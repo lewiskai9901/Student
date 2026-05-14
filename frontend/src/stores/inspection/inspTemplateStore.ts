@@ -4,6 +4,7 @@
  * "模板" = 根 TemplateSection。此 store 管理根分区列表、
  * 当前选中的根分区、分区树、版本、分类和选项集。
  */
+import type { LongId } from '@/types/common'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type {
@@ -50,7 +51,7 @@ export const useInspTemplateStore = defineStore('inspTemplate', () => {
     page?: number
     size?: number
     status?: TemplateStatus
-    catalogId?: number
+    catalogId?: LongId
     keyword?: string
   }): Promise<InspPageResult<TemplateSection>> {
     const result = await listRootSections(params)
@@ -59,7 +60,7 @@ export const useInspTemplateStore = defineStore('inspTemplate', () => {
     return result
   }
 
-  async function loadRootSection(id: number): Promise<TemplateSection> {
+  async function loadRootSection(id: LongId): Promise<TemplateSection> {
     const section = await getRootSection(id)
     currentRootSection.value = section
     return section
@@ -69,37 +70,37 @@ export const useInspTemplateStore = defineStore('inspTemplate', () => {
     return await createRootSection(data)
   }
 
-  async function editRootSection(id: number, data: UpdateRootSectionRequest): Promise<void> {
+  async function editRootSection(id: LongId, data: UpdateRootSectionRequest): Promise<void> {
     await updateRootSectionApi(id, data)
   }
 
-  async function removeRootSection(id: number): Promise<void> {
+  async function removeRootSection(id: LongId): Promise<void> {
     await deleteRootSectionApi(id)
   }
 
-  async function publish(id: number): Promise<TemplateVersion> {
+  async function publish(id: LongId): Promise<TemplateVersion> {
     return await publishRootSectionApi(id)
   }
 
-  async function deprecate(id: number): Promise<void> {
+  async function deprecate(id: LongId): Promise<void> {
     await deprecateRootSectionApi(id)
   }
 
-  async function archive(id: number): Promise<void> {
+  async function archive(id: LongId): Promise<void> {
     await archiveRootSectionApi(id)
   }
 
-  async function duplicate(id: number): Promise<TemplateSection> {
+  async function duplicate(id: LongId): Promise<TemplateSection> {
     return await duplicateRootSectionApi(id)
   }
 
-  async function loadVersions(rootSectionId: number): Promise<TemplateVersion[]> {
+  async function loadVersions(rootSectionId: LongId): Promise<TemplateVersion[]> {
     const list = await getVersions(rootSectionId)
     versions.value = list
     return list
   }
 
-  async function loadSectionTree(rootSectionId: number): Promise<TemplateSection[]> {
+  async function loadSectionTree(rootSectionId: LongId): Promise<TemplateSection[]> {
     const list = await getSections(rootSectionId)
     sectionTree.value = list
     return list

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Pencil, Trash2, Search } from 'lucide-vue-next'
@@ -10,7 +11,7 @@ const store = useInspPlatformStore()
 const loading = ref(false)
 const treeData = ref<IssueCategory[]>([])
 const showDialog = ref(false)
-const editingId = ref<number | null>(null)
+const editingId = ref<LongId | null>(null)
 
 const form = ref({
   categoryCode: '',
@@ -37,7 +38,7 @@ async function loadData() {
   }
 }
 
-function openCreate(parentId?: number) {
+function openCreate(parentId?: LongId) {
   editingId.value = null
   form.value = {
     categoryCode: '',
@@ -108,8 +109,8 @@ async function handleDelete(node: IssueCategory) {
 }
 
 // Flatten tree for parent selection in dialog
-function flattenCategories(nodes: IssueCategory[], level = 0): { id: number; label: string }[] {
-  const result: { id: number; label: string }[] = []
+function flattenCategories(nodes: IssueCategory[], level = 0): { id: LongId; label: string }[] {
+  const result: { id: LongId; label: string }[] = []
   for (const node of nodes) {
     const prefix = '\u00A0\u00A0'.repeat(level)
     result.push({ id: node.id, label: `${prefix}${node.categoryName}` })

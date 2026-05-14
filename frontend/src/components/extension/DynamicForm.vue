@@ -116,6 +116,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { http } from '@/utils/request'
@@ -212,8 +213,8 @@ function parseSelectValue(val: string, field: FieldSchema) {
   return val
 }
 
-const relationCache = ref<Record<string, { id: number; label: string }[]>>({})
-const userOptions = ref<{ id: number; name: string }[]>([])
+const relationCache = ref<Record<string, { id: LongId; label: string }[]>>({})
+const userOptions = ref<{ id: LongId; name: string }[]>([])
 
 function getRelationOptions(field: FieldSchema) {
   return relationCache.value[field.config?.target || ''] || []

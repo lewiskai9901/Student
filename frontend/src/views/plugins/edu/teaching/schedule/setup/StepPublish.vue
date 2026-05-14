@@ -45,12 +45,13 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { scheduleApi, instanceApi } from '@/api/teaching'
 import { scheduleConfigApi } from '@/api/teaching'
 
-const props = defineProps<{ semesterId: number | string | undefined }>()
+const props = defineProps<{ semesterId: LongId | string | undefined }>()
 const emit = defineEmits<{ published: [] }>()
 
 const entryCount = ref(0)

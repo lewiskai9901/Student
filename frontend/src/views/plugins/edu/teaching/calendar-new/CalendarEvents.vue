@@ -144,14 +144,15 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { academicEventApi } from '@/api/calendar'
 
-const props = defineProps<{ semesterId: number | string | undefined; yearId: number | string | undefined; events: any[] }>()
+const props = defineProps<{ semesterId: LongId | string | undefined; yearId: LongId | string | undefined; events: any[] }>()
 const emit = defineEmits<{ refresh: [] }>()
 
-const filterType = ref<number | undefined>()
+const filterType = ref<LongId | undefined>()
 const dialogVisible = ref(false)
 const saving = ref(false)
 const editingEvent = ref<any>(null)

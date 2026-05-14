@@ -206,6 +206,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, watch, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { teachingClassApi } from '@/api/teaching'
@@ -215,7 +216,7 @@ import type { TeachingClass, TeachingClassMember, Course } from '@/types/teachin
 import type { SchoolClass } from '@/types/organization'
 
 const props = defineProps<{
-  semesterId: number | string | null
+  semesterId: LongId | string | null
 }>()
 
 // Data
@@ -255,7 +256,7 @@ const newMemberClassId = ref<number | string>('')
 
 // Helpers
 function getClassTypeName(type: number) {
-  const map: Record<number, string> = { 1: '普通', 2: '合堂', 3: '走班' }
+  const map: Record<LongId, string> = { 1: '普通', 2: '合堂', 3: '走班' }
   return map[type] || '-'
 }
 
@@ -337,7 +338,7 @@ async function showMembersDialog(row: TeachingClass) {
   selectedTC.value = row; membersDialogVisible.value = true; newMemberClassId.value = ''; await loadMembers(row.id)
 }
 
-async function loadMembers(tcId: number) {
+async function loadMembers(tcId: LongId) {
   membersLoading.value = true
   try { currentMembers.value = await teachingClassApi.getMembers(tcId) } catch { currentMembers.value = [] } finally { membersLoading.value = false }
 }
@@ -345,7 +346,7 @@ async function loadMembers(tcId: number) {
 async function addClassMember() {
   if (!selectedTC.value || !newMemberClassId.value) return
   try {
-    await teachingClassApi.addMembers(selectedTC.value.id, [{ teachingClassId: selectedTC.value.id, memberType: 1, adminClassId: Number(newMemberClassId.value) }])
+    await teachingClassApi.addMembers(selectedTC.value.id, [{ teachingClassId: selectedTC.value.id, memberType: 1, adminClassId: newMemberClassId.value }])
     ElMessage.success('已添加'); newMemberClassId.value = ''; loadMembers(selectedTC.value.id); loadTeachingClasses()
   } catch { ElMessage.error('添加失败') }
 }

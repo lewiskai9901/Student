@@ -35,6 +35,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus, Upload } from '@element-plus/icons-vue'
@@ -44,7 +45,7 @@ import { getToken } from '@/utils/token'
 interface Props {
   modelValue?: UploadUserFile[]
   businessType?: string
-  businessId?: number
+  businessId?: LongId
   multiple?: boolean
   limit?: number
   accept?: string

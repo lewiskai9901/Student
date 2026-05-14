@@ -122,6 +122,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, X } from 'lucide-vue-next'
@@ -156,7 +157,7 @@ const sourceChildren = computed(() => props.source?.children || [])
 
 // Available children for a given split (exclude children already assigned to other splits)
 const availableChildrenFor = (splitIndex: number) => {
-  const assignedElsewhere = new Set<number>()
+  const assignedElsewhere = new Set<LongId>()
   splits.value.forEach((s, i) => {
     if (i !== splitIndex) {
       s.childIds.forEach(id => assignedElsewhere.add(id))

@@ -91,10 +91,11 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed } from 'vue'
 
 const props = defineProps<{
-  grades: { id: number; name: string }[]
+  grades: { id: LongId; name: string }[]
   gradeActivities: any[]
 }>()
 
@@ -105,9 +106,9 @@ defineEmits<{
 }>()
 
 const selectedGrade = ref<string | number>('all')
-const activityType = ref<number | null>(null)
+const activityType = ref<LongId | null>(null)
 
-const getGradeActivityCount = (gradeId: number) =>
+const getGradeActivityCount = (gradeId: LongId) =>
   props.gradeActivities.filter(a => a.gradeId === gradeId).length
 
 const filteredActivities = computed(() => {
@@ -122,7 +123,7 @@ const filteredActivities = computed(() => {
 })
 
 const getActivityTypeName = (type: number) => {
-  const map: Record<number, string> = {
+  const map: Record<LongId, string> = {
     1: '军训', 2: '入学教育', 3: '专业实习', 4: '社会实践',
     5: '毕业实习', 6: '毕业设计', 7: '毕业答辩', 8: '毕业典礼',
     9: '就业指导', 10: '其他'

@@ -367,6 +367,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
 import DeptTree from '@/components/teaching/DeptTree.vue'
@@ -383,14 +384,14 @@ const loading = ref(false)
 const saving = ref(false)
 const tasks = ref<TeachingTask[]>([])
 const total = ref(0)
-const selectedTreeOrg = ref<{ type: string; id: number | string; name: string }>({ type: '', id: '', name: '' })
-function onTreeSelect(node: { type: string; id: number | string; name: string }) {
+const selectedTreeOrg = ref<{ type: string; id: LongId | string; name: string }>({ type: '', id: '', name: '' })
+function onTreeSelect(node: { type: string; id: LongId | string; name: string }) {
   selectedTreeOrg.value = node
 }
 
 const semesters = ref<Semester[]>([])
 const courseOptions = ref<Course[]>([])
-const classOptions = ref<{ id: number | string; className: string }[]>([])
+const classOptions = ref<{ id: LongId | string; className: string }[]>([])
 const teacherOptions = ref<SimpleUser[]>([])
 const planOptions = ref<CurriculumPlan[]>([])
 const currentTask = ref<TeachingTask>()
@@ -419,7 +420,7 @@ const batchForm = ref({ semesterId: undefined as number | string | undefined, pl
 
 // Computed stats
 const statusCounts = computed(() => {
-  const counts: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 9: 0 }
+  const counts: Record<LongId, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 9: 0 }
   tasks.value.forEach(t => {
     const s = t.taskStatus ?? 0
     if (counts[s] !== undefined) counts[s]++
@@ -568,7 +569,7 @@ const assignTeachers = async () => {
   }
 }
 
-const getTeacherName = (id: number | string) => {
+const getTeacherName = (id: LongId | string) => {
   return teacherOptions.value.find(t => t.id === id)?.realName || ''
 }
 
@@ -628,7 +629,7 @@ const handleDelete = async (task: TeachingTask) => {
 }
 
 const getStatusName = (status: number) => {
-  const names: Record<number, string> = {
+  const names: Record<LongId, string> = {
     0: '待落实',
     1: '已分配教师',
     2: '已排课',
@@ -640,7 +641,7 @@ const getStatusName = (status: number) => {
 }
 
 const statusChipClass = (status: number) => {
-  const map: Record<number, string> = {
+  const map: Record<LongId, string> = {
     0: 'tm-chip-gray',
     1: 'tm-chip-blue',
     2: 'tm-chip-green',
@@ -652,17 +653,17 @@ const statusChipClass = (status: number) => {
 }
 
 const getConsecutiveLabel = (val?: number) => {
-  const map: Record<number, string> = { 1: '不连排', 2: '2节连', 3: '3节连', 4: '4节连' }
+  const map: Record<LongId, string> = { 1: '不连排', 2: '2节连', 3: '3节连', 4: '4节连' }
   return map[val ?? 2] ?? `${val}节`
 }
 
 const getAssessmentLabel = (val?: number) => {
-  const map: Record<number, string> = { 1: '考试', 2: '考查', 3: '技能考试', 4: '考试+考查' }
+  const map: Record<LongId, string> = { 1: '考试', 2: '考查', 3: '技能考试', 4: '考试+考查' }
   return map[val ?? 1] ?? '考试'
 }
 
 const getCourseNatureLabel = (val?: number) => {
-  const map: Record<number, string> = { 1: '理论', 2: '实验', 3: '实践', 4: '理论+实验' }
+  const map: Record<LongId, string> = { 1: '理论', 2: '实验', 3: '实践', 4: '理论+实验' }
   return map[val ?? 1] ?? '未知'
 }
 

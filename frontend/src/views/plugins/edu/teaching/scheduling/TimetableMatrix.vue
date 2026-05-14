@@ -95,6 +95,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
 import { http as request } from '@/utils/request'
 import { scheduleApi } from '@/api/teaching'
@@ -103,11 +104,11 @@ import { WEEKDAYS, DEFAULT_PERIODS } from '@/types/teaching'
 
 const props = defineProps<{
   mode: 'class' | 'teacher' | 'classroom'
-  semesterId?: number | string
+  semesterId?: LongId | string
   periods?: PeriodConfig[]
-  options?: { id: number | string; name: string; group?: string }[]
-  selectedTargets?: { id: number | string; name: string }[]
-  weekDates?: Record<number, string>
+  options?: { id: LongId | string; name: string; group?: string }[]
+  selectedTargets?: { id: LongId | string; name: string }[]
+  weekDates?: Record<LongId, string>
   dataSource?: 'schedule' | 'instance'
   /** 启用拖拽排课. 仅在 dataSource='schedule' 且 mode!='classroom' 时建议开启 */
   draggable?: boolean
@@ -144,7 +145,7 @@ function getColor(courseName: string) {
   return colorMap.get(courseName)!
 }
 
-const matrixData = ref<{ id: number | string; name: string; entries: any[] }[]>([])
+const matrixData = ref<{ id: LongId | string; name: string; entries: any[] }[]>([])
 
 async function loadAllData() {
   if (!props.semesterId || displayTargets.value.length === 0) {
@@ -152,7 +153,7 @@ async function loadAllData() {
     return
   }
 
-  const results: { id: number | string; name: string; entries: any[] }[] = []
+  const results: { id: LongId | string; name: string; entries: any[] }[] = []
 
   for (const target of displayTargets.value) {
     const targetId = target.id

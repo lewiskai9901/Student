@@ -5,6 +5,7 @@
  * Allows performing bulk operations on multiple inspection tasks:
  * PUBLISH, CANCEL, or REASSIGN.
  */
+import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Play, Ban, UserCheck } from 'lucide-vue-next'
@@ -109,7 +110,7 @@ watch(() => props.visible, (visible) => {
 
 // ---------- Actions ----------
 
-function toggleTask(taskId: number) {
+function toggleTask(taskId: LongId) {
   const idx = selectedTaskIds.value.indexOf(taskId)
   if (idx >= 0) {
     selectedTaskIds.value.splice(idx, 1)

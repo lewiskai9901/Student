@@ -128,6 +128,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, watch, onMounted } from 'vue'
 import { getDepartmentTree, type DepartmentResponse } from '@/api/organization'
 import { getUsersByOrgUnit, getUsersWithDepartments } from '@/api/user'
@@ -243,12 +244,12 @@ function filterExcluded(users: User[]): User[] {
 }
 
 // 选择部门
-function selectDepartment(deptId: number | string) {
+function selectDepartment(deptId: LongId | string) {
   selectedOrgUnitId.value = deptId
 }
 
 // 切换部门展开状态
-function toggleDepartment(deptId: number | string) {
+function toggleDepartment(deptId: LongId | string) {
   if (expandedDeptIds.value.has(deptId)) {
     expandedDeptIds.value.delete(deptId)
   } else {

@@ -1,6 +1,7 @@
 /**
  * 检查平台 - 整改管理 API
  */
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 import type {
   CorrectiveCase,
@@ -17,15 +18,15 @@ const BASE = '/inspection/corrective-cases'
 // ==================== CRUD ====================
 
 export function getCases(params?: {
-  projectId?: number
-  submissionId?: number
-  taskId?: number
+  projectId?: LongId
+  submissionId?: LongId
+  taskId?: LongId
   status?: CaseStatus
 }): Promise<CorrectiveCase[]> {
   return http.get<CorrectiveCase[]>(BASE, { params })
 }
 
-export function getCase(id: number): Promise<CorrectiveCase> {
+export function getCase(id: LongId): Promise<CorrectiveCase> {
   return http.get<CorrectiveCase>(`${BASE}/${id}`)
 }
 
@@ -41,52 +42,52 @@ export function getOverdueCases(): Promise<CorrectiveCase[]> {
   return http.get<CorrectiveCase[]>(`${BASE}/overdue`)
 }
 
-export function deleteCase(id: number): Promise<void> {
+export function deleteCase(id: LongId): Promise<void> {
   return http.delete(`${BASE}/${id}`)
 }
 
 /** P1#6: 责任人离职批量重派 — 返回受影响案例数 */
 export function reassignDepartedUser(
-  userId: number,
-  data: { reason: string; fallbackAssigneeId?: number; fallbackAssigneeName?: string },
+  userId: LongId,
+  data: { reason: string; fallbackAssigneeId?: LongId; fallbackAssigneeName?: string },
 ): Promise<number> {
   return http.post<number>(`${BASE}/reassign-departed-user/${userId}`, data)
 }
 
 // ==================== Lifecycle ====================
 
-export function assignCase(id: number, data: AssignCaseRequest): Promise<CorrectiveCase> {
+export function assignCase(id: LongId, data: AssignCaseRequest): Promise<CorrectiveCase> {
   return http.post<CorrectiveCase>(`${BASE}/${id}/assign`, data)
 }
 
-export function startWork(id: number): Promise<CorrectiveCase> {
+export function startWork(id: LongId): Promise<CorrectiveCase> {
   return http.post<CorrectiveCase>(`${BASE}/${id}/start-work`)
 }
 
-export function submitCorrection(id: number, data: SubmitCorrectionRequest): Promise<CorrectiveCase> {
+export function submitCorrection(id: LongId, data: SubmitCorrectionRequest): Promise<CorrectiveCase> {
   return http.post<CorrectiveCase>(`${BASE}/${id}/submit-correction`, data)
 }
 
-export function verifyCase(id: number, data: VerifyCaseRequest): Promise<CorrectiveCase> {
+export function verifyCase(id: LongId, data: VerifyCaseRequest): Promise<CorrectiveCase> {
   return http.post<CorrectiveCase>(`${BASE}/${id}/verify`, data)
 }
 
-export function rejectCase(id: number, data: RejectCaseRequest): Promise<CorrectiveCase> {
+export function rejectCase(id: LongId, data: RejectCaseRequest): Promise<CorrectiveCase> {
   return http.post<CorrectiveCase>(`${BASE}/${id}/reject`, data)
 }
 
-export function closeCase(id: number): Promise<CorrectiveCase> {
+export function closeCase(id: LongId): Promise<CorrectiveCase> {
   return http.post<CorrectiveCase>(`${BASE}/${id}/close`)
 }
 
-export function escalateCase(id: number): Promise<CorrectiveCase> {
+export function escalateCase(id: LongId): Promise<CorrectiveCase> {
   return http.post<CorrectiveCase>(`${BASE}/${id}/escalate`)
 }
 
 // ==================== V110 引擎: 整改候选 ====================
 
 export interface CorrectiveCandidate {
-  detailId: number
+  detailId: LongId
   itemCode: string
   itemName: string
   severity: 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE'
@@ -97,7 +98,7 @@ export interface CorrectiveCandidate {
 }
 
 /** 拉取某 submission 的引擎建议候选项. */
-export function getCorrectiveCandidates(submissionId: number): Promise<CorrectiveCandidate[]> {
+export function getCorrectiveCandidates(submissionId: LongId): Promise<CorrectiveCandidate[]> {
   return http.get<CorrectiveCandidate[]>('/inspection/corrective/candidates', {
     params: { submissionId },
   })
@@ -105,7 +106,7 @@ export function getCorrectiveCandidates(submissionId: number): Promise<Correctiv
 
 /** 批量确认建单. */
 export function confirmCorrectiveCandidates(
-  submissionId: number,
+  submissionId: LongId,
   detailIds: number[],
 ): Promise<number[]> {
   return http.post<number[]>('/inspection/corrective/candidates/confirm', {
@@ -125,8 +126,8 @@ export interface RecurrenceItem {
 
 /** 拉过去 30 天该项目+该主体的复发计数 (按 itemCode 聚合). */
 export function getRecurrenceForSubject(
-  projectId: number,
-  subjectId: number,
+  projectId: LongId,
+  subjectId: LongId,
 ): Promise<RecurrenceItem[]> {
   return http.get<RecurrenceItem[]>('/inspection/corrective/recurrence', {
     params: { projectId, subjectId },

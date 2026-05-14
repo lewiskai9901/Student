@@ -175,6 +175,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Building2, RefreshCw } from 'lucide-vue-next'
@@ -200,7 +201,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   'update:visible': [value: boolean]
-  success: [createdId?: number]
+  success: [createdId?: LongId]
 }>()
 
 const submitting = ref(false)
@@ -319,7 +320,7 @@ function handleNameInput() {
 const parentOptions = computed(() => {
   if (!props.allDepartments.length) return []
 
-  const excludeIds = new Set<number>()
+  const excludeIds = new Set<LongId>()
   if (isEdit.value && props.department) {
     const collectIds = (node: DepartmentResponse) => {
       excludeIds.add(node.id)

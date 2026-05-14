@@ -572,6 +572,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -619,7 +620,7 @@ const statusCounts = computed(() => {
 
 // Org tree
 const orgTree = ref<OrgUnitTreeNode[]>([])
-interface FlatOrgItem { id: number | string; label: string }
+interface FlatOrgItem { id: LongId | string; label: string }
 const flatOrgUnits = computed<FlatOrgItem[]>(() => {
   const result: FlatOrgItem[] = []
   const flatten = (nodes: OrgUnitTreeNode[], depth: number) => {
@@ -673,7 +674,7 @@ const handleUserSearch = () => {
 }
 
 const selectUser = (u: SimpleUser) => {
-  formData.userId = Number(u.id)
+  formData.userId = u.id
   userSearchKeyword.value = u.realName || u.username
   selectedUserLabel.value = `${u.realName || ''} (${u.username})`
   showUserDropdown.value = false
@@ -701,12 +702,12 @@ const detailFields = computed(() => {
 })
 
 // Courses
-const allCourses = ref<{ id: number; name: string; code: string }[]>([])
+const allCourses = ref<{ id: LongId; name: string; code: string }[]>([])
 const courseForm = reactive({ courseId: 0, qualificationLevel: 1, remark: '' })
 
 // Methods
 const statusClass = (status: number) => {
-  const map: Record<number, string> = {
+  const map: Record<LongId, string> = {
     1: 'rounded bg-green-50 px-1.5 py-0.5 text-xs text-green-600',
     2: 'rounded bg-red-50 px-1.5 py-0.5 text-xs text-red-600',
     3: 'rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500',

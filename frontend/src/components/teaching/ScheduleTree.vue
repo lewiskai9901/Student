@@ -73,29 +73,30 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
 import { orgUnitApi } from '@/api/organization'
 import { http as request } from '@/utils/request'
 
 const props = defineProps<{
   mode: 'class' | 'teacher' | 'classroom'
-  semesterId?: number | string
+  semesterId?: LongId | string
   multiple?: boolean
 }>()
 
 const emit = defineEmits<{
-  select: [node: { type: string; id: number | string; name: string; classIds?: (number | string)[] }]
-  multiSelect: [items: { id: number | string; name: string }[]]
+  select: [node: { type: string; id: LongId | string; name: string; classIds?: (number | string)[] }]
+  multiSelect: [items: { id: LongId | string; name: string }[]]
 }>()
 
 // 单选状态
 const selectedId = ref<number | string | null>(null)
 // 多选状态
 const selectedIdSet = ref<Set<number | string>>(new Set())
-const selectedNodes = ref<Map<number | string, { id: number | string; name: string }>>(new Map())
+const selectedNodes = ref<Map<number | string, { id: LongId | string; name: string }>>(new Map())
 
 const classTree = ref<any[]>([])
-const teacherTree = ref<{ name: string; teachers: { id: number; name: string }[] }[]>([])
+const teacherTree = ref<{ name: string; teachers: { id: LongId; name: string }[] }[]>([])
 const classroomTree = ref<any[]>([])
 
 const modeLabel = computed(() => ({ class: '组织筛选', teacher: '教师列表', classroom: '教室列表' }[props.mode]))
@@ -138,7 +139,7 @@ async function loadTeacherTree() {
     const data = (res as any).data || res
     const items = Array.isArray(data) ? data : []
 
-    const groups: Record<string, { id: number; name: string }[]> = {}
+    const groups: Record<string, { id: LongId; name: string }[]> = {}
     for (const t of items) {
       const dept = t.deptName || '未分配'
       if (!groups[dept]) groups[dept] = []
@@ -205,15 +206,15 @@ function collectIds(node: any): (number | string)[] {
   return ids
 }
 
-function selectNodeSingle(id: number | string, name: string, type: string, classIds?: (number | string)[]) {
+function selectNodeSingle(id: LongId | string, name: string, type: string, classIds?: (number | string)[]) {
   selectedId.value = id
   emit('select', { type, id, name, classIds: classIds || [id] })
 }
 
 // ==================== Selection - Multi Mode ====================
 
-function collectLeaves(node: any): { id: number | string; name: string }[] {
-  const leaves: { id: number | string; name: string }[] = []
+function collectLeaves(node: any): { id: LongId | string; name: string }[] {
+  const leaves: { id: LongId | string; name: string }[] = []
   function walk(n: any) {
     if (!n.children || n.children.length === 0) {
       leaves.push({ id: n.id, name: n.fullName || n.name })
@@ -272,7 +273,7 @@ function toggleBranch(node: any) {
   emitMulti()
 }
 
-function toggleLeaf(id: number | string, name: string) {
+function toggleLeaf(id: LongId | string, name: string) {
   if (selectedIdSet.value.has(id)) {
     selectedIdSet.value.delete(id)
     selectedNodes.value.delete(id)
@@ -298,7 +299,7 @@ function handleNodeClick(node: any, type: string) {
   }
 }
 
-function handleLeafClick(node: { id: number | string; name: string }, type: string) {
+function handleLeafClick(node: { id: LongId | string; name: string }, type: string) {
   if (props.multiple) {
     toggleLeaf(node.id, node.name)
   } else {

@@ -15,6 +15,7 @@
  *  - KPI 告警去重
  *  - 完成不可逆 > primary, 暂停 > ghost
  */
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { http } from '@/utils/request'
 import { useRouter, useRoute } from 'vue-router'
@@ -39,7 +40,7 @@ const auth = useAuthStore()
 const canManageProjects = computed(() => auth.hasPermission('insp:project:edit') || auth.hasPermission('*'))
 const canExecute = computed(() => auth.hasPermission('insp:task:execute'))
 // myUserId 备用 (检查员视角中"我的项目"判断)
-const myUserId = computed(() => auth.user?.id ? Number(auth.user.id) : null)
+const myUserId = computed(() => auth.user?.id ? auth.user.id : null)
 
 // ── State ──
 const loading = ref(false)
@@ -275,7 +276,7 @@ const filtered = computed(() => {
 const kpi = computed(() => {
   const all = summaries.value.filter(s => s.project.status !== 'ARCHIVED' || showArchived.value)
   // 告警 = 项目自身逾期 OR 项目内有 overdue task, 同一项目只计 1 次 (Set)
-  const alertSet = new Set<number>()
+  const alertSet = new Set<LongId>()
   for (const s of all) {
     if (isOverdueProject(s.project) || s.taskOverdue > 0) alertSet.add(s.project.id)
   }
@@ -468,8 +469,8 @@ function primaryAction(s: ProjectStatsSummary): { label: string; key: string; em
 }
 
 // V110: 项目策略 chip
-const policyMap = ref<Record<number, string>>({})
-function strictnessOf(projectId: number): string | undefined {
+const policyMap = ref<Record<LongId, string>>({})
+function strictnessOf(projectId: LongId): string | undefined {
   return policyMap.value[projectId]
 }
 function strictnessLabel(s?: string): string {

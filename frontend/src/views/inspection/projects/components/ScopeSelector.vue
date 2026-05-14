@@ -5,6 +5,7 @@
  * Provides a tree-select interface for choosing org units or places
  * as the inspection scope.
  */
+import type { LongId } from '@/types/common'
 import { ref, computed, watch, onMounted } from 'vue'
 import { previewTargetCount } from '@/api/inspection/project'
 
@@ -14,7 +15,7 @@ interface ScopeValue {
 }
 
 interface TreeNode {
-  id: number
+  id: LongId
   label: string
   children?: TreeNode[]
 }
@@ -49,7 +50,7 @@ const selectedIds = computed({
 })
 
 const selectedCount = computed(() => selectedIds.value.length)
-const targetPreviewCount = ref<number | null>(null)
+const targetPreviewCount = ref<LongId | null>(null)
 const previewLoading = ref(false)
 
 const scopeLabel = computed(() => {

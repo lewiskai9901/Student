@@ -1,6 +1,7 @@
 /**
  * 检查平台 - 预警系统 API
  */
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 import type {
   AlertRule,
@@ -23,7 +24,7 @@ export function getAlertRules(): Promise<AlertRule[]> {
   return http.get<AlertRule[]>(RULES_BASE)
 }
 
-export function getAlertRule(id: number): Promise<AlertRule> {
+export function getAlertRule(id: LongId): Promise<AlertRule> {
   return http.get<AlertRule>(`${RULES_BASE}/${id}`)
 }
 
@@ -31,15 +32,15 @@ export function createAlertRule(data: CreateAlertRuleRequest): Promise<AlertRule
   return http.post<AlertRule>(RULES_BASE, data)
 }
 
-export function updateAlertRule(id: number, data: UpdateAlertRuleRequest): Promise<AlertRule> {
+export function updateAlertRule(id: LongId, data: UpdateAlertRuleRequest): Promise<AlertRule> {
   return http.put<AlertRule>(`${RULES_BASE}/${id}`, data)
 }
 
-export function deleteAlertRule(id: number): Promise<void> {
+export function deleteAlertRule(id: LongId): Promise<void> {
   return http.delete(`${RULES_BASE}/${id}`)
 }
 
-export function toggleAlertRule(id: number, enabled: boolean): Promise<AlertRule> {
+export function toggleAlertRule(id: LongId, enabled: boolean): Promise<AlertRule> {
   return http.put<AlertRule>(`${RULES_BASE}/${id}`, { isEnabled: enabled })
 }
 
@@ -53,32 +54,32 @@ export function getRecentAlerts(limit: number = 20): Promise<Alert[]> {
   return http.get<Alert[]>(`${ALERTS_BASE}/recent`, { params: { limit } })
 }
 
-export function acknowledgeAlert(id: number): Promise<Alert> {
+export function acknowledgeAlert(id: LongId): Promise<Alert> {
   return http.put<Alert>(`${ALERTS_BASE}/${id}/acknowledge`)
 }
 
-export function resolveAlert(id: number): Promise<Alert> {
+export function resolveAlert(id: LongId): Promise<Alert> {
   return http.put<Alert>(`${ALERTS_BASE}/${id}/resolve`)
 }
 
-export function dismissAlert(id: number): Promise<Alert> {
+export function dismissAlert(id: LongId): Promise<Alert> {
   return http.put<Alert>(`${ALERTS_BASE}/${id}/dismiss`)
 }
 
 // ==================== Analytics Extensions ====================
 
 export function getHeatmapData(params: {
-  projectId: number
+  projectId: LongId
   dateFrom: string
   dateTo: string
   targetType?: string
-  dimensionId?: number
+  dimensionId?: LongId
 }): Promise<HeatmapDataPoint[]> {
   return http.get<HeatmapDataPoint[]>(`${ANALYTICS_BASE}/heatmap`, { params })
 }
 
 export function getIssueFlow(params: {
-  projectId: number
+  projectId: LongId
   dateFrom: string
   dateTo: string
 }): Promise<SankeyData> {
@@ -86,7 +87,7 @@ export function getIssueFlow(params: {
 }
 
 export function getTimingStats(params: {
-  projectId: number
+  projectId: LongId
   dateFrom: string
   dateTo: string
 }): Promise<TimingStats[]> {

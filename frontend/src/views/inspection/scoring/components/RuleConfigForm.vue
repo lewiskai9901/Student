@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { computed, ref, watch } from 'vue'
 import { Plus, Trash2, X } from 'lucide-vue-next'
 import type { RuleType } from '@/types/insp/scoring'
@@ -9,7 +10,7 @@ import FormulaEditor from './FormulaEditor.vue'
 const props = defineProps<{
   ruleType: RuleType
   modelValue: string
-  templateId?: number
+  templateId?: LongId
 }>()
 
 const emit = defineEmits<{
@@ -64,7 +65,7 @@ function getDefaultConfig(type: RuleType): Record<string, any> {
 // ==================== Template items with scoring info ====================
 
 interface ScoredItem {
-  id: number
+  id: LongId
   itemCode: string
   itemName: string
   sectionName: string

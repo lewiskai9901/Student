@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -32,7 +33,7 @@ function onMaskClose(e: MouseEvent, closeFn: () => void) {
 // Dialog state
 const dialogVisible = ref(false)
 const dialogTitle = ref('创建库项目')
-const editingId = ref<number | null>(null)
+const editingId = ref<LongId | null>(null)
 const form = reactive({
   itemCode: '',
   itemName: '',

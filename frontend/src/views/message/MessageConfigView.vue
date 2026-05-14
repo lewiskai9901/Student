@@ -418,6 +418,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from 'lucide-vue-next'
@@ -507,7 +508,7 @@ function getChannelLabel(ch: MsgSubscriptionRule['channel']): string {
   return ChannelConfig[ch]?.label ?? ch
 }
 
-function getTemplateName(id: number | null): string {
+function getTemplateName(id: LongId | null): string {
   if (!id) return '-'
   return templates.value.find(t => t.id === id)?.templateName ?? String(id)
 }

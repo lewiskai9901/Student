@@ -5,9 +5,10 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import ConstraintConfig from '../schedule/ConstraintConfig.vue'
 
 defineProps<{
-  semesterId: number | string | undefined
+  semesterId: LongId | string | undefined
 }>()
 </script>

@@ -6,11 +6,12 @@
  * the corrective action was truly effective over time. If the effectiveness
  * check fails, the case may be re-opened.
  */
+import type { LongId } from '@/types/common'
 import { ref, reactive } from 'vue'
 import { CheckCircle, XCircle, CalendarDays } from 'lucide-vue-next'
 
 const props = defineProps<{
-  caseId: number
+  caseId: LongId
 }>()
 
 const emit = defineEmits<{

@@ -619,6 +619,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, computed, onMounted, h } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -764,7 +765,7 @@ async function openDetailDrawer(major: Major) {
   loadDetailPlans(major.id)
 }
 
-async function loadDetailDirections(majorId: number | string) {
+async function loadDetailDirections(majorId: LongId | string) {
   directionsLoading.value = true
   try {
     const res = await majorDirectionApi.getByMajor(majorId)
@@ -776,7 +777,7 @@ async function loadDetailDirections(majorId: number | string) {
   }
 }
 
-async function loadDetailPlans(majorId: number | string) {
+async function loadDetailPlans(majorId: LongId | string) {
   plansLoading.value = true
   try {
     const res = await curriculumPlanApi.list({ majorId })
@@ -949,7 +950,7 @@ function openDirectionDialog(major: Major, dir?: MajorDirection) {
   newCertName.value = ''
   if (dir) {
     directionForm.id = dir.id
-    directionForm.majorId = Number(major.id)
+    directionForm.majorId = major.id
     directionForm.directionCode = dir.directionCode
     directionForm.directionName = dir.directionName
     directionForm.trainingMode = dir.isSegmented ? 'segmented' : 'direct'
@@ -969,7 +970,7 @@ function openDirectionDialog(major: Major, dir?: MajorDirection) {
     directionForm.remarks = dir.remarks || ''
   } else {
     resetDirectionForm()
-    directionForm.majorId = Number(major.id)
+    directionForm.majorId = major.id
   }
   directionDialogVisible.value = true
 }

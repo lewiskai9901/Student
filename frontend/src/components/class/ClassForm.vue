@@ -190,6 +190,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
@@ -205,7 +206,7 @@ import type { GradeMajorDirection } from '@/api/gradeMajorDirection'
 
 interface Props {
   mode: 'add' | 'edit'
-  orgUnitId?: number | null
+  orgUnitId?: LongId | null
 }
 
 const props = defineProps<Props>()
@@ -551,19 +552,19 @@ const loadClassDetail = async () => {
   loading.value = true
   try {
     const data = await getClass(props.orgUnitId) as any
-    formData.gradeId = data.gradeId ? Number(data.gradeId) : null
+    formData.gradeId = data.gradeId ? data.gradeId : null
     formData.gradeLevel = data.gradeLevel || null
-    formData.majorId = data.majorId ? Number(data.majorId) : null
-    formData.majorDirectionId = data.majorDirectionId ? Number(data.majorDirectionId) : null
+    formData.majorId = data.majorId ? data.majorId : null
+    formData.majorDirectionId = data.majorDirectionId ? data.majorDirectionId : null
     formData.classSequence = data.classSequence || null
     formData.className = data.className || ''
     formData.classCode = data.classCode || ''
-    formData.orgUnitId = data.orgUnitId ? Number(data.orgUnitId) : null
+    formData.orgUnitId = data.orgUnitId ? data.orgUnitId : null
     formData.enrollmentYear = data.enrollmentYear || null
     formData.graduationYear = data.graduationYear || null
     formData.classType = data.classType || 1
-    formData.teacherId = data.teacherId ? Number(data.teacherId) : null
-    formData.assistantTeacherId = data.assistantTeacherId ? Number(data.assistantTeacherId) : null
+    formData.teacherId = data.teacherId ? data.teacherId : null
+    formData.assistantTeacherId = data.assistantTeacherId ? data.assistantTeacherId : null
     formData.classroomLocation = data.classroomLocation || ''
     formData.educationSystem = data.educationSystem || ''
     formData.skillLevel = data.skillLevel || ''

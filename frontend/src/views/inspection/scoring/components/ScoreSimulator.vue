@@ -108,6 +108,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, watch, onMounted } from 'vue'
 import { Calculator, RotateCcw } from 'lucide-vue-next'
 import { inspTemplateApi } from '@/api/inspection/template'
@@ -119,25 +120,25 @@ const props = defineProps<{
   dimensions: ScoreDimension[]
   gradeBands: GradeBand[]
   rules: CalculationRule[]
-  templateId: number
+  templateId: LongId
 }>()
 
 // ==================== State ====================
 
 interface SimItem {
-  id: number
+  id: LongId
   itemCode: string
   name: string
   mode: string       // DEDUCTION, ADDITION, FIXED, RESPONSE_MAPPED
   configScore: number
-  dimensionId: number | null
+  dimensionId: LongId | null
   itemWeight: number  // 项目权重(分区内), 默认1.0
   mockQuantity: number
   itemScore: number
 }
 
 interface DimGroup {
-  dimensionId: number | null
+  dimensionId: LongId | null
   dimensionName: string
   weight: number
   baseScore: number

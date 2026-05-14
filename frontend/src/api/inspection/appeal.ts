@@ -1,6 +1,7 @@
 /**
  * 检查平台 - 申诉 API (P1#8)
  */
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 import type {
   InspAppeal,
@@ -17,22 +18,22 @@ export function submitAppeal(data: SubmitAppealRequest): Promise<InspAppeal> {
 }
 
 /** 审核通过 — 权限点 inspection:appeal:review */
-export function approveAppeal(id: number, data: ApproveAppealRequest): Promise<InspAppeal> {
+export function approveAppeal(id: LongId, data: ApproveAppealRequest): Promise<InspAppeal> {
   return http.post<InspAppeal>(`${BASE}/${id}/approve`, data)
 }
 
 /** 审核驳回 — 权限点 inspection:appeal:review */
-export function rejectAppeal(id: number, data: RejectAppealRequest): Promise<InspAppeal> {
+export function rejectAppeal(id: LongId, data: RejectAppealRequest): Promise<InspAppeal> {
   return http.post<InspAppeal>(`${BASE}/${id}/reject`, data)
 }
 
 /** 撤回申诉 — 仅提交人 */
-export function withdrawAppeal(id: number): Promise<InspAppeal> {
+export function withdrawAppeal(id: LongId): Promise<InspAppeal> {
   return http.post<InspAppeal>(`${BASE}/${id}/withdraw`)
 }
 
 /** 单条查询 */
-export function getAppeal(id: number): Promise<InspAppeal> {
+export function getAppeal(id: LongId): Promise<InspAppeal> {
   return http.get<InspAppeal>(`${BASE}/${id}`)
 }
 
@@ -47,6 +48,6 @@ export function getPendingAppeals(): Promise<InspAppeal[]> {
 }
 
 /** 按项目查询 */
-export function getAppealsByProject(projectId: number): Promise<InspAppeal[]> {
+export function getAppealsByProject(projectId: LongId): Promise<InspAppeal[]> {
   return http.get<InspAppeal[]>(`${BASE}/by-project/${projectId}`)
 }

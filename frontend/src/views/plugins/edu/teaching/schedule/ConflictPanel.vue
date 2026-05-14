@@ -113,19 +113,20 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { conflictApi } from '@/api/teaching'
 import type { DetectedConflict, FeasibilityReport } from '@/types/teaching'
 
-const props = defineProps<{ semesterId: number | string | undefined }>()
+const props = defineProps<{ semesterId: LongId | string | undefined }>()
 
 const conflicts = ref<DetectedConflict[]>([])
 const conflictsLoading = ref(false)
 const conflictDetecting = ref(false)
 const feasibilityLoading = ref(false)
 const feasibilityReport = ref<FeasibilityReport | null>(null)
-const conflictStatusFilter = ref<number | undefined>(undefined)
+const conflictStatusFilter = ref<LongId | undefined>(undefined)
 
 const resolveDialogVisible = ref(false)
 const resolveNote = ref('')

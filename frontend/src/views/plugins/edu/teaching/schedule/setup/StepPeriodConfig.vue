@@ -39,11 +39,12 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { periodConfigApi } from '@/api/teaching'
 
-const props = defineProps<{ semesterId: number | string | undefined; config: any }>()
+const props = defineProps<{ semesterId: LongId | string | undefined; config: any }>()
 const emit = defineEmits<{ saved: [config: any] }>()
 
 const loading = ref(false)
@@ -51,7 +52,7 @@ const hasConfig = ref(false)
 const periods = ref<any[]>([])
 const scheduleDays = ref<number[]>([])
 
-const dayNames: Record<number, string> = { 1: '周一', 2: '周二', 3: '周三', 4: '周四', 5: '周五', 6: '周六', 7: '周日' }
+const dayNames: Record<LongId, string> = { 1: '周一', 2: '周二', 3: '周三', 4: '周四', 5: '周五', 6: '周六', 7: '周日' }
 const scheduleDaysText = computed(() => scheduleDays.value.map(d => dayNames[d]).join('、'))
 
 async function loadConfig() {

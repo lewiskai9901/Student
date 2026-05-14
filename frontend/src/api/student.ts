@@ -3,6 +3,7 @@
  *
  * 注意: 响应拦截器已解包 ApiResponse，API 直接返回 data 内容
  */
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 import type {
   Student,
@@ -30,7 +31,7 @@ export function getStudents(params?: StudentQueryParams): Promise<PageResponse<S
 /**
  * 获取学生详情
  */
-export function getStudent(id: number | string): Promise<Student> {
+export function getStudent(id: LongId | string): Promise<Student> {
   return http.get<Student>(`${STUDENT_URL}/${id}`)
 }
 
@@ -51,14 +52,14 @@ export function createStudent(data: CreateStudentRequest): Promise<number | stri
 /**
  * 更新学生
  */
-export function updateStudent(id: number | string, data: UpdateStudentRequest): Promise<void> {
+export function updateStudent(id: LongId | string, data: UpdateStudentRequest): Promise<void> {
   return http.put(`${STUDENT_URL}/${id}`, data)
 }
 
 /**
  * 删除学生
  */
-export function deleteStudent(id: number | string): Promise<void> {
+export function deleteStudent(id: LongId | string): Promise<void> {
   return http.delete(`${STUDENT_URL}/${id}`)
 }
 
@@ -81,21 +82,21 @@ export function searchStudents(params: StudentSearchParams): Promise<Student[]> 
 /**
  * 检查学号是否存在
  */
-export function existsStudentNo(studentNo: string, excludeId?: number | string): Promise<boolean> {
+export function existsStudentNo(studentNo: string, excludeId?: LongId | string): Promise<boolean> {
   return http.get<boolean>(`${STUDENT_URL}/exists`, { params: { studentNo, excludeId } })
 }
 
 /**
  * 统计班级学生数量
  */
-export function countStudentsByClass(orgUnitId: number | string): Promise<number> {
+export function countStudentsByClass(orgUnitId: LongId | string): Promise<number> {
   return http.get<number>(`${STUDENT_URL}/count/by-class`, { params: { orgUnitId } })
 }
 
 /**
  * 根据班级ID获取学生列表
  */
-export function getStudentsByClass(orgUnitId: number | string): Promise<Student[]> {
+export function getStudentsByClass(orgUnitId: LongId | string): Promise<Student[]> {
   return http.get<Student[]>(`${STUDENT_URL}/by-class/${orgUnitId}`)
 }
 
@@ -104,21 +105,21 @@ export function getStudentsByClass(orgUnitId: number | string): Promise<Student[
 /**
  * 更新学生状态
  */
-export function updateStudentStatus(id: number | string, status: number): Promise<void> {
+export function updateStudentStatus(id: LongId | string, status: number): Promise<void> {
   return http.patch(`${STUDENT_URL}/${id}/status`, null, { params: { status } })
 }
 
 /**
  * 学生转班
  */
-export function transferClass(id: number | string, newClassId: number | string): Promise<void> {
+export function transferClass(id: LongId | string, newClassId: LongId | string): Promise<void> {
   return http.patch(`${STUDENT_URL}/${id}/transfer`, null, { params: { newClassId } })
 }
 
 /**
  * 重置密码
  */
-export function resetPassword(id: number | string, data: ResetPasswordRequest): Promise<void> {
+export function resetPassword(id: LongId | string, data: ResetPasswordRequest): Promise<void> {
   return http.patch(`${STUDENT_URL}/${id}/reset-password`, data)
 }
 
@@ -127,7 +128,7 @@ export function resetPassword(id: number | string, data: ResetPasswordRequest): 
 /**
  * 获取某学生的异动记录
  */
-export function getStudentStatusChanges(studentId: number | string): Promise<StudentStatusChange[]> {
+export function getStudentStatusChanges(studentId: LongId | string): Promise<StudentStatusChange[]> {
   return http.get<StudentStatusChange[]>(`${STUDENT_URL}/${studentId}/status-changes`)
 }
 

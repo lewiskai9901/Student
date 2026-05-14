@@ -1,3 +1,4 @@
+import type { LongId } from '@/types/common'
 import { http as request } from '@/utils/request'
 import type {
   AssetApproval,
@@ -18,28 +19,28 @@ export const assetApprovalApi = {
   /**
    * 审批通过
    */
-  approve(id: number | string, data?: ApprovalActionRequest): Promise<void> {
+  approve(id: LongId | string, data?: ApprovalActionRequest): Promise<void> {
     return request.post(`${BASE_URL}/${id}/approve`, data || {})
   },
 
   /**
    * 审批拒绝
    */
-  reject(id: number | string, data?: ApprovalActionRequest): Promise<void> {
+  reject(id: LongId | string, data?: ApprovalActionRequest): Promise<void> {
     return request.post(`${BASE_URL}/${id}/reject`, data || {})
   },
 
   /**
    * 取消申请
    */
-  cancel(id: number | string): Promise<void> {
+  cancel(id: LongId | string): Promise<void> {
     return request.post(`${BASE_URL}/${id}/cancel`)
   },
 
   /**
    * 获取审批详情
    */
-  getApproval(id: number | string): Promise<AssetApproval> {
+  getApproval(id: LongId | string): Promise<AssetApproval> {
     return request.get(`${BASE_URL}/${id}`)
   },
 
@@ -63,7 +64,7 @@ export const assetApprovalApi = {
   queryApprovals(params: {
     approvalType?: number
     status?: number
-    applicantId?: number | string
+    applicantId?: LongId | string
     pageNum?: number
     pageSize?: number
   }): Promise<{

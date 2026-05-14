@@ -1,10 +1,11 @@
+import type { LongId } from '@/types/common'
 import { http as request } from '@/utils/request'
 
 const BASE_URL = '/asset-depreciation'
 
 export interface AssetDepreciationDTO {
-  id: number
-  assetId: number
+  id: LongId
+  assetId: LongId
   assetCode: string
   depreciationPeriod: string
   beginningValue: number
@@ -31,7 +32,7 @@ export const assetDepreciationApi = {
   /**
    * 计算单个资产的折旧
    */
-  calculateDepreciation(assetId: number | string, period?: string): Promise<AssetDepreciationDTO> {
+  calculateDepreciation(assetId: LongId | string, period?: string): Promise<AssetDepreciationDTO> {
     return request.post(`${BASE_URL}/${assetId}/calculate`, null, {
       params: { period }
     })
@@ -61,7 +62,7 @@ export const assetDepreciationApi = {
   /**
    * 预览折旧计算结果
    */
-  previewDepreciation(assetId: number | string, period?: string): Promise<AssetDepreciationDTO> {
+  previewDepreciation(assetId: LongId | string, period?: string): Promise<AssetDepreciationDTO> {
     return request.get(`${BASE_URL}/${assetId}/preview`, {
       params: { period }
     })
@@ -70,7 +71,7 @@ export const assetDepreciationApi = {
   /**
    * 获取资产折旧历史
    */
-  getDepreciationHistory(assetId: number | string): Promise<AssetDepreciationDTO[]> {
+  getDepreciationHistory(assetId: LongId | string): Promise<AssetDepreciationDTO[]> {
     return request.get(`${BASE_URL}/${assetId}/history`)
   },
 
@@ -78,7 +79,7 @@ export const assetDepreciationApi = {
    * 获取资产折旧历史（分页）
    */
   getDepreciationHistoryPage(
-    assetId: number | string,
+    assetId: LongId | string,
     pageNum = 1,
     pageSize = 10
   ): Promise<{
@@ -113,7 +114,7 @@ export const assetDepreciationApi = {
 }
 
 // 折旧方法枚举
-export const DepreciationMethodMap: Record<number, string> = {
+export const DepreciationMethodMap: Record<LongId, string> = {
   0: '不计提折旧',
   1: '直线法',
   2: '双倍余额递减法',

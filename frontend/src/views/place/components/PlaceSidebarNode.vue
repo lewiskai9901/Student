@@ -99,6 +99,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
 import { ChevronRight } from 'lucide-vue-next'
 import type { PlaceTreeNode } from '@/types/universalPlace'
@@ -106,7 +107,7 @@ import type { PlaceTreeNode } from '@/types/universalPlace'
 interface Props {
   node: PlaceTreeNode
   level: number
-  selectedId: number | string | null
+  selectedId: LongId | string | null
   searchKeyword: string
 }
 

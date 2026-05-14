@@ -84,6 +84,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Settings } from 'lucide-vue-next'
@@ -105,7 +106,7 @@ import {
 
 const loading = ref(false)
 const treeData = ref<DepartmentResponse[]>([])
-const selectedNodeId = ref<number | null>(null)
+const selectedNodeId = ref<LongId | null>(null)
 const formVisible = ref(false)
 const editingDept = ref<DepartmentResponse | null>(null)
 const parentDept = ref<DepartmentResponse | null>(null)
@@ -121,7 +122,7 @@ const flattenedDepartments = computed(() => {
 })
 
 // Find selected node in tree
-const findNode = (nodes: DepartmentResponse[], id: number): DepartmentResponse | null => {
+const findNode = (nodes: DepartmentResponse[], id: LongId): DepartmentResponse | null => {
   for (const node of nodes) {
     if (node.id === id) return node
     if (node.children) {
@@ -269,7 +270,7 @@ const handleLifecycleSuccess = () => {
   loadData()
 }
 
-const handleFormSuccess = async (createdId?: number) => {
+const handleFormSuccess = async (createdId?: LongId) => {
   await loadData()
   if (createdId) {
     selectedNodeId.value = createdId

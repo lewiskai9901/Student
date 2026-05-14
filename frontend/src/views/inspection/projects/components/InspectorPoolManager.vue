@@ -6,13 +6,14 @@
  * Supports adding new inspectors via a user selector dialog
  * and removing existing ones.
  */
+import type { LongId } from '@/types/common'
 import { ref, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Trash2, Search } from 'lucide-vue-next'
 import { InspectorRoleConfig } from '@/types/insp/enums'
 
 interface InspectorEntry {
-  userId: number
+  userId: LongId
   userName: string
   role: string
 }
@@ -29,9 +30,9 @@ const emit = defineEmits<{
 
 const dialogVisible = ref(false)
 const searchKeyword = ref('')
-const userSearchResults = ref<{ id: number; name: string }[]>([])
+const userSearchResults = ref<{ id: LongId; name: string }[]>([])
 const searchLoading = ref(false)
-const selectedUserId = ref<number | null>(null)
+const selectedUserId = ref<LongId | null>(null)
 const selectedUserName = ref('')
 const selectedRole = ref<string>('INSPECTOR')
 
@@ -81,7 +82,7 @@ async function searchUsers() {
   }
 }
 
-function selectUser(user: { id: number; name: string }) {
+function selectUser(user: { id: LongId; name: string }) {
   selectedUserId.value = user.id
   selectedUserName.value = user.name
 }

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, watch, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Check, Search } from '@element-plus/icons-vue'
@@ -8,7 +9,7 @@ import { InventoryStatus, InventoryResultType, InventoryResultTypeMap } from '@/
 
 const props = defineProps<{
   visible: boolean
-  inventoryId?: number
+  inventoryId?: LongId
 }>()
 
 const emit = defineEmits<{

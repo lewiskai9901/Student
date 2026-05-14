@@ -153,6 +153,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed } from 'vue'
 import { ArrowLeft, ArrowRight } from '@element-plus/icons-vue'
 import type { Semester, AcademicEvent } from '@/types/teaching'
@@ -160,7 +161,7 @@ import type { Semester, AcademicEvent } from '@/types/teaching'
 const props = defineProps<{
   events: AcademicEvent[]
   currentSemester: Semester | null
-  currentYearId: number | undefined
+  currentYearId: LongId | undefined
 }>()
 
 const emit = defineEmits<{
@@ -193,7 +194,7 @@ const formatDateStr = (date: Date) => {
 }
 
 const getShortEventName = (type: number) => {
-  const map: Record<number, string> = { 1: '开', 2: '假', 3: '考', 4: '活', 5: '他', 6: '补' }
+  const map: Record<LongId, string> = { 1: '开', 2: '假', 3: '考', 4: '活', 5: '他', 6: '补' }
   return map[type] || ''
 }
 
@@ -354,7 +355,7 @@ const getDayClasses = (day: typeof calendarDays.value[0]) => {
   if (day.isToday) { c.push('bg-blue-600 text-white'); return c }
   if (day.events.length) {
     const t = day.events[0].eventType
-    const map: Record<number, string> = { 1: 'bg-emerald-50 text-emerald-700', 2: 'bg-amber-50 text-amber-700', 3: 'bg-red-50 text-red-700', 4: 'bg-blue-50 text-blue-700', 5: 'bg-gray-100 text-gray-600', 6: 'bg-orange-50 text-orange-700' }
+    const map: Record<LongId, string> = { 1: 'bg-emerald-50 text-emerald-700', 2: 'bg-amber-50 text-amber-700', 3: 'bg-red-50 text-red-700', 4: 'bg-blue-50 text-blue-700', 5: 'bg-gray-100 text-gray-600', 6: 'bg-orange-50 text-orange-700' }
     c.push(map[t] || 'bg-gray-50')
     return c
   }
@@ -369,7 +370,7 @@ const getOverviewDayClasses = (day: { date: Date | null; isToday: boolean; event
   if (day.isToday) return 'bg-blue-600 text-white'
   if (day.events.length) {
     const t = day.events[0].eventType
-    const map: Record<number, string> = { 1: 'bg-emerald-50', 2: 'bg-amber-50', 3: 'bg-red-50', 4: 'bg-blue-50', 5: 'bg-gray-100', 6: 'bg-orange-50' }
+    const map: Record<LongId, string> = { 1: 'bg-emerald-50', 2: 'bg-amber-50', 3: 'bg-red-50', 4: 'bg-blue-50', 5: 'bg-gray-100', 6: 'bg-orange-50' }
     return `cursor-pointer ${map[t] || ''}`
   }
   return 'cursor-pointer hover:bg-blue-50/50'
@@ -454,17 +455,17 @@ const getEventDay = (dateStr: string) => new Date(dateStr).getDate()
 const getEventMonth = (dateStr: string) => (new Date(dateStr).getMonth() + 1) + '月'
 
 const getEventDateBg = (type: number) => {
-  const map: Record<number, string> = { 1: 'bg-emerald-500', 2: 'bg-amber-500', 3: 'bg-red-500', 4: 'bg-blue-500', 5: 'bg-gray-400', 6: 'bg-orange-500' }
+  const map: Record<LongId, string> = { 1: 'bg-emerald-500', 2: 'bg-amber-500', 3: 'bg-red-500', 4: 'bg-blue-500', 5: 'bg-gray-400', 6: 'bg-orange-500' }
   return map[type] || 'bg-gray-400'
 }
 
 const getEventTagType = (type: number) => {
-  const map: Record<number, '' | 'success' | 'warning' | 'danger' | 'info'> = { 1: 'success', 2: 'warning', 3: 'danger', 4: '', 5: 'info', 6: 'warning' }
+  const map: Record<LongId, '' | 'success' | 'warning' | 'danger' | 'info'> = { 1: 'success', 2: 'warning', 3: 'danger', 4: '', 5: 'info', 6: 'warning' }
   return map[type] || 'info'
 }
 
 const getEventTypeName = (type: number) => {
-  const map: Record<number, string> = { 1: '开学', 2: '放假', 3: '考试', 4: '活动', 5: '其他', 6: '补课' }
+  const map: Record<LongId, string> = { 1: '开学', 2: '放假', 3: '考试', 4: '活动', 5: '其他', 6: '补课' }
   return map[type] || '其他'
 }
 

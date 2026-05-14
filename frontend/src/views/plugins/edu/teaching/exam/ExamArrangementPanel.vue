@@ -136,6 +136,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, watch, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { examApi } from '@/api/teaching'
@@ -157,7 +158,7 @@ const emit = defineEmits<{
 const saving = ref(false)
 const arrangements = ref<ExamArrangement[]>([])
 const courseOptions = ref<Course[]>([])
-const classOptions = ref<{ id: number | string; name: string }[]>([])
+const classOptions = ref<{ id: LongId | string; name: string }[]>([])
 
 const arrangementDialogVisible = ref(false)
 const arrangementForm = ref<Partial<ExamArrangement>>({})

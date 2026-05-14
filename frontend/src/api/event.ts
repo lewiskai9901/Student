@@ -1,3 +1,4 @@
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 import type {
   TriggerPoint,
@@ -18,7 +19,7 @@ export const triggerPointApi = {
   },
 
   /** 获取触发点详情 */
-  getById(id: number) {
+  getById(id: LongId) {
     return http.get<TriggerPoint>(`/event/trigger-points/${id}`)
   },
 
@@ -28,22 +29,22 @@ export const triggerPointApi = {
   },
 
   /** 更新触发点 */
-  update(id: number, data: Partial<TriggerPoint>) {
+  update(id: LongId, data: Partial<TriggerPoint>) {
     return http.put(`/event/trigger-points/${id}`, data)
   },
 
   /** 删除触发点 */
-  delete(id: number) {
+  delete(id: LongId) {
     return http.delete(`/event/trigger-points/${id}`)
   },
 
   /** 启用触发点 */
-  enable(id: number) {
+  enable(id: LongId) {
     return http.put(`/event/trigger-points/${id}/enable`)
   },
 
   /** 禁用触发点 */
-  disable(id: number) {
+  disable(id: LongId) {
     return http.put(`/event/trigger-points/${id}/disable`)
   },
 }
@@ -57,7 +58,7 @@ export const eventTriggerApi = {
   },
 
   /** 获取触发器详情 */
-  getById(id: number) {
+  getById(id: LongId) {
     return http.get<EventTrigger>(`/event/triggers/${id}`)
   },
 
@@ -67,22 +68,22 @@ export const eventTriggerApi = {
   },
 
   /** 更新触发器 */
-  update(id: number, data: Partial<EventTrigger>) {
+  update(id: LongId, data: Partial<EventTrigger>) {
     return http.put(`/event/triggers/${id}`, data)
   },
 
   /** 删除触发器 */
-  delete(id: number) {
+  delete(id: LongId) {
     return http.delete(`/event/triggers/${id}`)
   },
 
   /** 启用触发器 */
-  enable(id: number) {
+  enable(id: LongId) {
     return http.put(`/event/triggers/${id}/enable`)
   },
 
   /** 禁用触发器 */
-  disable(id: number) {
+  disable(id: LongId) {
     return http.put(`/event/triggers/${id}/disable`)
   },
 
@@ -116,12 +117,12 @@ export const eventTypeApi = {
   },
 
   /** 更新事件类型 */
-  update(id: number, data: Partial<EventType>) {
+  update(id: LongId, data: Partial<EventType>) {
     return http.put<EventType>(`/entity-event-types/${id}`, data)
   },
 
   /** 删除事件类型 */
-  delete(id: number) {
+  delete(id: LongId) {
     return http.delete(`/entity-event-types/${id}`)
   },
 }
@@ -130,21 +131,21 @@ export const eventTypeApi = {
 
 export const entityEventApi = {
   /** 按主体查询事件时间线 */
-  bySubject(type: string, id: number, limit = 50) {
+  bySubject(type: string, id: LongId, limit = 50) {
     return http.get<EntityEvent[]>(`/entity-events/subject/${type}/${id}`, {
       params: { limit },
     })
   },
 
   /** 按关联主体查询事件时间线 */
-  byRelated(type: string, id: number, limit = 50) {
+  byRelated(type: string, id: LongId, limit = 50) {
     return http.get<EntityEvent[]>(`/entity-events/related/${type}/${id}`, {
       params: { limit },
     })
   },
 
   /** 获取主体事件统计 */
-  statistics(type: string, id: number) {
+  statistics(type: string, id: LongId) {
     return http.get<EventStatItem[]>(`/entity-events/stats/${type}/${id}`)
   },
 }

@@ -7,6 +7,7 @@
  * 3. 网络状态检测（在线/离线）
  * 4. 冲突检测与解决
  */
+import type { LongId } from '@/types/common'
 import { ref, readonly, onMounted, onUnmounted } from 'vue'
 import { inspSyncApi } from '@/api/inspection/sync'
 import type { SyncPushItem, SyncPushResult } from '@/api/inspection/sync'
@@ -18,14 +19,14 @@ const DB_NAME = 'insp_offline_db'
 const DB_VERSION = 1
 
 interface OfflineDraft {
-  submissionId: number
+  submissionId: LongId
   formData: string
   clientSyncVersion: number
   savedAt: number // timestamp
 }
 
 interface SyncConflict {
-  submissionId: number
+  submissionId: LongId
   localFormData: string
   localSyncVersion: number
   serverFormData: string
@@ -111,7 +112,7 @@ async function dbClearStore(storeName: string): Promise<void> {
 
 // ==================== Composable ====================
 
-export function useOfflineSync(taskId: number) {
+export function useOfflineSync(taskId: LongId) {
   const isOnline = ref(navigator.onLine)
   const pendingCount = ref(0)
   const conflicts = ref<SyncConflict[]>([])
@@ -164,7 +165,7 @@ export function useOfflineSync(taskId: number) {
   // ========== Offline Draft Operations ==========
 
   /** Save form data locally (offline-first) */
-  async function saveDraft(submissionId: number, formData: string, syncVersion: number) {
+  async function saveDraft(submissionId: LongId, formData: string, syncVersion: number) {
     const draft: OfflineDraft = {
       submissionId,
       formData,
@@ -176,12 +177,12 @@ export function useOfflineSync(taskId: number) {
   }
 
   /** Get a draft from local storage */
-  async function getDraft(submissionId: number): Promise<OfflineDraft | undefined> {
+  async function getDraft(submissionId: LongId): Promise<OfflineDraft | undefined> {
     return dbGet<OfflineDraft>('drafts', submissionId)
   }
 
   /** Remove a draft after successful sync */
-  async function removeDraft(submissionId: number) {
+  async function removeDraft(submissionId: LongId) {
     await dbDelete('drafts', submissionId)
     await loadPendingCount()
   }
@@ -280,7 +281,7 @@ export function useOfflineSync(taskId: number) {
   // ========== Conflict Resolution ==========
 
   /** Resolve a conflict by keeping local version */
-  async function resolveKeepLocal(submissionId: number) {
+  async function resolveKeepLocal(submissionId: LongId) {
     const conflict = await dbGet<SyncConflict>('conflicts', submissionId)
     if (!conflict) return
 
@@ -291,7 +292,7 @@ export function useOfflineSync(taskId: number) {
   }
 
   /** Resolve a conflict by keeping server version */
-  async function resolveKeepServer(submissionId: number) {
+  async function resolveKeepServer(submissionId: LongId) {
     await removeDraft(submissionId)
     await dbDelete('conflicts', submissionId)
     await loadConflicts()

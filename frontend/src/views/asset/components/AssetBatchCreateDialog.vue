@@ -2,6 +2,7 @@
 /**
  * 批量入库对话框 - 一次性入库多件相同规格的资产
  */
+import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { User, Close, Box, Coin, DocumentAdd, Check } from '@element-plus/icons-vue'
@@ -82,7 +83,7 @@ const totalValue = computed(() => {
 
 // 展开分类选项
 const flatCategories = computed(() => {
-  const result: { id: number | string; label: string; level: number; code: string }[] = []
+  const result: { id: LongId | string; label: string; level: number; code: string }[] = []
 
   const flatten = (items: AssetCategory[], level = 0) => {
     items.forEach(item => {

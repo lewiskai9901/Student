@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -21,7 +22,7 @@ const formRef = ref<FormInstance>()
 const loading = ref(false)
 const categoryList = ref<AssetCategory[]>([])
 
-const formData = reactive<CreateInventoryRequest & { scopeType: string; categoryId?: number }>({
+const formData = reactive<CreateInventoryRequest & { scopeType: string; categoryId?: LongId }>({
   inventoryName: '',
   scopeType: InventoryScopeType.ALL,
   scopeValue: '',

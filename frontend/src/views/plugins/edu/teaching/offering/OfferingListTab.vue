@@ -215,6 +215,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, watch, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { offeringApi } from '@/api/teaching'
@@ -225,7 +226,7 @@ import type { SchoolClass } from '@/types/organization'
 import { EduOrgTypes } from '@/types/plugins/education-types'
 
 const props = defineProps<{
-  semesterId: number | string | null
+  semesterId: LongId | string | null
   selectedOrg?: any
 }>()
 const emit = defineEmits<{ allConfirmed: [] }>()
@@ -296,13 +297,13 @@ const offeringTotalWeeklyHours = computed(() => filteredOfferings.value.reduce((
 
 function getCourseTypeName(type: number | undefined) {
   if (type == null) return '其他'
-  const map: Record<number, string> = { 1: '必修', 2: '选修', 3: '通识' }
+  const map: Record<LongId, string> = { 1: '必修', 2: '选修', 3: '通识' }
   return map[type] || '其他'
 }
 
 function getCourseTypeChip(type: number | undefined) {
   if (type == null) return 'tm-chip-gray'
-  const map: Record<number, string> = { 1: 'tm-chip-red', 2: 'tm-chip-blue', 3: 'tm-chip-gray' }
+  const map: Record<LongId, string> = { 1: 'tm-chip-red', 2: 'tm-chip-blue', 3: 'tm-chip-gray' }
   return map[type] || 'tm-chip-gray'
 }
 
@@ -357,7 +358,7 @@ async function loadOfferings() {
 
 function onOfferingCourseChange(event: Event) {
   const courseId = Number((event.target as HTMLSelectElement).value)
-  const course = allCourses.value.find(c => Number(c.id) === courseId)
+  const course = allCourses.value.find(c => c.id === courseId)
   if (course) {
     offeringForm.value.courseType = course.courseType
   }

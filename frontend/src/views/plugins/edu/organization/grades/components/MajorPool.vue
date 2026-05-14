@@ -115,6 +115,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed } from 'vue'
 import {
   Package,
@@ -126,7 +127,7 @@ import {
 } from 'lucide-vue-next'
 
 interface Major {
-  id: number | string
+  id: LongId | string
   majorName: string
   directions?: any[]
 }

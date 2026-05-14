@@ -68,11 +68,12 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { periodConfigApi } from '@/api/teaching'
 
-const props = defineProps<{ semesterId: number | string | undefined }>()
+const props = defineProps<{ semesterId: LongId | string | undefined }>()
 
 const allDays = [{ value: 1, label: '周一' },{ value: 2, label: '周二' },{ value: 3, label: '周三' },{ value: 4, label: '周四' },{ value: 5, label: '周五' },{ value: 6, label: '周六' },{ value: 7, label: '周日' }]
 

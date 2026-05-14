@@ -6,12 +6,13 @@
  * Each section is collapsible, and each item within is rendered by
  * the FormItemRenderer component.
  */
+import type { LongId } from '@/types/common'
 import { ref } from 'vue'
 import { ChevronDown, ChevronRight } from 'lucide-vue-next'
 import FormItemRenderer from './FormItemRenderer.vue'
 
 interface SectionDef {
-  id: number
+  id: LongId
   sectionName: string
   sectionCode?: string
   weight?: number
@@ -19,7 +20,7 @@ interface SectionDef {
 }
 
 interface ItemDef {
-  id: number
+  id: LongId
   itemCode: string
   itemName: string
   itemType: string
@@ -30,7 +31,7 @@ interface ItemDef {
   scoringConfig?: string | null
   validationRules?: string | null
   config?: string | null
-  responseSetId?: number | null
+  responseSetId?: LongId | null
 }
 
 const props = withDefaults(defineProps<{
@@ -47,9 +48,9 @@ const emit = defineEmits<{
 
 // ---------- Collapsed State ----------
 
-const collapsedSections = ref<Set<number>>(new Set())
+const collapsedSections = ref<Set<LongId>>(new Set())
 
-function toggleSection(sectionId: number) {
+function toggleSection(sectionId: LongId) {
   if (collapsedSections.value.has(sectionId)) {
     collapsedSections.value.delete(sectionId)
   } else {
@@ -59,7 +60,7 @@ function toggleSection(sectionId: number) {
   collapsedSections.value = new Set(collapsedSections.value)
 }
 
-function isSectionCollapsed(sectionId: number): boolean {
+function isSectionCollapsed(sectionId: LongId): boolean {
   return collapsedSections.value.has(sectionId)
 }
 

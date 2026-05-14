@@ -3,6 +3,7 @@
  *
  * 用于部门管理员管理本部门宿舍分配给班级的功能（Level 2）
  */
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 import type { Dormitory } from '@/types/dormitory'
 
@@ -15,13 +16,13 @@ const BASE_URL = '/department-dormitory'
  * 班级-宿舍绑定信息
  */
 export interface ClassDormitoryBinding {
-  id: number
-  orgUnitId: number
+  id: LongId
+  orgUnitId: LongId
   className: string
   classCode: string
-  dormitoryId: number
+  dormitoryId: LongId
   dormitoryNo: string
-  buildingId: number
+  buildingId: LongId
   buildingName: string
   bedCapacity: number
   occupiedBeds: number
@@ -34,14 +35,14 @@ export interface ClassDormitoryBinding {
  * 班级简要信息
  */
 export interface ClassInfo {
-  id: number
+  id: LongId
   className: string
   classCode: string
   gradeLevel: number
   studentCount: number
-  orgUnitId: number
+  orgUnitId: LongId
   orgUnitName?: string
-  teacherId?: number
+  teacherId?: LongId
   teacherName?: string
   status: number
 }
@@ -50,8 +51,8 @@ export interface ClassInfo {
  * 分配宿舍请求
  */
 export interface AssignDormitoryRequest {
-  dormitoryId: number
-  orgUnitId: number
+  dormitoryId: LongId
+  orgUnitId: LongId
   allocatedBeds?: number
 }
 
@@ -59,7 +60,7 @@ export interface AssignDormitoryRequest {
  * 批量分配请求
  */
 export interface BatchAssignRequest {
-  orgUnitId: number
+  orgUnitId: LongId
   dormitoryIds: number[]
 }
 
@@ -100,7 +101,7 @@ export function getBindings(): Promise<ClassDormitoryBinding[]> {
 /**
  * 按班级获取绑定关系
  */
-export function getBindingsByClass(orgUnitId: number | string): Promise<ClassDormitoryBinding[]> {
+export function getBindingsByClass(orgUnitId: LongId | string): Promise<ClassDormitoryBinding[]> {
   return http.get<ClassDormitoryBinding[]>(`${BASE_URL}/bindings/by-class/${orgUnitId}`)
 }
 
@@ -121,7 +122,7 @@ export function batchAssignDormitoriesToClass(data: BatchAssignRequest): Promise
 /**
  * 取消宿舍-班级绑定
  */
-export function unassignDormitoryFromClass(dormitoryId: number | string, orgUnitId: number | string): Promise<void> {
+export function unassignDormitoryFromClass(dormitoryId: LongId | string, orgUnitId: LongId | string): Promise<void> {
   return http.delete(`${BASE_URL}/unassign`, { params: { dormitoryId, orgUnitId } })
 }
 

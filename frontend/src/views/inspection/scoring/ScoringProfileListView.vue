@@ -5,6 +5,7 @@
  * 评分方案是跨模板复用的强独立资源 (一套规则可被 N 个模板挂),
  * 之前只能从模板编辑器进, 没有列表页. 这里补上一等公民入口.
  */
+import type { LongId } from '@/types/common'
 import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -48,7 +49,7 @@ function goEdit(profile: ScoringProfile) {
   router.push(`/inspection/scoring/${profile.id}`)
 }
 
-function goSection(sectionId: number) {
+function goSection(sectionId: LongId) {
   router.push(`/inspection/templates/${sectionId}/edit`)
 }
 

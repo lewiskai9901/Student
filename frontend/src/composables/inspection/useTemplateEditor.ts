@@ -4,6 +4,7 @@
  * 管理 section/item CRUD、自动保存、undo/redo
  * "模板" = 根 TemplateSection（parentSectionId=null）
  */
+import type { LongId } from '@/types/common'
 import { ref, computed, watch, type Ref } from 'vue'
 import type { TemplateSection, TemplateItem } from '@/types/insp/template'
 import type { ItemType, ScoringMode } from '@/types/insp/enums'
@@ -92,7 +93,7 @@ export function useTemplateEditor(rootSectionId: Ref<number>) {
 
   // ==================== Section CRUD ====================
 
-  async function addSection(parentSectionId?: number | null, sectionName?: string): Promise<TemplateSection> {
+  async function addSection(parentSectionId?: LongId | null, sectionName?: string): Promise<TemplateSection> {
     const code = `S${Date.now().toString(36).toUpperCase()}`
     const section = await createSection({
       rootSectionId: rootSectionId.value,
@@ -109,13 +110,13 @@ export function useTemplateEditor(rootSectionId: Ref<number>) {
     return section
   }
 
-  async function updateScoringConfigFn(sectionId: number, config: string): Promise<void> {
+  async function updateScoringConfigFn(sectionId: LongId, config: string): Promise<void> {
     await updateSectionScoringConfig(sectionId, config)
     const idx = sections.value.findIndex(s => s.id === sectionId)
     if (idx >= 0) sections.value[idx].scoringConfig = config
   }
 
-  async function editSection(sectionId: number, data: Partial<TemplateSection>) {
+  async function editSection(sectionId: LongId, data: Partial<TemplateSection>) {
     const section = await updateSection(sectionId, {
       sectionName: data.sectionName,
       targetType: data.targetType ?? undefined,
@@ -130,7 +131,7 @@ export function useTemplateEditor(rootSectionId: Ref<number>) {
     isDirty.value = true
   }
 
-  async function removeSection(sectionId: number) {
+  async function removeSection(sectionId: LongId) {
     await deleteSection(sectionId)
     sections.value = sections.value.filter(s => s.id !== sectionId)
     itemsBySection.value.delete(String(sectionId))
@@ -151,7 +152,7 @@ export function useTemplateEditor(rootSectionId: Ref<number>) {
 
   // ==================== Item CRUD ====================
 
-  async function addItem(sectionId: number, itemType: ItemType | null, isScored: boolean, scoringMode?: ScoringMode, itemName?: string) {
+  async function addItem(sectionId: LongId, itemType: ItemType | null, isScored: boolean, scoringMode?: ScoringMode, itemName?: string) {
     const code = `I${Date.now().toString(36).toUpperCase()}`
     const currentItems = itemsBySection.value.get(String(sectionId)) || []
 
@@ -176,9 +177,9 @@ export function useTemplateEditor(rootSectionId: Ref<number>) {
     return item
   }
 
-  async function editItem(itemId: number, data: Partial<TemplateItem>) {
+  async function editItem(itemId: LongId, data: Partial<TemplateItem>) {
     // Preserve existing dimensionId if not explicitly provided
-    let currentDimensionId: number | null | undefined = undefined
+    let currentDimensionId: LongId | null | undefined = undefined
     if (data.dimensionId === undefined) {
       for (const [, items] of itemsBySection.value) {
         const found = items.find(i => i.id === itemId)
@@ -216,7 +217,7 @@ export function useTemplateEditor(rootSectionId: Ref<number>) {
     isDirty.value = true
   }
 
-  async function removeItem(itemId: number) {
+  async function removeItem(itemId: LongId) {
     await deleteItem(itemId)
     for (const [secId, items] of itemsBySection.value) {
       const filtered = items.filter(i => i.id !== itemId)
@@ -228,7 +229,7 @@ export function useTemplateEditor(rootSectionId: Ref<number>) {
     isDirty.value = true
   }
 
-  async function sortItems(sectionId: number, itemIds: number[]) {
+  async function sortItems(sectionId: LongId, itemIds: number[]) {
     await reorderItems(sectionId, itemIds)
     const items = itemsBySection.value.get(String(sectionId)) || []
     const ordered: TemplateItem[] = []

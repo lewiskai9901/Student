@@ -382,6 +382,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted } from 'vue'
 import { Plus, Settings, Edit3, Trash2 } from 'lucide-vue-next'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
@@ -437,7 +438,7 @@ const form = ref({
 // Dynamic params
 const paramDays = ref<number[]>([])
 const paramPeriods = ref<number[]>([])
-const paramFixedDay = ref<number | undefined>()
+const paramFixedDay = ref<LongId | undefined>()
 const paramMaxPeriods = ref(4)
 const paramMinGapDays = ref(1)
 const paramMaxDays = ref(5)

@@ -158,6 +158,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { gradeApi } from '@/api/teaching'
@@ -175,12 +176,12 @@ const emit = defineEmits<{
 
 // Chip class helpers
 function gradeTypeChipClass(type: number) {
-  const map: Record<number, string> = { 1: 'tm-chip-gray', 2: 'tm-chip-amber', 3: 'tm-chip-blue', 4: 'tm-chip-green' }
+  const map: Record<LongId, string> = { 1: 'tm-chip-gray', 2: 'tm-chip-amber', 3: 'tm-chip-blue', 4: 'tm-chip-green' }
   return map[type] || 'tm-chip-gray'
 }
 
 function statusChipClass(status: number) {
-  const map: Record<number, string> = { 0: 'tm-chip-gray', 1: 'tm-chip-amber', 2: 'tm-chip-blue', 3: 'tm-chip-green' }
+  const map: Record<LongId, string> = { 0: 'tm-chip-gray', 1: 'tm-chip-amber', 2: 'tm-chip-blue', 3: 'tm-chip-green' }
   return map[status] || 'tm-chip-gray'
 }
 
@@ -191,7 +192,7 @@ const exporting = ref(false)
 const batches = ref<GradeBatch[]>([])
 const semesters = ref<Semester[]>([])
 const courseOptions = ref<Course[]>([])
-const classOptions = ref<{ id: number | string; name: string }[]>([])
+const classOptions = ref<{ id: LongId | string; name: string }[]>([])
 const total = ref(0)
 
 const statusCounts = computed(() => {

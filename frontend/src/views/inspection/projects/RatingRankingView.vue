@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -8,7 +9,7 @@ import type { RatingDimension, RatingResult } from '@/types/insp/template'
 
 const route = useRoute()
 const router = useRouter()
-const dimensionId = Number(route.params.id)
+const dimensionId = route.params.id as string
 
 // ========== State ==========
 const loading = ref(false)

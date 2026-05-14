@@ -1,6 +1,7 @@
 /**
  * 统一访问关系 API
  */
+import type { LongId } from '@/types/common'
 import { http as request } from '@/utils/request'
 import type {
   AccessRelation,
@@ -14,14 +15,14 @@ export const accessRelationApi = {
   /**
    * 按资源查询关系
    */
-  getByResource(resourceType: string, resourceId: number | string): Promise<AccessRelation[]> {
+  getByResource(resourceType: string, resourceId: LongId | string): Promise<AccessRelation[]> {
     return request.get(BASE_URL, { params: { resourceType, resourceId } })
   },
 
   /**
    * 按主体查询关系
    */
-  getBySubject(subjectType: string, subjectId: number | string, resourceType?: string): Promise<AccessRelation[]> {
+  getBySubject(subjectType: string, subjectId: LongId | string, resourceType?: string): Promise<AccessRelation[]> {
     return request.get(BASE_URL, { params: { subjectType, subjectId, resourceType } })
   },
 
@@ -30,10 +31,10 @@ export const accessRelationApi = {
    */
   check(params: {
     resourceType: string
-    resourceId: number | string
+    resourceId: LongId | string
     relation: string
     subjectType: string
-    subjectId: number | string
+    subjectId: LongId | string
   }): Promise<{ exists: boolean }> {
     return request.get(`${BASE_URL}/check`, { params })
   },
@@ -48,14 +49,14 @@ export const accessRelationApi = {
   /**
    * 更新关系
    */
-  update(id: number | string, data: UpdateAccessRelationRequest): Promise<void> {
+  update(id: LongId | string, data: UpdateAccessRelationRequest): Promise<void> {
     return request.put(`${BASE_URL}/${id}`, data)
   },
 
   /**
    * 删除关系
    */
-  delete(id: number | string): Promise<void> {
+  delete(id: LongId | string): Promise<void> {
     return request.delete(`${BASE_URL}/${id}`)
   },
 

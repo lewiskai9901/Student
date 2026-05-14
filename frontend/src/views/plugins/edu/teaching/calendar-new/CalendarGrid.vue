@@ -128,14 +128,15 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { semesterApi, academicEventApi } from '@/api/calendar'
 import type { CalendarGrid, CalendarDay, CalendarWeek } from '@/types/teaching'
 
 const props = defineProps<{
-  semesterId: number | string | undefined
-  yearId?: number | string
+  semesterId: LongId | string | undefined
+  yearId?: LongId | string
 }>()
 const emit = defineEmits<{ loaded: [grid: CalendarGrid] }>()
 
@@ -274,7 +275,7 @@ async function saveEvent() {
   const sorted = popover.dates.sort()
   // Map internal affectType values to backend eventType and real affectType
   const isInfo = popover.affectType >= 10
-  const eventTypeMap: Record<number, number> = { 1: 2, 3: 5, 4: 3, 10: 4, 11: 5 }
+  const eventTypeMap: Record<LongId, number> = { 1: 2, 3: 5, 4: 3, 10: 4, 11: 5 }
   const realAffectType = isInfo ? 0 : popover.affectType
 
   try {
@@ -330,7 +331,7 @@ function formatDateCN(dateStr: string) {
 }
 
 function weekdayName(wd: number) {
-  return ({ 1: '周一', 2: '周二', 3: '周三', 4: '周四', 5: '周五' } as Record<number, string>)[wd] || ''
+  return ({ 1: '周一', 2: '周二', 3: '周三', 4: '周四', 5: '周五' } as Record<LongId, string>)[wd] || ''
 }
 
 function getDayTypeName(t?: string) {

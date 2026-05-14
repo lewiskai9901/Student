@@ -71,12 +71,13 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Building2, Home, AlertCircle } from 'lucide-vue-next'
 import { getClass } from '@/api/organization'
 
-interface Props { orgUnitId: number | null }
+interface Props { orgUnitId: LongId | null }
 const props = defineProps<Props>()
 const emit = defineEmits<{ close: [] }>()
 

@@ -235,6 +235,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { getCurrentUser, updateProfile, changePassword } from '@/api/auth'
@@ -402,7 +403,7 @@ interface MyRoleInfo {
   roleName: string
   roleCode: string
   scopeType: string
-  scopeId: number | string
+  scopeId: LongId | string
   scopeName?: string
   expiresAt?: string
   isExpired: boolean

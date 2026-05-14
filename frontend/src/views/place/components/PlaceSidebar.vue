@@ -53,6 +53,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed } from 'vue'
 import { Search, Plus, MapPin } from 'lucide-vue-next'
 import PlaceSidebarNode from './PlaceSidebarNode.vue'
@@ -60,7 +61,7 @@ import type { PlaceTreeNode } from '@/types/universalPlace'
 
 interface Props {
   treeData: PlaceTreeNode[]
-  selectedId: number | string | null
+  selectedId: LongId | string | null
 }
 
 const props = defineProps<Props>()

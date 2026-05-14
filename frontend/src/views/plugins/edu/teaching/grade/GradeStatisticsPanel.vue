@@ -116,14 +116,15 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { gradeApi } from '@/api/teaching'
 import type { GradeStatistics } from '@/types/teaching'
 
 const props = defineProps<{
-  semesterId?: number | string | null
-  batchId?: number | string | null
+  semesterId?: LongId | string | null
+  batchId?: LongId | string | null
 }>()
 
 const tabs = [
@@ -138,7 +139,7 @@ const loading = ref(false)
 const rankingLoading = ref(false)
 const exporting = ref(false)
 const statistics = ref<GradeStatistics>()
-const ranking = ref<{ studentId: number | string; studentName: string; totalScore: number; rank: number }[]>([])
+const ranking = ref<{ studentId: LongId | string; studentName: string; totalScore: number; rank: number }[]>([])
 
 watch(() => [props.semesterId, props.batchId], () => {
   if (props.semesterId || props.batchId) loadStatistics()

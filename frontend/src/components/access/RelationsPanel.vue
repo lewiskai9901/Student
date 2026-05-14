@@ -149,6 +149,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, watch } from 'vue'
 import { Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -160,7 +161,7 @@ const props = withDefaults(defineProps<{
   /** 当前主体/资源类型: user / org_unit / place */
   entityType: string
   /** 当前主体/资源 ID */
-  entityId: number | string
+  entityId: LongId | string
   /** 只显示,不允许操作 */
   readonly?: boolean
   /** 标题 */

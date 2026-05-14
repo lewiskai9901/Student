@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, watch, computed, reactive, nextTick, onMounted, onUnmounted } from 'vue'
 import {
   Save, Plus, Trash2,
@@ -481,7 +482,7 @@ function serializeValidationRules(): string {
       if (r.min != null) obj.min = r.min
       if (r.max != null) obj.max = r.max
     } else if (['minLength', 'maxLength', 'minPhotos', 'maxPhotos'].includes(r.type)) {
-      obj.value = Number(r.value) || 0
+      obj.value = r.value || 0
     } else if (r.type === 'pattern') {
       obj.value = r.value || ''
     }

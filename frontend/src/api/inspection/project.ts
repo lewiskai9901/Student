@@ -1,6 +1,7 @@
 /**
  * V62 检查平台 - 项目 & 计划 & 评级维度 & 违纪记录 API
  */
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 import type {
   InspProject,
@@ -44,7 +45,7 @@ export function getProjectsWithStats(params?: { status?: ProjectStatus }): Promi
   return http.get<ProjectStatsSummary[]>(`${BASE}/with-stats`, { params })
 }
 
-export function getProject(id: number): Promise<InspProject> {
+export function getProject(id: LongId): Promise<InspProject> {
   return http.get<InspProject>(`${BASE}/${id}`)
 }
 
@@ -52,63 +53,63 @@ export function createProject(data: CreateProjectRequest): Promise<InspProject> 
   return http.post<InspProject>(BASE, data)
 }
 
-export function updateProject(id: number, data: UpdateProjectRequest): Promise<InspProject> {
+export function updateProject(id: LongId, data: UpdateProjectRequest): Promise<InspProject> {
   return http.put<InspProject>(`${BASE}/${id}`, data)
 }
 
-export function deleteProject(id: number): Promise<void> {
+export function deleteProject(id: LongId): Promise<void> {
   return http.delete(`${BASE}/${id}`)
 }
 
 // ==================== 项目生命周期 ====================
 
-export function publishProject(id: number, data: PublishProjectRequest): Promise<InspProject> {
+export function publishProject(id: LongId, data: PublishProjectRequest): Promise<InspProject> {
   return http.post<InspProject>(`${BASE}/${id}/publish`, data)
 }
 
 /** review #1: 升级项目模板版本至模板的最新已发布版本 */
-export function upgradeTemplateVersion(id: number): Promise<InspProject> {
+export function upgradeTemplateVersion(id: LongId): Promise<InspProject> {
   return http.post<InspProject>(`${BASE}/${id}/upgrade-template-version`)
 }
 
 /** review #12: 查询模板版本对比状态 */
 export interface TemplateVersionStatus {
   drifted: boolean
-  currentVersionId: number | null
+  currentVersionId: LongId | null
   currentVersionNumber?: number
-  latestVersionId?: number
+  latestVersionId?: LongId
   latestVersionNumber?: number
-  templateId?: number
-  rootSectionId?: number | null
+  templateId?: LongId
+  rootSectionId?: LongId | null
   multiTemplate?: boolean
 }
-export function getTemplateVersionStatus(id: number): Promise<TemplateVersionStatus> {
+export function getTemplateVersionStatus(id: LongId): Promise<TemplateVersionStatus> {
   return http.get<TemplateVersionStatus>(`${BASE}/${id}/template-version-status`)
 }
 
-export function pauseProject(id: number): Promise<InspProject> {
+export function pauseProject(id: LongId): Promise<InspProject> {
   return http.post<InspProject>(`${BASE}/${id}/pause`)
 }
 
-export function resumeProject(id: number): Promise<InspProject> {
+export function resumeProject(id: LongId): Promise<InspProject> {
   return http.post<InspProject>(`${BASE}/${id}/resume`)
 }
 
-export function completeProject(id: number): Promise<InspProject> {
+export function completeProject(id: LongId): Promise<InspProject> {
   return http.post<InspProject>(`${BASE}/${id}/complete`)
 }
 
-export function archiveProject(id: number): Promise<InspProject> {
+export function archiveProject(id: LongId): Promise<InspProject> {
   return http.post<InspProject>(`${BASE}/${id}/archive`)
 }
 
 // ==================== 项目分数 ====================
 
-export function getProjectScores(projectId: number): Promise<ProjectScore[]> {
+export function getProjectScores(projectId: LongId): Promise<ProjectScore[]> {
   return http.get<ProjectScore[]>(`${BASE}/${projectId}/scores`)
 }
 
-export function getScoreTree(projectId: number): Promise<any> {
+export function getScoreTree(projectId: LongId): Promise<any> {
   return http.get(`${BASE}/${projectId}/score-tree`)
 }
 
@@ -122,21 +123,21 @@ export function previewTargetCount(data: {
 
 // ==================== 检查员池 ====================
 
-export function getInspectors(projectId: number): Promise<ProjectInspector[]> {
+export function getInspectors(projectId: LongId): Promise<ProjectInspector[]> {
   return http.get<ProjectInspector[]>(`${BASE}/${projectId}/inspectors`)
 }
 
-export function addInspector(projectId: number, data: AddInspectorRequest): Promise<ProjectInspector> {
+export function addInspector(projectId: LongId, data: AddInspectorRequest): Promise<ProjectInspector> {
   return http.post<ProjectInspector>(`${BASE}/${projectId}/inspectors`, data)
 }
 
-export function removeInspector(projectId: number, inspectorId: number): Promise<void> {
+export function removeInspector(projectId: LongId, inspectorId: LongId): Promise<void> {
   return http.delete(`${BASE}/${projectId}/inspectors/${inspectorId}`)
 }
 
 // ==================== 运营配置 ====================
 
-export function updateOperationalConfig(id: number, data: {
+export function updateOperationalConfig(id: LongId, data: {
   projectName?: string
   assignmentMode?: string
   reviewRequired?: boolean
@@ -153,31 +154,31 @@ export function createPlan(data: CreatePlanRequest): Promise<InspectionPlan> {
   return http.post<InspectionPlan>(PLAN_BASE, data)
 }
 
-export function listPlans(projectId: number): Promise<InspectionPlan[]> {
+export function listPlans(projectId: LongId): Promise<InspectionPlan[]> {
   return http.get<InspectionPlan[]>(PLAN_BASE, { params: { projectId } })
 }
 
-export function getPlan(planId: number): Promise<InspectionPlan> {
+export function getPlan(planId: LongId): Promise<InspectionPlan> {
   return http.get<InspectionPlan>(`${PLAN_BASE}/${planId}`)
 }
 
-export function updatePlan(planId: number, data: UpdatePlanRequest): Promise<InspectionPlan> {
+export function updatePlan(planId: LongId, data: UpdatePlanRequest): Promise<InspectionPlan> {
   return http.put<InspectionPlan>(`${PLAN_BASE}/${planId}`, data)
 }
 
-export function deletePlan(planId: number): Promise<void> {
+export function deletePlan(planId: LongId): Promise<void> {
   return http.delete(`${PLAN_BASE}/${planId}`)
 }
 
-export function enablePlan(planId: number): Promise<void> {
+export function enablePlan(planId: LongId): Promise<void> {
   return http.post(`${PLAN_BASE}/${planId}/enable`)
 }
 
-export function disablePlan(planId: number): Promise<void> {
+export function disablePlan(planId: LongId): Promise<void> {
   return http.post(`${PLAN_BASE}/${planId}/disable`)
 }
 
-export function triggerPlan(planId: number): Promise<void> {
+export function triggerPlan(planId: LongId): Promise<void> {
   return http.post(`${PLAN_BASE}/${planId}/trigger`)
 }
 
@@ -189,27 +190,27 @@ export function createDimension(data: Partial<RatingDimension>): Promise<RatingD
   return http.post<RatingDimension>(DIMENSION_BASE, data)
 }
 
-export function listDimensions(projectId: number): Promise<RatingDimension[]> {
+export function listDimensions(projectId: LongId): Promise<RatingDimension[]> {
   return http.get<RatingDimension[]>(DIMENSION_BASE, { params: { projectId } })
 }
 
-export function getDimension(dimensionId: number): Promise<RatingDimension> {
+export function getDimension(dimensionId: LongId): Promise<RatingDimension> {
   return http.get<RatingDimension>(`${DIMENSION_BASE}/${dimensionId}`)
 }
 
-export function updateDimension(dimensionId: number, data: Partial<RatingDimension>): Promise<RatingDimension> {
+export function updateDimension(dimensionId: LongId, data: Partial<RatingDimension>): Promise<RatingDimension> {
   return http.put<RatingDimension>(`${DIMENSION_BASE}/${dimensionId}`, data)
 }
 
-export function deleteDimension(dimensionId: number): Promise<void> {
+export function deleteDimension(dimensionId: LongId): Promise<void> {
   return http.delete(`${DIMENSION_BASE}/${dimensionId}`)
 }
 
-export function calculateRatings(dimensionId: number, params?: { cycleDate?: string }): Promise<RatingResult[]> {
+export function calculateRatings(dimensionId: LongId, params?: { cycleDate?: string }): Promise<RatingResult[]> {
   return http.post<RatingResult[]>(`${DIMENSION_BASE}/${dimensionId}/calculate`, null, { params })
 }
 
-export function getRankings(dimensionId: number, params?: { cycleDate?: string }): Promise<RatingResult[]> {
+export function getRankings(dimensionId: LongId, params?: { cycleDate?: string }): Promise<RatingResult[]> {
   return http.get<RatingResult[]>(`${DIMENSION_BASE}/${dimensionId}/rankings`, { params })
 }
 
@@ -221,23 +222,23 @@ export function createViolationRecord(data: Partial<ViolationRecord>): Promise<V
   return http.post<ViolationRecord>(VIOLATION_BASE, data)
 }
 
-export function listViolationsBySubmission(submissionId: number): Promise<ViolationRecord[]> {
+export function listViolationsBySubmission(submissionId: LongId): Promise<ViolationRecord[]> {
   return http.get<ViolationRecord[]>(VIOLATION_BASE, { params: { submissionId } })
 }
 
-export function listViolationsByUser(userId: number, params?: { startDate?: string; endDate?: string }): Promise<ViolationRecord[]> {
+export function listViolationsByUser(userId: LongId, params?: { startDate?: string; endDate?: string }): Promise<ViolationRecord[]> {
   return http.get<ViolationRecord[]>(VIOLATION_BASE, { params: { userId, ...params } })
 }
 
-export function getViolationRecord(recordId: number): Promise<ViolationRecord> {
+export function getViolationRecord(recordId: LongId): Promise<ViolationRecord> {
   return http.get<ViolationRecord>(`${VIOLATION_BASE}/${recordId}`)
 }
 
-export function updateViolationRecord(recordId: number, data: Partial<ViolationRecord>): Promise<ViolationRecord> {
+export function updateViolationRecord(recordId: LongId, data: Partial<ViolationRecord>): Promise<ViolationRecord> {
   return http.put<ViolationRecord>(`${VIOLATION_BASE}/${recordId}`, data)
 }
 
-export function deleteViolationRecord(recordId: number): Promise<void> {
+export function deleteViolationRecord(recordId: LongId): Promise<void> {
   return http.delete(`${VIOLATION_BASE}/${recordId}`)
 }
 

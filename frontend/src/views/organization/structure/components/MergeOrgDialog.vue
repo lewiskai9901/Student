@@ -78,6 +78,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Building2 } from 'lucide-vue-next'
@@ -96,7 +97,7 @@ const emit = defineEmits<{
   success: []
 }>()
 
-const targetId = ref<number | null>(null)
+const targetId = ref<LongId | null>(null)
 const reason = ref('')
 const submitting = ref(false)
 
@@ -110,7 +111,7 @@ const treeSelectProps = {
 const targetOptions = computed(() => {
   if (!props.allDepartments.length || !props.source) return []
 
-  const excludeIds = new Set<number>()
+  const excludeIds = new Set<LongId>()
   const collectIds = (node: DepartmentResponse) => {
     excludeIds.add(node.id)
     node.children?.forEach(collectIds)
@@ -157,7 +158,7 @@ const handleSubmit = async () => {
   }
 }
 
-const findNode = (nodes: DepartmentResponse[], id: number): DepartmentResponse | null => {
+const findNode = (nodes: DepartmentResponse[], id: LongId): DepartmentResponse | null => {
   for (const n of nodes) {
     if (n.id === id) return n
     if (n.children) {

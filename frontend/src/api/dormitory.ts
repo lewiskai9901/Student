@@ -3,6 +3,7 @@
  *
  * 注意: 响应拦截器已解包 ApiResponse，API 直接返回 data 内容
  */
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 import type {
   Dormitory,
@@ -38,7 +39,7 @@ export function getDormitories(params?: DormitoryQueryParams): Promise<PageRespo
 /**
  * 获取宿舍详情
  */
-export function getDormitory(id: number | string): Promise<Dormitory> {
+export function getDormitory(id: LongId | string): Promise<Dormitory> {
   return http.get<Dormitory>(`${DORMITORY_URL}/${id}`)
 }
 
@@ -52,14 +53,14 @@ export function createDormitory(data: CreateDormitoryRequest): Promise<number> {
 /**
  * 更新宿舍
  */
-export function updateDormitory(id: number | string, data: UpdateDormitoryRequest): Promise<void> {
+export function updateDormitory(id: LongId | string, data: UpdateDormitoryRequest): Promise<void> {
   return http.put(`${DORMITORY_URL}/${id}`, data)
 }
 
 /**
  * 删除宿舍
  */
-export function deleteDormitory(id: number | string, force = false): Promise<void> {
+export function deleteDormitory(id: LongId | string, force = false): Promise<void> {
   return http.delete(`${DORMITORY_URL}/${id}`, { params: { force } })
 }
 
@@ -82,7 +83,7 @@ export function batchCreateDormitories(data: BatchCreateDormitoryRequest): Promi
 /**
  * 根据楼宇ID获取宿舍列表
  */
-export function getDormitoriesByBuilding(buildingId: number | string): Promise<Dormitory[]> {
+export function getDormitoriesByBuilding(buildingId: LongId | string): Promise<Dormitory[]> {
   return http.get<Dormitory[]>(`${DORMITORY_URL}/by-building/${buildingId}`)
 }
 
@@ -96,7 +97,7 @@ export function getDormitoriesByGender(genderType: number): Promise<Dormitory[]>
 /**
  * 根据组织单元ID获取宿舍列表
  */
-export function getDormitoriesByOrgUnit(orgUnitId: number | string): Promise<Dormitory[]> {
+export function getDormitoriesByOrgUnit(orgUnitId: LongId | string): Promise<Dormitory[]> {
   return http.get<Dormitory[]>(`${DORMITORY_URL}/by-org-unit`, { params: { orgUnitId } })
 }
 
@@ -110,7 +111,7 @@ export function getAvailableDormitories(genderType?: number): Promise<Dormitory[
 /**
  * 根据宿管员ID获取宿舍列表
  */
-export function getDormitoriesBySupervisor(supervisorId: number | string): Promise<Dormitory[]> {
+export function getDormitoriesBySupervisor(supervisorId: LongId | string): Promise<Dormitory[]> {
   return http.get<Dormitory[]>(`${DORMITORY_URL}/by-supervisor/${supervisorId}`)
 }
 
@@ -124,7 +125,7 @@ export function getAllNormalDormitories(): Promise<Dormitory[]> {
 /**
  * 检查宿舍编号是否存在
  */
-export function existsDormitoryNo(buildingId: number | string, dormitoryNo: string, excludeId?: number | string): Promise<boolean> {
+export function existsDormitoryNo(buildingId: LongId | string, dormitoryNo: string, excludeId?: LongId | string): Promise<boolean> {
   return http.get<boolean>(`${DORMITORY_URL}/exists`, { params: { buildingId, dormitoryNo, excludeId } })
 }
 
@@ -133,14 +134,14 @@ export function existsDormitoryNo(buildingId: number | string, dormitoryNo: stri
 /**
  * 更新宿舍状态
  */
-export function updateDormitoryStatus(id: number | string, status: number): Promise<void> {
+export function updateDormitoryStatus(id: LongId | string, status: number): Promise<void> {
   return http.patch(`${DORMITORY_URL}/${id}/status`, null, { params: { status } })
 }
 
 /**
  * 更新宿舍已占用床位数
  */
-export function updateOccupiedBeds(id: number | string, occupiedBeds: number): Promise<void> {
+export function updateOccupiedBeds(id: LongId | string, occupiedBeds: number): Promise<void> {
   return http.patch(`${DORMITORY_URL}/${id}/occupied-beds`, null, { params: { occupiedBeds } })
 }
 
@@ -149,21 +150,21 @@ export function updateOccupiedBeds(id: number | string, occupiedBeds: number): P
 /**
  * 分配床位
  */
-export function assignBed(dormitoryId: number | string, studentId: number | string): Promise<void> {
+export function assignBed(dormitoryId: LongId | string, studentId: LongId | string): Promise<void> {
   return http.post(`${DORMITORY_URL}/${dormitoryId}/assign-bed`, null, { params: { studentId } })
 }
 
 /**
  * 释放床位
  */
-export function releaseBed(dormitoryId: number | string, studentId: number | string): Promise<void> {
+export function releaseBed(dormitoryId: LongId | string, studentId: LongId | string): Promise<void> {
   return http.post(`${DORMITORY_URL}/${dormitoryId}/release-bed`, null, { params: { studentId } })
 }
 
 /**
  * 获取床位分配情况
  */
-export function getBedAllocations(dormitoryId: number | string): Promise<BedAllocation[]> {
+export function getBedAllocations(dormitoryId: LongId | string): Promise<BedAllocation[]> {
   return http.get<BedAllocation[]>(`${DORMITORY_URL}/${dormitoryId}/bed-allocations`)
 }
 
@@ -177,7 +178,7 @@ export function assignStudentToDormitory(data: AssignStudentRequest): Promise<vo
 /**
  * 从宿舍移除学生
  */
-export function removeStudentFromDormitory(studentId: number | string): Promise<void> {
+export function removeStudentFromDormitory(studentId: LongId | string): Promise<void> {
   return http.delete(`${DORMITORY_URL}/remove-student/${studentId}`)
 }
 
@@ -216,7 +217,7 @@ export function getBuildings(params?: BuildingQueryParams): Promise<PageResponse
 /**
  * 获取楼宇详情
  */
-export function getBuilding(id: number | string): Promise<Building> {
+export function getBuilding(id: LongId | string): Promise<Building> {
   return http.get<Building>(`${BUILDING_URL}/${id}`)
 }
 
@@ -230,14 +231,14 @@ export function createBuilding(data: CreateBuildingRequest): Promise<Building> {
 /**
  * 更新楼宇
  */
-export function updateBuilding(id: number | string, data: UpdateBuildingRequest): Promise<Building> {
+export function updateBuilding(id: LongId | string, data: UpdateBuildingRequest): Promise<Building> {
   return http.put<Building>(`${BUILDING_URL}/${id}`, data)
 }
 
 /**
  * 删除楼宇
  */
-export function deleteBuilding(id: number | string): Promise<void> {
+export function deleteBuilding(id: LongId | string): Promise<void> {
   return http.delete(`${BUILDING_URL}/${id}`)
 }
 
@@ -251,7 +252,7 @@ export function getAllEnabledBuildings(buildingType?: number): Promise<Building[
 /**
  * 检查楼号是否存在
  */
-export function existsBuildingNo(buildingNo: string, excludeId?: number | string): Promise<boolean> {
+export function existsBuildingNo(buildingNo: string, excludeId?: LongId | string): Promise<boolean> {
   return http.get<boolean>(`${BUILDING_URL}/exists`, { params: { buildingNo, excludeId } })
 }
 
@@ -281,9 +282,9 @@ export function getDormitoryManagerList(): Promise<any[]> {
 // ==================== 学生宿舍历史 ====================
 
 export interface StudentDormitoryHistory {
-  id: number
-  studentId: number
-  dormitoryId: number
+  id: LongId
+  studentId: LongId
+  dormitoryId: LongId
   dormitoryName: string
   buildingName: string
   roomNo: string
@@ -296,17 +297,17 @@ export interface StudentDormitoryHistory {
 /**
  * 获取学生宿舍历史
  */
-export function getStudentDormitoryHistory(studentId: number | string): Promise<StudentDormitoryHistory[]> {
+export function getStudentDormitoryHistory(studentId: LongId | string): Promise<StudentDormitoryHistory[]> {
   return http.get<StudentDormitoryHistory[]>(`/student-dormitory/history/${studentId}`)
 }
 
 // ==================== 楼宇部门分配 ====================
 
 export interface BuildingOrgUnitAssignment {
-  id: number
-  buildingId: number
+  id: LongId
+  buildingId: LongId
   buildingName: string
-  orgUnitId: number
+  orgUnitId: LongId
   orgUnitName: string
   floorStart?: number
   floorEnd?: number
@@ -318,8 +319,8 @@ export interface BuildingOrgUnitAssignment {
 export interface BuildingOrgUnitAssignmentQueryParams {
   pageNum?: number
   pageSize?: number
-  buildingId?: number
-  orgUnitId?: number
+  buildingId?: LongId
+  orgUnitId?: LongId
   status?: number
 }
 
@@ -333,49 +334,49 @@ export function getBuildingOrgUnitAssignmentList(params?: BuildingOrgUnitAssignm
 /**
  * 获取分配详情
  */
-export function getBuildingOrgUnitAssignmentDetail(id: number | string): Promise<BuildingOrgUnitAssignment> {
+export function getBuildingOrgUnitAssignmentDetail(id: LongId | string): Promise<BuildingOrgUnitAssignment> {
   return http.get<BuildingOrgUnitAssignment>(`/dormitory/building-assignments/${id}`)
 }
 
 /**
  * 根据宿舍楼ID查询分配的组织单元
  */
-export function getAssignmentsByBuildingId(buildingId: number | string): Promise<BuildingOrgUnitAssignment[]> {
+export function getAssignmentsByBuildingId(buildingId: LongId | string): Promise<BuildingOrgUnitAssignment[]> {
   return http.get<BuildingOrgUnitAssignment[]>(`/dormitory/building-assignments/building/${buildingId}`)
 }
 
 /**
  * 创建楼宇组织单元分配
  */
-export function createBuildingOrgUnitAssignment(data: { buildingId: number; orgUnitId: number; floorStart?: number; floorEnd?: number }): Promise<BuildingOrgUnitAssignment> {
+export function createBuildingOrgUnitAssignment(data: { buildingId: LongId; orgUnitId: LongId; floorStart?: number; floorEnd?: number }): Promise<BuildingOrgUnitAssignment> {
   return http.post('/dormitory/building-assignments', data)
 }
 
 /**
  * 更新楼宇组织单元分配
  */
-export function updateBuildingOrgUnitAssignment(data: { id: number; floorStart?: number; floorEnd?: number }): Promise<BuildingOrgUnitAssignment> {
+export function updateBuildingOrgUnitAssignment(data: { id: LongId; floorStart?: number; floorEnd?: number }): Promise<BuildingOrgUnitAssignment> {
   return http.put('/dormitory/building-assignments', data)
 }
 
 /**
  * 删除楼宇组织单元分配
  */
-export function deleteBuildingOrgUnitAssignment(id: number | string): Promise<void> {
+export function deleteBuildingOrgUnitAssignment(id: LongId | string): Promise<void> {
   return http.delete(`/dormitory/building-assignments/${id}`)
 }
 
 /**
  * 启用分配
  */
-export function enableBuildingOrgUnitAssignment(id: number | string): Promise<void> {
+export function enableBuildingOrgUnitAssignment(id: LongId | string): Promise<void> {
   return http.put(`/dormitory/building-assignments/${id}/enable`)
 }
 
 /**
  * 禁用分配
  */
-export function disableBuildingOrgUnitAssignment(id: number | string): Promise<void> {
+export function disableBuildingOrgUnitAssignment(id: LongId | string): Promise<void> {
   return http.put(`/dormitory/building-assignments/${id}/disable`)
 }
 
@@ -451,15 +452,15 @@ export const buildingApi = {
 
 // ==================== 宿舍楼管理 (兼容) ====================
 
-export function updateDormitoryBuilding(id: number | string, data: any): Promise<void> {
+export function updateDormitoryBuilding(id: LongId | string, data: any): Promise<void> {
   return http.put(`/dormitory/buildings/${id}`, data)
 }
 
-export function assignManagers(buildingId: number | string, managerIds: (number | string)[]): Promise<void> {
+export function assignManagers(buildingId: LongId | string, managerIds: (number | string)[]): Promise<void> {
   return http.post(`/dormitory/buildings/${buildingId}/managers`, { managerIds })
 }
 
-export function removeManager(buildingId: number | string, managerId: number | string): Promise<void> {
+export function removeManager(buildingId: LongId | string, managerId: LongId | string): Promise<void> {
   return http.delete(`/dormitory/buildings/${buildingId}/managers/${managerId}`)
 }
 

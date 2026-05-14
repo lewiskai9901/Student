@@ -3,6 +3,7 @@
  * 资产分类管理
  * UI优化版本 - 使用设计系统组件
  */
+import type { LongId } from '@/types/common'
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -42,7 +43,7 @@ function buildLevelMap(categories: AssetCategory[], level: number = 0) {
 }
 
 // 获取分类层级
-function getCategoryLevel(categoryId: number): number {
+function getCategoryLevel(categoryId: LongId): number {
   return categoryLevelMap.value.get(categoryId) || 0
 }
 

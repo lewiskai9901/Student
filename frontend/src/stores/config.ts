@@ -1,3 +1,4 @@
+import type { LongId } from '@/types/common'
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { http } from '@/utils/request'
@@ -7,7 +8,7 @@ import type { LoginCustomizationConfig, LoginFeature, BackgroundMode, TextPositi
  * 系统配置项接口
  */
 interface SystemConfigItem {
-  id: number
+  id: LongId
   configKey: string
   configValue: string
   configGroup?: string

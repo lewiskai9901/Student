@@ -119,6 +119,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, watch, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import FloorPlanEditor from './FloorPlanEditor.vue'
@@ -148,7 +149,7 @@ const floorPlanRef = ref<InstanceType<typeof FloorPlanEditor> | null>(null)
 const floorPlanContainerRef = ref<HTMLElement | null>(null)
 
 // State
-const assignments = ref<Record<string, { userId: number | string; userName: string }>>({})
+const assignments = ref<Record<string, { userId: LongId | string; userName: string }>>({})
 const attendees = ref<BookingAttendeeInfo[]>([])
 const selectedAttendee = ref<BookingAttendeeInfo | null>(null)
 const saving = ref(false)
@@ -190,7 +191,7 @@ const seatElements = computed<FloorPlanElement[]>(() => {
   )
 })
 
-function getAssignedPosition(userId: number | string): string | null {
+function getAssignedPosition(userId: LongId | string): string | null {
   for (const [pos, user] of Object.entries(assignments.value)) {
     if (String(user.userId) === String(userId)) return pos
   }
@@ -390,7 +391,7 @@ watch(
     // Load existing seat assignments
     try {
       const existing: BookingSeatAssignment[] = await universalPlaceApi.getBookingSeating(props.booking.id)
-      const obj: Record<string, { userId: number | string; userName: string }> = {}
+      const obj: Record<string, { userId: LongId | string; userName: string }> = {}
       for (const a of existing) {
         obj[a.positionNo] = { userId: a.userId, userName: a.userName }
       }

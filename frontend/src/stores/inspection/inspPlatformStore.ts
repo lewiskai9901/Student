@@ -6,6 +6,7 @@
  *   - API 文件不存在, view 也不消费, 阻塞 prod build, 直接 strip
  *   - 如未来重新引入, 需先建 src/api/inspection/{notificationRule,reportTemplate,webhook}.ts
  */
+import type { LongId } from '@/types/common'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type {
@@ -27,10 +28,10 @@ export const useInspPlatformStore = defineStore('inspPlatform', () => {
   const loading = ref(false)
 
   async function fetchAuditEntries(params?: {
-    userId?: number
+    userId?: LongId
     action?: string
     resourceType?: string
-    resourceId?: number
+    resourceId?: LongId
     startDate?: string
     endDate?: string
   }) {
@@ -55,7 +56,7 @@ export const useInspPlatformStore = defineStore('inspPlatform', () => {
     loading.value = true
     try {
       const flat = await issueCategoryApi.list()
-      const map = new Map<number, IssueCategory & { children?: IssueCategory[] }>()
+      const map = new Map<LongId, IssueCategory & { children?: IssueCategory[] }>()
       for (const cat of flat) {
         map.set(cat.id, { ...cat, children: [] })
       }
@@ -79,14 +80,14 @@ export const useInspPlatformStore = defineStore('inspPlatform', () => {
     return created
   }
 
-  async function updateIssueCategory(id: number, data: Partial<IssueCategory>) {
+  async function updateIssueCategory(id: LongId, data: Partial<IssueCategory>) {
     const updated = await issueCategoryApi.update(id, data)
     const idx = issueCategories.value.findIndex(c => c.id === id)
     if (idx !== -1) issueCategories.value[idx] = updated
     return updated
   }
 
-  async function deleteIssueCategory(id: number) {
+  async function deleteIssueCategory(id: LongId) {
     await issueCategoryApi.delete(id)
     issueCategories.value = issueCategories.value.filter(c => c.id !== id)
   }
@@ -102,7 +103,7 @@ export const useInspPlatformStore = defineStore('inspPlatform', () => {
     }
   }
 
-  async function fetchHolidayCalendar(id: number) {
+  async function fetchHolidayCalendar(id: LongId) {
     loading.value = true
     try {
       currentCalendar.value = await holidayCalendarApi.getById(id)
@@ -117,7 +118,7 @@ export const useInspPlatformStore = defineStore('inspPlatform', () => {
     return created
   }
 
-  async function updateHolidayCalendar(id: number, data: UpdateHolidayCalendarRequest) {
+  async function updateHolidayCalendar(id: LongId, data: UpdateHolidayCalendarRequest) {
     const updated = await holidayCalendarApi.update(id, data)
     const idx = holidayCalendars.value.findIndex(c => c.id === id)
     if (idx !== -1) holidayCalendars.value[idx] = updated
@@ -125,7 +126,7 @@ export const useInspPlatformStore = defineStore('inspPlatform', () => {
     return updated
   }
 
-  async function deleteHolidayCalendar(id: number) {
+  async function deleteHolidayCalendar(id: LongId) {
     await holidayCalendarApi.delete(id)
     holidayCalendars.value = holidayCalendars.value.filter(c => c.id !== id)
     if (currentCalendar.value?.id === id) currentCalendar.value = null

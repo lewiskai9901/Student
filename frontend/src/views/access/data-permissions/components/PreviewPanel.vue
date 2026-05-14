@@ -179,6 +179,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { computed, ref } from 'vue'
 import {
   Eye,
@@ -308,7 +309,7 @@ function scopeName(code: string): string {
 }
 
 // ==================== 模拟用户预览 ====================
-const simulateUserId = ref<number | null>(null)
+const simulateUserId = ref<LongId | null>(null)
 const simulating = ref(false)
 const simulateResults = ref<SimulateResult[]>([])
 const expandAll = ref(false)

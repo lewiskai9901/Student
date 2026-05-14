@@ -2,12 +2,13 @@
  * 分区树构建工具
  * 将扁平分区列表构建为嵌套树结构
  */
+import type { LongId } from '@/types/common'
 
 export interface SectionTreeNode {
-  id: number
+  id: LongId
   sectionName: string
   targetType?: string
-  parentSectionId: number | null
+  parentSectionId: LongId | null
   sortOrder: number
   children: SectionTreeNode[]
   isLeaf: boolean
@@ -18,17 +19,17 @@ export interface SectionTreeNode {
  * @param sections 扁平分区列表（从 getSections API 返回）
  * @param rootId 根分区 ID（不包含在树中，其直接子分区为树的根节点）
  */
-export function buildSectionTree(sections: Array<any>, rootId: number | string): SectionTreeNode[] {
-  const rid = Number(rootId)
-  const map = new Map<number, SectionTreeNode>()
+export function buildSectionTree(sections: Array<any>, rootId: LongId | string): SectionTreeNode[] {
+  const rid = rootId
+  const map = new Map<LongId, SectionTreeNode>()
 
   // 初始化所有节点
   for (const s of sections) {
-    map.set(Number(s.id), {
-      id: Number(s.id),
+    map.set(s.id, {
+      id: s.id,
       sectionName: s.sectionName,
       targetType: s.targetType,
-      parentSectionId: s.parentSectionId != null ? Number(s.parentSectionId) : null,
+      parentSectionId: s.parentSectionId != null ? s.parentSectionId : null,
       sortOrder: s.sortOrder ?? 0,
       children: [],
       isLeaf: true,
@@ -84,7 +85,7 @@ export function getLeafSections(nodes: SectionTreeNode[]): SectionTreeNode[] {
 /**
  * 获取节点深度
  */
-export function getDepth(nodes: SectionTreeNode[], targetId: number): number {
+export function getDepth(nodes: SectionTreeNode[], targetId: LongId): number {
   const find = (list: SectionTreeNode[], depth: number): number => {
     for (const n of list) {
       if (n.id === targetId) return depth

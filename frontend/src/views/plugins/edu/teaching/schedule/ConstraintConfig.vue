@@ -285,6 +285,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { constraintApi, scheduleConfigApi } from '@/api/teaching'
@@ -294,7 +295,7 @@ import type { SchedulingConstraint, TimeSlotStatus, Course, PeriodConfig } from 
 import { CONSTRAINT_LEVELS, CONSTRAINT_TYPES, WEEKDAYS, DEFAULT_PERIODS } from '@/types/teaching'
 
 const props = defineProps<{
-  semesterId: number | string | undefined
+  semesterId: LongId | string | undefined
 }>()
 
 // State
@@ -347,7 +348,7 @@ const form = ref({ constraintName: '', constraintType: '' as string, isHard: tru
 
 const paramDays = ref<number[]>([])
 const paramPeriods = ref<number[]>([])
-const paramFixedDay = ref<number | undefined>()
+const paramFixedDay = ref<LongId | undefined>()
 const paramMaxPeriods = ref(4)
 const paramMinGapDays = ref(1)
 const paramMaxDays = ref(5)

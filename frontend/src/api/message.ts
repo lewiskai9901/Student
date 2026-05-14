@@ -1,3 +1,4 @@
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 import type { MsgNotification, MsgSubscriptionRule, MsgTemplate } from '@/types/message'
 
@@ -27,7 +28,7 @@ export interface SendManualParams {
 }
 
 export interface RulePreviewSampleUser {
-  id: number
+  id: LongId
   username: string
   realName: string
 }
@@ -53,7 +54,7 @@ export const messageApi = {
   },
 
   /** 标记单条消息已读 */
-  markRead(id: number): Promise<void> {
+  markRead(id: LongId): Promise<void> {
     return http.put(`/msg/notifications/${id}/read`)
   },
 
@@ -63,7 +64,7 @@ export const messageApi = {
   },
 
   /** 删除消息（软删除） */
-  delete(id: number): Promise<void> {
+  delete(id: LongId): Promise<void> {
     return http.delete(`/msg/notifications/${id}`)
   },
 }
@@ -82,12 +83,12 @@ export const msgConfigApi = {
   },
 
   /** 更新订阅规则 */
-  updateRule(id: number, data: Partial<MsgSubscriptionRule>): Promise<MsgSubscriptionRule> {
+  updateRule(id: LongId, data: Partial<MsgSubscriptionRule>): Promise<MsgSubscriptionRule> {
     return http.put(`/msg/config/rules/${id}`, data)
   },
 
   /** 删除订阅规则 */
-  deleteRule(id: number): Promise<void> {
+  deleteRule(id: LongId): Promise<void> {
     return http.delete(`/msg/config/rules/${id}`)
   },
 
@@ -107,12 +108,12 @@ export const msgConfigApi = {
   },
 
   /** 更新消息模板 */
-  updateTemplate(id: number, data: Partial<MsgTemplate>): Promise<MsgTemplate> {
+  updateTemplate(id: LongId, data: Partial<MsgTemplate>): Promise<MsgTemplate> {
     return http.put(`/msg/config/templates/${id}`, data)
   },
 
   /** 删除消息模板 */
-  deleteTemplate(id: number): Promise<void> {
+  deleteTemplate(id: LongId): Promise<void> {
     return http.delete(`/msg/config/templates/${id}`)
   },
 

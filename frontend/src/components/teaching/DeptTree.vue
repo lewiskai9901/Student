@@ -32,14 +32,15 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, onMounted } from 'vue'
 import { orgUnitApi } from '@/api/organization'
 import { EduOrgTypes } from '@/types/plugins/education-types'
 
-const props = defineProps<{ semesterId?: number | string }>()
+const props = defineProps<{ semesterId?: LongId | string }>()
 
 const emit = defineEmits<{
-  select: [node: { type: string; id: number | string; name: string; classIds?: (number | string)[] }]
+  select: [node: { type: string; id: LongId | string; name: string; classIds?: (number | string)[] }]
 }>()
 
 const departments = ref<any[]>([])

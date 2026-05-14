@@ -145,6 +145,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Download } from '@element-plus/icons-vue'
@@ -152,7 +153,7 @@ import { http } from '@/utils/request'
 import { useInspExecutionStore } from '@/stores/inspection/inspExecutionStore'
 
 const executionStore = useInspExecutionStore()
-const projects = ref<{ id: number; projectName: string }[]>([])
+const projects = ref<{ id: LongId; projectName: string }[]>([])
 
 const rank = reactive({ projectId: null as number | null, range: null as [string, string] | null })
 const corr = reactive({ projectId: null as number | null, status: null as string | null })

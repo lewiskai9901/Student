@@ -303,6 +303,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
@@ -505,7 +506,7 @@ const parseExcelFile = async (file: File) => {
 
     // 获取表头
     const headers = jsonData[0] as string[]
-    const headerMap: Record<number, string> = {}
+    const headerMap: Record<LongId, string> = {}
 
     headers.forEach((header, index) => {
       const cleanHeader = header?.toString().trim()

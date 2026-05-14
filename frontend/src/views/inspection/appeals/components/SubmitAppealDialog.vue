@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import * as appealApi from '@/api/inspection/appeal'
@@ -6,7 +7,7 @@ import { http } from '@/utils/request'
 
 const props = defineProps<{
   modelValue: boolean
-  submissionDetailId: number
+  submissionDetailId: LongId
   itemName?: string
   currentScore?: number
 }>()

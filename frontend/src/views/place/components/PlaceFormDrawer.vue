@@ -157,6 +157,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, watch, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -239,7 +240,7 @@ const groupedAttributeFields = computed(() => {
 })
 
 // relation 字段目标数据缓存 (target > [{id, label}])
-const relationOptions = ref<Record<string, { id: number; label: string }[]>>({})
+const relationOptions = ref<Record<string, { id: LongId; label: string }[]>>({})
 async function loadRelationOptions() {
   const targets = new Set<string>()
   for (const f of attributeFields.value) {
@@ -403,8 +404,8 @@ watch(() => props.visible, (val) => {
           status: props.editData!.status ?? 1,
           capacity: props.editData!.capacity,
           gender: props.editData!.gender || undefined,
-          orgUnitId: props.editData!.orgUnitId != null ? Number(props.editData!.orgUnitId) : undefined,
-          responsibleUserId: props.editData!.responsibleUserId != null ? Number(props.editData!.responsibleUserId) : undefined,
+          orgUnitId: props.editData!.orgUnitId != null ? props.editData!.orgUnitId : undefined,
+          responsibleUserId: props.editData!.responsibleUserId != null ? props.editData!.responsibleUserId : undefined,
           clearOrgOverride: false,
           reason: ''
         }

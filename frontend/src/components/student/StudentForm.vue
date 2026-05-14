@@ -447,6 +447,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getStudent, createStudent, updateStudent } from '@/api/student'
@@ -457,7 +458,7 @@ import { getDirectionsByYear } from '@/api/gradeMajorDirection'
 
 interface Props {
   mode: 'add' | 'edit'
-  studentId?: number | string | null
+  studentId?: LongId | string | null
 }
 
 const props = defineProps<Props>()

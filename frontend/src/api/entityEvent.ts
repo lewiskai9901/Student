@@ -1,3 +1,4 @@
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 import type {
   EntityEventType,
@@ -27,7 +28,7 @@ export async function listEntityEventTypes(includeDisabled?: boolean): Promise<E
         for (const t of group.types) {
           flat.push({
             ...t,
-            id: Number(t.id),
+            id: t.id,
             categoryCode: t.categoryCode || group.categoryCode,
             categoryName: t.categoryName || group.categoryName,
             categoryPolarity: t.categoryPolarity || group.categoryPolarity,
@@ -49,25 +50,25 @@ export function createEntityEventType(cmd: CreateEntityEventTypeCommand) {
 }
 
 /** 更新事件类型 */
-export function updateEntityEventType(id: number, cmd: UpdateEntityEventTypeCommand) {
+export function updateEntityEventType(id: LongId, cmd: UpdateEntityEventTypeCommand) {
   return http.put<EntityEventType>(`${TYPE_BASE}/${id}`, cmd)
 }
 
 /** 删除事件类型 */
-export function deleteEntityEventType(id: number) {
+export function deleteEntityEventType(id: LongId) {
   return http.delete<void>(`${TYPE_BASE}/${id}`)
 }
 
 // ==================== Events ====================
 
 /** 获取主体事件时间线 */
-export function getSubjectTimeline(subjectType: string, subjectId: number, limit = 50) {
+export function getSubjectTimeline(subjectType: string, subjectId: LongId, limit = 50) {
   return http.get<EntityEvent[]>(`${EVENT_BASE}/subject/${subjectType}/${subjectId}`, {
     params: { limit }
   })
 }
 
 /** 获取主体事件统计 */
-export function getSubjectStats(subjectType: string, subjectId: number) {
+export function getSubjectStats(subjectType: string, subjectId: LongId) {
   return http.get<EntityEventStats>(`${EVENT_BASE}/stats/${subjectType}/${subjectId}`)
 }

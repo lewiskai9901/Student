@@ -1,6 +1,7 @@
 /**
  * 检查平台 - 评价指标 API
  */
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 import type {
   Indicator,
@@ -15,11 +16,11 @@ const SCORE_BASE = '/inspection/indicator-scores'
 
 // ==================== 指标 CRUD ====================
 
-export function getIndicators(projectId: number): Promise<Indicator[]> {
+export function getIndicators(projectId: LongId): Promise<Indicator[]> {
   return http.get<Indicator[]>(BASE, { params: { projectId } })
 }
 
-export function getIndicator(id: number): Promise<Indicator> {
+export function getIndicator(id: LongId): Promise<Indicator> {
   return http.get<Indicator>(`${BASE}/${id}`)
 }
 
@@ -31,18 +32,18 @@ export function createCompositeIndicator(data: CreateCompositeIndicatorRequest):
   return http.post<Indicator>(`${BASE}/composite`, data)
 }
 
-export function updateIndicator(id: number, data: UpdateIndicatorRequest): Promise<Indicator> {
+export function updateIndicator(id: LongId, data: UpdateIndicatorRequest): Promise<Indicator> {
   return http.put<Indicator>(`${BASE}/${id}`, data)
 }
 
-export function deleteIndicator(id: number): Promise<void> {
+export function deleteIndicator(id: LongId): Promise<void> {
   return http.delete(`${BASE}/${id}`)
 }
 
 // ==================== 指标得分 ====================
 
 export function getIndicatorScores(
-  indicatorId: number,
+  indicatorId: LongId,
   periodStart?: string,
   periodEnd?: string,
 ): Promise<IndicatorScore[]> {
@@ -53,7 +54,7 @@ export function getIndicatorScores(
 }
 
 export function computeIndicatorScores(
-  projectId: number,
+  projectId: LongId,
   periodStart: string,
   periodEnd: string,
 ): Promise<void> {

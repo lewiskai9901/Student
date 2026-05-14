@@ -136,15 +136,16 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, watch, onMounted } from 'vue'
 import { Loader2, ChevronDown, Building2, GraduationCap, Users } from 'lucide-vue-next'
 import { getOrgUnitTree, getAllCohorts, getAllClasses } from '@/api/organization'
 
 interface UnifiedNode {
-  id: number | string
+  id: LongId | string
   name: string
   children?: UnifiedNode[]
-  grades?: { id: number | string; name: string; classes?: { id: number | string; name: string }[] }[]
+  grades?: { id: LongId | string; name: string; classes?: { id: LongId | string; name: string }[] }[]
 }
 
 interface Props {
@@ -164,17 +165,17 @@ const loading = ref(false)
 const treeData = ref<UnifiedNode[]>([])
 const expanded = ref<Set<string>>(new Set())
 
-function isExpanded(type: 'org' | 'grade', id: number | string): boolean {
+function isExpanded(type: 'org' | 'grade', id: LongId | string): boolean {
   return expanded.value.has(`${type}-${id}`)
 }
 
-function toggle(type: 'org' | 'grade', id: number | string) {
+function toggle(type: 'org' | 'grade', id: LongId | string) {
   const key = `${type}-${id}`
   if (expanded.value.has(key)) expanded.value.delete(key)
   else expanded.value.add(key)
 }
 
-function toggleOrg(id: number | string) {
+function toggleOrg(id: LongId | string) {
   const arr = [...props.orgIds]
   const idx = arr.findIndex(x => String(x) === String(id))
   if (idx > -1) arr.splice(idx, 1)
@@ -182,7 +183,7 @@ function toggleOrg(id: number | string) {
   emit('update:orgIds', arr)
 }
 
-function toggleGrade(id: number | string) {
+function toggleGrade(id: LongId | string) {
   const arr = [...props.gradeIds]
   const idx = arr.findIndex(x => String(x) === String(id))
   if (idx > -1) arr.splice(idx, 1)
@@ -190,7 +191,7 @@ function toggleGrade(id: number | string) {
   emit('update:gradeIds', arr)
 }
 
-function toggleClass(id: number | string) {
+function toggleClass(id: LongId | string) {
   const arr = [...props.classIds]
   const idx = arr.findIndex(x => String(x) === String(id))
   if (idx > -1) arr.splice(idx, 1)
@@ -230,7 +231,7 @@ async function buildTree() {
 
     const gradeMap = new Map<
       number | string,
-      { id: number | string; name: string; classes: { id: number | string; name: string }[] }
+      { id: LongId | string; name: string; classes: { id: LongId | string; name: string }[] }
     >()
     for (const g of grades) {
       if (g.id) {

@@ -114,6 +114,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -183,7 +184,7 @@ async function loadAll() {
     if (!pending.length) { allTasks.value = []; return }
 
     // 拉每个任务的 submissions
-    const subsByTask = new Map<number, any[]>()
+    const subsByTask = new Map<LongId, any[]>()
     await Promise.all(pending.map(async (t) => {
       try {
         const subs = await getSubmissions({ taskId: t.id })
@@ -202,11 +203,11 @@ async function loadAll() {
 
     // 同 (orgUnit, day) 跨检查员差异: 收集同 targetId 不同 inspector 的分差
     // 简化: 对每个 task 的 target avgScore 与该 target 全局 avgScore 比较
-    const targetAvg = new Map<number, number[]>()
+    const targetAvg = new Map<LongId, number[]>()
     for (const subs of subsByTask.values()) {
       for (const s of subs) {
         if (s.finalScore == null || !s.targetId) continue
-        const id = Number(s.targetId)
+        const id = s.targetId
         if (!targetAvg.has(id)) targetAvg.set(id, [])
         targetAvg.get(id)!.push(Number(s.finalScore))
       }
@@ -233,7 +234,7 @@ async function loadAll() {
       let inconsistent = false
       for (const s of subs) {
         if (s.finalScore == null || !s.targetId) continue
-        const arr = targetAvg.get(Number(s.targetId)) || []
+        const arr = targetAvg.get(s.targetId) || []
         if (arr.length < 2) continue
         const otherAvg = (arr.reduce((a, b) => a + b, 0) - Number(s.finalScore)) / (arr.length - 1)
         if (Math.abs(Number(s.finalScore) - otherAvg) > 20) { inconsistent = true; break }
@@ -270,7 +271,7 @@ async function loadAll() {
   }
 }
 
-function goReview(taskId: number) {
+function goReview(taskId: LongId) {
   router.push(`/inspection/tasks/review?taskId=${taskId}`)
 }
 

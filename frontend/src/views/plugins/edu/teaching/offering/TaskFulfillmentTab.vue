@@ -301,6 +301,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, watch, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -311,8 +312,8 @@ import type { TeachingTask } from '@/types/teaching'
 import type { SimpleUser } from '@/types/user'
 
 const props = defineProps<{
-  semesterId: number | string | undefined
-  selectedOrg?: { type: string; id: number | string; name: string; classIds?: (number | string)[] }
+  semesterId: LongId | string | undefined
+  selectedOrg?: { type: string; id: LongId | string; name: string; classIds?: (number | string)[] }
 }>()
 
 const router = useRouter()
@@ -327,12 +328,12 @@ const loading = ref(false)
 const savingTaskId = ref<number | string | null>(null)
 const batchAssignVisible = ref(false)
 const batchTeacherId = ref<number | string>('')
-const batchWeeklyHours = ref<number | null>(null)
+const batchWeeklyHours = ref<LongId | null>(null)
 const batchAssigning = ref(false)
 
 // Per-task edit state for teacher assignments
 interface TeacherEditRow {
-  teacherId: number | string
+  teacherId: LongId | string
   role: number
   weeklyHours: number | null
 }
@@ -606,7 +607,7 @@ async function executeBatchAssign() {
 // ==================== Helpers ====================
 
 function getStatusName(status: number) {
-  const names: Record<number, string> = {
+  const names: Record<LongId, string> = {
     0: '待落实',
     1: '已分配教师',
     2: '已排课',
@@ -618,12 +619,12 @@ function getStatusName(status: number) {
 }
 
 function getAssessmentLabel(val?: number) {
-  const map: Record<number, string> = { 1: '考试', 2: '考查', 3: '技能考试', 4: '考试+考查' }
+  const map: Record<LongId, string> = { 1: '考试', 2: '考查', 3: '技能考试', 4: '考试+考查' }
   return map[val ?? 1] ?? '考试'
 }
 
 function statusChipClass(status: number) {
-  const map: Record<number, string> = {
+  const map: Record<LongId, string> = {
     0: 'tm-chip-gray',
     1: 'tm-chip-blue',
     2: 'tm-chip-green',

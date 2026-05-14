@@ -1,6 +1,7 @@
 /**
  * 检查平台 - 提交 API
  */
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 import type {
   InspSubmission,
@@ -20,13 +21,13 @@ const BASE = '/inspection/submissions'
 // ==================== 提交 CRUD ====================
 
 export function getSubmissions(params?: {
-  taskId?: number
-  targetId?: number
+  taskId?: LongId
+  targetId?: LongId
 }): Promise<InspSubmission[]> {
   return http.get<InspSubmission[]>(BASE, { params })
 }
 
-export function getSubmission(id: number): Promise<InspSubmission> {
+export function getSubmission(id: LongId): Promise<InspSubmission> {
   return http.get<InspSubmission>(`${BASE}/${id}`)
 }
 
@@ -36,75 +37,75 @@ export function createSubmission(data: CreateSubmissionRequest): Promise<InspSub
 
 // ==================== 提交生命周期 ====================
 
-export function lockSubmission(id: number): Promise<InspSubmission> {
+export function lockSubmission(id: LongId): Promise<InspSubmission> {
   return http.post<InspSubmission>(`${BASE}/${id}/lock`)
 }
 
-export function unlockSubmission(id: number): Promise<InspSubmission> {
+export function unlockSubmission(id: LongId): Promise<InspSubmission> {
   return http.post<InspSubmission>(`${BASE}/${id}/unlock`)
 }
 
-export function startFilling(id: number): Promise<InspSubmission> {
+export function startFilling(id: LongId): Promise<InspSubmission> {
   return http.post<InspSubmission>(`${BASE}/${id}/start-filling`)
 }
 
-export function saveFormData(id: number, data: SaveFormDataRequest): Promise<InspSubmission> {
+export function saveFormData(id: LongId, data: SaveFormDataRequest): Promise<InspSubmission> {
   return http.put<InspSubmission>(`${BASE}/${id}/form-data`, data)
 }
 
-export function completeSubmission(id: number, data: CompleteSubmissionRequest): Promise<InspSubmission> {
+export function completeSubmission(id: LongId, data: CompleteSubmissionRequest): Promise<InspSubmission> {
   return http.post<InspSubmission>(`${BASE}/${id}/complete`, data)
 }
 
-export function skipSubmission(id: number): Promise<InspSubmission> {
+export function skipSubmission(id: LongId): Promise<InspSubmission> {
   return http.post<InspSubmission>(`${BASE}/${id}/skip`)
 }
 
 // ==================== 明细 ====================
 
-export function getDetails(submissionId: number): Promise<SubmissionDetail[]> {
+export function getDetails(submissionId: LongId): Promise<SubmissionDetail[]> {
   return http.get<SubmissionDetail[]>(`${BASE}/${submissionId}/details`)
 }
 
-export function getFlaggedDetails(submissionId: number): Promise<SubmissionDetail[]> {
+export function getFlaggedDetails(submissionId: LongId): Promise<SubmissionDetail[]> {
   return http.get<SubmissionDetail[]>(`${BASE}/${submissionId}/details/flagged`)
 }
 
-export function createDetail(submissionId: number, data: CreateDetailRequest): Promise<SubmissionDetail> {
+export function createDetail(submissionId: LongId, data: CreateDetailRequest): Promise<SubmissionDetail> {
   return http.post<SubmissionDetail>(`${BASE}/${submissionId}/details`, data)
 }
 
-export function updateDetailResponse(detailId: number, data: UpdateDetailResponseRequest): Promise<SubmissionDetail> {
+export function updateDetailResponse(detailId: LongId, data: UpdateDetailResponseRequest): Promise<SubmissionDetail> {
   return http.put<SubmissionDetail>(`${BASE}/details/${detailId}/response`, data)
 }
 
-export function updateDetailRemark(detailId: number, remark: string): Promise<SubmissionDetail> {
+export function updateDetailRemark(detailId: LongId, remark: string): Promise<SubmissionDetail> {
   return http.put<SubmissionDetail>(`${BASE}/details/${detailId}/remark`, { remark })
 }
 
-export function flagDetail(detailId: number, data: FlagDetailRequest): Promise<SubmissionDetail> {
+export function flagDetail(detailId: LongId, data: FlagDetailRequest): Promise<SubmissionDetail> {
   return http.post<SubmissionDetail>(`${BASE}/details/${detailId}/flag`, data)
 }
 
-export function unflagDetail(detailId: number): Promise<SubmissionDetail> {
+export function unflagDetail(detailId: LongId): Promise<SubmissionDetail> {
   return http.post<SubmissionDetail>(`${BASE}/details/${detailId}/unflag`)
 }
 
-export function deleteDetail(detailId: number): Promise<void> {
+export function deleteDetail(detailId: LongId): Promise<void> {
   return http.delete(`${BASE}/details/${detailId}`)
 }
 
 // ==================== 证据 ====================
 
-export function getEvidence(submissionId: number): Promise<InspEvidence[]> {
+export function getEvidence(submissionId: LongId): Promise<InspEvidence[]> {
   return http.get<InspEvidence[]>(`${BASE}/${submissionId}/evidences`)
 }
 
-export function addEvidence(submissionId: number, data: AddEvidenceRequest): Promise<InspEvidence> {
+export function addEvidence(submissionId: LongId, data: AddEvidenceRequest): Promise<InspEvidence> {
   return http.post<InspEvidence>(`${BASE}/${submissionId}/evidences`, data)
 }
 
-export function deleteEvidence(evidenceId: number): Promise<void> {
+export function deleteEvidence(evidenceId: LongId): Promise<void> {
   return http.delete(`${BASE}/evidences/${evidenceId}`)
 }
 

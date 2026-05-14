@@ -1,3 +1,4 @@
+import type { LongId } from '@/types/common'
 import { ref, computed } from 'vue'
 
 /**
@@ -77,7 +78,7 @@ export interface UseEditDialogOptions<T> extends UseDialogOptions {
   defaultData?: Partial<T>
 }
 
-export function useEditDialog<T extends { id?: number }>(
+export function useEditDialog<T extends { id?: LongId }>(
   options: UseEditDialogOptions<T> = {}
 ) {
   const { defaultData = {}, ...dialogOptions } = options

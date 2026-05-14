@@ -8,7 +8,7 @@ import type {
   ReturnBorrowRequest,
   BorrowStatistics
 } from '@/types/asset'
-import type { PageResult } from '@/types/common'
+import type { PageResult, LongId } from '@/types/common'
 
 const BASE_URL = '/asset-borrows'
 
@@ -22,21 +22,21 @@ export function createBorrow(data: CreateBorrowRequest) {
 /**
  * 归还资产
  */
-export function returnBorrow(id: number | string, data: ReturnBorrowRequest) {
+export function returnBorrow(id: LongId | string, data: ReturnBorrowRequest) {
   return request.post(`${BASE_URL}/${id}/return`, data)
 }
 
 /**
  * 取消借用
  */
-export function cancelBorrow(id: number | string) {
+export function cancelBorrow(id: LongId | string) {
   return request.post(`${BASE_URL}/${id}/cancel`)
 }
 
 /**
  * 获取借用详情
  */
-export function getBorrow(id: number | string) {
+export function getBorrow(id: LongId | string) {
   return request.get<AssetBorrow>(`${BASE_URL}/${id}`)
 }
 
@@ -46,7 +46,7 @@ export function getBorrow(id: number | string) {
 export function listBorrows(params: {
   borrowType?: number
   status?: number
-  borrowerId?: number | string
+  borrowerId?: LongId | string
   keyword?: string
   pageNum?: number
   pageSize?: number
@@ -64,7 +64,7 @@ export function getMyBorrows() {
 /**
  * 获取资产的借用历史
  */
-export function getAssetBorrowHistory(assetId: number | string) {
+export function getAssetBorrowHistory(assetId: LongId | string) {
   return request.get<AssetBorrow[]>(`${BASE_URL}/asset/${assetId}`)
 }
 

@@ -154,6 +154,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -325,8 +326,8 @@ const filter = ref({
   resourceType: (route.query.resourceType as string) || '',
   relation: (route.query.relation as string) || '',
   subjectType: (route.query.subjectType as string) || '',
-  subjectId: route.query.subjectId ? Number(route.query.subjectId) : null,
-  resourceId: route.query.resourceId ? Number(route.query.resourceId) : null
+  subjectId: route.query.subjectId ? route.query.subjectId : null,
+  resourceId: route.query.resourceId ? route.query.resourceId : null
 })
 const relationOptions = ref<RelationTypeDef[]>([])
 

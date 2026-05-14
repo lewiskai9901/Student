@@ -5,6 +5,7 @@
  * Supports all 3 target types (ORG / USER / PLACE) and all scoring modes.
  * Flow: Search target > select > score all items > save > next target
  */
+import type { LongId } from '@/types/common'
 import { ref, computed, watch, nextTick } from 'vue'
 import { ElMessage, ElInputNumber } from 'element-plus'
 import { Search } from 'lucide-vue-next'
@@ -17,7 +18,7 @@ import type { ScoringMode } from '@/types/insp/enums'
 // ==================== Props ====================
 
 interface Props {
-  sectionId: number
+  sectionId: LongId
   targetType: string  // 'ORG' | 'USER' | 'PLACE'
   items: SubmissionDetail[]
   submissions: InspSubmission[]
@@ -33,7 +34,7 @@ const store = useInspExecutionStore()
 // ==================== Search ====================
 
 interface SearchResult {
-  id: number | string
+  id: LongId | string
   name: string
   subtitle: string
 }
@@ -109,8 +110,8 @@ async function doSearch(keyword: string) {
 const selectedResult = ref<SearchResult | null>(null)
 
 // Per-item score state (keyed by item detail id)
-const scoreValues = ref<Record<number, string>>({})
-const numScores = ref<Record<number, number>>({})
+const scoreValues = ref<Record<LongId, string>>({})
+const numScores = ref<Record<LongId, number>>({})
 
 function selectTarget(result: SearchResult) {
   selectedResult.value = result
@@ -203,7 +204,7 @@ function getMaxStars(item: SubmissionDetail): number {
 // ==================== Recorded Targets ====================
 
 interface RecordedTarget {
-  targetId: number | string
+  targetId: LongId | string
   targetName: string
   summary: string
 }

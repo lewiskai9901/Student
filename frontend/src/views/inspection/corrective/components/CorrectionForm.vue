@@ -5,12 +5,13 @@
  * Allows the assignee to submit a corrective action with description,
  * optional file evidence, and root cause reference.
  */
+import type { LongId } from '@/types/common'
 import { ref, reactive } from 'vue'
 import { Send, Upload } from 'lucide-vue-next'
 import type { UploadFile } from 'element-plus'
 
 const props = defineProps<{
-  caseId: number
+  caseId: LongId
 }>()
 
 const emit = defineEmits<{

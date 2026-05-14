@@ -231,6 +231,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useEntityLabel } from '@/composables/useEntityLabel'
 
@@ -255,9 +256,9 @@ const executionStore = useInspExecutionStore()
 
 interface DailyTarget {
   targetType: string
-  targetId: number
+  targetId: LongId
   targetName: string
-  orgUnitId: number
+  orgUnitId: LongId
   orgUnitName: string
   avgScore: number | null
   ranking: number | null
@@ -268,20 +269,20 @@ interface DailyTarget {
 }
 
 interface CorrectiveCase {
-  id: number
+  id: LongId
   caseCode: string
   issueDescription: string
   priority: string
   deadline: string | null
   status: string
-  targetId: number
+  targetId: LongId
   targetName: string
-  orgUnitId: number
-  taskId: number
+  orgUnitId: LongId
+  taskId: LongId
 }
 
 interface SubmissionDetailRow {
-  id: number
+  id: LongId
   itemName: string
   itemCode: string
   itemType: string
@@ -293,8 +294,8 @@ interface SubmissionDetailRow {
 
 // ========== State ==========
 
-const projectId = ref<number | null>(null)
-const projects = ref<{ id: number; projectName: string }[]>([])
+const projectId = ref<LongId | null>(null)
+const projects = ref<{ id: LongId; projectName: string }[]>([])
 const allTargets = ref<DailyTarget[]>([])
 const selectedTargetKey = ref<string>('')
 

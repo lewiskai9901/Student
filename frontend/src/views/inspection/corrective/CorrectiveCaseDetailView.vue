@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -11,7 +12,7 @@ const route = useRoute()
 const router = useRouter()
 const store = useInspCorrectiveStore()
 
-const caseId = Number(route.params.id)
+const caseId = route.params.id as string
 const loading = ref(false)
 
 // Dialogs

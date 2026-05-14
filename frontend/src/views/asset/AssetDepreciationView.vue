@@ -3,6 +3,7 @@
  * 资产折旧管理视图
  * UI优化版本 - 使用设计系统组件
  */
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
@@ -28,7 +29,7 @@ const periodSummary = ref({
 
 // 历史记录对话框
 const historyDialogVisible = ref(false)
-const historyAssetId = ref<number | null>(null)
+const historyAssetId = ref<LongId | null>(null)
 const historyLoading = ref(false)
 const historyRecords = ref<AssetDepreciationDTO[]>([])
 const historyTotal = ref(0)
@@ -105,7 +106,7 @@ async function handleCalculateAll() {
   }
 }
 
-function handleViewHistory(assetId: number) {
+function handleViewHistory(assetId: LongId) {
   historyAssetId.value = assetId
   historyPage.value = 1
   historyDialogVisible.value = true

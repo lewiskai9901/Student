@@ -15,6 +15,7 @@
  *
  * 每个 Inbox 项可单击直达对应实体, 旁边标注下一步动作 (CTA).
  */
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -70,7 +71,7 @@ const myTaskTodos = computed(() =>
 const myCaseTodos = computed(() =>
   myCases.value.filter(c =>
     ['ASSIGNED', 'IN_PROGRESS', 'REJECTED'].includes(c.status) &&
-    c.assigneeId === Number(authStore.user?.userId)
+    c.assigneeId === authStore.user?.userId
   )
 )
 
@@ -109,7 +110,7 @@ const totalActionable = computed(() => {
 // ── Loaders ──
 async function loadAll() {
   loading.value = true
-  const userId = Number(authStore.user?.userId)
+  const userId = authStore.user?.userId
   try {
     const promises: Promise<any>[] = []
     promises.push(getMyTasks().then(d => (myTasks.value = d || [])).catch(() => {}))

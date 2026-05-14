@@ -149,6 +149,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { http as request } from '@/utils/request'
@@ -158,7 +159,7 @@ import { semesterApi, academicEventApi } from '@/api/calendar'
 import type { PeriodConfig } from '@/types/teaching'
 import { DEFAULT_PERIODS } from '@/types/teaching'
 
-const props = defineProps<{ semesterId: number | string | undefined }>()
+const props = defineProps<{ semesterId: LongId | string | undefined }>()
 
 const viewType = ref<'class' | 'teacher' | 'classroom'>('class')
 const targetId = ref<number | string>()
@@ -170,9 +171,9 @@ const loading = ref(false)
 const weekNumber = ref(1)
 const periods = ref<PeriodConfig[]>(DEFAULT_PERIODS)
 
-const classList = ref<{ id: number; name: string }[]>([])
-const teacherList = ref<{ id: number; name: string }[]>([])
-const classroomList = ref<{ id: number; name: string }[]>([])
+const classList = ref<{ id: LongId; name: string }[]>([])
+const teacherList = ref<{ id: LongId; name: string }[]>([])
+const classroomList = ref<{ id: LongId; name: string }[]>([])
 
 const targetOptions = computed(() =>
   viewType.value === 'class' ? classList.value
@@ -399,7 +400,7 @@ async function loadPeriodConfig() {
 async function loadOptions() {
   try {
     const r = await request.get('/org-units/tree'); const d = (r as any).data || r
-    const classes: { id: number; name: string }[] = []
+    const classes: { id: LongId; name: string }[] = []
     function walk(nodes: any[]) { for (const n of nodes) { if (n.unitType === 'CLASS') classes.push({ id: n.id, name: n.unitName }); if (n.children) walk(n.children) } }
     walk(Array.isArray(d) ? d : [])
     classList.value = classes

@@ -1,3 +1,4 @@
+import type { LongId } from '@/types/common'
 import { ref, computed, type Ref } from 'vue'
 import { http } from '@/utils/request'
 
@@ -14,7 +15,7 @@ import { http } from '@/utils/request'
  */
 
 export interface EntityTypeConfig {
-  id: number
+  id: LongId
   entityType: string           // 'USER' | 'ORG_UNIT' | 'PLACE'
   typeCode: string             // 'STUDENT' | 'DORM_ROOM' | ...
   typeName: string

@@ -353,6 +353,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { ArrowLeft, ArrowRight, InfoFilled, Clock } from '@element-plus/icons-vue'
@@ -369,8 +370,8 @@ const currentYearId = ref<number>()
 const semesters = ref<Semester[]>([])
 const events = ref<AcademicEvent[]>([])
 const selectedYear = ref<AcademicYear | null>(null)
-const yearSemesterCounts = ref<Map<number, number>>(new Map())
-const yearEventCounts = ref<Map<number, number>>(new Map())
+const yearSemesterCounts = ref<Map<LongId, number>>(new Map())
+const yearEventCounts = ref<Map<LongId, number>>(new Map())
 const teachingWeeks = ref<TeachingWeek[]>([])
 const saving = ref(false)
 const selectedSemester = ref<Semester | null>(null)
@@ -475,24 +476,24 @@ const loadYearStats = async () => {
     try {
       const semRes: any = await semesterApi.list(year.id)
       const semData = semRes.data || semRes
-      yearSemesterCounts.value.set(Number(year.id), Array.isArray(semData) ? semData.length : 0)
+      yearSemesterCounts.value.set(year.id, Array.isArray(semData) ? semData.length : 0)
       const eventRes = await academicEventApi.list({ yearId: year.id })
       let eventData: any[] = []
       if (Array.isArray(eventRes)) eventData = eventRes
       else if (eventRes && typeof eventRes === 'object') eventData = (eventRes as any).data || (eventRes as any).records || []
-      yearEventCounts.value.set(Number(year.id), eventData.length)
+      yearEventCounts.value.set(year.id, eventData.length)
     } catch (error) {
       console.error(`Failed to load stats for year ${year.id}:`, error)
     }
   }
 }
 
-const getYearSemesterCount = (yearId: number | string) => yearSemesterCounts.value.get(Number(yearId)) || 0
-const getYearEventCount = (yearId: number | string) => yearEventCounts.value.get(Number(yearId)) || 0
+const getYearSemesterCount = (yearId: LongId | string) => yearSemesterCounts.value.get(yearId) || 0
+const getYearEventCount = (yearId: LongId | string) => yearEventCounts.value.get(yearId) || 0
 
 const enterYear = (year: AcademicYear) => {
   selectedYear.value = year
-  currentYearId.value = Number(year.id)
+  currentYearId.value = year.id
   loadSemesters()
   loadEvents()
 }
@@ -542,7 +543,7 @@ const selectSemester = (sem: Semester) => {
   loadTeachingWeeks(sem.id)
 }
 
-const loadTeachingWeeks = async (semesterId: number | string) => {
+const loadTeachingWeeks = async (semesterId: LongId | string) => {
   try {
     const res = await semesterApi.getWeeks(semesterId)
     const data = Array.isArray(res) ? res : (res as any)?.data || []
@@ -586,11 +587,11 @@ const editWeek = (_week: TeachingWeek) => {
 }
 
 const getWeekTypeName = (type: number) => {
-  const map: Record<number, string> = { 1: '教学周', 2: '考试周', 3: '假期', 4: '机动周' }
+  const map: Record<LongId, string> = { 1: '教学周', 2: '考试周', 3: '假期', 4: '机动周' }
   return map[type] || '未知'
 }
 const getWeekTypeTag = (type: number): string => {
-  const map: Record<number, string> = { 1: 'success', 2: 'warning', 3: 'info', 4: '' }
+  const map: Record<LongId, string> = { 1: 'success', 2: 'warning', 3: 'info', 4: '' }
   return map[type] || ''
 }
 
@@ -638,7 +639,7 @@ const saveSemester = async () => {
   finally { saving.value = false }
 }
 
-const setCurrentSemester = async (id: number | string) => {
+const setCurrentSemester = async (id: LongId | string) => {
   try {
     await semesterApi.setCurrent(id)
     ElMessage.success('设置成功')

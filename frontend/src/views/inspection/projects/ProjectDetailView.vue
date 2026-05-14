@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -35,7 +36,7 @@ import InspSpinner from '../shared/InspSpinner.vue'
 const route = useRoute()
 const router = useRouter()
 const store = useInspExecutionStore()
-const projectId = Number(route.params.id)
+const projectId = route.params.id as string
 
 // ========== State ==========
 const loading = ref(false)
@@ -43,7 +44,7 @@ const project = ref<InspProject | null>(null)
 const inspectors = ref<ProjectInspector[]>([])
 const allTasks = ref<InspTask[]>([])
 const allSubmissions = ref<InspSubmission[]>([])
-const sectionNameMap = ref<Map<number, { name: string; targetType?: string }>>(new Map())
+const sectionNameMap = ref<Map<LongId, { name: string; targetType?: string }>>(new Map())
 const sectionTree = ref<SectionTreeNode[]>([])
 const sectionList = computed(() => [...sectionNameMap.value.entries()].map(([id, info]) => ({ id, sectionName: info.name, targetType: info.targetType })))
 const rootGradeBands = ref<Array<{ name: string; min: number; max: number }>>([])
@@ -240,12 +241,12 @@ const weeklyTrendMax = computed(() => Math.max(1, ...weeklyTrend.value.map(d => 
 
 // ========== 待分配任务 ==========
 const pendingAssignTasks = computed(() => filteredTasks.value.filter(t => t.status === 'PENDING' && !t.inspectorId))
-const assigningTaskId = ref<number | null>(null)
+const assigningTaskId = ref<LongId | null>(null)
 
 async function handleAssignTask(task: InspTask, inspector: ProjectInspector) {
   try {
     assigningTaskId.value = task.id
-    await assignTask(task.id, { inspectorId: Number(inspector.userId), inspectorName: inspector.userName })
+    await assignTask(task.id, { inspectorId: inspector.userId, inspectorName: inspector.userName })
     ElMessage.success(`已分配给 ${inspector.userName}`)
     await loadProject()
   } catch (e: any) {
@@ -392,7 +393,7 @@ const targetScores = computed(() => {
 const aggregatedTargetScores = computed(() => {
   const completed = filteredSubmissions.value.filter(s => s.status === 'COMPLETED' && s.finalScore != null)
   // Group by rootTargetId (or targetId if rootTargetId is absent)
-  const groups = new Map<number, typeof completed>()
+  const groups = new Map<LongId, typeof completed>()
   for (const s of completed) {
     const key = s.rootTargetId ?? s.targetId
     if (!key) continue
@@ -401,12 +402,12 @@ const aggregatedTargetScores = computed(() => {
   }
   // Build aggregated rows
   const rows: Array<{
-    targetId: number
+    targetId: LongId
     targetName: string
     totalScore: number
     grade: string | null
     passed: boolean | null
-    sections: Array<{ sectionId: number; sectionName: string; score: number; grade: string | null }>
+    sections: Array<{ sectionId: LongId; sectionName: string; score: number; grade: string | null }>
   }> = []
   for (const [targetId, subs] of groups) {
     // Simple average of all section scores
@@ -456,10 +457,10 @@ const hasGradeConfig = computed(() => {
 })
 
 // ========== 维度选择 (Dimension tabs for scores) ==========
-const selectedDimension = ref<'overall' | number>('overall')
+const selectedDimension = ref<'overall' | LongId>('overall')
 
 const dimensionTabs = computed(() => {
-  const tabs: Array<{ key: 'overall' | number; label: string }> = [{ key: 'overall', label: '综合' }]
+  const tabs: Array<{ key: 'overall' | LongId; label: string }> = [{ key: 'overall', label: '综合' }]
   const entries = [...sectionNameMap.value.entries()]
   for (const [id, info] of entries) {
     tabs.push({ key: id, label: info.name })
@@ -473,7 +474,7 @@ const dimensionScores = computed(() => {
       .sort((a, b) => b.totalScore - a.totalScore)
       .map((a, i) => ({ ...a, rank: i + 1 }))
   }
-  const sectionId = selectedDimension.value as number
+  const sectionId = selectedDimension.value as LongId
   const completed = filteredSubmissions.value
     .filter(s => s.status === 'COMPLETED' && s.finalScore != null && s.sectionId === sectionId)
     .sort((a, b) => (b.finalScore ?? 0) - (a.finalScore ?? 0))
@@ -484,7 +485,7 @@ const dimensionScores = computed(() => {
     grade: s.grade ?? null,
     passed: null as boolean | null,
     rank: i + 1,
-    sections: [] as Array<{ sectionId: number; sectionName: string; score: number; grade: string | null; weight: number }>
+    sections: [] as Array<{ sectionId: LongId; sectionName: string; score: number; grade: string | null; weight: number }>
   }))
 })
 
@@ -508,7 +509,7 @@ const dimensionHasGrades = computed(() => {
 })
 
 // Grade color resolver (简单回退，详细等级颜色由 IndicatorScoreView 处理)
-function getGradeColor(grade: string | null, _sectionId?: number): string | null {
+function getGradeColor(grade: string | null, _sectionId?: LongId): string | null {
   if (!grade) return null
   if (grade.includes('不') || grade.includes('差')) return '#ef4444'
   return '#10b981'
@@ -536,9 +537,9 @@ async function loadProject() {
     if (project.value.rootSectionId) {
       try {
         const sections = await getSections(project.value.rootSectionId)
-        const map = new Map<number, { name: string; targetType?: string }>()
+        const map = new Map<LongId, { name: string; targetType?: string }>()
         for (const sec of sections) {
-          map.set(Number(sec.id), { name: sec.sectionName, targetType: sec.targetType ?? undefined })
+          map.set(sec.id, { name: sec.sectionName, targetType: sec.targetType ?? undefined })
         }
         sectionNameMap.value = map
         sectionTree.value = buildSectionTree(sections, project.value.rootSectionId)
@@ -697,16 +698,16 @@ async function handleClaim(task: InspTask) { try { await store.claimTask(task.id
 
 // ========== Inspector ==========
 async function searchUsers(q: string) { if (!q.trim()) { addResults.value = []; return }; addLoading.value = true; try { addResults.value = await getSimpleUserList(q.trim()) } catch (e: any) { console.warn('搜索用户失败', e); addResults.value = [] }; addLoading.value = false }
-async function handleAddInspector(userId: number) {
-  const u = addResults.value.find(x => Number(x.id) === userId); if (!u) return
-  try { await store.addInspector(projectId, { userId: Number(u.id), userName: u.realName || u.username, role: addRole.value }); ElMessage.success(`已添加 ${u.realName || u.username}`); addQuery.value = ''; addResults.value = []; inspectors.value = await store.loadInspectors(projectId) } catch (e: any) { ElMessage.error(e.message || '失败') }
+async function handleAddInspector(userId: LongId) {
+  const u = addResults.value.find(x => x.id === userId); if (!u) return
+  try { await store.addInspector(projectId, { userId: u.id, userName: u.realName || u.username, role: addRole.value }); ElMessage.success(`已添加 ${u.realName || u.username}`); addQuery.value = ''; addResults.value = []; inspectors.value = await store.loadInspectors(projectId) } catch (e: any) { ElMessage.error(e.message || '失败') }
 }
 async function handleRemoveInspector(insp: ProjectInspector) { try { await ElMessageBox.confirm(`移除「${insp.userName}」？`, '确认', { type: 'warning' }); await store.removeInspector(projectId, insp.id); inspectors.value = await store.loadInspectors(projectId) } catch (e: any) {
     if (e !== 'cancel' && e?.toString?.() !== 'cancel') { console.error('移除检查员失败', e); ElMessage.error('移除检查员失败，请重试') }
   } }
 
 function goBack() { router.push('/inspection/projects') }
-function goExecuteTask(taskId: number) { router.push(`/inspection/tasks/${taskId}/execute`) }
+function goExecuteTask(taskId: LongId) { router.push(`/inspection/tasks/${taskId}/execute`) }
 
 // review #12: 模板版本状态 (drifted / 当前 / 最新)
 const templateVersionStatus = ref<{
@@ -1291,7 +1292,7 @@ onMounted(async () => {
             <div class="cfg-add-insp-row">
               <div class="cfg-add-insp-search">
                 <el-select v-model="addQuery" filterable remote reserve-keyword :remote-method="searchUsers" :loading="addLoading" placeholder="输入姓名搜索..." class="w-full" size="default" @change="handleAddInspector" clearable>
-                  <el-option v-for="u in addResults" :key="Number(u.id)" :label="(u.realName||u.username) + (u.orgUnitName ? ` (${u.orgUnitName})` : '')" :value="Number(u.id)">
+                  <el-option v-for="u in addResults" :key="u.id" :label="(u.realName||u.username) + (u.orgUnitName ? ` (${u.orgUnitName})` : '')" :value="u.id">
                     <div class="cfg-user-option"><span class="cfg-user-name">{{ u.realName || u.username }}</span><span class="cfg-hint">{{ u.orgUnitName || u.username }}</span></div>
                   </el-option>
                 </el-select>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
@@ -13,14 +14,14 @@ import type { Indicator, IndicatorScore } from '@/types/insp/indicator'
 import type { GradeScheme } from '@/types/insp/gradeScheme'
 import type { InspTask, InspSubmission } from '@/types/insp/project'
 
-const props = defineProps<{ projectId: number }>()
+const props = defineProps<{ projectId: LongId }>()
 
 const loading = ref(false)
 const computing = ref(false)
-const lastComputedAt = ref<number | null>(null)
+const lastComputedAt = ref<LongId | null>(null)
 const indicators = ref<Indicator[]>([])
 const gradeSchemes = ref<GradeScheme[]>([])
-const scoreMap = ref<Map<number, IndicatorScore[]>>(new Map())
+const scoreMap = ref<Map<LongId, IndicatorScore[]>>(new Map())
 const tasks = ref<InspTask[]>([])
 const submissions = ref<InspSubmission[]>([])
 
@@ -48,11 +49,11 @@ const periodRange = computed(() => {
 
 // ═══ Derived data ═══
 const rootIndicators = computed(() => indicators.value.filter(i => !i.parentIndicatorId).sort((a, b) => a.sortOrder - b.sortOrder))
-function getChildren(pid: number) { return indicators.value.filter(i => Number(i.parentIndicatorId) === pid).sort((a, b) => a.sortOrder - b.sortOrder) }
-function schemeName(id: number | null) { return id ? (gradeSchemes.value.find(s => s.id === id)?.displayName || '') : '' }
+function getChildren(pid: number) { return indicators.value.filter(i => i.parentIndicatorId === pid).sort((a, b) => a.sortOrder - b.sortOrder) }
+function schemeName(id: LongId | null) { return id ? (gradeSchemes.value.find(s => s.id === id)?.displayName || '') : '' }
 
 // All sections from indicators
-const allSections = computed(() => indicators.value.filter(i => i.sourceSectionId).map(i => ({ id: Number(i.sourceSectionId), name: i.name })))
+const allSections = computed(() => indicators.value.filter(i => i.sourceSectionId).map(i => ({ id: i.sourceSectionId, name: i.name })))
 // All inspectors from tasks
 const allInspectors = computed(() => {
   const m = new Map<string, string>()
@@ -70,7 +71,7 @@ const filteredSubmissions = computed(() => {
     return task && task.taskDate >= range.start && task.taskDate <= range.end
   })
   // Section filter
-  if (filterSection.value) subs = subs.filter(s => Number(s.sectionId) === Number(filterSection.value))
+  if (filterSection.value) subs = subs.filter(s => s.sectionId === filterSection.value)
   // Inspector filter
   if (filterInspector.value) {
     const taskIds = new Set(tasks.value.filter(t => String(t.inspectorId) === filterInspector.value || t.inspectorName === filterInspector.value).map(t => String(t.id)))
@@ -87,12 +88,12 @@ function toggleSort(f: 'score' | 'name') {
   else { sortField.value = f; sortDir.value = f === 'score' ? 'desc' : 'asc' }
 }
 
-interface TargetRow { targetId: number; targetName: string; score: number; count: number; avg: number; max: number; min: number; sections: Map<number, { score: number; count: number }> }
+interface TargetRow { targetId: LongId; targetName: string; score: number; count: number; avg: number; max: number; min: number; sections: Map<LongId, { score: number; count: number }> }
 
 const targetRows = computed<TargetRow[]>(() => {
-  const map = new Map<number, TargetRow>()
+  const map = new Map<LongId, TargetRow>()
   for (const s of filteredSubmissions.value) {
-    const tid = Number(s.targetId)
+    const tid = s.targetId
     if (!map.has(tid)) map.set(tid, { targetId: tid, targetName: s.targetName || `#${tid}`, score: 0, count: 0, avg: 0, max: -Infinity, min: Infinity, sections: new Map() })
     const row = map.get(tid)!
     const score = s.finalScore!
@@ -100,7 +101,7 @@ const targetRows = computed<TargetRow[]>(() => {
     if (score > row.max) row.max = score
     if (score < row.min) row.min = score
     // Section breakdown
-    const secId = Number(s.sectionId)
+    const secId = s.sectionId
     if (!row.sections.has(secId)) row.sections.set(secId, { score: 0, count: 0 })
     const sec = row.sections.get(secId)!; sec.score += score; sec.count++
   }
@@ -116,18 +117,18 @@ const targetRows = computed<TargetRow[]>(() => {
 })
 
 // ═══ Section analysis view ═══
-interface SectionStat { sectionId: number; sectionName: string; totalScore: number; count: number; avg: number; max: number; min: number; targets: number }
+interface SectionStat { sectionId: LongId; sectionName: string; totalScore: number; count: number; avg: number; max: number; min: number; targets: number }
 const sectionStats = computed<SectionStat[]>(() => {
-  const map = new Map<number, SectionStat>()
-  const targetSets = new Map<number, Set<number>>()
+  const map = new Map<LongId, SectionStat>()
+  const targetSets = new Map<LongId, Set<LongId>>()
   for (const s of filteredSubmissions.value) {
-    const secId = Number(s.sectionId)
+    const secId = s.sectionId
     const secName = allSections.value.find(x => x.id === secId)?.name || `分区#${secId}`
     if (!map.has(secId)) { map.set(secId, { sectionId: secId, sectionName: secName, totalScore: 0, count: 0, avg: 0, max: -Infinity, min: Infinity, targets: 0 }); targetSets.set(secId, new Set()) }
     const stat = map.get(secId)!; const score = s.finalScore!
     stat.totalScore += score; stat.count++
     if (score > stat.max) stat.max = score; if (score < stat.min) stat.min = score
-    targetSets.get(secId)!.add(Number(s.targetId))
+    targetSets.get(secId)!.add(s.targetId)
   }
   for (const [secId, stat] of map) { stat.avg = stat.count > 0 ? Math.round(stat.totalScore / stat.count * 10) / 10 : 0; stat.targets = targetSets.get(secId)!.size; if (stat.max === -Infinity) stat.max = 0; if (stat.min === Infinity) stat.min = 0 }
   return [...map.values()].sort((a, b) => b.avg - a.avg)
@@ -145,7 +146,7 @@ const inspectorStats = computed<InspectorStat[]>(() => {
     if (!map.has(name)) map.set(name, { name, taskCount: 0, submissionCount: 0, avgScore: 0, totalScore: 0, targets: 0 })
     map.get(name)!.taskCount++
   }
-  const targetSets = new Map<string, Set<number>>()
+  const targetSets = new Map<string, Set<LongId>>()
   for (const s of filteredSubmissions.value) {
     const task = tasks.value.find(t => String(t.id) === String(s.taskId))
     if (!task?.inspectorName) continue
@@ -153,7 +154,7 @@ const inspectorStats = computed<InspectorStat[]>(() => {
     if (!map.has(name)) map.set(name, { name, taskCount: 0, submissionCount: 0, avgScore: 0, totalScore: 0, targets: 0 })
     const stat = map.get(name)!; stat.submissionCount++; stat.totalScore += s.finalScore!
     if (!targetSets.has(name)) targetSets.set(name, new Set())
-    targetSets.get(name)!.add(Number(s.targetId))
+    targetSets.get(name)!.add(s.targetId)
   }
   for (const [name, stat] of map) { stat.avgScore = stat.submissionCount > 0 ? Math.round(stat.totalScore / stat.submissionCount * 10) / 10 : 0; stat.targets = targetSets.get(name)?.size || 0 }
   return [...map.values()].sort((a, b) => b.submissionCount - a.submissionCount)
@@ -190,7 +191,7 @@ async function loadData() {
   finally { loading.value = false }
 }
 async function loadScores() {
-  const r = periodRange.value; const m = new Map<number, IndicatorScore[]>()
+  const r = periodRange.value; const m = new Map<LongId, IndicatorScore[]>()
   await Promise.all(indicators.value.map(async ind => { try { m.set(ind.id, await getIndicatorScores(ind.id, r.start, r.end)) } catch { m.set(ind.id, []) } }))
   scoreMap.value = m
 }

@@ -293,6 +293,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -378,7 +379,7 @@ const refreshData = () => {
   loadData()
 }
 
-const isSelectedDormitory = (id: number | string) => {
+const isSelectedDormitory = (id: LongId | string) => {
   return selectedDormitories.value.some(d => d.id === id)
 }
 
@@ -391,11 +392,11 @@ const toggleDormitorySelection = (dormitory: Dormitory) => {
   }
 }
 
-const getDormitoryBindings = (dormitoryId: number | string) => {
+const getDormitoryBindings = (dormitoryId: LongId | string) => {
   return bindings.value.filter(b => b.dormitoryId === dormitoryId)
 }
 
-const getClassBindings = (orgUnitId: number | string) => {
+const getClassBindings = (orgUnitId: LongId | string) => {
   return bindings.value.filter(b => b.orgUnitId === orgUnitId)
 }
 
@@ -414,8 +415,8 @@ const confirmAssign = async () => {
   assigning.value = true
   try {
     const count = await batchAssignDormitoriesToClass({
-      orgUnitId: Number(targetClass.value.id),
-      dormitoryIds: selectedDormitories.value.map(d => Number(d.id))
+      orgUnitId: targetClass.value.id,
+      dormitoryIds: selectedDormitories.value.map(d => d.id)
     })
     ElMessage.success(`成功分配 ${count} 间宿舍`)
     confirmDialogVisible.value = false

@@ -54,6 +54,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import * as XLSX from 'xlsx'
@@ -61,7 +62,7 @@ import { orgMemberApi } from '@/api/orgMember'
 import type { OrgMember } from '@/types/position'
 
 interface OrgNode {
-  id: number | string
+  id: LongId | string
   unitName: string
   unitType?: string
   children?: OrgNode[]

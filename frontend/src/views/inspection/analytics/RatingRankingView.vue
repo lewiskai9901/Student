@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Trophy, Medal, RefreshCw } from 'lucide-vue-next'
@@ -7,13 +8,13 @@ import type { InspProject, RatingDimension, RatingResult } from '@/types/insp/pr
 
 // ========== State ==========
 const projects = ref<InspProject[]>([])
-const selectedProjectId = ref<number | null>(null)
+const selectedProjectId = ref<LongId | null>(null)
 const selectedDate = ref('')
 const dimensions = ref<RatingDimension[]>([])
-const resultsByDimension = ref<Map<number, RatingResult[]>>(new Map())
+const resultsByDimension = ref<Map<LongId, RatingResult[]>>(new Map())
 const loadingProjects = ref(false)
 const loadingDimensions = ref(false)
-const loadingResults = ref<Set<number>>(new Set())
+const loadingResults = ref<Set<LongId>>(new Set())
 
 // ========== Load projects ==========
 async function loadProjects() {
@@ -50,7 +51,7 @@ async function loadDimensions() {
 
 // ========== Load results for all dimensions ==========
 async function loadAllResults() {
-  const newMap = new Map<number, RatingResult[]>()
+  const newMap = new Map<LongId, RatingResult[]>()
   const promises = dimensions.value.map(async (dim) => {
     loadingResults.value.add(dim.id)
     try {
@@ -88,11 +89,11 @@ function getGradeColor(grade: string | null): string {
   return map[grade] || '#6b7280'
 }
 
-function isDimensionLoading(dimId: number): boolean {
+function isDimensionLoading(dimId: LongId): boolean {
   return loadingResults.value.has(dimId)
 }
 
-function getDimensionResults(dimId: number): RatingResult[] {
+function getDimensionResults(dimId: LongId): RatingResult[] {
   return resultsByDimension.value.get(dimId) || []
 }
 

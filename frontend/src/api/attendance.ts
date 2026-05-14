@@ -1,6 +1,7 @@
 /**
  * 考勤管理 API
  */
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 import type {
   AttendanceRecord,
@@ -19,9 +20,9 @@ export function listRecords(params: Record<string, any>): Promise<AttendanceReco
 }
 
 export function getByClass(params: {
-  orgUnitId: number
+  orgUnitId: LongId
   date: string
-  courseId?: number
+  courseId?: LongId
   period?: number
 }): Promise<ClassAttendanceRow[]> {
   return http.get<ClassAttendanceRow[]>(`${BASE}/records/by-class`, { params })
@@ -31,11 +32,11 @@ export function createRecord(data: Record<string, any>): Promise<any> {
   return http.post(`${BASE}/records`, data)
 }
 
-export function updateRecord(id: number | string, data: Record<string, any>): Promise<any> {
+export function updateRecord(id: LongId | string, data: Record<string, any>): Promise<any> {
   return http.put(`${BASE}/records/${id}`, data)
 }
 
-export function deleteRecord(id: number | string): Promise<any> {
+export function deleteRecord(id: LongId | string): Promise<any> {
   return http.delete(`${BASE}/records/${id}`)
 }
 
@@ -46,8 +47,8 @@ export function batchRecord(data: Record<string, any>): Promise<any> {
 // ==================== 导出 ====================
 
 export function exportRecords(params: {
-  semesterId: number | string
-  orgUnitId?: number
+  semesterId: LongId | string
+  orgUnitId?: LongId
   startDate?: string
   endDate?: string
 }): Promise<any> {
@@ -61,7 +62,7 @@ export function getStatistics(params: Record<string, any>): Promise<AttendanceSt
 }
 
 export function getStudentStats(
-  studentId: number | string,
+  studentId: LongId | string,
   params?: Record<string, any>
 ): Promise<StudentAttendanceStats> {
   return http.get<StudentAttendanceStats>(`${BASE}/statistics/student/${studentId}`, { params })
@@ -77,11 +78,11 @@ export function listLeaves(params?: Record<string, any>): Promise<LeaveRequest[]
   return http.get<LeaveRequest[]>(`${BASE}/leave-requests`, { params })
 }
 
-export function approveLeave(id: number | string, comment?: string): Promise<any> {
+export function approveLeave(id: LongId | string, comment?: string): Promise<any> {
   return http.post(`${BASE}/leave-requests/${id}/approve`, comment ? { comment } : {})
 }
 
-export function rejectLeave(id: number | string, comment?: string): Promise<any> {
+export function rejectLeave(id: LongId | string, comment?: string): Promise<any> {
   return http.post(`${BASE}/leave-requests/${id}/reject`, { comment })
 }
 

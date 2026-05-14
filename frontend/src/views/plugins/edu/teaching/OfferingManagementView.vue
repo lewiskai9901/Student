@@ -41,6 +41,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -60,9 +61,9 @@ watch(() => route.query.tab, (tab) => {
   if (tab && typeof tab === 'string') activeTab.value = tab
 })
 
-const selectedOrg = ref<{ type: string; id: number | string; name: string; classIds?: (number | string)[] }>({ type: '', id: '', name: '' })
+const selectedOrg = ref<{ type: string; id: LongId | string; name: string; classIds?: (number | string)[] }>({ type: '', id: '', name: '' })
 
-function onTreeSelect(node: { type: string; id: number | string; name: string; classIds?: (number | string)[] }) {
+function onTreeSelect(node: { type: string; id: LongId | string; name: string; classIds?: (number | string)[] }) {
   selectedOrg.value = node
 }
 

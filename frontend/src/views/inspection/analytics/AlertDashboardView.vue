@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Pencil, Trash2 } from 'lucide-vue-next'
@@ -32,7 +33,7 @@ const statusFilter = ref<AlertStatus | ''>('')
 
 // Dialog
 const dialogVisible = ref(false)
-const editingId = ref<number | null>(null)
+const editingId = ref<LongId | null>(null)
 const dialogTitle = computed(() => (editingId.value ? '编辑预警规则' : '新建预警规则'))
 
 const form = ref<{
@@ -41,7 +42,7 @@ const form = ref<{
   thresholdConfig: string
   severity: AlertSeverity
   notificationChannels: string
-  projectId: number | null
+  projectId: LongId | null
 }>({
   ruleName: '',
   metricType: 'SCORE_DROP',

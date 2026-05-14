@@ -273,6 +273,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
@@ -339,7 +340,7 @@ const handleOperatorSearch = () => {
 }
 
 const selectOperator = (u: SimpleUser) => {
-  queryParams.operatorId = Number(u.id)
+  queryParams.operatorId = u.id
   operatorKeyword.value = u.realName || u.username
   showOperatorDropdown.value = false
 }

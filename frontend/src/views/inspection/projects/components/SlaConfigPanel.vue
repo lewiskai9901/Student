@@ -5,13 +5,14 @@
  * Configures response/resolution time limits and an escalation chain
  * for when SLA thresholds are breached.
  */
+import type { LongId } from '@/types/common'
 import { ref, computed } from 'vue'
 import { Plus, Trash2, AlertTriangle } from 'lucide-vue-next'
 import { ElMessage } from 'element-plus'
 
 interface EscalationStep {
   level: number
-  userId: number
+  userId: LongId
   userName: string
   hours: number
 }

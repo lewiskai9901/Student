@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -20,7 +21,7 @@ const route = useRoute()
 const router = useRouter()
 const store = useInspExecutionStore()
 
-const taskId = Number(route.params.id)
+const taskId = route.params.id as string
 
 // Offline sync
 const {
@@ -163,7 +164,7 @@ async function handleGetLocation() {
   }
 }
 
-async function handleResolveConflict(submissionId: number, keepLocal: boolean) {
+async function handleResolveConflict(submissionId: LongId, keepLocal: boolean) {
   if (keepLocal) {
     await resolveKeepLocal(submissionId)
   } else {

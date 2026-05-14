@@ -5,6 +5,7 @@
  * Hierarchical category selection using el-tree-select.
  * Displays category code + name for each node.
  */
+import type { LongId } from '@/types/common'
 import { computed } from 'vue'
 import type { IssueCategory } from '@/types/insp/platform'
 
@@ -46,7 +47,7 @@ function handleChange(val: number) {
 }
 
 /** Find the selected category by ID for display */
-function findCategory(items: IssueCategory[], id: number): IssueCategory | null {
+function findCategory(items: IssueCategory[], id: LongId): IssueCategory | null {
   for (const item of items) {
     if (item.id === id) return item
     if (item.children) {

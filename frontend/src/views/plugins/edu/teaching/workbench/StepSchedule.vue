@@ -61,6 +61,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { scheduleConfigApi } from '@/api/teaching'
@@ -69,7 +70,7 @@ import StepDataReady from '../schedule/setup/StepDataReady.vue'
 import StepExecute from '../schedule/setup/StepExecute.vue'
 import SelfStudyFiller from './SelfStudyFiller.vue'
 
-const props = defineProps<{ semesterId: number | string | undefined; totalWeeks?: number }>()
+const props = defineProps<{ semesterId: LongId | string | undefined; totalWeeks?: number }>()
 const emit = defineEmits<{ scheduled: [] }>()
 
 const readiness = ref<any>(null)

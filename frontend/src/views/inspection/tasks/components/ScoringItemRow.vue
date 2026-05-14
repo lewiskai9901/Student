@@ -6,6 +6,7 @@
  * remark input, flag toggle, and score display.
  * Supports both scored items (13 scoring modes) and capture items (input-only).
  */
+import type { LongId } from '@/types/common'
 import { computed, ref } from 'vue'
 import { Check, X, Flag, Sparkles } from 'lucide-vue-next'
 import type { SubmissionDetail } from '@/types/insp/project'
@@ -25,10 +26,10 @@ const props = defineProps<{
   needsRemark: (d: SubmissionDetail) => boolean
   isNonScoring: (d: SubmissionDetail) => boolean
   scoringInProgress: boolean
-  numberInputs: Record<number, number>
-  remarkInputs: Record<number, string>
-  selectInputs: Record<number, string>
-  multiInputs: Record<number, Record<string, number>>
+  numberInputs: Record<LongId, number>
+  remarkInputs: Record<LongId, string>
+  selectInputs: Record<LongId, string>
+  multiInputs: Record<LongId, Record<string, number>>
   modeLabelMap: Record<string, string>
   modeTagTypeMap: Record<string, string>
   // Condition state
@@ -52,10 +53,10 @@ const emit = defineEmits<{
   formula: [detail: SubmissionDetail]
   toggleFlag: [detail: SubmissionDetail]
   remarkChange: [detail: SubmissionDetail]
-  'update:numberInput': [detailId: number, value: number]
-  'update:multiInput': [detailId: number, key: string, value: number]
-  'update:remarkInput': [detailId: number, value: string]
-  'update:selectInput': [detailId: number, value: string]
+  'update:numberInput': [detailId: LongId, value: number]
+  'update:multiInput': [detailId: LongId, key: string, value: number]
+  'update:remarkInput': [detailId: LongId, value: string]
+  'update:selectInput': [detailId: LongId, value: string]
 }>()
 
 // Shorthand

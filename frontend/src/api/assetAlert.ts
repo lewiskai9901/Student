@@ -1,3 +1,4 @@
+import type { LongId } from '@/types/common'
 import { http as request } from '@/utils/request'
 import type { AssetAlert, AlertStatistics } from '@/types/asset'
 
@@ -7,7 +8,7 @@ export const assetAlertApi = {
   /**
    * 获取预警详情
    */
-  getAlert(id: number | string): Promise<AssetAlert> {
+  getAlert(id: LongId | string): Promise<AssetAlert> {
     return request.get(`${BASE_URL}/${id}`)
   },
 
@@ -28,7 +29,7 @@ export const assetAlertApi = {
   /**
    * 标记为已读
    */
-  markAsRead(id: number | string): Promise<void> {
+  markAsRead(id: LongId | string): Promise<void> {
     return request.post(`${BASE_URL}/${id}/read`)
   },
 
@@ -42,7 +43,7 @@ export const assetAlertApi = {
   /**
    * 处理预警
    */
-  handleAlert(id: number | string, remark?: string): Promise<void> {
+  handleAlert(id: LongId | string, remark?: string): Promise<void> {
     return request.post(`${BASE_URL}/${id}/handle`, { remark })
   },
 

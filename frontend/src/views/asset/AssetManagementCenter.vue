@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -97,7 +98,7 @@ const maintenanceAsset = ref<Asset | null>(null)
 
 // 标签打印
 const labelDialogVisible = ref(false)
-const labelAssets = ref<Array<{ id: number | string; assetCode: string; assetName: string; location?: string | null }>>([])
+const labelAssets = ref<Array<{ id: LongId | string; assetCode: string; assetName: string; location?: string | null }>>([])
 
 // ============ 计算属性 ============
 
@@ -168,7 +169,7 @@ function handleCategoryClick(category: AssetCategory | null) {
 }
 
 // 切换分类展开
-function toggleCategory(categoryId: number | string) {
+function toggleCategory(categoryId: LongId | string) {
   const idx = expandedCategoryIds.value.indexOf(categoryId)
   if (idx >= 0) {
     expandedCategoryIds.value.splice(idx, 1)

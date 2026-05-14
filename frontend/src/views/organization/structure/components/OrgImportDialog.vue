@@ -117,6 +117,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { UploadFilled, Download, CircleCheckFilled, WarningFilled } from '@element-plus/icons-vue'
@@ -130,7 +131,7 @@ import type { Position } from '@/types/position'
 
 const props = defineProps<{
   visible: boolean
-  orgUnitId: number | string
+  orgUnitId: LongId | string
 }>()
 
 const emit = defineEmits<{
@@ -147,9 +148,9 @@ interface ParsedRow {
   positionCode?: string
   appointmentType?: string
   // resolved
-  _userId?: number | string
-  _orgUnitId?: number | string
-  _positionId?: number | string
+  _userId?: LongId | string
+  _orgUnitId?: LongId | string
+  _positionId?: LongId | string
   _valid: boolean
   _error: string
   _matchInfo: string

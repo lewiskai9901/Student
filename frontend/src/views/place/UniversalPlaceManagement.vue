@@ -680,6 +680,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -739,7 +740,7 @@ const floorPlanEditorRef = ref<InstanceType<typeof FloorPlanEditor> | null>(null
 
 // New batch check-in state
 interface PendingUser {
-  userId: number | string
+  userId: LongId | string
   username: string
   realName: string
   userType?: string
@@ -750,12 +751,12 @@ interface PendingUser {
 }
 const ciPendingUsers = ref<PendingUser[]>([])
 const ciRemark = ref('')
-const ciSearchUserId = ref<number | undefined>(undefined)
+const ciSearchUserId = ref<LongId | undefined>(undefined)
 const userSearchList = ref<SimpleUser[]>([])
 const userSearchLoading = ref(false)
 const showOrgPicker = ref(false)
 const ciOrgTreeData = ref<OrgUnitTreeNode[]>([])
-const ciBatchOrgId = ref<number | undefined>(undefined)
+const ciBatchOrgId = ref<LongId | undefined>(undefined)
 const ciBatchLoading = ref(false)
 
 const ciRemaining = computed(() => {
@@ -851,7 +852,7 @@ async function handleUserSearch(keyword: string) {
   }
 }
 
-function handleAddUserFromSearch(userId: number) {
+function handleAddUserFromSearch(userId: LongId) {
   if (!userId) return
   const user = userSearchList.value.find(u => String(u.id) === String(userId))
   if (!user) return
@@ -928,7 +929,7 @@ const bookingForm = ref({
 })
 const attendeeOptions = ref<SimpleUser[]>([])
 const attendeeSearching = ref(false)
-const batchOrgUnitId = ref<number | null>(null)
+const batchOrgUnitId = ref<LongId | null>(null)
 
 const showBookingPanel = computed(() => {
   const node = selectedNode.value
@@ -936,7 +937,7 @@ const showBookingPanel = computed(() => {
   return !!node.bookable
 })
 
-async function loadBookings(placeId: number | string) {
+async function loadBookings(placeId: LongId | string) {
   try {
     bookings.value = await universalPlaceApi.getPlaceBookings(placeId, !bookingShowAll.value)
   } catch {
@@ -970,7 +971,7 @@ async function searchAttendees(keyword: string) {
   }
 }
 
-async function handleBatchAddAttendeesByOrg(orgId: number | null) {
+async function handleBatchAddAttendeesByOrg(orgId: LongId | null) {
   if (!orgId) return
   try {
     const users = await getUsersByOrgUnit(orgId)
@@ -1046,12 +1047,12 @@ function openSeatArrangement(bk: PlaceBooking) {
 }
 
 function bookingStatusLabel(status: number): string {
-  const map: Record<number, string> = { 0: '已取消', 1: '待使用', 2: '使用中', 3: '已完成' }
+  const map: Record<LongId, string> = { 0: '已取消', 1: '待使用', 2: '使用中', 3: '已完成' }
   return map[status] || '未知'
 }
 
 function bookingStatusClass(status: number): string {
-  const map: Record<number, string> = {
+  const map: Record<LongId, string> = {
     0: 'bg-gray-100 text-gray-500',
     1: 'bg-blue-50 text-blue-600',
     2: 'bg-emerald-50 text-emerald-600',
@@ -1069,7 +1070,7 @@ function formatDateTime(dateStr?: string) {
 
 
 // ========== Computed ==========
-const findNode = (nodes: PlaceTreeNode[], id: number | string): PlaceTreeNode | null => {
+const findNode = (nodes: PlaceTreeNode[], id: LongId | string): PlaceTreeNode | null => {
   for (const node of nodes) {
     if (String(node.id) === String(id)) return node
     if (node.children) {
@@ -1081,7 +1082,7 @@ const findNode = (nodes: PlaceTreeNode[], id: number | string): PlaceTreeNode | 
 }
 
 // Build path from tree by walking ancestors
-const buildPath = (nodes: PlaceTreeNode[], targetId: number | string, ancestors: string[] = []): string[] | null => {
+const buildPath = (nodes: PlaceTreeNode[], targetId: LongId | string, ancestors: string[] = []): string[] | null => {
   for (const node of nodes) {
     const current = [...ancestors, node.placeName]
     if (String(node.id) === String(targetId)) return current
@@ -1220,7 +1221,7 @@ async function loadStatistics() {
   }
 }
 
-async function loadChildPlaces(parentId: number | string) {
+async function loadChildPlaces(parentId: LongId | string) {
   try {
     childPlaces.value = await universalPlaceApi.getChildren(parentId)
   } catch {
@@ -1330,7 +1331,7 @@ function handleCommand(command: string) {
   }
 }
 
-async function changeStatus(id: number | string, status: number) {
+async function changeStatus(id: LongId | string, status: number) {
   try {
     await universalPlaceApi.changeStatus(id, status)
     ElMessage.success('状态更新成功')
@@ -1358,7 +1359,7 @@ async function handleDelete(place: PlaceTreeNode) {
 }
 
 // ========== Occupant Methods ==========
-async function loadOccupants(placeId: number | string) {
+async function loadOccupants(placeId: LongId | string) {
   try {
     occupants.value = await universalPlaceApi.getOccupants(placeId)
   } catch {
@@ -1366,7 +1367,7 @@ async function loadOccupants(placeId: number | string) {
   }
 }
 
-async function loadOccupantHistory(placeId: number | string) {
+async function loadOccupantHistory(placeId: LongId | string) {
   try {
     occupantHistory.value = await universalPlaceApi.getOccupantHistory(placeId)
   } catch {

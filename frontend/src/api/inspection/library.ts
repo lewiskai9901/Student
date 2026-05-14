@@ -1,6 +1,7 @@
 /**
  * 检查平台 - 检查项库 API
  */
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 import type {
   LibraryItem,
@@ -18,7 +19,7 @@ export function getLibraryItems(params?: {
   return http.get<LibraryItem[]>(BASE, { params })
 }
 
-export function getLibraryItem(id: number): Promise<LibraryItem> {
+export function getLibraryItem(id: LongId): Promise<LibraryItem> {
   return http.get<LibraryItem>(`${BASE}/${id}`)
 }
 
@@ -30,19 +31,19 @@ export function createLibraryItem(data: CreateLibraryItemRequest): Promise<Libra
   return http.post<LibraryItem>(BASE, data)
 }
 
-export function updateLibraryItem(id: number, data: UpdateLibraryItemRequest): Promise<LibraryItem> {
+export function updateLibraryItem(id: LongId, data: UpdateLibraryItemRequest): Promise<LibraryItem> {
   return http.put<LibraryItem>(`${BASE}/${id}`, data)
 }
 
-export function deleteLibraryItem(id: number): Promise<void> {
+export function deleteLibraryItem(id: LongId): Promise<void> {
   return http.delete(`${BASE}/${id}`)
 }
 
-export function syncLibraryItem(id: number): Promise<number> {
+export function syncLibraryItem(id: LongId): Promise<number> {
   return http.post<number>(`${BASE}/${id}/sync`)
 }
 
-export function createItemFromLibrary(sectionId: number, libraryItemId: number, syncWithLibrary: boolean): Promise<TemplateItem> {
+export function createItemFromLibrary(sectionId: LongId, libraryItemId: LongId, syncWithLibrary: boolean): Promise<TemplateItem> {
   return http.post<TemplateItem>(`/inspection/sections/${sectionId}/items/from-library`, {
     libraryItemId,
     syncWithLibrary,

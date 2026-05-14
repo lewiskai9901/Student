@@ -310,6 +310,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, onMounted, h } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
@@ -330,14 +331,14 @@ const InfoItem = (props: { label: string; value?: string | number | null; class?
 }
 
 interface Props {
-  studentId: number | string | null
+  studentId: LongId | string | null
 }
 
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
   close: []
-  edit: [id: number]
+  edit: [id: LongId]
 }>()
 
 const authStore = useAuthStore()
@@ -367,7 +368,7 @@ const statusChangesLoading = ref(false)
 
 // 获取状态样式类 - V2: 0=在读, 1=休学, 2=退学, 3=毕业, 4=转学
 const getStatusClass = (status: number) => {
-  const classMap: Record<number, string> = {
+  const classMap: Record<LongId, string> = {
     0: 'bg-green-50 text-green-700',
     1: 'bg-amber-50 text-amber-700',
     2: 'bg-gray-100 text-gray-700',
@@ -393,7 +394,7 @@ const maskIdCard = (idCard?: string) => {
 
 // 住宿状态样式类 (UniversalPlace: 1=在住, 0=已退)
 const getDormitoryStatusClass = (status: number) => {
-  const classMap: Record<number, string> = {
+  const classMap: Record<LongId, string> = {
     1: 'bg-green-50 text-green-700',
     0: 'bg-gray-100 text-gray-700'
   }
@@ -402,7 +403,7 @@ const getDormitoryStatusClass = (status: number) => {
 
 // 住宿状态文本
 const getDormitoryStatusText = (status: number) => {
-  const statusMap: Record<number, string> = {
+  const statusMap: Record<LongId, string> = {
     1: '在住',
     0: '已退宿'
   }

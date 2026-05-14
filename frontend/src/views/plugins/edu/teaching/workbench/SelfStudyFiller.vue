@@ -48,11 +48,12 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { selfStudyApi } from '@/api/teaching'
 
-const props = defineProps<{ semesterId: number | string | undefined; totalWeeks?: number }>()
+const props = defineProps<{ semesterId: LongId | string | undefined; totalWeeks?: number }>()
 
 const maxPeriods = ref(8)
 const maxWeekday = ref(5)

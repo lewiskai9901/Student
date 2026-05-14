@@ -225,6 +225,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Building, Users, LayoutGrid, List, UserPlus, Edit } from 'lucide-vue-next'
@@ -271,7 +272,7 @@ const drawerTitle = computed(() => {
 
 // 扁平化房间列表（用于列表视图）
 interface FlatRoom extends DormitoryRoom {
-  buildingId: number | string
+  buildingId: LongId | string
   buildingName: string
   buildingType: 'MALE' | 'FEMALE' | 'MIXED'
 }

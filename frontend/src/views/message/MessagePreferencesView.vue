@@ -7,13 +7,14 @@
  *   2. 按事件类型行级覆盖
  *   3. 测试发送 (调 dry-run 看会被哪些规则匹配)
  */
+import type { LongId } from '@/types/common'
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus, Trash2, Save } from 'lucide-vue-next'
 import { http } from '@/utils/request'
 
 interface Preference {
-  id?: number
+  id?: LongId
   eventTypeCode: string | null
   channels: string[]
   quietHoursStart: string | null

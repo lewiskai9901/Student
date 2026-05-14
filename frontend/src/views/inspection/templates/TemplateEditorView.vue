@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -22,14 +23,14 @@ const route = useRoute()
 const router = useRouter()
 const tplStore = useInspTemplateStore()
 
-const rootSectionId = computed(() => route.params.id ? Number(route.params.id) : 0)
+const rootSectionId = computed(() => route.params.id ? route.params.id : 0)
 const rootSectionIdRef = ref(rootSectionId.value)
 const editor = useTemplateEditor(rootSectionIdRef)
 
 const rootSection = computed(() => tplStore.currentRootSection)
 const responseSets = ref<ResponseSet[]>([])
 const loadError = ref<string | null>(null)
-const selectedSectionId = ref<number | null>(null)
+const selectedSectionId = ref<LongId | null>(null)
 const selectedItem = ref<TemplateItem | null>(null)
 const selectedKey = computed(() => {
   if (selectedItem.value) return `item:${selectedItem.value.id}`
@@ -38,16 +39,16 @@ const selectedKey = computed(() => {
 })
 const showPreview = ref(false)
 const showItemTypeSelector = ref(false)
-const addItemToSectionId = ref<number | null>(null)
+const addItemToSectionId = ref<LongId | null>(null)
 const isReadonly = computed(() => rootSection.value?.status !== 'DRAFT')
 
-const isRootSelected = computed(() => selectedSectionId.value != null && Number(selectedSectionId.value) === Number(rootSectionId.value))
+const isRootSelected = computed(() => selectedSectionId.value != null && selectedSectionId.value === rootSectionId.value)
 const selectedSection = computed(() => {
   if (isRootSelected.value) return rootSection.value || null
-  return editor.sections.value.find(s => Number(s.id) === Number(selectedSectionId.value)) || null
+  return editor.sections.value.find(s => s.id === selectedSectionId.value) || null
 })
-const isFirstLevel = computed(() => Number(selectedSection.value?.parentSectionId) === Number(rootSectionId.value))
-const isLeaf = computed(() => selectedSection.value ? !editor.sections.value.some(s => Number(s.parentSectionId) === Number(selectedSection.value!.id)) : false)
+const isFirstLevel = computed(() => selectedSection.value?.parentSectionId === rootSectionId.value)
+const isLeaf = computed(() => selectedSection.value ? !editor.sections.value.some(s => s.parentSectionId === selectedSection.value!.id) : false)
 const currentItems = computed(() => {
   if (!selectedSectionId.value) return []
   return editor.itemsBySection.value.get(String(selectedSectionId.value)) || []
@@ -152,12 +153,12 @@ async function saveRootProps() {
     // 保存基本信息
     await tplStore.editRootSection(rootSection.value.id, { name: rootForm.value.name, description: rootForm.value.description || undefined, tags: rootForm.value.tags || undefined })
     // 保存 targetType 等通过通用 section API
-    await editor.editSection(Number(rootSection.value.id), {
+    await editor.editSection(rootSection.value.id, {
       sectionName: rootForm.value.name,
       targetType: rootForm.value.targetType,
       targetTypeFilter: arrayToFilter(rootForm.value.targetTypeFilter),
     } as any)
-    await tplStore.loadRootSection(Number(rootSection.value.id))
+    await tplStore.loadRootSection(rootSection.value.id)
     rootInfoDirty.value = false; ElMessage.success('已保存')
   } catch (e: any) { ElMessage.error(e.message || '保存失败') }
 }
@@ -226,7 +227,7 @@ async function saveSection() {
 }
 
 // ===== Section CRUD =====
-async function handleAddSection(parentSectionId?: number) {
+async function handleAddSection(parentSectionId?: LongId) {
   if (isReadonly.value) return
   try {
     const { value: name } = await ElMessageBox.prompt('请输入分区名称', '新建分区', {
@@ -239,23 +240,23 @@ async function handleAddSection(parentSectionId?: number) {
     selectedItem.value = null
   } catch (e: any) { if (e !== 'cancel') ElMessage.error(e.message || '添加失败') }
 }
-async function handleRemoveSection(id: number) {
+async function handleRemoveSection(id: LongId) {
   if (isReadonly.value) return
   try { await ElMessageBox.confirm('确认删除？', '删除', { type: 'warning' }); await editor.removeSection(id); if (selectedSectionId.value === id) { selectedSectionId.value = null; selectedItem.value = null } }
   catch (e: any) { if (e !== 'cancel') ElMessage.error(e.message || '删除失败') }
 }
 
 // ===== Item CRUD =====
-function selectSection(id: number) {
-  selectedSectionId.value = Number(id); selectedItem.value = null
-  loadScoringForSection(Number(id))
+function selectSection(id: LongId) {
+  selectedSectionId.value = id; selectedItem.value = null
+  loadScoringForSection(id)
 }
 function selectItem(item: TemplateItem) {
   selectedItem.value = item
-  selectedSectionId.value = Number(item.sectionId)
+  selectedSectionId.value = item.sectionId
   showScoring.value = false
 }
-function openAddItem(sectionId: number) { addItemToSectionId.value = sectionId; showItemTypeSelector.value = true }
+function openAddItem(sectionId: LongId) { addItemToSectionId.value = sectionId; showItemTypeSelector.value = true }
 const addingItem = ref(false)
 async function handleSelectItemType(type: ItemType | null, isScored: boolean, scoringMode?: ScoringMode) {
   if (!addItemToSectionId.value || addingItem.value) return
@@ -291,9 +292,9 @@ const showScoring = ref(true)
 const scoringLoading = ref(false)
 
 // 展开汇总规则时才加载
-const scoringSectionId = ref<number | null>(null)
+const scoringSectionId = ref<LongId | null>(null)
 
-async function loadScoringForSection(sectionId: number) {
+async function loadScoringForSection(sectionId: LongId) {
   if (scoringSectionId.value === sectionId && scoringProfile.value) return
   scoringSectionId.value = sectionId
   scoringLoading.value = true
@@ -330,7 +331,7 @@ async function saveScoringBasic() {
 function toggleScoring() {
   showScoring.value = !showScoring.value
   if (showScoring.value && selectedSectionId.value != null) {
-    loadScoringForSection(Number(selectedSectionId.value))
+    loadScoringForSection(selectedSectionId.value)
   }
 }
 
@@ -338,11 +339,11 @@ async function handleCreateGradeBand(data: CreateGradeBandRequest) {
   if (!scoringProfile.value) return
   await scoringStore.createGradeBand(scoringProfile.value.id, data)
 }
-async function handleUpdateGradeBand(id: number, data: UpdateGradeBandRequest) {
+async function handleUpdateGradeBand(id: LongId, data: UpdateGradeBandRequest) {
   if (!scoringProfile.value) return
   await scoringStore.updateGradeBand(scoringProfile.value.id, id, data)
 }
-async function handleDeleteGradeBand(id: number) {
+async function handleDeleteGradeBand(id: LongId) {
   if (!scoringProfile.value) return
   await scoringStore.deleteGradeBand(scoringProfile.value.id, id)
 }
@@ -350,11 +351,11 @@ async function handleCreateRule(data: CreateRuleRequest) {
   if (!scoringProfile.value) return
   await scoringStore.createRule(scoringProfile.value.id, data)
 }
-async function handleUpdateRule(id: number, data: UpdateRuleRequest) {
+async function handleUpdateRule(id: LongId, data: UpdateRuleRequest) {
   if (!scoringProfile.value) return
   await scoringStore.updateRule(scoringProfile.value.id, id, data)
 }
-async function handleDeleteRule(id: number) {
+async function handleDeleteRule(id: LongId) {
   if (!scoringProfile.value) return
   await scoringStore.deleteRule(scoringProfile.value.id, id)
 }
@@ -469,7 +470,7 @@ async function updateGradeBand(band: any) {
     gradeName: band.gradeName, minScore: band.minScore, maxScore: band.maxScore,
   })
 }
-async function deleteGradeBand(bandId: number) {
+async function deleteGradeBand(bandId: LongId) {
   if (!scoringProfile.value) return
   await scoringStore.deleteGradeBand(scoringProfile.value.id, bandId)
 }

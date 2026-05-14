@@ -140,6 +140,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { User, Search, Check, Loading } from '@element-plus/icons-vue'
@@ -152,9 +153,9 @@ import type { MyClassStudent } from '@/types/myClass'
 const props = defineProps<{
   visible: boolean
   dormitory: {
-    id: number
+    id: LongId
     dormitoryNo: string
-    buildingId?: number
+    buildingId?: LongId
     buildingName?: string
     floorNumber?: number
     genderType?: number

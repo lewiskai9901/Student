@@ -138,6 +138,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, watch, shallowRef } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -379,7 +380,7 @@ function scopeLabel(code: PrimaryScope): string {
   return m[code] || code
 }
 
-function jumpToRole(id: number | string) {
+function jumpToRole(id: LongId | string) {
   showCompareDialog.value = false
   selectedRoleId.value = String(id)
 }

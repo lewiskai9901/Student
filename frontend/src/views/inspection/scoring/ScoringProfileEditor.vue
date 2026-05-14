@@ -134,6 +134,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, ShieldCheck, CheckCircle2, AlertTriangle, XCircle } from 'lucide-vue-next'
@@ -245,8 +246,8 @@ const healthChecks = computed<HealthCheck[]>(() => {
 // ==================== Lifecycle ====================
 
 onMounted(async () => {
-  const id = route.params.id ? Number(route.params.id) : null
-  const tid = route.query.templateId ? Number(route.query.templateId) : null
+  const id = route.params.id ? route.params.id as string : null
+  const tid = route.query.templateId ? route.query.templateId : null
 
   try {
     if (id) {
@@ -292,7 +293,7 @@ function goBack() {
 }
 
 async function initProfile() {
-  const tid = templateId.value || (route.query.templateId ? Number(route.query.templateId) : 0)
+  const tid = templateId.value || (route.query.templateId ? route.query.templateId : 0)
   if (!tid) return
   const p = await store.createProfile(tid)
   profile.value = p
@@ -314,11 +315,11 @@ async function handleCreateGradeBand(data: CreateGradeBandRequest) {
   if (!profile.value) return
   await store.createGradeBand(profile.value.id, data)
 }
-async function handleUpdateGradeBand(id: number, data: UpdateGradeBandRequest) {
+async function handleUpdateGradeBand(id: LongId, data: UpdateGradeBandRequest) {
   if (!profile.value) return
   await store.updateGradeBand(profile.value.id, id, data)
 }
-async function handleDeleteGradeBand(id: number) {
+async function handleDeleteGradeBand(id: LongId) {
   if (!profile.value) return
   await store.deleteGradeBand(profile.value.id, id)
 }
@@ -340,11 +341,11 @@ async function handleCreateRule(data: CreateRuleRequest) {
   if (!profile.value) return
   await store.createRule(profile.value.id, data)
 }
-async function handleUpdateRule(id: number, data: UpdateRuleRequest) {
+async function handleUpdateRule(id: LongId, data: UpdateRuleRequest) {
   if (!profile.value) return
   await store.updateRule(profile.value.id, id, data)
 }
-async function handleDeleteRule(id: number) {
+async function handleDeleteRule(id: LongId) {
   if (!profile.value) return
   await store.deleteRule(profile.value.id, id)
 }

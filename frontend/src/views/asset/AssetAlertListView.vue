@@ -3,6 +3,7 @@
  * 资产预警列表视图
  * UI优化版本 - 使用设计系统组件
  */
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
@@ -35,7 +36,7 @@ const statistics = ref({
 })
 
 // 筛选条件
-const filterType = ref<number | undefined>()
+const filterType = ref<LongId | undefined>()
 const filterIsRead = ref<boolean | undefined>()
 const filterIsHandled = ref<boolean | undefined>(false) // 默认显示未处理
 

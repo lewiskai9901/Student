@@ -99,12 +99,13 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { http } from '@/utils/request'
 
 interface Props {
-  itemId: number | null
+  itemId: LongId | null
 }
 
 const props = defineProps<Props>()

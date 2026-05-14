@@ -238,6 +238,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { http as request } from '@/utils/request'
@@ -251,13 +252,13 @@ import TimetableGrid from '../scheduling/TimetableGrid.vue'
 import TimetableMatrix from '../scheduling/TimetableMatrix.vue'
 import ScheduleTree from '@/components/teaching/ScheduleTree.vue'
 
-const props = defineProps<{ semesterId: number | string | undefined }>()
+const props = defineProps<{ semesterId: LongId | string | undefined }>()
 const periods = ref<PeriodConfig[]>(DEFAULT_PERIODS)
 
 // State
 const viewType = ref<'class' | 'teacher' | 'classroom' | 'overview'>('class')
 const overviewMode = ref<'class' | 'teacher' | 'classroom'>('class')
-const overviewSelected = ref<{ id: number | string; name: string }[]>([])
+const overviewSelected = ref<{ id: LongId | string; name: string }[]>([])
 const targetId = ref<number | string>()
 
 function setViewType(t: typeof viewType.value) {
@@ -273,7 +274,7 @@ function setViewType(t: typeof viewType.value) {
   }
 }
 
-function onMultiSelect(items: { id: number | string; name: string }[]) {
+function onMultiSelect(items: { id: LongId | string; name: string }[]) {
   overviewSelected.value = items
 }
 
@@ -313,10 +314,10 @@ const currentWeekMonday = computed<Date | null>(() => {
 })
 
 /** weekday(1-7) > "M/D" 字符串 */
-const weekDates = computed<Record<number, string>>(() => {
+const weekDates = computed<Record<LongId, string>>(() => {
   const monday = currentWeekMonday.value
   if (!monday) return {}
-  const out: Record<number, string> = {}
+  const out: Record<LongId, string> = {}
   for (let i = 0; i < 7; i++) {
     const d = new Date(monday)
     d.setDate(monday.getDate() + i)
@@ -346,7 +347,7 @@ const todayWeekday = computed<number>(() => {
   return diffDays + 1
 })
 const entries = ref<ScheduleEntry[]>([])
-const week = ref<number | undefined>()
+const week = ref<LongId | undefined>()
 const weekType = ref(0)
 
 // 统计当前班级/教师/教室的单双周课程数量
@@ -375,9 +376,9 @@ watch([hasOddWeek, hasEvenWeek], () => {
   if (weekType.value === 2 && !hasEvenWeek.value) weekType.value = 0
 })
 
-const classrooms = ref<{ id: number; name: string }[]>([])
-const classList = ref<{ id: number; name: string; dept?: string }[]>([])
-const teacherList = ref<{ id: number; name: string }[]>([])
+const classrooms = ref<{ id: LongId; name: string }[]>([])
+const classList = ref<{ id: LongId; name: string; dept?: string }[]>([])
+const teacherList = ref<{ id: LongId; name: string }[]>([])
 
 const detailVisible = ref(false)
 const selectedEntry = ref<ScheduleEntry | null>(null)
@@ -403,7 +404,7 @@ const filteredCompareEntries = computed(() => {
   return result
 })
 const groupedClasses = computed(() => {
-  const groups: Record<string, { id: number; name: string }[]> = {}
+  const groups: Record<string, { id: LongId; name: string }[]> = {}
   for (const cls of classList.value) {
     const dept = cls.dept || '其他'
     if (!groups[dept]) groups[dept] = []
@@ -458,7 +459,7 @@ const weeklyHours = computed(() => filteredEntries.value.reduce((sum, e) => sum 
 
 // Tree selection handler — works for all three modes
 const currentTargetNameFromTree = ref('')
-function onTreeSelect(node: { type: string; id: number | string; name: string; classIds?: (number | string)[] }) {
+function onTreeSelect(node: { type: string; id: LongId | string; name: string; classIds?: (number | string)[] }) {
   if (!node.id) { targetId.value = undefined; entries.value = []; currentTargetNameFromTree.value = ''; return }
   // For CLASS/TEACHER/CLASSROOM leaf nodes, load timetable
   if (['CLASS', 'TEACHER', 'CLASSROOM'].includes(node.type)) {
@@ -512,7 +513,7 @@ async function loadClassList() {
   try {
     const tree = await orgUnitApi.getTree()
     const data = Array.isArray(tree) ? tree : (tree as any).data || []
-    const result: { id: number; name: string; dept?: string }[] = []
+    const result: { id: LongId; name: string; dept?: string }[] = []
     function walk(nodes: any[], deptName?: string) {
       for (const n of nodes) {
         const t = n.unitType || ''
@@ -544,7 +545,7 @@ async function loadTeacherList() {
         }
       }
     }
-    teacherList.value = Array.from(teacherMap.entries()).map(([id, name]) => ({ id: Number(id), name }))
+    teacherList.value = Array.from(teacherMap.entries()).map(([id, name]) => ({ id: id, name }))
     // Fallback: load from simple user list (non-students)
     if (teacherList.value.length === 0) {
       const res2 = await request.get('/users/simple')
@@ -614,7 +615,7 @@ async function saveWeekType() {
   }
 }
 
-async function onEntryDrop(entryId: number, newDay: number, newPeriod: number) {
+async function onEntryDrop(entryId: LongId, newDay: number, newPeriod: number) {
   if (!props.semesterId) return
   try {
     const check = await scheduleApi.checkMoveConflict({ entryId, semesterId: props.semesterId, dayOfWeek: newDay, periodStart: newPeriod })

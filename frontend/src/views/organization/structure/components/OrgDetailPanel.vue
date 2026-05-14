@@ -335,6 +335,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { computed, ref, watch } from 'vue'
 import {
   Plus,
@@ -408,7 +409,7 @@ const typeBadgeStyle = computed(() => ({
 }))
 
 // Find parent name
-const findParentName = (nodes: DepartmentResponse[], parentId: number | null): string => {
+const findParentName = (nodes: DepartmentResponse[], parentId: LongId | null): string => {
   if (!parentId) return ''
   for (const n of nodes) {
     if (n.id === parentId) return n.unitName

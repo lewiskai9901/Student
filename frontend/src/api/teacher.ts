@@ -1,6 +1,7 @@
 /**
  * Teacher profile API
  */
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 import type { TeacherProfile, TeacherCourseQualification } from '@/types/teacher'
 
@@ -11,7 +12,7 @@ export const teacherProfileApi = {
   list(params?: {
     pageNum?: number
     pageSize?: number
-    orgUnitId?: number
+    orgUnitId?: LongId
     title?: string
     status?: number
     keyword?: string
@@ -20,12 +21,12 @@ export const teacherProfileApi = {
   },
 
   /** Get teacher profile by ID */
-  getById(id: number | string) {
+  getById(id: LongId | string) {
     return http.get<TeacherProfile>(`${BASE_URL}/${id}`)
   },
 
   /** Get teacher profile by user ID */
-  getByUserId(userId: number | string) {
+  getByUserId(userId: LongId | string) {
     return http.get<TeacherProfile>(`${BASE_URL}/by-user/${userId}`)
   },
 
@@ -35,32 +36,32 @@ export const teacherProfileApi = {
   },
 
   /** Update teacher profile */
-  update(id: number | string, data: Partial<TeacherProfile>) {
+  update(id: LongId | string, data: Partial<TeacherProfile>) {
     return http.put(`${BASE_URL}/${id}`, data)
   },
 
   /** Delete teacher profile */
-  delete(id: number | string) {
+  delete(id: LongId | string) {
     return http.delete(`${BASE_URL}/${id}`)
   },
 
   /** Get course qualifications for a teacher */
-  getCourses(id: number | string) {
+  getCourses(id: LongId | string) {
     return http.get<TeacherCourseQualification[]>(`${BASE_URL}/${id}/courses`)
   },
 
   /** Add course qualification */
-  addCourse(id: number | string, data: { courseId: number; qualificationLevel?: number; remark?: string }) {
+  addCourse(id: LongId | string, data: { courseId: LongId; qualificationLevel?: number; remark?: string }) {
     return http.post<number>(`${BASE_URL}/${id}/courses`, data)
   },
 
   /** Remove course qualification */
-  removeCourse(id: number | string, courseId: number | string) {
+  removeCourse(id: LongId | string, courseId: LongId | string) {
     return http.delete(`${BASE_URL}/${id}/courses/${courseId}`)
   },
 
   /** Get teachers qualified for a specific course */
-  getAvailableForCourse(courseId: number | string) {
+  getAvailableForCourse(courseId: LongId | string) {
     return http.get<TeacherProfile[]>(`${BASE_URL}/available`, { params: { courseId } })
   },
 }

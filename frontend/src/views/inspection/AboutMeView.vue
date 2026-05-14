@@ -8,6 +8,7 @@
  * 数据来源: 调用观察记录 API 过滤 subjectId == currentUser.userId 或所在 orgUnit.
  * 此页面对所有登录用户开放, 无需特殊权限.
  */
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -21,7 +22,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 interface Observation {
-  id: number
+  id: LongId
   itemName: string
   subjectName: string
   subjectType: string
@@ -38,9 +39,9 @@ const myAppeals = ref<InspAppeal[]>([])
 
 // Appeal dialog
 const appealDialog = ref(false)
-const appealDetailId = ref<number | null>(null)
+const appealDetailId = ref<LongId | null>(null)
 const appealItemName = ref<string | undefined>('')
-const appealCurrentScore = ref<number | undefined>(undefined)
+const appealCurrentScore = ref<LongId | undefined>(undefined)
 
 // Period filter
 const period = ref<'7d' | '30d' | '90d' | 'all'>('30d')
@@ -52,7 +53,7 @@ async function loadObservations() {
   loading.value = true
   try {
     // Try filtering by subjectId (USER) and orgUnit
-    const userId = Number(authStore.user?.userId)
+    const userId = authStore.user?.userId
     const params: Record<string, any> = { size: 200, isNegative: true }
 
     const data = await http.get<any>('/inspection/observations', { params })
@@ -60,8 +61,8 @@ async function loadObservations() {
     observations.value = (records as any[])
       .filter(r => {
         // 主体是我自己, 或我所在的组织单元
-        if (r.subjectType === 'USER' && Number(r.subjectId) === userId) return true
-        if (r.subjectType === 'ORG_UNIT' && Number(r.subjectId) === userOrgUnitId.value) return true
+        if (r.subjectType === 'USER' && r.subjectId === userId) return true
+        if (r.subjectType === 'ORG_UNIT' && r.subjectId === userOrgUnitId.value) return true
         return false
       })
       .filter(r => filterByPeriod(r.observedAt))

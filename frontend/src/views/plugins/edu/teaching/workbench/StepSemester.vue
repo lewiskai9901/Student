@@ -54,11 +54,12 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, watch, computed } from 'vue'
 import { semesterApi } from '@/api/calendar'
 import PeriodSettings from '../calendar-new/PeriodSettings.vue'
 
-const props = defineProps<{ semesterId: number | string | undefined }>()
+const props = defineProps<{ semesterId: LongId | string | undefined }>()
 
 const semester = ref<any>(null)
 const weeks = ref<any[]>([])

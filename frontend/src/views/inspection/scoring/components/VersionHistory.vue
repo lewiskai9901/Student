@@ -80,6 +80,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref } from 'vue'
 import { History } from 'lucide-vue-next'
 import type { ScoringProfileVersion } from '@/types/insp/scoring'
@@ -96,7 +97,7 @@ const emit = defineEmits<{
 const showPublish = ref(false)
 const changeSummary = ref('')
 const publishing = ref(false)
-const expandedVersion = ref<number | null>(null)
+const expandedVersion = ref<LongId | null>(null)
 const snapshotPreview = ref<{
   dimensionCount: number
   gradeBandCount: number

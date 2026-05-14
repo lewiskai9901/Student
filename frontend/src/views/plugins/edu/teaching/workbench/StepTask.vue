@@ -3,10 +3,11 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import TaskFulfillmentTab from '../offering/TaskFulfillmentTab.vue'
 
 defineProps<{
-  semesterId: number | string | undefined
-  selectedOrg?: { type: string; id: number | string; name: string; classIds?: (number | string)[] }
+  semesterId: LongId | string | undefined
+  selectedOrg?: { type: string; id: LongId | string; name: string; classIds?: (number | string)[] }
 }>()
 </script>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -28,19 +29,19 @@ import { flattenTree, type SectionTreeNode } from '@/utils/sectionTree'
 // ══════════════════════════════════════════════
 
 const props = defineProps<{
-  projectId: number
-  sections: Array<{ id: number; sectionName: string; targetType?: string }>
-  inspectors: Array<{ userId: number | string; userName: string }>
+  projectId: LongId
+  sections: Array<{ id: LongId; sectionName: string; targetType?: string }>
+  inspectors: Array<{ userId: LongId | string; userName: string }>
   sectionTree?: SectionTreeNode[]
-  rootSectionId?: number | string | null
+  rootSectionId?: LongId | string | null
   rootSectionName?: string
   // P1 升级: 父组件传入项目任务列表用于计算调度组运营数据
-  projectTasks?: Array<{ id: number | string; inspectionPlanId?: number | string | null; status?: string; taskDate?: string }>
+  projectTasks?: Array<{ id: LongId | string; inspectionPlanId?: LongId | string | null; status?: string; taskDate?: string }>
 }>()
 
 // 调度组运营数据 (按 inspectionPlanId 聚合任务)
-function planStats(planId: number | string) {
-  const tasks = (props.projectTasks || []).filter(t => Number(t.inspectionPlanId) === Number(planId))
+function planStats(planId: LongId | string) {
+  const tasks = (props.projectTasks || []).filter(t => t.inspectionPlanId === planId)
   if (tasks.length === 0) return null
   const today = new Date().toISOString().slice(0, 10)
   return {
@@ -90,15 +91,15 @@ const scheduleForm = ref({
 
 // ── Evaluation Dialog ──
 const evalDialogVisible = ref(false)
-const editingSectionId = ref<number | null>(null)
+const editingSectionId = ref<LongId | null>(null)
 const editingSectionTargetType = computed(() => {
   if (!editingSectionId.value) return null
   // Try flat sections first
-  const sec = props.sections.find(s => Number(s.id) === Number(editingSectionId.value))
+  const sec = props.sections.find(s => s.id === editingSectionId.value)
   if (sec?.targetType) return sec.targetType
   // Fallback: look in tree
   if (hasTreeData.value) {
-    const node = flattenTree(props.sectionTree || []).find(n => n.id === Number(editingSectionId.value))
+    const node = flattenTree(props.sectionTree || []).find(n => n.id === editingSectionId.value)
     return node?.targetType || null
   }
   return null
@@ -159,8 +160,8 @@ function toggleArray<T>(arr: T[], val: T) {
 }
 
 const sectionMap = computed(() => {
-  const m = new Map<number, string>()
-  for (const s of props.sections) m.set(Number(s.id), s.sectionName)
+  const m = new Map<LongId, string>()
+  for (const s of props.sections) m.set(s.id, s.sectionName)
   return m
 })
 
@@ -171,7 +172,7 @@ const flatSectionsWithDepth = computed(() => {
   if (props.rootSectionId && props.rootSectionName) {
     result.push({
       node: {
-        id: Number(props.rootSectionId),
+        id: props.rootSectionId,
         sectionName: props.rootSectionName + '（综合评价）',
         parentSectionId: null,
         sortOrder: -1,
@@ -199,13 +200,13 @@ const hasTreeData = computed(() => (props.sectionTree?.length ?? 0) > 0)
 const editingSectionIsLeaf = computed(() => {
   if (!editingSectionId.value) return true
   if (!hasTreeData.value) return true
-  const node = flattenTree(props.sectionTree || []).find(n => n.id === Number(editingSectionId.value))
+  const node = flattenTree(props.sectionTree || []).find(n => n.id === editingSectionId.value)
   return node?.isLeaf ?? true
 })
 
 const inspectorMap = computed(() => {
-  const m = new Map<number, string>()
-  for (const i of (props.inspectors || [])) m.set(Number(i.userId), i.userName)
+  const m = new Map<LongId, string>()
+  for (const i of (props.inspectors || [])) m.set(i.userId, i.userName)
   return m
 })
 
@@ -219,43 +220,43 @@ function parsePlanInspectorIds(plan: InspectionPlan): number[] {
 }
 
 // Which plans cover a given section (empty sectionIds = all sections)
-function plansForSection(sectionId: number | string): InspectionPlan[] {
-  const sid = Number(sectionId)
+function plansForSection(sectionId: LongId | string): InspectionPlan[] {
+  const sid = sectionId
   return plans.value.filter(p => {
     const ids = parsePlanSectionIds(p)
-    return ids.length === 0 || ids.some(id => Number(id) === sid)
+    return ids.length === 0 || ids.some(id => id === sid)
   })
 }
 
 // For tree mode: check plans for intermediate sections by looking at children
-function plansForSectionRecursive(sectionId: number | string): InspectionPlan[] {
+function plansForSectionRecursive(sectionId: LongId | string): InspectionPlan[] {
   const direct = plansForSection(sectionId)
   if (direct.length > 0) return direct
   if (!hasTreeData.value) return []
-  const node = flattenTree(props.sectionTree || []).find(n => n.id === Number(sectionId))
+  const node = flattenTree(props.sectionTree || []).find(n => n.id === sectionId)
   if (node && !node.isLeaf) {
     const childIds = flattenTree(node.children).map(c => c.id)
     return plans.value.filter(p => {
       const ids = parsePlanSectionIds(p)
-      return ids.some(id => childIds.includes(Number(id)))
+      return ids.some(id => childIds.includes(id))
     })
   }
   return []
 }
 
 // Find indicator for a section (leaf or composite for intermediate)
-function indicatorForSectionAny(sectionId: number | string): Indicator | undefined {
-  const sid = Number(sectionId)
+function indicatorForSectionAny(sectionId: LongId | string): Indicator | undefined {
+  const sid = sectionId
   return indicators.value.find(
-    i => Number(i.sourceSectionId) === sid && !i.parentIndicatorId
+    i => i.sourceSectionId === sid && !i.parentIndicatorId
   )
 }
 
 // Find leaf indicator for a section
-function indicatorForSection(sectionId: number | string): Indicator | undefined {
-  const sid = Number(sectionId)
+function indicatorForSection(sectionId: LongId | string): Indicator | undefined {
+  const sid = sectionId
   return indicators.value.find(
-    i => i.indicatorType === 'LEAF' && Number(i.sourceSectionId) === sid && !i.parentIndicatorId
+    i => i.indicatorType === 'LEAF' && i.sourceSectionId === sid && !i.parentIndicatorId
   )
 }
 
@@ -334,7 +335,7 @@ function missingLabel(m: string | null): string {
   return MISSING_POLICY_OPTIONS.find(o => o.value === m)?.label || m || ''
 }
 
-function schemeName(id: number | null): string {
+function schemeName(id: LongId | null): string {
   if (!id) return ''
   return gradeSchemes.value.find(s => s.id === id)?.displayName || ''
 }
@@ -360,7 +361,7 @@ function fmtThresholdsShort(ind: Indicator): string {
 }
 
 // ── Grade helpers (shared) ──
-function selectedSchemeGrades(schemeId: number | null): GradeScheme['grades'] {
+function selectedSchemeGrades(schemeId: LongId | null): GradeScheme['grades'] {
   if (!schemeId) return []
   return gradeSchemes.value.find(s => s.id === schemeId)?.grades || []
 }
@@ -500,7 +501,7 @@ function removeTimeSlot(i: number) {
 //  Evaluation Dialog (Leaf Indicator per Section)
 // ══════════════════════════════════════════════
 
-function openEditEval(sectionId: number) {
+function openEditEval(sectionId: LongId) {
   editingSectionId.value = sectionId
   const existing = indicatorForSectionAny(sectionId) || indicatorForSection(sectionId)
   editingIndicator.value = existing || null
@@ -555,7 +556,7 @@ function openEditEval(sectionId: number) {
 async function handleSaveEval() {
   if (!editingSectionId.value) return
   const sectionId = editingSectionId.value
-  const sectionName = sectionMap.value.get(Number(sectionId)) || flattenTree(props.sectionTree || []).find(n => n.id === Number(sectionId))?.sectionName || `分区#${sectionId}`
+  const sectionName = sectionMap.value.get(sectionId) || flattenTree(props.sectionTree || []).find(n => n.id === sectionId)?.sectionName || `分区#${sectionId}`
   const normCfg = evalForm.value.normalization !== 'NONE' ? JSON.stringify(normConfig.value) : undefined
   const grades = selectedSchemeGrades(evalForm.value.gradeSchemeId)
   const serializedThresholds = evalForm.value.gradeSchemeId && grades.length
@@ -569,12 +570,12 @@ async function handleSaveEval() {
   const isLeaf = editingSectionIsLeaf.value
 
   // 自动查找父分区的 indicator ID（镜像分区树层级）
-  const sectionNode = flattenTree(props.sectionTree || []).find(n => n.id === Number(sectionId))
-  let parentIndicatorId: number | null = null
+  const sectionNode = flattenTree(props.sectionTree || []).find(n => n.id === sectionId)
+  let parentIndicatorId: LongId | null = null
   if (sectionNode?.parentSectionId) {
     const parentInd = indicators.value.find(i =>
-      Number(i.sourceSectionId) === Number(sectionNode.parentSectionId) ||
-      (i.indicatorType === 'COMPOSITE' && i.name === sectionMap.value.get(Number(sectionNode.parentSectionId)))
+      i.sourceSectionId === sectionNode.parentSectionId ||
+      (i.indicatorType === 'COMPOSITE' && i.name === sectionMap.value.get(sectionNode.parentSectionId))
     )
     if (parentInd) parentIndicatorId = parentInd.id
   }
@@ -603,7 +604,7 @@ async function handleSaveEval() {
         projectId: props.projectId,
         parentIndicatorId: parentIndicatorId,
         name: sectionName,
-        sourceSectionId: Number(sectionId),
+        sourceSectionId: sectionId,
         sourceAggregation: evalForm.value.sourceAggregation,
         evaluationPeriod: evalForm.value.evaluationPeriod,
         gradeSchemeId: evalForm.value.gradeSchemeId,
@@ -620,7 +621,7 @@ async function handleSaveEval() {
         projectId: props.projectId,
         parentIndicatorId: parentIndicatorId,
         name: sectionName,
-        sourceSectionId: Number(sectionId),
+        sourceSectionId: sectionId,
         compositeAggregation: evalCompositeAgg.value,
         missingPolicy: evalMissingPolicy.value,
         evaluationPeriod: evalForm.value.evaluationPeriod,
@@ -1042,9 +1043,9 @@ defineExpose({ reload: loadAll })
         <div class="fd-block">
           <label class="fd-lbl">包含分区 <span class="fd-sub">不选=全部</span></label>
           <div class="fd-pills">
-            <button v-for="s in props.sections" :key="Number(s.id)"
-              class="fd-pill" :class="{ on: scheduleForm.sectionIds.includes(Number(s.id)) }"
-              @click="toggleArray(scheduleForm.sectionIds, Number(s.id))">
+            <button v-for="s in props.sections" :key="s.id"
+              class="fd-pill" :class="{ on: scheduleForm.sectionIds.includes(s.id) }"
+              @click="toggleArray(scheduleForm.sectionIds, s.id)">
               {{ s.sectionName }}
             </button>
           </div>
@@ -1130,9 +1131,9 @@ defineExpose({ reload: loadAll })
         <div v-if="(props.inspectors || []).length > 0" class="fd-block">
           <label class="fd-lbl">指定检查员 <span class="fd-sub">不选=全员可领取</span></label>
           <div class="fd-pills">
-            <button v-for="insp in props.inspectors" :key="Number(insp.userId)"
-              class="fd-pill" :class="{ on: scheduleForm.inspectorIds.includes(Number(insp.userId)) }"
-              @click="toggleArray(scheduleForm.inspectorIds, Number(insp.userId))">
+            <button v-for="insp in props.inspectors" :key="insp.userId"
+              class="fd-pill" :class="{ on: scheduleForm.inspectorIds.includes(insp.userId) }"
+              @click="toggleArray(scheduleForm.inspectorIds, insp.userId)">
               {{ insp.userName }}
             </button>
           </div>
@@ -1160,7 +1161,7 @@ defineExpose({ reload: loadAll })
         <div class="fd-block">
           <label class="fd-lbl">检查分区</label>
           <div class="fd-readonly">
-            {{ sectionMap.get(Number(editingSectionId)) || flattenTree(props.sectionTree || []).find(n => n.id === Number(editingSectionId))?.sectionName || '' }}
+            {{ sectionMap.get(editingSectionId) || flattenTree(props.sectionTree || []).find(n => n.id === editingSectionId)?.sectionName || '' }}
             <span v-if="!editingSectionIsLeaf" class="ev-card-type-tag" style="margin-left:6px">分组</span>
           </div>
         </div>

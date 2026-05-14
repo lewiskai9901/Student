@@ -88,11 +88,12 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import { scheduleApi } from '@/api/teaching'
 
-const props = defineProps<{ semesterId: number | string | undefined }>()
+const props = defineProps<{ semesterId: LongId | string | undefined }>()
 const emit = defineEmits<{ scheduled: [] }>()
 
 const params = reactive({ maxIterations: 500, populationSize: 30, mutationRate: 0.1 })

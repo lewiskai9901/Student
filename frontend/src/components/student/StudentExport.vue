@@ -176,6 +176,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { GripVertical } from 'lucide-vue-next'
@@ -213,7 +214,7 @@ const fileName = ref(`学生列表_${new Date().toLocaleDateString().replace(/\/
 const exporting = ref(false)
 
 // 拖拽相关
-const dragIndex = ref<number | null>(null)
+const dragIndex = ref<LongId | null>(null)
 
 // 默认导出字段配置
 const defaultFields: ExportField[] = [
@@ -232,7 +233,7 @@ const defaultFields: ExportField[] = [
   { key: 'studyLength', label: '学制', selected: false },
   { key: 'degreeType', label: '入学前学历', selected: false },
   { key: 'studentStatus', label: '学生状态', selected: true, format: (v) => {
-    const map: Record<number, string> = { 1: '在校', 2: '休学', 3: '毕业', 4: '退学' }
+    const map: Record<LongId, string> = { 1: '在校', 2: '休学', 3: '毕业', 4: '退学' }
     return map[v] || '-'
   }},
   { key: 'admissionDate', label: '入学日期', selected: true },

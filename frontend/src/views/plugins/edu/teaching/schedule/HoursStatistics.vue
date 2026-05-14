@@ -62,10 +62,11 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted } from 'vue'
 import { hoursApi } from '@/api/teaching'
 
-const props = defineProps<{ semesterId: number | string | undefined }>()
+const props = defineProps<{ semesterId: LongId | string | undefined }>()
 
 const groupBy = ref<'teacher' | 'class' | 'course' | 'classroom'>('teacher')
 const period = ref<'all' | 'month' | 'week'>('all')

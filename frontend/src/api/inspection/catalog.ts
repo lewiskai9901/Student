@@ -1,6 +1,7 @@
 /**
  * 检查平台 - 模板分类 API
  */
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 import type {
   TemplateCatalog,
@@ -23,11 +24,11 @@ export function createCatalog(data: CreateCatalogRequest): Promise<TemplateCatal
   return http.post<TemplateCatalog>(BASE, data)
 }
 
-export function updateCatalog(id: number, data: UpdateCatalogRequest): Promise<TemplateCatalog> {
+export function updateCatalog(id: LongId, data: UpdateCatalogRequest): Promise<TemplateCatalog> {
   return http.put<TemplateCatalog>(`${BASE}/${id}`, data)
 }
 
-export function deleteCatalog(id: number): Promise<void> {
+export function deleteCatalog(id: LongId): Promise<void> {
   return http.delete(`${BASE}/${id}`)
 }
 

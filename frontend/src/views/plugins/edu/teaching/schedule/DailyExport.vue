@@ -24,18 +24,19 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { http as request } from '@/utils/request'
 import { scheduleApi } from '@/api/teaching'
 
-const props = defineProps<{ semesterId: number | string | undefined }>()
+const props = defineProps<{ semesterId: LongId | string | undefined }>()
 
 const dimension = ref<'class' | 'teacher'>('class')
 const targetId = ref<number | string>('')
 const exporting = ref(false)
-const classList = ref<{ id: number; name: string }[]>([])
-const teacherList = ref<{ id: number; name: string }[]>([])
+const classList = ref<{ id: LongId; name: string }[]>([])
+const teacherList = ref<{ id: LongId; name: string }[]>([])
 
 const targetList = computed(() => dimension.value === 'class' ? classList.value : teacherList.value)
 

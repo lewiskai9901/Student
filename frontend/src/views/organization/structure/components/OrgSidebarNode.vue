@@ -100,6 +100,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
 import { ChevronRight, Building2, Users, Plus } from 'lucide-vue-next'
 import type { DepartmentResponse } from '@/api/organization'
@@ -107,7 +108,7 @@ import type { DepartmentResponse } from '@/api/organization'
 interface Props {
   node: DepartmentResponse
   level: number
-  selectedId: number | null
+  selectedId: LongId | null
   searchKeyword: string
 }
 

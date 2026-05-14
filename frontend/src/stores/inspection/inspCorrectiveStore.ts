@@ -1,6 +1,7 @@
 /**
  * 检查平台 - 整改管理 Store
  */
+import type { LongId } from '@/types/common'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { CorrectiveCase, CreateCaseRequest, AssignCaseRequest, SubmitCorrectionRequest, VerifyCaseRequest, RejectCaseRequest } from '@/types/insp/corrective'
@@ -16,7 +17,7 @@ export const useInspCorrectiveStore = defineStore('inspCorrective', () => {
 
   // ========== CRUD ==========
 
-  async function fetchCases(params?: { projectId?: number; submissionId?: number; taskId?: number; status?: CaseStatus }) {
+  async function fetchCases(params?: { projectId?: LongId; submissionId?: LongId; taskId?: LongId; status?: CaseStatus }) {
     loading.value = true
     try {
       cases.value = await inspCorrectiveCaseApi.getCases(params)
@@ -25,7 +26,7 @@ export const useInspCorrectiveStore = defineStore('inspCorrective', () => {
     }
   }
 
-  async function fetchCase(id: number) {
+  async function fetchCase(id: LongId) {
     loading.value = true
     try {
       currentCase.value = await inspCorrectiveCaseApi.getCase(id)
@@ -58,50 +59,50 @@ export const useInspCorrectiveStore = defineStore('inspCorrective', () => {
     }
   }
 
-  async function removeCase(id: number) {
+  async function removeCase(id: LongId) {
     await inspCorrectiveCaseApi.deleteCase(id)
     cases.value = cases.value.filter(c => c.id !== id)
   }
 
   // ========== Lifecycle ==========
 
-  async function assignCase(id: number, data: AssignCaseRequest) {
+  async function assignCase(id: LongId, data: AssignCaseRequest) {
     const updated = await inspCorrectiveCaseApi.assignCase(id, data)
     updateInList(updated)
     return updated
   }
 
-  async function startWork(id: number) {
+  async function startWork(id: LongId) {
     const updated = await inspCorrectiveCaseApi.startWork(id)
     updateInList(updated)
     return updated
   }
 
-  async function submitCorrection(id: number, data: SubmitCorrectionRequest) {
+  async function submitCorrection(id: LongId, data: SubmitCorrectionRequest) {
     const updated = await inspCorrectiveCaseApi.submitCorrection(id, data)
     updateInList(updated)
     return updated
   }
 
-  async function verifyCase(id: number, data: VerifyCaseRequest) {
+  async function verifyCase(id: LongId, data: VerifyCaseRequest) {
     const updated = await inspCorrectiveCaseApi.verifyCase(id, data)
     updateInList(updated)
     return updated
   }
 
-  async function rejectCase(id: number, data: RejectCaseRequest) {
+  async function rejectCase(id: LongId, data: RejectCaseRequest) {
     const updated = await inspCorrectiveCaseApi.rejectCase(id, data)
     updateInList(updated)
     return updated
   }
 
-  async function closeCase(id: number) {
+  async function closeCase(id: LongId) {
     const updated = await inspCorrectiveCaseApi.closeCase(id)
     updateInList(updated)
     return updated
   }
 
-  async function escalateCase(id: number) {
+  async function escalateCase(id: LongId) {
     const updated = await inspCorrectiveCaseApi.escalateCase(id)
     updateInList(updated)
     return updated

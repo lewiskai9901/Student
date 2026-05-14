@@ -120,6 +120,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed } from 'vue'
 import type { GradeBand, CreateGradeBandRequest, UpdateGradeBandRequest } from '@/types/insp/scoring'
 
@@ -129,8 +130,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   create: [data: CreateGradeBandRequest]
-  update: [id: number, data: UpdateGradeBandRequest]
-  delete: [id: number]
+  update: [id: LongId, data: UpdateGradeBandRequest]
+  delete: [id: LongId]
   applyPreset: [bands: CreateGradeBandRequest[]]
 }>()
 

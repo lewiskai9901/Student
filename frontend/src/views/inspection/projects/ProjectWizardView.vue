@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -36,7 +37,7 @@ const form = reactive({
 
 // ========== Template Info ==========
 const selectedSection = computed(() =>
-  rootSections.value.find(s => Number(s.id) === Number(form.rootSectionId))
+  rootSections.value.find(s => s.id === form.rootSectionId)
 )
 
 const templateTargetType = computed<TargetType | null>(() => {
@@ -367,13 +368,13 @@ onMounted(() => {
           v-for="section in filteredSections" :key="section.id"
           class="tpl-row"
           :class="{
-            'is-selected': Number(form.rootSectionId) === Number(section.id),
+            'is-selected': form.rootSectionId === section.id,
             'is-disabled': !isPublished(section),
           }"
           @click="selectSection(section)"
         >
           <div class="tpl-radio">
-            <span class="tpl-radio__dot" :class="{ 'is-on': Number(form.rootSectionId) === Number(section.id) }" />
+            <span class="tpl-radio__dot" :class="{ 'is-on': form.rootSectionId === section.id }" />
           </div>
           <div class="tpl-main">
             <div class="tpl-line1">

@@ -64,6 +64,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, onMounted } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
@@ -150,7 +151,7 @@ async function handleSave() {
   }
 }
 
-async function handleDelete(id: number) {
+async function handleDelete(id: LongId) {
   try {
     await deleteTenant(id)
     ElMessage.success('删除成功')

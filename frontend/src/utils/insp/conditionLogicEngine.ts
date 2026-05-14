@@ -1,3 +1,4 @@
+import type { LongId } from '@/types/common'
 import type {
   ConditionRule,
   ConditionGroup,
@@ -190,7 +191,7 @@ export function resolveItemState(
         state.disabled = true
         break
       case 'setScore':
-        state.scoreOverride = typeof action.value === 'number' ? action.value : Number(action.value)
+        state.scoreOverride = typeof action.value === 'number' ? action.value : action.value
         break
       case 'clearValue':
         state.clearValue = true
@@ -334,7 +335,7 @@ export function topologicalSort(details: DetailLike[]): string[] {
 // =========================================================
 
 interface SectionCondition {
-  sectionId: number | string
+  sectionId: LongId | string
   conditionLogic: string | null
 }
 

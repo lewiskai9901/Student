@@ -1,3 +1,4 @@
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 
 const BASE = '/enrollment'
@@ -18,7 +19,7 @@ export const enrollmentApplicationApi = {
   delete: (id: any) => http.delete(`${BASE}/applications/${id}`),
   admit: (id: any) => http.post(`${BASE}/applications/${id}/admit`),
   reject: (id: any, comment?: string) => http.post(`${BASE}/applications/${id}/reject`, { comment }),
-  register: (id: any, data: { orgUnitId: number }) => http.post(`${BASE}/applications/${id}/register`, data),
+  register: (id: any, data: { orgUnitId: LongId }) => http.post(`${BASE}/applications/${id}/register`, data),
   batchAdmit: (ids: number[]) => http.post(`${BASE}/applications/batch-admit`, { ids }),
   export: (params: any) => http.get(`${BASE}/applications/export`, { params, responseType: 'blob' }),
 }

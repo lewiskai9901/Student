@@ -5,7 +5,7 @@ import type {
   UpdateInventoryDetailRequest,
   InventoryStatistics
 } from '@/types/asset'
-import type { PageResult } from '@/types/common'
+import type { PageResult, LongId } from '@/types/common'
 
 const BASE_URL = '/asset-inventories'
 
@@ -31,7 +31,7 @@ export function getInventories(params: {
 /**
  * 获取盘点任务详情
  */
-export function getInventory(id: number | string): Promise<AssetInventory> {
+export function getInventory(id: LongId | string): Promise<AssetInventory> {
   return request.get(`${BASE_URL}/${id}`)
 }
 
@@ -39,8 +39,8 @@ export function getInventory(id: number | string): Promise<AssetInventory> {
  * 更新盘点明细
  */
 export function updateInventoryDetail(
-  inventoryId: number | string,
-  detailId: number | string,
+  inventoryId: LongId | string,
+  detailId: LongId | string,
   data: UpdateInventoryDetailRequest
 ): Promise<void> {
   return request.put(`${BASE_URL}/${inventoryId}/details/${detailId}`, data)
@@ -49,14 +49,14 @@ export function updateInventoryDetail(
 /**
  * 完成盘点
  */
-export function completeInventory(id: number | string): Promise<void> {
+export function completeInventory(id: LongId | string): Promise<void> {
   return request.post(`${BASE_URL}/${id}/complete`)
 }
 
 /**
  * 取消盘点
  */
-export function cancelInventory(id: number | string): Promise<void> {
+export function cancelInventory(id: LongId | string): Promise<void> {
   return request.post(`${BASE_URL}/${id}/cancel`)
 }
 

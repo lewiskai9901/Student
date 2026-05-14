@@ -133,6 +133,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref } from 'vue'
 import { Pencil, Trash2, ToggleLeft, ToggleRight } from 'lucide-vue-next'
 import type { CalculationRule, CreateRuleRequest, UpdateRuleRequest, RuleType } from '@/types/insp/scoring'
@@ -143,13 +144,13 @@ const iconMap = { Pencil, Trash2, ToggleLeft, ToggleRight }
 
 const props = defineProps<{
   rules: CalculationRule[]
-  templateId?: number
+  templateId?: LongId
 }>()
 
 const emit = defineEmits<{
   create: [data: CreateRuleRequest]
-  update: [id: number, data: UpdateRuleRequest]
-  delete: [id: number]
+  update: [id: LongId, data: UpdateRuleRequest]
+  delete: [id: LongId]
 }>()
 
 const showAdd = ref(false)

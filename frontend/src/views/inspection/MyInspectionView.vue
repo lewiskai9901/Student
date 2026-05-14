@@ -3,6 +3,7 @@
  * MyInspectionView — 我的检查任务 (Audit Console redesign)
  * 卷宗式分组列表 · 状态筛选 · 内联快速操作 · 键盘快捷键
  */
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, onUnmounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -23,15 +24,15 @@ const authStore = useAuthStore()
 const loading = ref(false)
 const myTaskList = ref<InspTask[]>([])
 const availableTaskList = ref<InspTask[]>([])
-const projectMap = ref<Map<number, InspProject>>(new Map())
-const claimingIds = ref<Set<number>>(new Set())
+const projectMap = ref<Map<LongId, InspProject>>(new Map())
+const claimingIds = ref<Set<LongId>>(new Set())
 const filter = ref<'all' | 'available' | 'mine' | 'inprogress' | 'toreview' | 'overdue' | 'adhoc'>('all')
 
 // V108: 抽查发起对话框
 const adhocDialog = ref(false)
 const adhocSubmitting = ref(false)
 const adhocLoadingProjects = ref(false)
-const adhocProjects = ref<{ id: number; projectName: string }[]>([])
+const adhocProjects = ref<{ id: LongId; projectName: string }[]>([])
 const adhocForm = reactive({ projectId: null as number | null, reason: '' })
 
 async function loadAdhocProjects() {
@@ -72,8 +73,8 @@ async function submitAdhoc() {
 function roleInTask(t: InspTask): 'inspector' | 'reviewer' | null {
   const me = authStore.user?.userId ?? authStore.user?.id
   if (!me) return null
-  if (Number(t.inspectorId) === Number(me)) return 'inspector'
-  if (Number(t.reviewerId) === Number(me)) return 'reviewer'
+  if (t.inspectorId === Number(me)) return 'inspector'
+  if (t.reviewerId === Number(me)) return 'reviewer'
   return null
 }
 function isReviewable(t: InspTask): boolean {
@@ -95,7 +96,7 @@ async function loadAll() {
     ])
     myTaskList.value = mine || []
     availableTaskList.value = available || []
-    const m = new Map<number, InspProject>()
+    const m = new Map<LongId, InspProject>()
     for (const p of projects || []) m.set(p.id, p)
     projectMap.value = m
   } catch (e: any) {
@@ -107,7 +108,7 @@ async function loadAll() {
 
 // ── Combined unique tasks ──
 const allTasks = computed(() => {
-  const map = new Map<number, InspTask>()
+  const map = new Map<LongId, InspTask>()
   for (const t of myTaskList.value) map.set(t.id, t)
   for (const t of availableTaskList.value) map.set(t.id, t)
   return Array.from(map.values())
@@ -543,7 +544,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           <!-- Actions -->
           <div class="row-actions" @click.stop>
             <button
-              v-if="t.status === 'IN_PROGRESS' && t.inspectorId === Number(authStore.user?.userId)"
+              v-if="t.status === 'IN_PROGRESS' && t.inspectorId === authStore.user?.userId"
               class="insp-btn insp-btn--sm" @click="handleWithdraw(t)" title="撤回提交"
             >撤回</button>
             <button

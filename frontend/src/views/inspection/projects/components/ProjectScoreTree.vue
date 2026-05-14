@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, onMounted } from 'vue'
 import { inspProjectApi } from '@/api/inspection/project'
 import { TargetTypeConfig, ProjectStatusConfig, type TargetType, type ProjectStatus } from '@/types/insp/enums'
@@ -12,7 +13,7 @@ interface ScoreNode {
 }
 
 const props = defineProps<{
-  projectId: number
+  projectId: LongId
 }>()
 
 const loading = ref(false)

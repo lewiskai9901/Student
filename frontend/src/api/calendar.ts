@@ -4,6 +4,7 @@
  * 从 teaching.ts 提取，学年/学期/教学周/校历事件现在走 /calendar 路径。
  * 这些是跨领域共享的日历资源，不再属于 teaching 专有。
  */
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 import type {
   AcademicYear,
@@ -19,80 +20,80 @@ const BASE = '/calendar'
 export const academicYearApi = {
   list: () => http.get<AcademicYear[]>(`${BASE}/academic-years`),
 
-  getById: (id: number | string) => http.get<AcademicYear>(`${BASE}/academic-years/${id}`),
+  getById: (id: LongId | string) => http.get<AcademicYear>(`${BASE}/academic-years/${id}`),
 
   getCurrent: () => http.get<AcademicYear>(`${BASE}/academic-years/current`),
 
   create: (data: Partial<AcademicYear>) =>
     http.post<AcademicYear>(`${BASE}/academic-years`, data),
 
-  update: (id: number | string, data: Partial<AcademicYear>) =>
+  update: (id: LongId | string, data: Partial<AcademicYear>) =>
     http.put<AcademicYear>(`${BASE}/academic-years/${id}`, data),
 
-  delete: (id: number | string) => http.delete(`${BASE}/academic-years/${id}`),
+  delete: (id: LongId | string) => http.delete(`${BASE}/academic-years/${id}`),
 
-  setCurrent: (id: number | string) =>
+  setCurrent: (id: LongId | string) =>
     http.post(`${BASE}/academic-years/${id}/set-current`),
 }
 
 // ==================== 学期管理 ====================
 
 export const semesterApi = {
-  list: (yearId?: number | string) => {
+  list: (yearId?: LongId | string) => {
     const params = yearId ? { yearId } : {}
     return http.get<Semester[]>(`${BASE}/semesters`, { params })
   },
 
-  getById: (id: number | string) => http.get<Semester>(`${BASE}/semesters/${id}`),
+  getById: (id: LongId | string) => http.get<Semester>(`${BASE}/semesters/${id}`),
 
   getCurrent: () => http.get<Semester>(`${BASE}/semesters/current`),
 
   create: (data: Partial<Semester>) =>
     http.post<Semester>(`${BASE}/semesters`, data),
 
-  update: (id: number | string, data: Partial<Semester>) =>
+  update: (id: LongId | string, data: Partial<Semester>) =>
     http.put<Semester>(`${BASE}/semesters/${id}`, data),
 
-  delete: (id: number | string) => http.delete(`${BASE}/semesters/${id}`),
+  delete: (id: LongId | string) => http.delete(`${BASE}/semesters/${id}`),
 
-  setCurrent: (id: number | string) =>
+  setCurrent: (id: LongId | string) =>
     http.post(`${BASE}/semesters/${id}/set-current`),
 
-  end: (id: number | string) =>
+  end: (id: LongId | string) =>
     http.post(`${BASE}/semesters/${id}/end`),
 
-  reactivate: (id: number | string) =>
+  reactivate: (id: LongId | string) =>
     http.post(`${BASE}/semesters/${id}/reactivate`),
 
   generateCode: (startYear: number, semesterType: number) =>
     http.get<string>(`${BASE}/semesters/generate-code`, { params: { startYear, semesterType } }),
 
-  getWeeks: (semesterId: number | string) =>
+  getWeeks: (semesterId: LongId | string) =>
     http.get<TeachingWeek[]>(`${BASE}/semesters/${semesterId}/weeks`),
 
-  generateWeeks: (semesterId: number | string) =>
+  generateWeeks: (semesterId: LongId | string) =>
     http.post<TeachingWeek[]>(`${BASE}/semesters/${semesterId}/generate-weeks`),
 
-  getCalendarGrid: (semesterId: number | string) =>
+  getCalendarGrid: (semesterId: LongId | string) =>
     http.get(`${BASE}/semesters/${semesterId}/calendar-grid`),
 
-  updateWeekType: (weekId: number | string, weekType: number) =>
+  updateWeekType: (weekId: LongId | string, weekType: number) =>
     http.put(`${BASE}/weeks/${weekId}/type`, { weekType }),
 }
 
 // ==================== 校历事件 ====================
 
 export const academicEventApi = {
-  list: (params: { yearId?: number | string; semesterId?: number | string; eventType?: number }) =>
+  list: (params: { yearId?: LongId | string; semesterId?: LongId | string; eventType?: number }) =>
     http.get<AcademicEvent[]>(`${BASE}/events`, { params }),
 
-  getById: (id: number | string) => http.get<AcademicEvent>(`${BASE}/events/${id}`),
+  getById: (id: LongId | string) => http.get<AcademicEvent>(`${BASE}/events/${id}`),
 
   create: (data: Partial<AcademicEvent>) =>
     http.post<AcademicEvent>(`${BASE}/events`, data),
 
-  update: (id: number | string, data: Partial<AcademicEvent>) =>
+  update: (id: LongId | string, data: Partial<AcademicEvent>) =>
     http.put<AcademicEvent>(`${BASE}/events/${id}`, data),
 
-  delete: (id: number | string) => http.delete(`${BASE}/events/${id}`),
+  delete: (id: LongId | string) => http.delete(`${BASE}/events/${id}`),
 }

@@ -160,6 +160,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { universalPlaceApi } from '@/api/universalPlace'
@@ -167,7 +168,7 @@ import { scheduleApi, adjustmentApi } from '@/api/teaching'
 import type { ScheduleEntry, ScheduleAdjustment, CourseSchedule } from '@/types/teaching'
 import { WEEKDAYS, DEFAULT_PERIODS } from '@/types/teaching'
 
-const props = defineProps<{ semesterId: number | string | undefined }>()
+const props = defineProps<{ semesterId: LongId | string | undefined }>()
 const weekdays = WEEKDAYS
 const periods = DEFAULT_PERIODS
 
@@ -180,7 +181,7 @@ const adjustmentDialogVisible = ref(false)
 const adjSaving = ref(false)
 const adjForm = ref<Partial<ScheduleAdjustment & { newWeek?: number }>>({ adjustmentType: 1, reason: '' })
 const adjEntryOptions = ref<ScheduleEntry[]>([])
-const classrooms = ref<{ id: number; name: string }[]>([])
+const classrooms = ref<{ id: LongId; name: string }[]>([])
 const scheduleList = ref<CourseSchedule[]>([])
 
 async function loadAdjustments() {

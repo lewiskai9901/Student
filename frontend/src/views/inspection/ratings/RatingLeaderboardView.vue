@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Trophy, RefreshCw, Zap } from 'lucide-vue-next'
@@ -7,8 +8,8 @@ import type { InspProject, RatingDimension, RatingResult } from '@/types/insp/pr
 
 // ========== State ==========
 const projects = ref<InspProject[]>([])
-const selectedProjectId = ref<number | null>(null)
-const selectedDimensionId = ref<number | null>(null)
+const selectedProjectId = ref<LongId | null>(null)
+const selectedDimensionId = ref<LongId | null>(null)
 const cycleDate = ref('')
 const dimensions = ref<RatingDimension[]>([])
 const results = ref<RatingResult[]>([])

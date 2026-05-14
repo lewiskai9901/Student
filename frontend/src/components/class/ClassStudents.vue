@@ -53,11 +53,12 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from 'lucide-vue-next'
 
-interface Props { orgUnitId: number | null }
+interface Props { orgUnitId: LongId | null }
 const props = defineProps<Props>()
 const emit = defineEmits<{ close: [] }>()
 

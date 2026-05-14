@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Bell, Plus, Search, Pencil, Trash2, X } from 'lucide-vue-next'
@@ -91,7 +92,7 @@ function formatSubjects(json: string | null): string {
 
 // ==================== Dialog ====================
 const dialogVisible = ref(false)
-const editingId = ref<number | null>(null)
+const editingId = ref<LongId | null>(null)
 const maskMouseDownTarget = ref<EventTarget | null>(null)
 
 const form = reactive<{

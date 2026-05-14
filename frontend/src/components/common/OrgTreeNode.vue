@@ -50,13 +50,14 @@
         :selected-ids="selectedIds"
         :expanded-keys="expandedKeys"
         @toggle="$emit('toggle', $event)"
-        @check="(payload: { id: number | string; checked: boolean }) => $emit('check', payload)"
+        @check="(payload: { id: LongId | string; checked: boolean }) => $emit('check', payload)"
       />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { computed } from 'vue'
 import { ChevronRight, Building2, Users, GraduationCap, Home, Folder } from 'lucide-vue-next'
 import type { OrgUnitTreeNode } from '@/types'
@@ -68,8 +69,8 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  toggle: [id: number | string]
-  check: [payload: { id: number | string; checked: boolean }]
+  toggle: [id: LongId | string]
+  check: [payload: { id: LongId | string; checked: boolean }]
 }>()
 
 const hasChildren = computed(() => props.node.children && props.node.children.length > 0)

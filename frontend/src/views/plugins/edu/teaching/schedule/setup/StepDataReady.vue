@@ -79,11 +79,12 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { reactive, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { workflowApi } from '@/api/teaching'
 
-const props = defineProps<{ semesterId: number | string | undefined; readiness: any }>()
+const props = defineProps<{ semesterId: LongId | string | undefined; readiness: any }>()
 const emit = defineEmits<{ refresh: [] }>()
 
 const r = computed(() => props.readiness || {})

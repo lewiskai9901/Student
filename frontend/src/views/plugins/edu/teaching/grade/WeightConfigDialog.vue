@@ -105,6 +105,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { gradeApi } from '@/api/teaching'
@@ -113,7 +114,7 @@ import type { Course } from '@/types/academic'
 
 const props = defineProps<{
   modelValue: boolean
-  semesterId?: number | string
+  semesterId?: LongId | string
 }>()
 
 const emit = defineEmits<{
@@ -152,8 +153,8 @@ async function loadConfig() {
   if (!props.semesterId || !courseId.value) return
   try {
     const res: any = await gradeApi.getWeightConfigs(
-      Number(props.semesterId),
-      Number(courseId.value)
+      props.semesterId,
+      courseId.value
     )
     const configs: Array<{ componentType: number; weightPercent: number }> =
       Array.isArray(res) ? res : res.data || []
@@ -184,8 +185,8 @@ async function saveConfig() {
   saving.value = true
   try {
     await gradeApi.saveWeightConfigs({
-      semesterId: Number(props.semesterId),
-      courseId: Number(courseId.value),
+      semesterId: props.semesterId,
+      courseId: courseId.value,
       configs: weights.value.map(w => ({
         componentType: w.componentType,
         weightPercent: w.weightPercent,
@@ -207,8 +208,8 @@ async function doCalculateOverall() {
   calculating.value = true
   try {
     const res: any = await gradeApi.calculateOverall({
-      semesterId: Number(props.semesterId),
-      courseId: Number(courseId.value),
+      semesterId: props.semesterId,
+      courseId: courseId.value,
     })
     const data = res.data || res
     ElMessage.success(

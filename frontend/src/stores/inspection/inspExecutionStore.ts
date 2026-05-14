@@ -1,6 +1,7 @@
 /**
  * 检查平台 - 执行引擎 Store
  */
+import type { LongId } from '@/types/common'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type {
@@ -70,7 +71,7 @@ import type { UpdateDetailResponseRequest, FlagDetailRequest } from '@/types/ins
 import { getSections } from '@/api/inspection/template'
 
 export interface SectionCondition {
-  sectionId: number | string
+  sectionId: LongId | string
   conditionLogic: string | null
 }
 
@@ -100,7 +101,7 @@ export const useInspExecutionStore = defineStore('inspExecution', () => {
     return list
   }
 
-  async function loadProject(id: number): Promise<InspProject> {
+  async function loadProject(id: LongId): Promise<InspProject> {
     const p = await getProject(id)
     currentProject.value = p
     return p
@@ -110,57 +111,57 @@ export const useInspExecutionStore = defineStore('inspExecution', () => {
     return await createProject(data)
   }
 
-  async function editProject(id: number, data: UpdateProjectRequest): Promise<InspProject> {
+  async function editProject(id: LongId, data: UpdateProjectRequest): Promise<InspProject> {
     return await updateProjectApi(id, data)
   }
 
-  async function removeProject(id: number): Promise<void> {
+  async function removeProject(id: LongId): Promise<void> {
     await deleteProjectApi(id)
   }
 
-  async function publishProject(id: number, data: PublishProjectRequest): Promise<InspProject> {
+  async function publishProject(id: LongId, data: PublishProjectRequest): Promise<InspProject> {
     return await publishProjectApi(id, data)
   }
 
-  async function pauseProject(id: number): Promise<InspProject> {
+  async function pauseProject(id: LongId): Promise<InspProject> {
     return await pauseProjectApi(id)
   }
 
-  async function resumeProject(id: number): Promise<InspProject> {
+  async function resumeProject(id: LongId): Promise<InspProject> {
     return await resumeProjectApi(id)
   }
 
-  async function completeProject(id: number): Promise<InspProject> {
+  async function completeProject(id: LongId): Promise<InspProject> {
     return await completeProjectApi(id)
   }
 
-  async function archiveProject(id: number): Promise<InspProject> {
+  async function archiveProject(id: LongId): Promise<InspProject> {
     return await archiveProjectApi(id)
   }
 
-  async function loadInspectors(projectId: number): Promise<ProjectInspector[]> {
+  async function loadInspectors(projectId: LongId): Promise<ProjectInspector[]> {
     const list = await getInspectors(projectId)
     inspectors.value = list
     return list
   }
 
-  async function addInspector(projectId: number, data: AddInspectorRequest): Promise<ProjectInspector> {
+  async function addInspector(projectId: LongId, data: AddInspectorRequest): Promise<ProjectInspector> {
     return await addInspectorApi(projectId, data)
   }
 
-  async function removeInspector(projectId: number, inspectorId: number): Promise<void> {
+  async function removeInspector(projectId: LongId, inspectorId: LongId): Promise<void> {
     await removeInspectorApi(projectId, inspectorId)
   }
 
   // ========== Task Actions ==========
 
-  async function loadTasks(projectId?: number): Promise<InspTask[]> {
+  async function loadTasks(projectId?: LongId): Promise<InspTask[]> {
     const list = await getTasks(projectId ? { projectId } : undefined)
     tasks.value = list
     return list
   }
 
-  async function loadTask(id: number): Promise<InspTask> {
+  async function loadTask(id: LongId): Promise<InspTask> {
     const t = await getTask(id)
     currentTask.value = t
     return t
@@ -178,107 +179,107 @@ export const useInspExecutionStore = defineStore('inspExecution', () => {
     return list
   }
 
-  async function claimTask(id: number, data: ClaimTaskRequest): Promise<InspTask> {
+  async function claimTask(id: LongId, data: ClaimTaskRequest): Promise<InspTask> {
     return await claimTaskApi(id, data)
   }
 
-  async function startTask(id: number): Promise<InspTask> {
+  async function startTask(id: LongId): Promise<InspTask> {
     return await startTaskApi(id)
   }
 
-  async function submitTask(id: number): Promise<InspTask> {
+  async function submitTask(id: LongId): Promise<InspTask> {
     return await submitTaskApi(id)
   }
 
-  async function withdrawTask(id: number): Promise<InspTask> {
+  async function withdrawTask(id: LongId): Promise<InspTask> {
     return await withdrawTaskApi(id)
   }
 
-  async function reviewTask(id: number, data: ReviewTaskRequest): Promise<InspTask> {
+  async function reviewTask(id: LongId, data: ReviewTaskRequest): Promise<InspTask> {
     return await reviewTaskApi(id, data)
   }
 
-  async function publishTask(id: number): Promise<InspTask> {
+  async function publishTask(id: LongId): Promise<InspTask> {
     return await publishTaskApi(id)
   }
 
-  async function cancelTask(id: number): Promise<InspTask> {
+  async function cancelTask(id: LongId): Promise<InspTask> {
     return await cancelTaskApi(id)
   }
 
-  async function assignTask(id: number, data: AssignTaskRequest): Promise<InspTask> {
+  async function assignTask(id: LongId, data: AssignTaskRequest): Promise<InspTask> {
     return await assignTaskApi(id, data)
   }
 
   // ========== Submission Actions ==========
 
-  async function loadSubmissions(taskId: number): Promise<InspSubmission[]> {
+  async function loadSubmissions(taskId: LongId): Promise<InspSubmission[]> {
     const list = await getSubmissions({ taskId })
     submissions.value = list
     return list
   }
 
-  async function loadSubmission(id: number): Promise<InspSubmission> {
+  async function loadSubmission(id: LongId): Promise<InspSubmission> {
     const s = await getSubmission(id)
     currentSubmission.value = s
     return s
   }
 
-  async function lockSubmission(id: number): Promise<InspSubmission> {
+  async function lockSubmission(id: LongId): Promise<InspSubmission> {
     return await lockSubmissionApi(id)
   }
 
-  async function unlockSubmission(id: number): Promise<InspSubmission> {
+  async function unlockSubmission(id: LongId): Promise<InspSubmission> {
     return await unlockSubmissionApi(id)
   }
 
-  async function startFillingSubmission(id: number): Promise<InspSubmission> {
+  async function startFillingSubmission(id: LongId): Promise<InspSubmission> {
     return await startFillingApi(id)
   }
 
-  async function saveFormData(id: number, data: SaveFormDataRequest): Promise<InspSubmission> {
+  async function saveFormData(id: LongId, data: SaveFormDataRequest): Promise<InspSubmission> {
     return await saveFormDataApi(id, data)
   }
 
-  async function completeSubmission(id: number, data: CompleteSubmissionRequest): Promise<InspSubmission> {
+  async function completeSubmission(id: LongId, data: CompleteSubmissionRequest): Promise<InspSubmission> {
     return await completeSubmissionApi(id, data)
   }
 
-  async function skipSubmission(id: number): Promise<InspSubmission> {
+  async function skipSubmission(id: LongId): Promise<InspSubmission> {
     return await skipSubmissionApi(id)
   }
 
-  async function loadDetails(submissionId: number): Promise<SubmissionDetail[]> {
+  async function loadDetails(submissionId: LongId): Promise<SubmissionDetail[]> {
     const list = await getDetails(submissionId)
     details.value = list
     return list
   }
 
-  async function loadEvidence(submissionId: number): Promise<InspEvidence[]> {
+  async function loadEvidence(submissionId: LongId): Promise<InspEvidence[]> {
     const list = await getEvidence(submissionId)
     evidence.value = list
     return list
   }
 
-  async function updateDetailResponse(detailId: number, data: UpdateDetailResponseRequest): Promise<SubmissionDetail> {
+  async function updateDetailResponse(detailId: LongId, data: UpdateDetailResponseRequest): Promise<SubmissionDetail> {
     return await updateDetailResponseApi(detailId, data)
   }
 
-  async function updateDetailRemark(detailId: number, remark: string): Promise<SubmissionDetail> {
+  async function updateDetailRemark(detailId: LongId, remark: string): Promise<SubmissionDetail> {
     return await updateDetailRemarkApi(detailId, remark)
   }
 
-  async function flagDetail(detailId: number, data: FlagDetailRequest): Promise<SubmissionDetail> {
+  async function flagDetail(detailId: LongId, data: FlagDetailRequest): Promise<SubmissionDetail> {
     return await flagDetailApi(detailId, data)
   }
 
-  async function unflagDetail(detailId: number): Promise<SubmissionDetail> {
+  async function unflagDetail(detailId: LongId): Promise<SubmissionDetail> {
     return await unflagDetailApi(detailId)
   }
 
   // ========== Section Conditions ==========
 
-  async function loadSectionConditions(projectId: number): Promise<SectionCondition[]> {
+  async function loadSectionConditions(projectId: LongId): Promise<SectionCondition[]> {
     try {
       const project = await getProject(projectId)
       if (project.rootSectionId) {

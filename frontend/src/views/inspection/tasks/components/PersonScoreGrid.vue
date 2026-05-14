@@ -6,26 +6,27 @@
  * a compact grid with score inputs for each person.
  * Emits update:scores with the full array on every change.
  */
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { http } from '@/utils/request'
 
 interface TargetPerson {
-  id: number
+  id: LongId
   name: string
-  orgUnitId?: number
+  orgUnitId?: LongId
 }
 
 interface PersonScore {
-  userId: number
+  userId: LongId
   userName: string
   score: number | null
 }
 
 const props = withDefaults(defineProps<{
   targetType: string
-  targetId: number
-  detailId: number
+  targetId: LongId
+  detailId: LongId
   disabled?: boolean
   maxScore?: number
 }>(), {
@@ -40,7 +41,7 @@ const emit = defineEmits<{
 // ========== State ==========
 const loading = ref(false)
 const persons = ref<TargetPerson[]>([])
-const scoreMap = ref<Record<number, number | null>>({})
+const scoreMap = ref<Record<LongId, number | null>>({})
 
 // ========== Computed ==========
 const stats = computed(() => {
@@ -82,7 +83,7 @@ async function loadPersons() {
 }
 
 // ========== Score change ==========
-function handleScoreChange(personId: number, value: number | null) {
+function handleScoreChange(personId: LongId, value: number | null) {
   scoreMap.value[personId] = value
   emitScores()
 }

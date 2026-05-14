@@ -1,3 +1,4 @@
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 import type { ActivityEvent, ActivityEventQuery, ActivityEventStats } from '@/types/activityEvent'
 
@@ -19,7 +20,7 @@ export function getResourceTimeline(resourceType: string, resourceId: string | n
 }
 
 /** 获取用户活动历史 */
-export function getUserActivity(userId: number, limit = 50) {
+export function getUserActivity(userId: LongId, limit = 50) {
   return http.get<ActivityEvent[]>(`${BASE}/user/${userId}`, {
     params: { limit }
   })

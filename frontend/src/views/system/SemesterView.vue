@@ -348,6 +348,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -374,11 +375,11 @@ import type { Semester } from '@/types/teaching'
 const getAllSemesters = () => semesterApi.list()
 const getCurrentSemester = () => semesterApi.getCurrent()
 const createSemester = (data: any) => semesterApi.create(data)
-const updateSemester = (id: number | string, data: any) => semesterApi.update(id, data)
-const deleteSemester = (id: number | string) => semesterApi.delete(id)
-const setCurrentSemester = (id: number | string) => semesterApi.setCurrent(id)
-const endSemester = (id: number | string) => semesterApi.end(id)
-const reactivateSemester = (id: number | string) => semesterApi.reactivate(id)
+const updateSemester = (id: LongId | string, data: any) => semesterApi.update(id, data)
+const deleteSemester = (id: LongId | string) => semesterApi.delete(id)
+const setCurrentSemester = (id: LongId | string) => semesterApi.setCurrent(id)
+const endSemester = (id: LongId | string) => semesterApi.end(id)
+const reactivateSemester = (id: LongId | string) => semesterApi.reactivate(id)
 const generateSemesterCode = (startYear: number, semesterType: number) => semesterApi.generateCode(startYear, semesterType)
 
 const loading = ref(false)

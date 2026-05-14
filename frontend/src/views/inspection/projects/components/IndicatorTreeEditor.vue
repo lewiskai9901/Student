@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Trash2, Pencil, Layers, BarChart3 } from 'lucide-vue-next'
@@ -17,7 +18,7 @@ import {
   EVALUATION_METHOD_OPTIONS,
 } from '@/types/insp/indicator'
 
-const props = defineProps<{ projectId: number; rootSectionId: number | null }>()
+const props = defineProps<{ projectId: LongId; rootSectionId: LongId | null }>()
 
 // ── State ──
 const loading = ref(false)
@@ -30,7 +31,7 @@ const saving = ref(false)
 
 // Dialog mode: 'indicator' (leaf) or 'group' (composite)
 const dialogMode = ref<'indicator' | 'group'>('indicator')
-const dialogParentId = ref<number | null>(null)
+const dialogParentId = ref<LongId | null>(null)
 
 const form = ref({
   name: '',
@@ -64,16 +65,16 @@ const standaloneIndicators = computed(() =>
   indicators.value.filter(i => !i.parentIndicatorId && i.indicatorType === 'LEAF').sort((a, b) => a.sortOrder - b.sortOrder)
 )
 
-function getChildren(parentId: number): Indicator[] {
+function getChildren(parentId: LongId): Indicator[] {
   return indicators.value.filter(i => i.parentIndicatorId === parentId).sort((a, b) => a.sortOrder - b.sortOrder)
 }
 
-function getSectionName(id: number | null): string {
+function getSectionName(id: LongId | null): string {
   if (!id) return '-'
   return sections.value.find(s => s.id === id)?.sectionName || `#${id}`
 }
 
-function getSchemeDisplayName(id: number | null): string {
+function getSchemeDisplayName(id: LongId | null): string {
   if (!id) return ''
   return gradeSchemes.value.find(s => s.id === id)?.displayName || ''
 }
@@ -109,7 +110,7 @@ async function loadAll() {
 }
 
 // ── Dialog ──
-function openAdd(parentId: number | null, mode: 'indicator' | 'group') {
+function openAdd(parentId: LongId | null, mode: 'indicator' | 'group') {
   editingIndicator.value = null
   dialogMode.value = mode
   dialogParentId.value = parentId

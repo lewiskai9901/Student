@@ -106,6 +106,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -113,12 +114,12 @@ import { RefreshRight, Loading } from '@element-plus/icons-vue'
 import { http } from '@/utils/request'
 
 interface CorrectiveCase {
-  id: number; caseCode: string; issueDescription: string
+  id: LongId; caseCode: string; issueDescription: string
   priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
   status: 'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'SUBMITTED' | 'VERIFIED' | 'CLOSED' | 'REJECTED' | 'ESCALATED'
   deadline: string | null
   targetName: string
-  assigneeId: number | null
+  assigneeId: LongId | null
   escalationLevel: number
 }
 

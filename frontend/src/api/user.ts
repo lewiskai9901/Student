@@ -3,6 +3,7 @@
  *
  * 统一使用 /users 端点（UserController + UserRoleController）
  */
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 import type {
   User,
@@ -59,14 +60,14 @@ export function createUser(data: CreateUserRequest): Promise<User> {
 /**
  * 更新用户
  */
-export function updateUser(id: number | string, data: UpdateUserRequest): Promise<User> {
+export function updateUser(id: LongId | string, data: UpdateUserRequest): Promise<User> {
   return http.put<User>(`${USER_URL}/${id}`, data)
 }
 
 /**
  * 删除用户
  */
-export function deleteUser(id: number | string): Promise<void> {
+export function deleteUser(id: LongId | string): Promise<void> {
   return http.delete(`${USER_URL}/${id}`)
 }
 
@@ -80,7 +81,7 @@ export function batchDeleteUsers(ids: (number | string)[]): Promise<void> {
 /**
  * 获取用户详情
  */
-export function getUser(id: number | string): Promise<User> {
+export function getUser(id: LongId | string): Promise<User> {
   return http.get<User>(`${USER_URL}/${id}`)
 }
 
@@ -95,7 +96,7 @@ export function getUserByUsername(username: string): Promise<User> {
  * 根据组织单元获取用户列表
  */
 export function getUsersByOrgUnit(
-  orgUnitId: number | string,
+  orgUnitId: LongId | string,
   includeChildren?: boolean,
   keyword?: string
 ): Promise<User[]> {
@@ -107,7 +108,7 @@ export function getUsersByOrgUnit(
 /**
  * 检查用户名是否存在
  */
-export function checkUsernameExists(username: string, excludeId?: number | string): Promise<boolean> {
+export function checkUsernameExists(username: string, excludeId?: LongId | string): Promise<boolean> {
   return http.get<boolean>(`${USER_URL}/exists`, {
     params: { username, excludeId }
   })
@@ -118,14 +119,14 @@ export function checkUsernameExists(username: string, excludeId?: number | strin
 /**
  * 启用用户
  */
-export function enableUser(id: number | string): Promise<User> {
+export function enableUser(id: LongId | string): Promise<User> {
   return http.post<User>(`${USER_URL}/${id}/enable`)
 }
 
 /**
  * 禁用用户
  */
-export function disableUser(id: number | string): Promise<User> {
+export function disableUser(id: LongId | string): Promise<User> {
   return http.post<User>(`${USER_URL}/${id}/disable`)
 }
 
@@ -133,7 +134,7 @@ export function disableUser(id: number | string): Promise<User> {
  * 更新用户状态（兼容旧接口）
  * @param status 1=启用, 2=禁用
  */
-export async function updateUserStatus(id: number | string, status: number): Promise<User> {
+export async function updateUserStatus(id: LongId | string, status: number): Promise<User> {
   if (status === 1) {
     return enableUser(id)
   } else {
@@ -146,7 +147,7 @@ export async function updateUserStatus(id: number | string, status: number): Pro
 /**
  * 重置用户密码
  */
-export function resetPassword(id: number | string): Promise<string> {
+export function resetPassword(id: LongId | string): Promise<string> {
   return http.post<string>(`${USER_URL}/${id}/reset-password`)
 }
 
@@ -157,7 +158,7 @@ const ROLE_ASSIGN_URL = '/users'
 /**
  * 获取用户角色ID列表
  */
-export function getUserRoleIds(id: number | string): Promise<(number | string)[]> {
+export function getUserRoleIds(id: LongId | string): Promise<(number | string)[]> {
   return http.get<any[]>(`${ROLE_ASSIGN_URL}/${id}/roles`).then(roles => {
     if (!Array.isArray(roles)) return []
     return [...new Set(roles.map((r: any) => r.roleId || r.id))]
@@ -167,7 +168,7 @@ export function getUserRoleIds(id: number | string): Promise<(number | string)[]
 /**
  * 获取用户角色分配（含作用域信息）
  */
-export function getUserRoleAssignments(id: number | string): Promise<any[]> {
+export function getUserRoleAssignments(id: LongId | string): Promise<any[]> {
   return http.get<any[]>(`${ROLE_ASSIGN_URL}/${id}/roles`)
 }
 
@@ -175,8 +176,8 @@ export function getUserRoleAssignments(id: number | string): Promise<any[]> {
  * 为用户分配角色（批量，带作用域、过期时间、原因）
  */
 export function assignRoles(
-  id: number | string,
-  assignments: { roleId: number | string; scopeType?: string; scopeId?: number | string; expiresAt?: string; reason?: string }[]
+  id: LongId | string,
+  assignments: { roleId: LongId | string; scopeType?: string; scopeId?: LongId | string; expiresAt?: string; reason?: string }[]
 ): Promise<void> {
   const normalized = assignments.map(a => ({
     roleId: a.roleId,
@@ -193,14 +194,14 @@ export function assignRoles(
 /**
  * 绑定微信
  */
-export function bindWechat(id: number | string, openid: string): Promise<void> {
+export function bindWechat(id: LongId | string, openid: string): Promise<void> {
   return http.post(`${USER_URL}/${id}/bind-wechat`, null, { params: { openid } })
 }
 
 /**
  * 解绑微信
  */
-export function unbindWechat(id: number | string): Promise<void> {
+export function unbindWechat(id: LongId | string): Promise<void> {
   return http.post(`${USER_URL}/${id}/unbind-wechat`)
 }
 
@@ -261,13 +262,13 @@ export interface ScopeType {
  * 用户数据范围DTO
  */
 export interface UserDataScopeDTO {
-  id: number
-  userId: number
+  id: LongId
+  userId: LongId
   username?: string
   realName?: string
   scopeType: string
   scopeTypeName?: string
-  scopeId: number
+  scopeId: LongId
   scopeName?: string
   includeChildren: number
   createdAt?: string
@@ -279,9 +280,9 @@ export interface UserDataScopeDTO {
  * 添加数据范围请求
  */
 export interface AddScopeRequest {
-  userId: number
+  userId: LongId
   scopeType: string
-  scopeId: number
+  scopeId: LongId
   includeChildren?: number
 }
 
@@ -289,10 +290,10 @@ export interface AddScopeRequest {
  * 批量添加数据范围请求
  */
 export interface BatchAddScopeRequest {
-  userId: number
+  userId: LongId
   scopes: Array<{
     scopeType: string
-    scopeId: number
+    scopeId: LongId
     includeChildren?: number
   }>
 }
@@ -302,7 +303,7 @@ const DATA_SCOPE_URL = '/user-data-scopes'
 /**
  * 获取用户的数据范围列表
  */
-export function getUserDataScopes(userId: number | string): Promise<UserDataScopeDTO[]> {
+export function getUserDataScopes(userId: LongId | string): Promise<UserDataScopeDTO[]> {
   return http.get<UserDataScopeDTO[]>(`${DATA_SCOPE_URL}/user/${userId}`)
 }
 
@@ -323,7 +324,7 @@ export function batchAddUserDataScopes(data: BatchAddScopeRequest): Promise<User
 /**
  * 删除用户数据范围
  */
-export function deleteUserDataScope(id: number | string): Promise<void> {
+export function deleteUserDataScope(id: LongId | string): Promise<void> {
   return http.delete(`${DATA_SCOPE_URL}/${id}`)
 }
 
@@ -337,14 +338,14 @@ export function batchDeleteUserDataScopes(ids: (number | string)[]): Promise<voi
 /**
  * 删除用户所有数据范围
  */
-export function deleteAllUserDataScopes(userId: number | string): Promise<void> {
+export function deleteAllUserDataScopes(userId: LongId | string): Promise<void> {
   return http.delete(`${DATA_SCOPE_URL}/user/${userId}`)
 }
 
 /**
  * 获取拥有指定范围的用户列表
  */
-export function getUsersByScopeTypeAndId(scopeType: string, scopeId: number | string): Promise<UserDataScopeDTO[]> {
+export function getUsersByScopeTypeAndId(scopeType: string, scopeId: LongId | string): Promise<UserDataScopeDTO[]> {
   return http.get<UserDataScopeDTO[]>(`${DATA_SCOPE_URL}/scope`, {
     params: { scopeType, scopeId }
   })
@@ -353,7 +354,7 @@ export function getUsersByScopeTypeAndId(scopeType: string, scopeId: number | st
 /**
  * 检查用户是否有指定范围的权限
  */
-export function checkUserScope(userId: number | string, scopeType: string, scopeId: number | string): Promise<boolean> {
+export function checkUserScope(userId: LongId | string, scopeType: string, scopeId: LongId | string): Promise<boolean> {
   return http.get<boolean>(`${DATA_SCOPE_URL}/check`, {
     params: { userId, scopeType, scopeId }
   })
@@ -362,7 +363,7 @@ export function checkUserScope(userId: number | string, scopeType: string, scope
 /**
  * 获取用户可访问的班级ID列表
  */
-export function getAccessibleClassIds(userId: number | string): Promise<(number | string)[]> {
+export function getAccessibleClassIds(userId: LongId | string): Promise<(number | string)[]> {
   return http.get<number[]>(`${DATA_SCOPE_URL}/accessible/classes/${userId}`)
 }
 

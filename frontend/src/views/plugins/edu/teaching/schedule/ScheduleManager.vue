@@ -176,13 +176,14 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { scheduleApi } from '@/api/teaching'
 import type { CourseSchedule } from '@/types/teaching'
 import { WEEKDAYS } from '@/types/teaching'
 
-const props = defineProps<{ semesterId: number | string | undefined }>()
+const props = defineProps<{ semesterId: LongId | string | undefined }>()
 
 const loading = ref(false)
 const scheduleList = ref<CourseSchedule[]>([])

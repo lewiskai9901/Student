@@ -103,6 +103,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { examApi } from '@/api/teaching'
@@ -135,7 +136,7 @@ const assignedRooms = ref<any[]>([])
 const addRoomDialogVisible = ref(false)
 const newRoomForm = ref({ classroomId: undefined as number | undefined })
 
-const teacherOptions = ref<{ id: number | string; username: string; realName?: string }[]>([])
+const teacherOptions = ref<{ id: LongId | string; username: string; realName?: string }[]>([])
 const classroomOptions = ref<any[]>([])
 
 async function loadTeacherOptions() {

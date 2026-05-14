@@ -24,6 +24,7 @@ import {
   type TaskStatus, type ScoringMode,
 } from '@/types/insp/enums'
 import type { InspTask, InspSubmission, SubmissionDetail } from '@/types/insp/project'
+import type { LongId } from '@/types/common'
 import type { TemplateSection } from '@/types/insp/template'
 import { getProject } from '@/api/inspection/project'
 import { http } from '@/utils/request'
@@ -43,7 +44,7 @@ import type { SuggestScoreResponse } from '@/api/inspection/aiScoring'
 const route = useRoute()
 const router = useRouter()
 const store = useInspExecutionStore()
-const taskId = Number(route.params.id)
+const taskId = String(route.params.id)
 
 // ==================== Core State ====================
 
@@ -58,16 +59,16 @@ const prevIssuesHint = ref<{ itemName: string; itemCode: string; sectionName: st
 const prevIssuesDate = ref<string>('')
 const details = ref<SubmissionDetail[]>([])
 const allSections = ref<TemplateSection[]>([])
-const rootSectionId = ref<number | null>(null)
+const rootSectionId = ref<LongId | null>(null)
 const sectionTree = ref<SectionTreeNode[]>([])
 
 // Per-detail input state (keyed by detail.id)
-const numberInputs = ref<Record<number, number>>({})
-const selectInputs = ref<Record<number, string>>({})
-const textInputs = ref<Record<number, string>>({})
+const numberInputs = ref<Record<LongId, number>>({})
+const selectInputs = ref<Record<LongId, string>>({})
+const textInputs = ref<Record<LongId, string>>({})
 
 // G1: 当前键盘聚焦的 detail (用于 1/2 键 PASS_FAIL)
-const focusedDetailId = ref<number | null>(null)
+const focusedDetailId = ref<LongId | null>(null)
 // G1: 键盘提示条折叠状态 (用户可关掉)
 const showKeyboardHints = ref(localStorage.getItem('insp_kbd_hints_dismissed') !== '1')
 function dismissKeyboardHints() {
@@ -84,7 +85,7 @@ function setViewMode(m: ViewMode) {
 }
 
 // G3: 自动保存指示
-const lastSavedAt = ref<number | null>(null)
+const lastSavedAt = ref<LongId | null>(null)
 const savingActive = ref(false)
 const lastSavedText = computed(() => {
   if (!lastSavedAt.value) return ''
@@ -149,14 +150,14 @@ const isEditable = computed(() => {
 
 // ==================== Target Mode ====================
 
-const selectedTargetId = ref<number | null>(null)
+const selectedTargetId = ref<LongId | null>(null)
 const targetSearch = ref('')
 const targetFilter = ref<'all' | 'pending' | 'completed'>('all')
 const targetContextFilter = ref<string>('')
 
 // ---- Target filter context (org tree / place types) ----
-interface TargetMeta { targetId: number; targetName: string; targetType: string; parentId?: number; parentName?: string }
-const targetMetaMap = ref<Map<number, TargetMeta>>(new Map())
+interface TargetMeta { targetId: LongId; targetName: string; targetType: string; parentId?: LongId; parentName?: string }
+const targetMetaMap = ref<Map<LongId, TargetMeta>>(new Map())
 const filterDimensions = ref<{ label: string; key: string; options: { value: string; label: string }[] }[]>([])
 
 /** Load filter context based on target type */
@@ -167,12 +168,12 @@ async function loadTargetFilterContext() {
   if (dominantType === 'ORG') {
     try {
       const tree = await orgUnitApi.getTree()
-      const parentMap = new Map<number, { id: number; name: string; type: string }>()
-      const nameMap = new Map<number, string>()
+      const parentMap = new Map<LongId, { id: LongId; name: string; type: string }>()
+      const nameMap = new Map<LongId, string>()
       function walk(nodes: any[], parent?: any) {
         for (const n of nodes || []) {
-          nameMap.set(Number(n.id), n.unitName || n.name || '')
-          if (parent) parentMap.set(Number(n.id), { id: Number(parent.id), name: parent.unitName || parent.name, type: parent.unitType })
+          nameMap.set(n.id, n.unitName || n.name || '')
+          if (parent) parentMap.set(n.id, { id: parent.id, name: parent.unitName || parent.name, type: parent.unitType })
           walk(n.children || [], n)
         }
       }
@@ -180,7 +181,7 @@ async function loadTargetFilterContext() {
       // Build meta with parent info, resolve empty targetName from org tree
       const newMap = new Map(targetMetaMap.value)
       for (const s of submissions.value) {
-        const tid = Number(s.targetId)
+        const tid = s.targetId
         const p = parentMap.get(tid)
         const resolvedName = s.targetName || nameMap.get(tid) || `目标 #${s.targetId}`
         newMap.set(s.targetId, {
@@ -227,7 +228,7 @@ async function loadTargetFilterContext() {
 
 /** Unique targets deduped from submissions */
 const uniqueTargets = computed(() => {
-  const map = new Map<number, TargetMeta>()
+  const map = new Map<LongId, TargetMeta>()
   for (const s of submissions.value) {
     if (!map.has(s.targetId)) {
       const meta = targetMetaMap.value.get(s.targetId)
@@ -244,7 +245,7 @@ const contextFilterLabel = computed(() => filterDimensions.value[0]?.label ?? '�
 /** Context filter options */
 const contextFilterOptions = computed(() => filterDimensions.value[0]?.options ?? [])
 
-function getTargetStatus(targetId: number): string {
+function getTargetStatus(targetId: LongId): string {
   const subs = submissions.value.filter(s => s.targetId === targetId)
   if (subs.length === 0) return 'PENDING'
   if (subs.every(s => s.status === 'COMPLETED' || s.status === 'SKIPPED')) return 'COMPLETED'
@@ -252,7 +253,7 @@ function getTargetStatus(targetId: number): string {
   return 'PENDING'
 }
 
-function getTargetProgress(targetId: number): { done: number; total: number } {
+function getTargetProgress(targetId: LongId): { done: number; total: number } {
   const subs = submissions.value.filter(s => s.targetId === targetId)
   const done = subs.filter(s => s.status === 'COMPLETED' || s.status === 'SKIPPED').length
   return { done, total: subs.length }
@@ -265,7 +266,7 @@ const completedTargetCount = computed(() =>
   uniqueTargets.value.filter(t => getTargetStatus(t.targetId) === 'COMPLETED').length
 )
 
-function getTargetDotClass(targetId: number): string {
+function getTargetDotClass(targetId: LongId): string {
   const s = getTargetStatus(targetId)
   return s === 'COMPLETED' ? 'done' : s === 'IN_PROGRESS' ? 'progress' : 'pending'
 }
@@ -480,7 +481,7 @@ function groupProgressPercent(group: TargetSectionGroup): number {
 /** Count child leaf sections under an intermediate group */
 function intermediateChildCount(group: TargetSectionGroup): number {
   if (!group.section || !sectionTree.value.length) return 0
-  const node = flattenTree(sectionTree.value).find(n => n.id === Number(group.section!.id))
+  const node = flattenTree(sectionTree.value).find(n => n.id === group.section!.id)
   if (!node) return 0
   return flattenTree(node.children).filter(c => c.isLeaf).length
 }
@@ -501,7 +502,7 @@ function isGroupHiddenByParent(gi: number): boolean {
   return false
 }
 
-async function selectTarget(targetId: number) {
+async function selectTarget(targetId: LongId) {
   selectedTargetId.value = targetId
   details.value = []
   numberInputs.value = {}
@@ -526,10 +527,10 @@ async function selectTarget(targetId: number) {
     const rawGroups: TargetSectionGroup[] = []
     const updatedSubs = submissions.value.filter(s => s.targetId === targetId)
     for (const sub of updatedSubs) {
-      let section = allSections.value.find(s => Number(s.id) === Number(sub.sectionId)) || null
+      let section = allSections.value.find(s => s.id === sub.sectionId) || null
       // Fallback: if sectionId is null/missing, use root section
       if (!section && !sub.sectionId && allSections.value.length > 0 && rootSectionId.value) {
-        section = allSections.value.find(s => Number(s.id) === rootSectionId.value) || allSections.value[0]
+        section = allSections.value.find(s => s.id === rootSectionId.value) || allSections.value[0]
       }
       let dets: SubmissionDetail[] = []
       try { dets = await store.loadDetails(sub.id) } catch { /* skip */ }
@@ -538,9 +539,9 @@ async function selectTarget(targetId: number) {
       if (sectionTree.value.length > 0) {
         const leafNodes = flattenTree(sectionTree.value).filter(n => n.isLeaf)
         // Index existing details by sectionId
-        const detsBySectionId = new Map<number, SubmissionDetail[]>()
+        const detsBySectionId = new Map<LongId, SubmissionDetail[]>()
         for (const d of dets) {
-          const sid = Number(d.sectionId || 0)
+          const sid = d.sectionId || ''
           if (!detsBySectionId.has(sid)) detsBySectionId.set(sid, [])
           detsBySectionId.get(sid)!.push(d)
         }
@@ -553,9 +554,9 @@ async function selectTarget(targetId: number) {
             try {
               const items = await inspTemplateApi.getItems(leaf.id)
               leafDets = items.map(item => ({
-                id: -(leaf.id * 10000 + Number(item.id || 0)),
+                id: -(leaf.id * 10000 + item.id || ''),
                 submissionId: sub.id,
-                templateItemId: Number(item.id),
+                templateItemId: item.id,
                 itemCode: item.itemCode || '',
                 itemName: item.itemName || '',
                 itemType: item.itemType || 'NUMBER',
@@ -570,12 +571,12 @@ async function selectTarget(targetId: number) {
             } catch { /* skip */ }
           }
           if (leafDets.length === 0) continue
-          const leafSection = allSections.value.find(s => Number(s.id) === leaf.id) || { id: leaf.id, sectionName: leaf.sectionName } as any
+          const leafSection = allSections.value.find(s => s.id === leaf.id) || { id: leaf.id, sectionName: leaf.sectionName } as any
           rawGroups.push({ section: leafSection, submission: sub, details: leafDets, collapsed: false, depth: 0, isIntermediate: false })
         }
         // Also include any details not matched to a leaf section (orphaned)
         const leafIds = new Set(leafNodes.map(n => n.id))
-        const orphaned = dets.filter(d => !leafIds.has(Number(d.sectionId || 0)))
+        const orphaned = dets.filter(d => !leafIds.has(d.sectionId || ''))
         if (orphaned.length > 0) {
           rawGroups.push({ section, submission: sub, details: orphaned, collapsed: false, depth: 0, isIntermediate: false })
         }
@@ -587,11 +588,11 @@ async function selectTarget(targetId: number) {
     // If we have a section tree, annotate with depth and insert intermediate headers
     if (sectionTree.value.length > 0) {
       const allFlat = flattenTree(sectionTree.value)
-      const sectionIdToNode = new Map<number, SectionTreeNode>()
+      const sectionIdToNode = new Map<LongId, SectionTreeNode>()
       for (const n of allFlat) sectionIdToNode.set(n.id, n)
 
       // Compute depth for each section from tree
-      const depthMap = new Map<number, number>()
+      const depthMap = new Map<LongId, number>()
       const walkDepth = (nodes: SectionTreeNode[], d: number) => {
         for (const n of nodes) { depthMap.set(n.id, d); walkDepth(n.children, d + 1) }
       }
@@ -599,10 +600,10 @@ async function selectTarget(targetId: number) {
 
       // Build ordered groups following tree order, inserting intermediate headers
       const orderedGroups: TargetSectionGroup[] = []
-      const insertedIntermediates = new Set<number>()
-      const groupBySectionId = new Map<number, TargetSectionGroup>()
+      const insertedIntermediates = new Set<LongId>()
+      const groupBySectionId = new Map<LongId, TargetSectionGroup>()
       for (const g of rawGroups) {
-        if (g.section) groupBySectionId.set(Number(g.section.id), g)
+        if (g.section) groupBySectionId.set(g.section.id, g)
       }
 
       const walkTree = (nodes: SectionTreeNode[]) => {
@@ -617,7 +618,7 @@ async function selectTarget(targetId: number) {
               const hasChildSubmissions = childLeafIds.some(id => groupBySectionId.has(id))
               if (hasChildSubmissions) {
                 orderedGroups.push({
-                  section: allSections.value.find(s => Number(s.id) === node.id) || { id: node.id, sectionName: node.sectionName } as any,
+                  section: allSections.value.find(s => s.id === node.id) || { id: node.id, sectionName: node.sectionName } as any,
                   submission: {} as InspSubmission, // placeholder
                   details: [],
                   collapsed: false,
@@ -712,7 +713,7 @@ async function ensureDetailPersisted(detail: SubmissionDetail): Promise<Submissi
 }
 
 /** Get all submissions for a given section */
-function getSubmissionsForSection(sectionId: number): InspSubmission[] {
+function getSubmissionsForSection(sectionId: LongId): InspSubmission[] {
   return submissions.value.filter(s => String(s.sectionId) === String(sectionId))
 }
 
@@ -1068,7 +1069,7 @@ async function loadData() {
           try {
             const plans = await http.get<any[]>('/inspection/plans', { params: { projectId: task.value.projectId } })
             const plan = task.value.inspectionPlanId
-              ? plans?.find((p: any) => Number(p.id) === Number(task.value!.inspectionPlanId)) || plans?.[0]
+              ? plans?.find((p: any) => p.id === task.value!.inspectionPlanId) || plans?.[0]
               : plans?.[0]
             if (plan?.rootSectionId) rsi = plan.rootSectionId
           } catch (e: any) { console.warn('加载检查计划失败，尝试其他方式', e) }
@@ -1132,7 +1133,7 @@ async function loadPrevIssues() {
     }) as any[]
     // 找最近一个已发布且不是当前任务的
     const prev = allTasks
-      .filter(t => Number(t.id) !== Number(task.value!.id) &&
+      .filter(t => t.id !== task.value!.id &&
                    (t.status === 'PUBLISHED' || t.status === 'REVIEWED'))
       .sort((a, b) => (b.taskDate || '').localeCompare(a.taskDate || ''))[0]
     if (!prev) return
@@ -1196,7 +1197,7 @@ const correctiveDialogSubmissions = ref<number[]>([])
 
 // V110: 复发警示 - 该 target 在过去 30 天的 itemCode → recurCount 映射
 const recurrenceMap = ref<Record<string, { recurCount: number; lastSeenAt: string | null }>>({})
-async function loadRecurrence(targetId: number) {
+async function loadRecurrence(targetId: LongId) {
   recurrenceMap.value = {}
   if (!task.value?.projectId || !targetId) return
   try {
@@ -1565,10 +1566,10 @@ onMounted(() => loadData())
                   <!-- EVENT_STREAM mode: show search+record interface -->
                   <template v-if="detail.inputMode === 'EVENT_STREAM'">
                     <EventStreamRecorder
-                      :section-id="Number(group.submission.sectionId || 0)"
+                      :section-id="group.submission.sectionId || ''"
                       :target-type="group.submission.targetType"
                       :items="[detail]"
-                      :submissions="getSubmissionsForSection(Number(group.submission.sectionId || 0))"
+                      :submissions="getSubmissionsForSection(group.submission.sectionId || '')"
                       :disabled="!isGroupEditable(group)"
                     />
                   </template>
@@ -1643,10 +1644,10 @@ onMounted(() => loadData())
                   <template v-else-if="detail.itemType === 'VIOLATION_RECORD'">
                     <EventStreamRecorder
                       v-if="detail.inputMode === 'EVENT_STREAM'"
-                      :section-id="Number(group.submission.sectionId || 0)"
+                      :section-id="group.submission.sectionId || ''"
                       :target-type="group.submission.targetType"
                       :items="[detail]"
-                      :submissions="getSubmissionsForSection(Number(group.submission.sectionId || 0))"
+                      :submissions="getSubmissionsForSection(group.submission.sectionId || '')"
                       :disabled="!isGroupEditable(group)"
                     />
                     <ViolationRecordInput

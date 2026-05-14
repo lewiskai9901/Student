@@ -107,6 +107,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { computed } from 'vue'
 import {
   GraduationCap,
@@ -120,7 +121,7 @@ import {
 } from 'lucide-vue-next'
 
 interface Direction {
-  id: number | string
+  id: LongId | string
   directionName?: string
   level?: string
   years?: number
@@ -135,7 +136,7 @@ interface Direction {
 
 interface Props {
   majorName: string
-  majorId: number | string
+  majorId: LongId | string
   directions: Direction[]
   colorIndex?: number
   canAddMore?: boolean

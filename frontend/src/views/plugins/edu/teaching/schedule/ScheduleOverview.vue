@@ -233,6 +233,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { universalPlaceApi } from '@/api/universalPlace'
@@ -240,7 +241,7 @@ import { scheduleApi, teachingTaskApi, conflictApi } from '@/api/teaching'
 import type { CourseSchedule, ScheduleEntry, TeachingTask } from '@/types/teaching'
 import { WEEKDAYS, DEFAULT_PERIODS } from '@/types/teaching'
 
-const props = defineProps<{ semesterId: number | string | undefined }>()
+const props = defineProps<{ semesterId: LongId | string | undefined }>()
 
 const weekdays = WEEKDAYS
 const periods = DEFAULT_PERIODS
@@ -251,7 +252,7 @@ const taskFilter = reactive({ keyword: '', status: undefined as number | undefin
 const taskPagination = reactive({ page: 1, size: 20, total: 0 })
 
 const scheduleList = ref<CourseSchedule[]>([])
-const classrooms = ref<{ id: number; name: string }[]>([])
+const classrooms = ref<{ id: LongId; name: string }[]>([])
 
 const taskStats = computed(() => {
   const total = taskPagination.total
@@ -272,7 +273,7 @@ const autoScheduleParams = ref({ scheduleId: undefined as number | string | unde
 const entryDialogVisible = ref(false)
 const entrySaving = ref(false)
 const entryForm = ref<Partial<ScheduleEntry>>({})
-const taskOptionsForEntry = ref<{ id: number | string; courseName: string; className: string }[]>([])
+const taskOptionsForEntry = ref<{ id: LongId | string; courseName: string; className: string }[]>([])
 
 async function loadTasks() {
   if (!props.semesterId) return

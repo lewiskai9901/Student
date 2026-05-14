@@ -625,6 +625,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, reactive, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import {
   MousePointer2, Hand, CircleDot, Table2, Armchair, Circle,
@@ -643,7 +644,7 @@ import { useFloorPlan, TEMPLATES, type ActiveTool } from '../composables/useFloo
 
 // ===== Props & Emits =====
 interface Props {
-  placeId: number | string
+  placeId: LongId | string
   initialLayout?: FloorPlanLayout | null
   occupants?: PlaceOccupant[]
   mode?: 'edit' | 'view'

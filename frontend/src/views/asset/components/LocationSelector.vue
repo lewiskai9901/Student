@@ -3,6 +3,7 @@
  * 位置选择器组件 - 关联场所管理系统
  * 使用级联选择器，支持 校区 > 楼栋 > 楼层 > 房间
  */
+import type { LongId } from '@/types/common'
 import { ref, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Location } from '@element-plus/icons-vue'
@@ -15,7 +16,7 @@ type PlaceDTO = PlaceTreeNode
 
 const props = defineProps<{
   locationType?: string
-  locationId?: number | string
+  locationId?: LongId | string
   locationName?: string
 }>()
 

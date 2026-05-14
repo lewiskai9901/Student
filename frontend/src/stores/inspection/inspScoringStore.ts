@@ -1,6 +1,7 @@
 /**
  * 检查平台 - 评分引擎 Store
  */
+import type { LongId } from '@/types/common'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type {
@@ -60,40 +61,40 @@ export const useInspScoringStore = defineStore('inspScoring', () => {
     profiles.value = await getProfiles()
   }
 
-  async function loadProfile(id: number) {
+  async function loadProfile(id: LongId) {
     currentProfile.value = await getProfile(id)
     return currentProfile.value
   }
 
-  async function loadProfileBySection(sectionId: number) {
+  async function loadProfileBySection(sectionId: LongId) {
     currentProfile.value = await getProfileBySection(sectionId) ?? null
     return currentProfile.value
   }
 
   /** @deprecated Use loadProfileBySection instead */
-  async function loadProfileByTemplate(sectionId: number) {
+  async function loadProfileByTemplate(sectionId: LongId) {
     return loadProfileBySection(sectionId)
   }
 
-  async function createProfile(sectionId: number) {
+  async function createProfile(sectionId: LongId) {
     const profile = await createProfileApi({ sectionId })
     currentProfile.value = profile
     return profile
   }
 
-  async function updateProfile(id: number, data: UpdateProfileRequest) {
+  async function updateProfile(id: LongId, data: UpdateProfileRequest) {
     const profile = await updateProfileApi(id, data)
     currentProfile.value = profile
     return profile
   }
 
-  async function updateAdvancedSettings(id: number, data: UpdateAdvancedSettingsRequest) {
+  async function updateAdvancedSettings(id: LongId, data: UpdateAdvancedSettingsRequest) {
     const profile = await updateAdvancedSettingsApi(id, data)
     currentProfile.value = profile
     return profile
   }
 
-  async function deleteProfile(id: number) {
+  async function deleteProfile(id: LongId) {
     await deleteProfileApi(id)
     currentProfile.value = null
     dimensions.value = []
@@ -103,70 +104,70 @@ export const useInspScoringStore = defineStore('inspScoring', () => {
 
   // ===== Dimension Actions =====
 
-  async function loadDimensions(profileId: number) {
+  async function loadDimensions(profileId: LongId) {
     dimensions.value = await getDimensions(profileId)
   }
 
-  async function syncDimensions(profileId: number) {
+  async function syncDimensions(profileId: LongId) {
     dimensions.value = await syncDimensionsApi(profileId)
   }
 
-  async function createDimension(profileId: number, data: CreateDimensionRequest) {
+  async function createDimension(profileId: LongId, data: CreateDimensionRequest) {
     const dimension = await createDimensionApi(profileId, data)
     dimensions.value.push(dimension)
     return dimension
   }
 
-  async function updateDimension(profileId: number, dimensionId: number, data: UpdateDimensionRequest) {
+  async function updateDimension(profileId: LongId, dimensionId: LongId, data: UpdateDimensionRequest) {
     const dimension = await updateDimensionApi(profileId, dimensionId, data)
     const idx = dimensions.value.findIndex(d => String(d.id) === String(dimensionId))
     if (idx >= 0) dimensions.value[idx] = dimension
     return dimension
   }
 
-  async function deleteDimension(profileId: number, dimensionId: number) {
+  async function deleteDimension(profileId: LongId, dimensionId: LongId) {
     await deleteDimensionApi(profileId, dimensionId)
     dimensions.value = dimensions.value.filter(d => d.id !== dimensionId)
   }
 
   // ===== GradeBand Actions =====
 
-  async function loadGradeBands(profileId: number) {
+  async function loadGradeBands(profileId: LongId) {
     gradeBands.value = await getGradeBands(profileId)
   }
 
-  async function createGradeBand(profileId: number, data: CreateGradeBandRequest) {
+  async function createGradeBand(profileId: LongId, data: CreateGradeBandRequest) {
     const band = await createGradeBandApi(profileId, data)
     gradeBands.value.push(band)
     return band
   }
 
-  async function updateGradeBand(profileId: number, bandId: number, data: UpdateGradeBandRequest) {
+  async function updateGradeBand(profileId: LongId, bandId: LongId, data: UpdateGradeBandRequest) {
     const band = await updateGradeBandApi(profileId, bandId, data)
     const idx = gradeBands.value.findIndex(b => String(b.id) === String(bandId))
     if (idx >= 0) gradeBands.value[idx] = band
     return band
   }
 
-  async function deleteGradeBand(profileId: number, bandId: number) {
+  async function deleteGradeBand(profileId: LongId, bandId: LongId) {
     await deleteGradeBandApi(profileId, bandId)
     gradeBands.value = gradeBands.value.filter(b => String(b.id) !== String(bandId))
   }
 
   // ===== Rule Actions =====
 
-  async function loadRules(profileId: number) {
+  async function loadRules(profileId: LongId) {
     rules.value = await getRules(profileId)
   }
 
-  async function createRule(profileId: number, data: CreateRuleRequest) {
+  async function createRule(profileId: LongId, data: CreateRuleRequest) {
     const rule = await createRuleApi(profileId, data)
     rules.value.push(rule)
     rules.value.sort((a, b) => a.priority - b.priority)
     return rule
   }
 
-  async function updateRule(profileId: number, ruleId: number, data: UpdateRuleRequest) {
+  async function updateRule(profileId: LongId, ruleId: LongId, data: UpdateRuleRequest) {
     const rule = await updateRuleApi(profileId, ruleId, data)
     const idx = rules.value.findIndex(r => String(r.id) === String(ruleId))
     if (idx >= 0) rules.value[idx] = rule
@@ -174,18 +175,18 @@ export const useInspScoringStore = defineStore('inspScoring', () => {
     return rule
   }
 
-  async function deleteRule(profileId: number, ruleId: number) {
+  async function deleteRule(profileId: LongId, ruleId: LongId) {
     await deleteRuleApi(profileId, ruleId)
     rules.value = rules.value.filter(r => String(r.id) !== String(ruleId))
   }
 
   // ===== Profile Versioning (1.7) =====
 
-  async function loadVersions(profileId: number) {
+  async function loadVersions(profileId: LongId) {
     versions.value = await getVersions(profileId)
   }
 
-  async function publishVersion(profileId: number, data: PublishVersionRequest) {
+  async function publishVersion(profileId: LongId, data: PublishVersionRequest) {
     const version = await publishVersionApi(profileId, data)
     versions.value.unshift(version)
     // Refresh profile to get updated currentVersion
@@ -193,13 +194,13 @@ export const useInspScoringStore = defineStore('inspScoring', () => {
     return version
   }
 
-  async function getVersionDetail(profileId: number, versionNum: number) {
+  async function getVersionDetail(profileId: LongId, versionNum: number) {
     return await getVersionApi(profileId, versionNum)
   }
 
   // ===== Load All Sub-resources =====
 
-  async function loadProfileFull(profileId: number) {
+  async function loadProfileFull(profileId: LongId) {
     try {
       await Promise.all([
         loadProfile(profileId),

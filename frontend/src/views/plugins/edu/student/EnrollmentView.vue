@@ -401,6 +401,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { enrollmentPlanApi, enrollmentApplicationApi } from '@/api/enrollment'
@@ -535,7 +536,7 @@ function openPlanDialog(row?: any) {
   planDialogVisible.value = true
 }
 
-async function onPlanMajorChange(majorId: number) {
+async function onPlanMajorChange(majorId: LongId) {
   planForm.majorDirectionId = null
   if (majorId) {
     try {
@@ -712,7 +713,7 @@ async function loadAllPlansForSelect() {
   } catch { /* ignore */ }
 }
 
-function onAppPlanChange(planId: number) {
+function onAppPlanChange(planId: LongId) {
   const plan = plans.value.find((p: any) => p.id === planId)
   if (plan) {
     appForm.majorId = plan.majorId
@@ -721,7 +722,7 @@ function onAppPlanChange(planId: number) {
   }
 }
 
-async function onAppMajorChange(majorId: number) {
+async function onAppMajorChange(majorId: LongId) {
   appForm.majorDirectionId = null
   if (majorId) {
     try {
@@ -766,7 +767,7 @@ async function admitApp(row: any) {
 const rejectDialogVisible = ref(false)
 const rejectComment = ref('')
 const rejectSaving = ref(false)
-let rejectTargetId: number | null = null
+let rejectTargetId: LongId | null = null
 
 function rejectApp(row: any) {
   rejectTargetId = row.id
@@ -810,7 +811,7 @@ async function deleteApp(row: any) {
 const registerDialogVisible = ref(false)
 const registerSaving = ref(false)
 const registerTarget = ref<any>(null)
-const registerClassId = ref<number | null>(null)
+const registerClassId = ref<LongId | null>(null)
 
 function openRegisterDialog(row: any) {
   registerTarget.value = row

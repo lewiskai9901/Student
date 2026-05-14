@@ -1,11 +1,12 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import * as echarts from 'echarts'
 import { getHeatmapData } from '@/api/inspection/alert'
 import type { HeatmapDataPoint } from '@/types/insp/alert'
 
 const props = defineProps<{
-  projectId: number
+  projectId: LongId
   dateFrom: string
   dateTo: string
 }>()

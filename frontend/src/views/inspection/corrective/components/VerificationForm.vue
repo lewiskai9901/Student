@@ -5,6 +5,7 @@
  * Displays correction details (readonly) and allows the verifier to
  * pass or fail the correction with notes.
  */
+import type { LongId } from '@/types/common'
 import { ref, reactive } from 'vue'
 import { CheckCircle, XCircle } from 'lucide-vue-next'
 
@@ -16,7 +17,7 @@ interface CorrectionInfo {
 }
 
 const props = defineProps<{
-  caseId: number
+  caseId: LongId
   correction: CorrectionInfo
 }>()
 

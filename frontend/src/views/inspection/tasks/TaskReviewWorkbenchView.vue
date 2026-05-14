@@ -3,6 +3,7 @@
  * TaskReviewWorkbenchView — 任务审核工作台 (Audit Console redesign)
  * 双栏 + 键盘驱动 (J/K 切换 · A 通过+发布 · R 驳回 · E 延期 · Esc 取消)
  */
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -32,18 +33,18 @@ const filteredTasks = computed(() =>
   lateOnly.value ? submittedTasks.value.filter(t => t.lateSubmission) : submittedTasks.value
 )
 const lateCount = computed(() => submittedTasks.value.filter(t => t.lateSubmission).length)
-const selectedTaskId = ref<number | null>(null)
+const selectedTaskId = ref<LongId | null>(null)
 const taskSubmissions = ref<InspSubmission[]>([])
-const submissionDetails = ref<Map<number, SubmissionDetail[]>>(new Map())
+const submissionDetails = ref<Map<LongId, SubmissionDetail[]>>(new Map())
 
 const reviewComment = ref('')
 const showRejectInline = ref(false)
 
 // 申诉对话框
 const appealDialog = ref(false)
-const appealDetailId = ref<number | null>(null)
+const appealDetailId = ref<LongId | null>(null)
 const appealItemName = ref<string | undefined>(undefined)
-const appealCurrentScore = ref<number | undefined>(undefined)
+const appealCurrentScore = ref<LongId | undefined>(undefined)
 
 const selectedTask = computed(() =>
   submittedTasks.value.find(t => t.id === selectedTaskId.value) ?? null
@@ -68,9 +69,9 @@ async function loadSubmittedTasks() {
     const all = await getTasks()
     submittedTasks.value = all.filter(t => t.status === 'SUBMITTED' || t.status === 'UNDER_REVIEW')
     // 优先选择 URL ?taskId=N 指定的任务 (从我的任务页 "去审核" 跳转过来)
-    const queryTaskId = Number(route.query.taskId)
+    const queryTaskId = route.query.taskId
     if (queryTaskId && !selectedTaskId.value) {
-      const target = submittedTasks.value.find(t => Number(t.id) === queryTaskId)
+      const target = submittedTasks.value.find(t => t.id === queryTaskId)
       if (target) {
         await selectTask(target)
         return
@@ -93,8 +94,8 @@ async function selectTask(task: InspTask) {
   loadingDetails.value = true
   try {
     const subs = await getSubmissions({ taskId: task.id })
-    taskSubmissions.value = (subs || []).filter(s => Number(s.taskId) === Number(task.id))
-    const detailMap = new Map<number, SubmissionDetail[]>()
+    taskSubmissions.value = (subs || []).filter(s => s.taskId === task.id)
+    const detailMap = new Map<LongId, SubmissionDetail[]>()
     for (const sub of taskSubmissions.value) {
       try {
         detailMap.set(sub.id, await getDetails(sub.id))

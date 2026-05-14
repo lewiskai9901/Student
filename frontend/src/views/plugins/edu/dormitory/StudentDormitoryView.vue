@@ -413,6 +413,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { universalPlaceApi } from '@/api/universalPlace'
@@ -489,7 +490,7 @@ const batchCheckInDialogVisible = ref(false)
 const batchData = reactive({
   buildingId: undefined as number | string | undefined,
   roomId: undefined as number | string | undefined,
-  students: [] as Array<{ id: number | string; name: string; studentNo: string }>
+  students: [] as Array<{ id: LongId | string; name: string; studentNo: string }>
 })
 const batchStudentSearch = ref('')
 const batchStudentResults = ref<any[]>([])
@@ -580,7 +581,7 @@ const loadAllOccupants = async () => {
 /**
  * Collect room place IDs under a building (handles floor intermediary level)
  */
-const collectRoomIds = async (buildingId: number | string): Promise<(number | string)[]> => {
+const collectRoomIds = async (buildingId: LongId | string): Promise<(number | string)[]> => {
   try {
     const children = await universalPlaceApi.getChildren(buildingId)
     const roomIds: (number | string)[] = []
@@ -603,7 +604,7 @@ const collectRoomIds = async (buildingId: number | string): Promise<(number | st
   }
 }
 
-const loadRoomsForBuilding = async (buildingId: number | string): Promise<PlaceTreeNode[]> => {
+const loadRoomsForBuilding = async (buildingId: LongId | string): Promise<PlaceTreeNode[]> => {
   try {
     const children = await universalPlaceApi.getChildren(buildingId)
     const roomList: PlaceTreeNode[] = []

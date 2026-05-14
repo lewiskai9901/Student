@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -22,7 +23,7 @@ const stats = reactive({
 })
 
 interface Activity {
-  id: number
+  id: LongId
   description: string
   time: string
 }

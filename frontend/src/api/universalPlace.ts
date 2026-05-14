@@ -1,3 +1,4 @@
+import type { LongId } from '@/types/common'
 import { http as request } from '@/utils/request'
 import type {
   UniversalPlace,
@@ -20,7 +21,7 @@ const BASE_URL = '/v9/places'
  * 空间统计数据
  */
 export interface OrgPlaceStats {
-  orgUnitId: number
+  orgUnitId: LongId
   orgUnitName: string
   placeCount: number
   totalCapacity: number
@@ -33,7 +34,7 @@ export interface PlaceStatistics {
   totalCapacity: number
   totalOccupancy: number
   countByType: Record<string, number>
-  countByStatus: Record<number, number>
+  countByStatus: Record<LongId, number>
   occupancyRate: number
   statsByOrg?: OrgPlaceStats[]
 }
@@ -82,7 +83,7 @@ export const universalPlaceApi = {
   /**
    * 获取空间详情
    */
-  getById(id: number | string): Promise<UniversalPlace> {
+  getById(id: LongId | string): Promise<UniversalPlace> {
     return request.get(`${BASE_URL}/${id}`)
   },
 
@@ -96,7 +97,7 @@ export const universalPlaceApi = {
   /**
    * 获取子空间列表
    */
-  getChildren(parentId: number | string): Promise<UniversalPlace[]> {
+  getChildren(parentId: LongId | string): Promise<UniversalPlace[]> {
     return request.get(`${BASE_URL}/${parentId}/children`)
   },
 
@@ -117,7 +118,7 @@ export const universalPlaceApi = {
   /**
    * 获取允许创建的子类型
    */
-  getAllowedChildTypes(parentId: number | string): Promise<UniversalPlaceType[]> {
+  getAllowedChildTypes(parentId: LongId | string): Promise<UniversalPlaceType[]> {
     return request.get(`${BASE_URL}/${parentId}/allowed-child-types`)
   },
 
@@ -138,21 +139,21 @@ export const universalPlaceApi = {
   /**
    * 更新空间
    */
-  update(id: number | string, data: UpdatePlaceRequest): Promise<UniversalPlace> {
+  update(id: LongId | string, data: UpdatePlaceRequest): Promise<UniversalPlace> {
     return request.put(`${BASE_URL}/${id}`, data)
   },
 
   /**
    * 更改空间状态
    */
-  changeStatus(id: number | string, status: number): Promise<UniversalPlace> {
+  changeStatus(id: LongId | string, status: number): Promise<UniversalPlace> {
     return request.put(`${BASE_URL}/${id}/status`, { status })
   },
 
   /**
    * 删除空间
    */
-  delete(id: number | string): Promise<void> {
+  delete(id: LongId | string): Promise<void> {
     return request.delete(`${BASE_URL}/${id}`)
   },
 
@@ -161,42 +162,42 @@ export const universalPlaceApi = {
   /**
    * 获取当前入住列表
    */
-  getOccupants(placeId: number | string): Promise<PlaceOccupant[]> {
+  getOccupants(placeId: LongId | string): Promise<PlaceOccupant[]> {
     return request.get(`${BASE_URL}/${placeId}/occupants`)
   },
 
   /**
    * 获取入住历史
    */
-  getOccupantHistory(placeId: number | string): Promise<PlaceOccupant[]> {
+  getOccupantHistory(placeId: LongId | string): Promise<PlaceOccupant[]> {
     return request.get(`${BASE_URL}/${placeId}/occupant-history`)
   },
 
   /**
    * 入住
    */
-  checkIn(placeId: number | string, data: CheckInRequest): Promise<PlaceOccupant> {
+  checkIn(placeId: LongId | string, data: CheckInRequest): Promise<PlaceOccupant> {
     return request.post(`${BASE_URL}/${placeId}/check-in`, data)
   },
 
   /**
    * 批量入住
    */
-  batchCheckIn(placeId: number | string, data: CheckInRequest[]): Promise<PlaceOccupant[]> {
+  batchCheckIn(placeId: LongId | string, data: CheckInRequest[]): Promise<PlaceOccupant[]> {
     return request.post(`${BASE_URL}/${placeId}/batch-check-in`, data)
   },
 
   /**
    * 退出
    */
-  checkOut(placeId: number | string, recordId: number | string): Promise<void> {
+  checkOut(placeId: LongId | string, recordId: LongId | string): Promise<void> {
     return request.post(`${BASE_URL}/${placeId}/check-out/${recordId}`)
   },
 
   /**
    * 交换位置
    */
-  swapPositions(placeId: number | string, recordId1: number | string, recordId2: number | string): Promise<void> {
+  swapPositions(placeId: LongId | string, recordId1: number | string, recordId2: number | string): Promise<void> {
     return request.post(`${BASE_URL}/${placeId}/swap-positions`, { recordId1, recordId2 })
   },
 
@@ -210,17 +211,17 @@ export const universalPlaceApi = {
   /**
    * 查询占用者的所有占用历史（带场所信息）
    */
-  getOccupantHistoryByOccupant(occupantType: string, occupantId: number | string): Promise<PlaceOccupantWithPlace[]> {
+  getOccupantHistoryByOccupant(occupantType: string, occupantId: LongId | string): Promise<PlaceOccupantWithPlace[]> {
     return request.get(`${BASE_URL}/occupant-history`, { params: { occupantType, occupantId } })
   },
 
   // ==================== 预订管理 ====================
 
-  createBooking(placeId: number | string, data: CreateBookingRequest): Promise<PlaceBooking> {
+  createBooking(placeId: LongId | string, data: CreateBookingRequest): Promise<PlaceBooking> {
     return request.post('/place-bookings', { placeId, ...data })
   },
 
-  getPlaceBookings(placeId: number | string, activeOnly?: boolean): Promise<PlaceBooking[]> {
+  getPlaceBookings(placeId: LongId | string, activeOnly?: boolean): Promise<PlaceBooking[]> {
     return request.get('/place-bookings', { params: { placeId, activeOnly } })
   },
 
@@ -228,21 +229,21 @@ export const universalPlaceApi = {
     return request.get('/place-bookings/my')
   },
 
-  cancelBooking(id: number | string): Promise<void> {
+  cancelBooking(id: LongId | string): Promise<void> {
     return request.put(`/place-bookings/${id}/cancel`)
   },
 
   // ==================== 排座管理 ====================
 
-  getBookingSeating(bookingId: number | string): Promise<BookingSeatAssignment[]> {
+  getBookingSeating(bookingId: LongId | string): Promise<BookingSeatAssignment[]> {
     return request.get(`/place-bookings/${bookingId}/seating`)
   },
 
-  saveBookingSeating(bookingId: number | string, data: SaveSeatAssignmentRequest[]): Promise<BookingSeatAssignment[]> {
+  saveBookingSeating(bookingId: LongId | string, data: SaveSeatAssignmentRequest[]): Promise<BookingSeatAssignment[]> {
     return request.put(`/place-bookings/${bookingId}/seating`, data)
   },
 
-  clearBookingSeating(bookingId: number | string): Promise<void> {
+  clearBookingSeating(bookingId: LongId | string): Promise<void> {
     return request.delete(`/place-bookings/${bookingId}/seating`)
   }
 }

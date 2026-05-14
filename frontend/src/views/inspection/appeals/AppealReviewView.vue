@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import * as appealApi from '@/api/inspection/appeal'
@@ -7,7 +8,7 @@ import type { InspAppeal } from '@/types/insp/appeal'
 const loading = ref(false)
 const submitting = ref(false)
 const appeals = ref<InspAppeal[]>([])
-const selectedId = ref<number | null>(null)
+const selectedId = ref<LongId | null>(null)
 
 const selected = computed(() => appeals.value.find(a => a.id === selectedId.value) ?? null)
 

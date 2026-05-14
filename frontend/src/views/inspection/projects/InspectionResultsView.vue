@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -80,7 +81,7 @@ async function loadData() {
   }
 }
 
-function goToProject(projectId: number) {
+function goToProject(projectId: LongId) {
   router.push(`/inspection/projects/${projectId}`)
 }
 

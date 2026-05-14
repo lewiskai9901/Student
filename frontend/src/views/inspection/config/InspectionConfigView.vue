@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -68,7 +69,7 @@ const previewData = ref<PreviewData>({ sections: [], itemTotal: 0, scoringModes:
 const previewPos = ref({ top: '0px', left: '0px', placement: 'right' as 'right' | 'left' | 'bottom' })
 let previewShowTimer: any = null
 let previewHideTimer: any = null
-const previewCache = new Map<number, PreviewData>()
+const previewCache = new Map<LongId, PreviewData>()
 
 async function showPreview(sec: TemplateSection, e: MouseEvent) {
   clearTimeout(previewHideTimer)
@@ -88,7 +89,7 @@ async function showPreview(sec: TemplateSection, e: MouseEvent) {
     }
     previewVisible.value = true
     // cache hit?
-    const cached = previewCache.get(Number(sec.id))
+    const cached = previewCache.get(sec.id)
     if (cached) { previewData.value = cached; return }
     previewData.value = { sections: [], itemTotal: 0, scoringModes: {}, loading: true }
     try {
@@ -107,9 +108,9 @@ async function showPreview(sec: TemplateSection, e: MouseEvent) {
         } catch { /* skip */ }
       }
       const data: PreviewData = { sections: leaves, itemTotal, scoringModes: modes, loading: false }
-      previewCache.set(Number(sec.id), data)
+      previewCache.set(sec.id, data)
       // 仅当鼠标仍 hover 在同一目标上才展示
-      if (previewTarget.value && Number(previewTarget.value.id) === Number(sec.id)) {
+      if (previewTarget.value && previewTarget.value.id === sec.id) {
         previewData.value = data
       }
     } catch { previewData.value.loading = false }
@@ -125,9 +126,9 @@ function keepPreview() { clearTimeout(previewHideTimer) }
 const loading = ref(false)
 const rootSections = ref<TemplateSection[]>([])
 const total = ref(0)
-const childSectionsMap = ref<Map<number, TemplateSection[]>>(new Map())
+const childSectionsMap = ref<Map<LongId, TemplateSection[]>>(new Map())
 // P1-160: 使用计数 (rootSectionId > 在用项目数)
-const usageMap = ref<Record<number, number>>({})
+const usageMap = ref<Record<LongId, number>>({})
 
 const query = reactive({
   page: 1,
@@ -163,18 +164,18 @@ const filteredSections = computed(() => {
 })
 
 // ==================== 批量选择 ====================
-const selectedIds = ref<Set<number>>(new Set())
+const selectedIds = ref<Set<LongId>>(new Set())
 const allSelectedInView = computed(() =>
   filteredSections.value.length > 0 &&
-  filteredSections.value.every(s => selectedIds.value.has(Number(s.id)))
+  filteredSections.value.every(s => selectedIds.value.has(s.id))
 )
 const someSelectedInView = computed(() =>
   !allSelectedInView.value &&
-  filteredSections.value.some(s => selectedIds.value.has(Number(s.id)))
+  filteredSections.value.some(s => selectedIds.value.has(s.id))
 )
-function toggleSelect(id: number, e?: Event) {
+function toggleSelect(id: LongId, e?: Event) {
   e?.stopPropagation()
-  const n = Number(id)
+  const n = id
   const next = new Set(selectedIds.value)
   if (next.has(n)) next.delete(n); else next.add(n)
   selectedIds.value = next
@@ -183,14 +184,14 @@ function toggleSelectAll() {
   if (allSelectedInView.value) {
     selectedIds.value = new Set()
   } else {
-    selectedIds.value = new Set(filteredSections.value.map(s => Number(s.id)))
+    selectedIds.value = new Set(filteredSections.value.map(s => s.id))
   }
 }
 function clearSelection() { selectedIds.value = new Set() }
 
 // ==================== 批量发布预校验 ====================
 interface PrecheckRow {
-  id: number
+  id: LongId
   name: string
   ok: boolean
   reason?: string
@@ -204,7 +205,7 @@ const precheckPublishing = ref(false)
 
 async function batchPublish() {
   const ids = Array.from(selectedIds.value).filter(id => {
-    const s = rootSections.value.find(x => Number(x.id) === id)
+    const s = rootSections.value.find(x => x.id === id)
     return s?.status === 'DRAFT'
   })
   if (ids.length === 0) { ElMessage.warning('当前选中的模板里没有可发布的草稿'); return }
@@ -214,7 +215,7 @@ async function batchPublish() {
   precheckRunning.value = true
   precheckRows.value = []
   for (const id of ids) {
-    const sec = rootSections.value.find(x => Number(x.id) === id)!
+    const sec = rootSections.value.find(x => x.id === id)!
     const row: PrecheckRow = {
       id, name: sec.sectionName, ok: false,
       sectionCount: 0, itemCount: 0,
@@ -285,7 +286,7 @@ async function batchDuplicate() {
 }
 function batchExport() {
   const ids = Array.from(selectedIds.value)
-  const rows = filteredSections.value.filter(s => ids.includes(Number(s.id)))
+  const rows = filteredSections.value.filter(s => ids.includes(s.id))
   const csv = ['ID,名称,状态,版本,模板编码,创建时间,更新时间', ...rows.map(s =>
     [s.id, s.sectionName, s.status, `v${s.latestVersion}`, s.sectionCode || '', s.createdAt || '', s.updatedAt || ''].join(',')
   )].join('\n')
@@ -300,12 +301,12 @@ function batchExport() {
 }
 
 // ==================== Dropdown ====================
-const openDropdownId = ref<number | null>(null)
+const openDropdownId = ref<LongId | null>(null)
 const dropdownStyle = ref<Record<string, string>>({})
 
 const dropdownPos = ref({ top: '0px', right: '0px' })
 
-function toggleDropdown(id: number, event?: MouseEvent) {
+function toggleDropdown(id: LongId, event?: MouseEvent) {
   event?.stopPropagation()
   if (openDropdownId.value === id) { openDropdownId.value = null; return }
   openDropdownId.value = id
@@ -374,7 +375,7 @@ function onGlobalKey(e: KeyboardEvent) {
     case 'ArrowUp': e.preventDefault(); focusPrev(); break
     case ' ': {
       const sec = flatRows.value[focusedIdx.value]
-      if (sec) { e.preventDefault(); toggleSelect(Number(sec.id)) }
+      if (sec) { e.preventDefault(); toggleSelect(sec.id) }
       break
     }
     case 'Enter':
@@ -416,12 +417,12 @@ async function loadTemplates() {
 
     // P1-160: 批量取使用计数 — 一次请求, 不用 N+1
     try {
-      const ids = result.records.map(r => Number(r.id))
+      const ids = result.records.map(r => r.id)
       usageMap.value = await inspTemplateApi.getRootSectionUsage(ids)
     } catch { usageMap.value = {} }
 
     // Load first-level children for each root section to show target type tags
-    const map = new Map<number, TemplateSection[]>()
+    const map = new Map<LongId, TemplateSection[]>()
     await Promise.all(result.records.map(async (root) => {
       try {
         const children = await inspTemplateApi.getSections(root.id)
@@ -436,11 +437,11 @@ async function loadTemplates() {
   }
 }
 
-function getFirstLevelChildren(rootId: number): TemplateSection[] {
+function getFirstLevelChildren(rootId: LongId): TemplateSection[] {
   return childSectionsMap.value.get(rootId) || []
 }
 
-function getTargetTypes(rootId: number): TargetType[] {
+function getTargetTypes(rootId: LongId): TargetType[] {
   const children = getFirstLevelChildren(rootId)
   const types = new Set<TargetType>()
   for (const c of children) {
@@ -449,7 +450,7 @@ function getTargetTypes(rootId: number): TargetType[] {
   return Array.from(types)
 }
 
-function getSectionCount(rootId: number): number {
+function getSectionCount(rootId: LongId): number {
   return getFirstLevelChildren(rootId).length
 }
 
@@ -521,7 +522,7 @@ async function handlePublish(section: TemplateSection) {
 }
 
 async function handleDeprecate(section: TemplateSection) {
-  const inUse = usageMap.value[Number(section.id)] || 0
+  const inUse = usageMap.value[section.id] || 0
   const tip = inUse > 0
     ? `! 此模板正被 ${inUse} 个进行中的项目引用. 废弃后这些项目将继续运行 (使用快照), 但新项目无法选用此模板. 确认?`
     : '废弃后新项目无法使用此模板. 确认?'
@@ -535,7 +536,7 @@ async function handleDeprecate(section: TemplateSection) {
 }
 
 async function handleArchive(section: TemplateSection) {
-  const inUse = usageMap.value[Number(section.id)] || 0
+  const inUse = usageMap.value[section.id] || 0
   const tip = inUse > 0
     ? `! 此模板正被 ${inUse} 个项目引用. 归档后将从默认列表隐藏. 确认?`
     : '归档后将不可见 (可在筛选中找回). 确认?'
@@ -772,7 +773,7 @@ onMounted(() => { loadTemplates() })
           :data-section-id="sec.id"
           class="tpl-card"
           :class="{
-            'is-selected': selectedIds.has(Number(sec.id)),
+            'is-selected': selectedIds.has(sec.id),
             'is-focused': focusedIdx === i,
           }"
           @click="goEdit(sec)"
@@ -783,7 +784,7 @@ onMounted(() => { loadTemplates() })
             <span class="tpl-card__thumb-letter">{{ sec.sectionName.slice(0, 1) }}</span>
             <span class="tpl-card__thumb-version insp-num">v{{ sec.latestVersion }}</span>
             <label class="tpl-checkbox tpl-card__checkbox" @click.stop>
-              <input type="checkbox" :checked="selectedIds.has(Number(sec.id))" @change="toggleSelect(Number(sec.id))" />
+              <input type="checkbox" :checked="selectedIds.has(sec.id)" @change="toggleSelect(sec.id)" />
               <span class="tpl-checkbox__box"><Check :size="10" /></span>
             </label>
             <span class="tpl-card__index insp-num">{{ String(i + 1).padStart(2, '0') }}</span>
@@ -804,8 +805,8 @@ onMounted(() => { loadTemplates() })
               <div class="tpl-card__metric-rule" />
               <div class="tpl-card__metric">
                 <span class="tpl-card__metric-num insp-num"
-                      :style="{ color: usageMap[Number(sec.id)] > 0 ? 'var(--insp-info)' : '' }">
-                  {{ usageMap[Number(sec.id)] || 0 }}
+                      :style="{ color: usageMap[sec.id] > 0 ? 'var(--insp-info)' : '' }">
+                  {{ usageMap[sec.id] || 0 }}
                 </span>
                 <span class="tpl-card__metric-label">在用</span>
               </div>
@@ -825,7 +826,7 @@ onMounted(() => { loadTemplates() })
               <div class="tpl-card__actions" @click.stop>
                 <button class="insp-btn insp-btn--xs" @click="goEdit(sec)">编辑</button>
                 <button class="insp-btn insp-btn--xs insp-btn--ghost"
-                        @click.stop="toggleDropdown(Number(sec.id), $event)">
+                        @click.stop="toggleDropdown(sec.id, $event)">
                   <MoreHorizontal :size="12" />
                 </button>
               </div>
@@ -841,7 +842,7 @@ onMounted(() => { loadTemplates() })
           :data-section-id="sec.id"
           class="tpl-row"
           :class="{
-            'is-selected': selectedIds.has(Number(sec.id)),
+            'is-selected': selectedIds.has(sec.id),
             'is-focused': focusedIdx === i,
           }"
           @click="goEdit(sec)"
@@ -851,8 +852,8 @@ onMounted(() => { loadTemplates() })
           <label class="tpl-checkbox tpl-row__checkbox" @click.stop>
             <input
               type="checkbox"
-              :checked="selectedIds.has(Number(sec.id))"
-              @change="toggleSelect(Number(sec.id))"
+              :checked="selectedIds.has(sec.id)"
+              @change="toggleSelect(sec.id)"
             />
             <span class="tpl-checkbox__box"><Check :size="10" /></span>
           </label>
@@ -871,9 +872,9 @@ onMounted(() => { loadTemplates() })
                   {{ TargetTypeConfig[tt]?.label }}
                 </span>
               </template>
-              <template v-if="usageMap[Number(sec.id)] > 0">
-                <span class="tpl-row__usage" :title="`此模板正在被 ${usageMap[Number(sec.id)]} 个项目引用`">
-                  <span class="insp-num">{{ usageMap[Number(sec.id)] }}</span> 项目在用
+              <template v-if="usageMap[sec.id] > 0">
+                <span class="tpl-row__usage" :title="`此模板正在被 ${usageMap[sec.id]} 个项目引用`">
+                  <span class="insp-num">{{ usageMap[sec.id] }}</span> 项目在用
                 </span>
               </template>
             </div>
@@ -904,7 +905,7 @@ onMounted(() => { loadTemplates() })
               class="insp-btn insp-btn--sm"
               @click="handleDuplicate(sec)">复制为新模板</button>
             <button class="insp-btn insp-btn--sm" @click="goEdit(sec)">编辑</button>
-            <button class="insp-btn insp-btn--sm insp-btn--ghost" @click.stop="toggleDropdown(Number(sec.id), $event)">
+            <button class="insp-btn insp-btn--sm insp-btn--ghost" @click.stop="toggleDropdown(sec.id, $event)">
               <MoreHorizontal :size="13" />
             </button>
           </div>
@@ -918,7 +919,7 @@ onMounted(() => { loadTemplates() })
       <Transition name="dropdown">
         <div v-if="openDropdownId !== null" class="dropdown-menu" :style="{ top: dropdownPos.top, right: dropdownPos.right }" @click.stop>
           <template v-for="sec in filteredSections" :key="sec.id">
-            <template v-if="Number(sec.id) === openDropdownId">
+            <template v-if="sec.id === openDropdownId">
               <button v-if="sec.status === 'DRAFT'" @click.stop="handlePublish(sec)">
                 <Upload :size="13" /> 发布
               </button>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Trash2, Play, Pencil, Calendar, Users, Zap, Clock, X } from 'lucide-vue-next'
@@ -6,9 +7,9 @@ import { inspPlanApi } from '@/api/inspection/project'
 import type { InspectionPlan, CreatePlanRequest } from '@/types/insp/template'
 
 const props = defineProps<{
-  projectId: number
-  sections?: Array<{ id: number; sectionName: string }>
-  inspectors?: Array<{ userId: number | string; userName: string }>
+  projectId: LongId
+  sections?: Array<{ id: LongId; sectionName: string }>
+  inspectors?: Array<{ userId: LongId | string; userName: string }>
 }>()
 
 const loading = ref(false)
@@ -39,11 +40,11 @@ const form = ref({
 
 // ── Helpers ──
 const sectionOptions = computed(() =>
-  (props.sections || []).map(s => ({ value: Number(s.id), label: s.sectionName }))
+  (props.sections || []).map(s => ({ value: s.id, label: s.sectionName }))
 )
 const sectionMap = computed(() => {
-  const m = new Map<number, string>()
-  for (const s of (props.sections || [])) m.set(Number(s.id), s.sectionName)
+  const m = new Map<LongId, string>()
+  for (const s of (props.sections || [])) m.set(s.id, s.sectionName)
   return m
 })
 
@@ -359,9 +360,9 @@ onMounted(() => loadPlans())
         <div v-if="(props.inspectors || []).length > 0" class="fd-block">
           <label class="fd-lbl">指定检查员 <span class="fd-sub">不选=全员可领取</span></label>
           <div class="fd-pills">
-            <button v-for="insp in props.inspectors" :key="Number(insp.userId)"
-              class="fd-pill" :class="{ on: form.inspectorIds.includes(Number(insp.userId)) }"
-              @click="toggleArray(form.inspectorIds, Number(insp.userId))">
+            <button v-for="insp in props.inspectors" :key="insp.userId"
+              class="fd-pill" :class="{ on: form.inspectorIds.includes(insp.userId) }"
+              @click="toggleArray(form.inspectorIds, insp.userId)">
               {{ insp.userName }}
             </button>
           </div>

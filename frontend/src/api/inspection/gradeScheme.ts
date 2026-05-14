@@ -1,6 +1,7 @@
 /**
  * 检查平台 - 等级方案 API
  */
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 import type {
   GradeScheme,
@@ -17,7 +18,7 @@ export function getGradeSchemes(): Promise<GradeScheme[]> {
   return http.get<GradeScheme[]>(BASE)
 }
 
-export function getGradeScheme(id: number): Promise<GradeScheme> {
+export function getGradeScheme(id: LongId): Promise<GradeScheme> {
   return http.get<GradeScheme>(`${BASE}/${id}`)
 }
 
@@ -29,11 +30,11 @@ export function cloneGradeScheme(data: CloneGradeSchemeRequest): Promise<GradeSc
   return http.post<GradeScheme>(`${BASE}/clone`, data)
 }
 
-export function updateGradeScheme(id: number, data: UpdateGradeSchemeRequest): Promise<GradeScheme> {
+export function updateGradeScheme(id: LongId, data: UpdateGradeSchemeRequest): Promise<GradeScheme> {
   return http.put<GradeScheme>(`${BASE}/${id}`, data)
 }
 
-export function deleteGradeScheme(id: number): Promise<void> {
+export function deleteGradeScheme(id: LongId): Promise<void> {
   return http.delete(`${BASE}/${id}`)
 }
 

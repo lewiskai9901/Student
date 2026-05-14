@@ -16,13 +16,14 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref } from 'vue'
 import TimetableViewer from '../schedule/TimetableViewer.vue'
 import LiveTimetable from '../schedule/LiveTimetable.vue'
 import ScheduleOverview from '../schedule/ScheduleOverview.vue'
 
 defineProps<{
-  semesterId: number | string | undefined
+  semesterId: LongId | string | undefined
 }>()
 
 const tab = ref<'master' | 'live' | 'overview'>('master')

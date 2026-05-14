@@ -406,6 +406,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -643,7 +644,7 @@ async function saveEditRecord() {
   }
 }
 
-async function delRecord(id: number) {
+async function delRecord(id: LongId) {
   try {
     await ElMessageBox.confirm('确定删除此条考勤记录？', '确认', { type: 'warning' })
     await deleteRecord(id)
@@ -751,7 +752,7 @@ async function submitLeave() {
   }
 }
 
-async function handleApprove(id: number) {
+async function handleApprove(id: LongId) {
   try {
     await ElMessageBox.confirm('确认通过该请假申请？', '审批', { type: 'info' })
     await approveLeave(id)
@@ -765,9 +766,9 @@ async function handleApprove(id: number) {
 // Reject
 const rejectDialogVisible = ref(false)
 const rejectComment = ref('')
-const rejectTargetId = ref<number | null>(null)
+const rejectTargetId = ref<LongId | null>(null)
 
-function handleReject(id: number) {
+function handleReject(id: LongId) {
   rejectTargetId.value = id
   rejectComment.value = ''
   rejectDialogVisible.value = true
@@ -786,7 +787,7 @@ async function confirmReject() {
 }
 
 function leaveTypeLabel(type: number) {
-  const map: Record<number, string> = { 1: '事假', 2: '病假', 3: '公假' }
+  const map: Record<LongId, string> = { 1: '事假', 2: '病假', 3: '公假' }
   return map[type] || '未知'
 }
 

@@ -1,13 +1,14 @@
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 
 export interface GradeMajorDirection {
-  id?: number
+  id?: LongId
   academicYear: number       // 学年（如：2024）
-  majorDirectionId: number   // 专业方向ID
-  majorId?: number           // 专业ID
+  majorDirectionId: LongId   // 专业方向ID
+  majorId?: LongId           // 专业ID
   majorCode?: string         // 专业编码
   directionCode?: string     // 方向编码（用于生成班级编码）
-  orgUnitId?: number      // 所属组织单元ID（来自majors表）
+  orgUnitId?: LongId      // 所属组织单元ID（来自majors表）
   remarks?: string
   createdAt?: string
   updatedAt?: string
@@ -34,7 +35,7 @@ export interface GradeMajorDirectionQueryParams {
   pageNum?: number
   pageSize?: number
   academicYear?: number
-  majorDirectionId?: number
+  majorDirectionId?: LongId
 }
 
 // 获取学年专业方向列表(分页)
@@ -52,17 +53,17 @@ export const getDirectionsByYear = (academicYear: number | string) => {
 }
 
 // 根据专业方向ID获取关联的学年列表
-export const getYearsByDirection = (directionId: number | string) => {
+export const getYearsByDirection = (directionId: LongId | string) => {
   return http.get<GradeMajorDirection[]>(`/grade-major-directions/direction/${directionId}`)
 }
 
 // 获取详情
-export const getGradeMajorDirectionDetail = (id: number | string) => {
+export const getGradeMajorDirectionDetail = (id: LongId | string) => {
   return http.get<GradeMajorDirection>(`/grade-major-directions/${id}`)
 }
 
 // 根据学年和专业方向ID查询
-export const getByYearAndDirection = (academicYear: number, directionId: number | string) => {
+export const getByYearAndDirection = (academicYear: number, directionId: LongId | string) => {
   return http.get<GradeMajorDirection>(`/grade-major-directions/year/${academicYear}/direction/${directionId}`)
 }
 
@@ -77,12 +78,12 @@ export const batchAddDirectionsToYear = (academicYear: number, directionIds: (nu
 }
 
 // 更新学年专业方向配置
-export const updateGradeMajorDirection = (id: number | string, data: GradeMajorDirection) => {
+export const updateGradeMajorDirection = (id: LongId | string, data: GradeMajorDirection) => {
   return http.put(`/grade-major-directions/${id}`, data)
 }
 
 // 删除学年专业方向关联
-export const deleteGradeMajorDirection = (id: number | string) => {
+export const deleteGradeMajorDirection = (id: LongId | string) => {
   return http.delete(`/grade-major-directions/${id}`)
 }
 
@@ -92,15 +93,15 @@ export const batchDeleteGradeMajorDirections = (ids: (number | string)[]) => {
 }
 
 // 兼容旧API - 根据年级ID获取（重定向到使用学年）
-export const getDirectionsByCohort = (cohortId: number | string) => {
+export const getDirectionsByCohort = (cohortId: LongId | string) => {
   // 保持兼容性，继续使用原有API直到前端全部迁移
   return http.get<GradeMajorDirection[]>(`/grade-major-directions/year/${cohortId}`)
 }
 
 // 兼容旧API - 为年级添加专业方向
 export const addDirectionToCohort = (data: {
-  cohortId: number | string
-  majorDirectionId: number | string
+  cohortId: LongId | string
+  majorDirectionId: LongId | string
   plannedClassCount?: number
   isEnabled?: number
 }) => {

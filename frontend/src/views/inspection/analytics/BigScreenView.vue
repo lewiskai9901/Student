@@ -98,14 +98,15 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, onMounted, onUnmounted } from 'vue'
 import * as analyticsApi from '@/api/inspection/analytics'
 import { observationApi } from '@/api/observation'
 import { useInspExecutionStore } from '@/stores/inspection/inspExecutionStore'
 
 const executionStore = useInspExecutionStore()
-const projects = ref<{ id: number; projectName: string }[]>([])
-const projectId = ref<number | null>(null)
+const projects = ref<{ id: LongId; projectName: string }[]>([])
+const projectId = ref<LongId | null>(null)
 
 const currentTime = ref('')
 const isFullscreen = ref(false)

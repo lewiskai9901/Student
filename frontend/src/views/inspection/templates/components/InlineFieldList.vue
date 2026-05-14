@@ -129,14 +129,15 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed } from 'vue'
 import type { TemplateItem, ResponseSet } from '@/types/insp/template'
 import type { ItemType, ScoringMode } from '@/types/insp/enums'
 import { ItemTypeConfig, ScoringModeConfig } from '@/types/insp/enums'
 
 interface EditForm {
-  id: number
-  sectionId: number
+  id: LongId
+  sectionId: LongId
   itemName: string
   description: string
   itemType: ItemType
@@ -150,7 +151,7 @@ interface EditForm {
 
 const props = defineProps<{
   items: TemplateItem[]
-  sectionId: number
+  sectionId: LongId
   readonly: boolean
   isLeaf: boolean
   responseSets: ResponseSet[]
@@ -158,12 +159,12 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'add-item': [sectionId: number]
+  'add-item': [sectionId: LongId]
   'save-item': [data: Partial<TemplateItem>]
   'delete-item': [item: TemplateItem]
 }>()
 
-const expandedId = ref<number | null>(null)
+const expandedId = ref<LongId | null>(null)
 const editForm = ref<EditForm>(createEmptyForm())
 
 const sortedItems = computed(() =>

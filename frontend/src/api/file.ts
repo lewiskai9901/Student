@@ -1,7 +1,8 @@
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 
 export interface FileUploadResponse {
-  fileId: number
+  fileId: LongId
   originalName: string
   storedName: string
   fileSize: number
@@ -16,7 +17,7 @@ export interface FileUploadResponse {
 export function uploadFile(
   file: File,
   businessType?: string,
-  businessId?: number | string
+  businessId?: LongId | string
 ): Promise<FileUploadResponse> {
   const formData = new FormData()
   formData.append('file', file)
@@ -38,7 +39,7 @@ export function uploadFile(
 export function uploadFiles(
   files: File[],
   businessType?: string,
-  businessId?: number | string
+  businessId?: LongId | string
 ): Promise<FileUploadResponse[]> {
   const formData = new FormData()
   files.forEach((file) => {
@@ -59,14 +60,14 @@ export function uploadFiles(
 /**
  * 删除文件
  */
-export function deleteFile(fileId: number | string): Promise<void> {
+export function deleteFile(fileId: LongId | string): Promise<void> {
   return http.delete(`/files/${fileId}`)
 }
 
 /**
  * 获取文件信息
  */
-export function getFileInfo(fileId: number | string): Promise<FileUploadResponse> {
+export function getFileInfo(fileId: LongId | string): Promise<FileUploadResponse> {
   return http.get<FileUploadResponse>(`/files/${fileId}`)
 }
 
@@ -75,7 +76,7 @@ export function getFileInfo(fileId: number | string): Promise<FileUploadResponse
  */
 export function getFilesByBusiness(
   businessType: string,
-  businessId: number | string
+  businessId: LongId | string
 ): Promise<FileUploadResponse[]> {
   return http.get<FileUploadResponse[]>('/files/business', {
     params: { businessType, businessId }
@@ -85,6 +86,6 @@ export function getFilesByBusiness(
 /**
  * 下载文件
  */
-export function downloadFile(fileId: number | string): string {
+export function downloadFile(fileId: LongId | string): string {
   return `/api/files/download/${fileId}`
 }

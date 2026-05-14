@@ -1,6 +1,7 @@
 /**
  * 受检主体面 API — 班主任 / 场所负责人 / 受检单位的"被检查"视角.
  */
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 
 export interface ReceivedSummary {
@@ -14,12 +15,12 @@ export interface ReceivedSummary {
 }
 
 export interface ReceivedInspection {
-  submissionId: number
-  taskId: number
+  submissionId: LongId
+  taskId: LongId
   taskCode: string
-  projectId: number
+  projectId: LongId
   projectName: string
-  subjectId: number
+  subjectId: LongId
   subjectName: string
   inspectedAt: string
   score: number
@@ -50,7 +51,7 @@ export function getMySummary(days = 30): Promise<ReceivedSummary> {
 }
 
 export function getMyInspections(params?: {
-  projectId?: number
+  projectId?: LongId
   days?: number
 }): Promise<ReceivedInspection[]> {
   return http.get<ReceivedInspection[]>('/inspection/received/inspections', {

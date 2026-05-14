@@ -1,6 +1,7 @@
 /**
  * 检查平台 - 假日日历 API
  */
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 import type { HolidayCalendar } from '@/types/insp/platform'
 
@@ -12,7 +13,7 @@ export function listHolidayCalendars(): Promise<HolidayCalendar[]> {
   return http.get<HolidayCalendar[]>(BASE)
 }
 
-export function getHolidayCalendar(id: number): Promise<HolidayCalendar> {
+export function getHolidayCalendar(id: LongId): Promise<HolidayCalendar> {
   return http.get<HolidayCalendar>(`${BASE}/${id}`)
 }
 
@@ -28,11 +29,11 @@ export function createHolidayCalendar(data: Partial<HolidayCalendar>): Promise<H
   return http.post<HolidayCalendar>(BASE, data)
 }
 
-export function updateHolidayCalendar(id: number, data: Partial<HolidayCalendar>): Promise<HolidayCalendar> {
+export function updateHolidayCalendar(id: LongId, data: Partial<HolidayCalendar>): Promise<HolidayCalendar> {
   return http.put<HolidayCalendar>(`${BASE}/${id}`, data)
 }
 
-export function deleteHolidayCalendar(id: number): Promise<void> {
+export function deleteHolidayCalendar(id: LongId): Promise<void> {
   return http.delete(`${BASE}/${id}`)
 }
 

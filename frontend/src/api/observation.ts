@@ -1,8 +1,9 @@
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 import type { ObservationPageResult } from '@/types/observation'
 
 export interface ObservationListParams {
-  projectId?: number
+  projectId?: LongId
   subjectType?: string
   severity?: string
   isNegative?: boolean
@@ -16,7 +17,7 @@ export const observationApi = {
     return http.get('/inspection/observations', { params })
   },
 
-  bySubmission(submissionId: number) {
+  bySubmission(submissionId: LongId) {
     return http.get(`/inspection/observations/by-submission/${submissionId}`)
   },
 }

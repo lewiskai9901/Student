@@ -1,6 +1,7 @@
 /**
  * 检查平台 - 问题分类 API
  */
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 import type { IssueCategory } from '@/types/insp/platform'
 
@@ -16,7 +17,7 @@ export function getRootCategories(): Promise<IssueCategory[]> {
   return http.get<IssueCategory[]>(`${BASE}/roots`)
 }
 
-export function getChildCategories(parentId: number): Promise<IssueCategory[]> {
+export function getChildCategories(parentId: LongId): Promise<IssueCategory[]> {
   return http.get<IssueCategory[]>(`${BASE}/${parentId}/children`)
 }
 
@@ -24,11 +25,11 @@ export function createIssueCategory(data: Partial<IssueCategory>): Promise<Issue
   return http.post<IssueCategory>(BASE, data)
 }
 
-export function updateIssueCategory(id: number, data: Partial<IssueCategory>): Promise<IssueCategory> {
+export function updateIssueCategory(id: LongId, data: Partial<IssueCategory>): Promise<IssueCategory> {
   return http.put<IssueCategory>(`${BASE}/${id}`, data)
 }
 
-export function deleteIssueCategory(id: number): Promise<void> {
+export function deleteIssueCategory(id: LongId): Promise<void> {
   return http.delete(`${BASE}/${id}`)
 }
 

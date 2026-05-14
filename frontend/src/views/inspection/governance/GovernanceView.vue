@@ -226,6 +226,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { RefreshRight } from '@element-plus/icons-vue'
@@ -237,20 +238,20 @@ const router = useRouter()
 const executionStore = useInspExecutionStore()
 
 interface DailyTarget {
-  targetId: number; targetName: string; avgScore: number | null
-  totalDeductions: number | null; orgUnitId: number; orgUnitName: string
+  targetId: LongId; targetName: string; avgScore: number | null
+  totalDeductions: number | null; orgUnitId: LongId; orgUnitName: string
 }
 interface AlertItem {
-  id: number; severity: string; targetName: string
+  id: LongId; severity: string; targetName: string
   message: string; metricValue: number; thresholdValue: number
   status: string; triggeredAt: string
 }
 
-const projectId = ref<number | null>(null)
-const projects = ref<{ id: number; projectName: string }[]>([])
+const projectId = ref<LongId | null>(null)
+const projects = ref<{ id: LongId; projectName: string }[]>([])
 const loading = ref(false)
 
-const allDailyAgg = ref<Map<number, DailyTarget>>(new Map())
+const allDailyAgg = ref<Map<LongId, DailyTarget>>(new Map())
 const correctiveSummary = ref<any>(null)
 const activeAlerts = ref<AlertItem[]>([])
 const inspectorList = ref<{ name: string; count: number; rank: number; pct: number }[]>([])
@@ -311,7 +312,7 @@ async function loadProjects() {
 /** 累计 30 天 daily summaries 聚合到 target */
 async function loadDailyAgg() {
   if (!projectId.value) return
-  const map = new Map<number, DailyTarget>()
+  const map = new Map<LongId, DailyTarget>()
   const today = new Date()
   // 拉最近 30 天每天 ranking, 按 targetId 累加 totalDeductions
   for (let i = 0; i < 30; i++) {
@@ -320,7 +321,7 @@ async function loadDailyAgg() {
     try {
       const rows = await analyticsApi.getDailyRanking(projectId.value, ds) as any[]
       for (const r of rows) {
-        const id = Number(r.targetId)
+        const id = r.targetId
         if (!map.has(id)) {
           map.set(id, { targetId: id, targetName: r.targetName, avgScore: null, totalDeductions: 0,
                         orgUnitId: r.orgUnitId, orgUnitName: r.orgUnitName })

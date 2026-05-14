@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
@@ -29,7 +30,7 @@ const detailMessage = ref<MsgNotification | null>(null)
 
 // Delete confirm
 const deleteConfirmVisible = ref(false)
-const deleteTargetId = ref<number | null>(null)
+const deleteTargetId = ref<LongId | null>(null)
 
 // ==================== Computed ====================
 const hasMore = computed(() => notifications.value.length < total.value)
@@ -118,7 +119,7 @@ async function handleMarkAllRead() {
   } catch { /* silent */ }
 }
 
-function confirmDelete(id: number) {
+function confirmDelete(id: LongId) {
   deleteTargetId.value = id
   deleteConfirmVisible.value = true
 }

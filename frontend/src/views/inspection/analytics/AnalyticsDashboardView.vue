@@ -161,6 +161,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import { use } from 'echarts/core'
@@ -181,7 +182,7 @@ use([LineChart, BarChart, PieChart, GridComponent, TooltipComponent, LegendCompo
 const store = useInspAnalyticsStore()
 const executionStore = useInspExecutionStore()
 
-const projects = ref<{ id: number; projectName: string }[]>([])
+const projects = ref<{ id: LongId; projectName: string }[]>([])
 
 const filters = reactive({
   projectId: null as number | null,

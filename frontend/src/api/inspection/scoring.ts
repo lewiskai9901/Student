@@ -1,6 +1,7 @@
 /**
  * 检查平台 - 评分引擎 API
  */
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 import type {
   ScoringProfile,
@@ -28,16 +29,16 @@ export function getProfiles(): Promise<ScoringProfile[]> {
   return http.get<ScoringProfile[]>(BASE)
 }
 
-export function getProfile(id: number): Promise<ScoringProfile> {
+export function getProfile(id: LongId): Promise<ScoringProfile> {
   return http.get<ScoringProfile>(`${BASE}/${id}`)
 }
 
-export function getProfileBySection(sectionId: number): Promise<ScoringProfile> {
+export function getProfileBySection(sectionId: LongId): Promise<ScoringProfile> {
   return http.get<ScoringProfile>(`${BASE}/by-section/${sectionId}`)
 }
 
 /** @deprecated Use getProfileBySection instead */
-export function getProfileByTemplate(templateId: number): Promise<ScoringProfile> {
+export function getProfileByTemplate(templateId: LongId): Promise<ScoringProfile> {
   return http.get<ScoringProfile>(`${BASE}/by-section/${templateId}`)
 }
 
@@ -45,87 +46,87 @@ export function createProfile(data: CreateProfileRequest): Promise<ScoringProfil
   return http.post<ScoringProfile>(BASE, data)
 }
 
-export function updateProfile(id: number, data: UpdateProfileRequest): Promise<ScoringProfile> {
+export function updateProfile(id: LongId, data: UpdateProfileRequest): Promise<ScoringProfile> {
   return http.put<ScoringProfile>(`${BASE}/${id}`, data)
 }
 
-export function updateAdvancedSettings(id: number, data: UpdateAdvancedSettingsRequest): Promise<ScoringProfile> {
+export function updateAdvancedSettings(id: LongId, data: UpdateAdvancedSettingsRequest): Promise<ScoringProfile> {
   return http.put<ScoringProfile>(`${BASE}/${id}/advanced-settings`, data)
 }
 
-export function deleteProfile(id: number): Promise<void> {
+export function deleteProfile(id: LongId): Promise<void> {
   return http.delete(`${BASE}/${id}`)
 }
 
 // ==================== 评分维度 ====================
 
-export function getDimensions(profileId: number): Promise<ScoreDimension[]> {
+export function getDimensions(profileId: LongId): Promise<ScoreDimension[]> {
   return http.get<ScoreDimension[]>(`${BASE}/${profileId}/dimensions`)
 }
 
-export function createDimension(profileId: number, data: CreateDimensionRequest): Promise<ScoreDimension> {
+export function createDimension(profileId: LongId, data: CreateDimensionRequest): Promise<ScoreDimension> {
   return http.post<ScoreDimension>(`${BASE}/${profileId}/dimensions`, data)
 }
 
-export function updateDimension(profileId: number, dimensionId: number, data: UpdateDimensionRequest): Promise<ScoreDimension> {
+export function updateDimension(profileId: LongId, dimensionId: LongId, data: UpdateDimensionRequest): Promise<ScoreDimension> {
   return http.put<ScoreDimension>(`${BASE}/${profileId}/dimensions/${dimensionId}`, data)
 }
 
-export function deleteDimension(profileId: number, dimensionId: number): Promise<void> {
+export function deleteDimension(profileId: LongId, dimensionId: LongId): Promise<void> {
   return http.delete(`${BASE}/${profileId}/dimensions/${dimensionId}`)
 }
 
-export function syncDimensionsFromModules(profileId: number): Promise<ScoreDimension[]> {
+export function syncDimensionsFromModules(profileId: LongId): Promise<ScoreDimension[]> {
   return http.post<ScoreDimension[]>(`${BASE}/${profileId}/dimensions/sync-modules`)
 }
 
 // ==================== 等级区间 ====================
 
-export function getGradeBands(profileId: number): Promise<GradeBand[]> {
+export function getGradeBands(profileId: LongId): Promise<GradeBand[]> {
   return http.get<GradeBand[]>(`${BASE}/${profileId}/grade-bands`)
 }
 
-export function createGradeBand(profileId: number, data: CreateGradeBandRequest): Promise<GradeBand> {
+export function createGradeBand(profileId: LongId, data: CreateGradeBandRequest): Promise<GradeBand> {
   return http.post<GradeBand>(`${BASE}/${profileId}/grade-bands`, data)
 }
 
-export function updateGradeBand(profileId: number, bandId: number, data: UpdateGradeBandRequest): Promise<GradeBand> {
+export function updateGradeBand(profileId: LongId, bandId: LongId, data: UpdateGradeBandRequest): Promise<GradeBand> {
   return http.put<GradeBand>(`${BASE}/${profileId}/grade-bands/${bandId}`, data)
 }
 
-export function deleteGradeBand(profileId: number, bandId: number): Promise<void> {
+export function deleteGradeBand(profileId: LongId, bandId: LongId): Promise<void> {
   return http.delete(`${BASE}/${profileId}/grade-bands/${bandId}`)
 }
 
 // ==================== 计算规则 ====================
 
-export function getRules(profileId: number): Promise<CalculationRule[]> {
+export function getRules(profileId: LongId): Promise<CalculationRule[]> {
   return http.get<CalculationRule[]>(`${BASE}/${profileId}/calculation-rules`)
 }
 
-export function createRule(profileId: number, data: CreateRuleRequest): Promise<CalculationRule> {
+export function createRule(profileId: LongId, data: CreateRuleRequest): Promise<CalculationRule> {
   return http.post<CalculationRule>(`${BASE}/${profileId}/calculation-rules`, data)
 }
 
-export function updateRule(profileId: number, ruleId: number, data: UpdateRuleRequest): Promise<CalculationRule> {
+export function updateRule(profileId: LongId, ruleId: LongId, data: UpdateRuleRequest): Promise<CalculationRule> {
   return http.put<CalculationRule>(`${BASE}/${profileId}/calculation-rules/${ruleId}`, data)
 }
 
-export function deleteRule(profileId: number, ruleId: number): Promise<void> {
+export function deleteRule(profileId: LongId, ruleId: LongId): Promise<void> {
   return http.delete(`${BASE}/${profileId}/calculation-rules/${ruleId}`)
 }
 
 // ==================== 版本快照 (1.7) ====================
 
-export function publishVersion(profileId: number, data: PublishVersionRequest): Promise<ScoringProfileVersion> {
+export function publishVersion(profileId: LongId, data: PublishVersionRequest): Promise<ScoringProfileVersion> {
   return http.post<ScoringProfileVersion>(`${BASE}/${profileId}/versions`, data)
 }
 
-export function getVersions(profileId: number): Promise<ScoringProfileVersion[]> {
+export function getVersions(profileId: LongId): Promise<ScoringProfileVersion[]> {
   return http.get<ScoringProfileVersion[]>(`${BASE}/${profileId}/versions`)
 }
 
-export function getVersion(profileId: number, version: number): Promise<ScoringProfileVersion> {
+export function getVersion(profileId: LongId, version: number): Promise<ScoringProfileVersion> {
   return http.get<ScoringProfileVersion>(`${BASE}/${profileId}/versions/${version}`)
 }
 

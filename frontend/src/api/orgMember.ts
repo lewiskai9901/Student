@@ -1,28 +1,29 @@
 /**
  * 组织成员管理 API（对接 /org-units/{id}/members 端点）
  */
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 import type { OrgMember, OrgStatistics } from '@/types/position'
 
 const BASE = '/org-units'
 
-export function getBelongingMembers(orgUnitId: number | string): Promise<OrgMember[]> {
+export function getBelongingMembers(orgUnitId: LongId | string): Promise<OrgMember[]> {
   return http.get<OrgMember[]>(`${BASE}/${orgUnitId}/members`)
 }
 
-export function getMembersRecursive(orgUnitId: number | string): Promise<OrgMember[]> {
+export function getMembersRecursive(orgUnitId: LongId | string): Promise<OrgMember[]> {
   return http.get<OrgMember[]>(`${BASE}/${orgUnitId}/members/recursive`)
 }
 
-export function getOrgStatistics(orgUnitId: number | string): Promise<OrgStatistics> {
+export function getOrgStatistics(orgUnitId: LongId | string): Promise<OrgStatistics> {
   return http.get<OrgStatistics>(`${BASE}/${orgUnitId}/statistics`)
 }
 
-export function addMember(orgUnitId: number | string, userId: number | string): Promise<void> {
+export function addMember(orgUnitId: LongId | string, userId: LongId | string): Promise<void> {
   return http.post(`${BASE}/${orgUnitId}/members/${userId}`)
 }
 
-export function removeMember(orgUnitId: number | string, userId: number | string): Promise<void> {
+export function removeMember(orgUnitId: LongId | string, userId: LongId | string): Promise<void> {
   return http.delete(`${BASE}/${orgUnitId}/members/${userId}`)
 }
 

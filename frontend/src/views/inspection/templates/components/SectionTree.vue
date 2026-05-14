@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { computed } from 'vue'
 import type { TemplateSection, TemplateItem } from '@/types/insp/template'
 import { TargetTypeConfig, ItemTypeConfig, ScoringModeConfig, type TargetType, type ItemType, type ScoringMode } from '@/types/insp/enums'
@@ -8,16 +9,16 @@ const props = defineProps<{
   itemsBySection: Map<number | string, TemplateItem[]>
   selectedId: string | null  // "section:123" or "item:456"
   readonly?: boolean
-  rootSectionId?: number
+  rootSectionId?: LongId
   rootSection?: TemplateSection | null
 }>()
 
 const emit = defineEmits<{
-  selectSection: [sectionId: number]
+  selectSection: [sectionId: LongId]
   selectItem: [item: TemplateItem]
-  addChild: [parentSectionId: number]
-  addItem: [sectionId: number]
-  deleteSection: [sectionId: number]
+  addChild: [parentSectionId: LongId]
+  addItem: [sectionId: LongId]
+  deleteSection: [sectionId: LongId]
   deleteItem: [item: TemplateItem]
 }>()
 
@@ -42,7 +43,7 @@ const tree = computed<TreeNode[]>(() => {
     list.sort((a, b) => a.sortOrder - b.sortOrder)
   }
 
-  function buildNodes(parentId: number | null, depth: number): TreeNode[] {
+  function buildNodes(parentId: LongId | null, depth: number): TreeNode[] {
     const key = String(parentId ?? 'null')
     const childSections = childrenMap.get(key) || []
     const nodes: TreeNode[] = []
@@ -88,12 +89,12 @@ function flattenTree(nodes: TreeNode[]): TreeNode[] {
 const flatNodes = computed(() => flattenTree(tree.value))
 
 function isFirstLevel(section: TemplateSection): boolean {
-  if (props.rootSectionId) return Number(section.parentSectionId) === Number(props.rootSectionId)
+  if (props.rootSectionId) return section.parentSectionId === props.rootSectionId
   return section.parentSectionId === null
 }
 
-function hasChildren(sectionId: number): boolean {
-  return props.sections.some(s => Number(s.parentSectionId) === Number(sectionId))
+function hasChildren(sectionId: LongId): boolean {
+  return props.sections.some(s => s.parentSectionId === sectionId)
 }
 
 function getItemLabel(item: TemplateItem): string {
@@ -114,7 +115,7 @@ function getItemLabel(item: TemplateItem): string {
       <div v-if="rootSection"
         class="st-node st-root-node"
         :class="{ selected: selectedId === `section:${rootSection.id}` }"
-        @click="emit('selectSection', Number(rootSection.id))"
+        @click="emit('selectSection', rootSection.id)"
       >
         <div class="st-node-content">
           <span class="st-root-icon"></span>
@@ -124,7 +125,7 @@ function getItemLabel(item: TemplateItem): string {
           </span>
         </div>
         <div v-if="!readonly" class="st-node-actions">
-          <button title="添加子分区" @click.stop="emit('addChild', Number(rootSection.id))">+</button>
+          <button title="添加子分区" @click.stop="emit('addChild', rootSection.id)">+</button>
         </div>
       </div>
 
@@ -137,9 +138,9 @@ function getItemLabel(item: TemplateItem): string {
             selected: selectedId === node.key,
           }"
           :style="{ paddingLeft: `${4 + node.depth * 14}px` }"
-          @click="emit('selectSection', Number(node.section!.id))"
+          @click="emit('selectSection', node.section!.id)"
         >
-          <div class="st-node-content" @click="emit('selectSection', Number(node.section!.id))">
+          <div class="st-node-content" @click="emit('selectSection', node.section!.id)">
             <span class="st-indent-marker" />
             <span class="st-node-name">{{ node.section.sectionName || '未命名' }}</span>
             <span v-if="node.section.weight && node.section.weight !== 100" class="st-tag st-tag-weight">{{ node.section.weight }}</span>
@@ -148,14 +149,14 @@ function getItemLabel(item: TemplateItem): string {
             </span>
           </div>
           <div v-if="!readonly" class="st-node-actions">
-            <button v-if="!hasChildren(Number(node.section.id))"
+            <button v-if="!hasChildren(node.section.id)"
               title="添加字段" class="item-btn"
-              @click.stop="emit('addItem', Number(node.section!.id))">⊕</button>
+              @click.stop="emit('addItem', node.section!.id)">⊕</button>
             <button
               title="添加子分区"
-              @click.stop="emit('addChild', Number(node.section!.id))">+</button>
+              @click.stop="emit('addChild', node.section!.id)">+</button>
             <button title="删除" class="danger"
-              @click.stop="emit('deleteSection', Number(node.section!.id))">&times;</button>
+              @click.stop="emit('deleteSection', node.section!.id)">&times;</button>
           </div>
         </div>
 

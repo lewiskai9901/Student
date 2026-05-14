@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, onMounted } from 'vue'
 import { ExternalLink } from 'lucide-vue-next'
 import { responseSetApi } from '@/api/inspection/responseSet'
@@ -23,7 +24,7 @@ async function loadSets() {
   } catch { /* ignore */ }
 }
 
-async function loadOptions(setId: number) {
+async function loadOptions(setId: LongId) {
   loading.value = true
   try {
     selectedOptions.value = await responseSetApi.getOptions(setId)
@@ -31,7 +32,7 @@ async function loadOptions(setId: number) {
   finally { loading.value = false }
 }
 
-function handleSelect(setId: number | null) {
+function handleSelect(setId: LongId | null) {
   emit('update:modelValue', setId)
   if (setId) loadOptions(setId)
   else selectedOptions.value = []

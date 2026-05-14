@@ -144,6 +144,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, watch, computed } from 'vue'
 import { UserCircle, Loader2, X, ArrowRightLeft } from 'lucide-vue-next'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -156,7 +157,7 @@ import type { DepartmentResponse } from '@/api/organization'
 
 interface Props {
   visible: boolean
-  userId: number | string | null
+  userId: LongId | string | null
   userName: string
   treeData: DepartmentResponse[]
 }
@@ -224,7 +225,7 @@ const handleEndAppointment = async (pos: UserPosition) => {
 
 // ==================== Change Org ====================
 const showChangeOrg = ref(false)
-const changeOrgTarget = ref<number | null>(null)
+const changeOrgTarget = ref<LongId | null>(null)
 const changeOrgSubmitting = ref(false)
 
 const orgTreeOptions = computed(() => props.treeData)

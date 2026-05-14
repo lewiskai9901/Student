@@ -1,3 +1,4 @@
+import type { LongId } from '@/types/common'
 import { ref, reactive, computed } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
 
@@ -121,7 +122,7 @@ export function useForm<T extends Record<string, unknown>>(options: UseFormOptio
  */
 export interface UseEditFormOptions<T extends Record<string, unknown>> extends UseFormOptions<T> {
   createFn: (data: T) => Promise<unknown>
-  updateFn: (id: number, data: T) => Promise<unknown>
+  updateFn: (id: LongId, data: T) => Promise<unknown>
 }
 
 export function useEditForm<T extends Record<string, unknown>>(options: UseEditFormOptions<T>) {
@@ -130,7 +131,7 @@ export function useEditForm<T extends Record<string, unknown>>(options: UseEditF
   const form = useForm(formOptions)
 
   // 当前编辑的 ID
-  const editingId = ref<number | null>(null)
+  const editingId = ref<LongId | null>(null)
 
   // 是否编辑模式
   const isEditing = computed(() => editingId.value !== null)
@@ -145,7 +146,7 @@ export function useEditForm<T extends Record<string, unknown>>(options: UseEditF
   }
 
   // 开始编辑
-  const startEdit = (id: number, data: Partial<T>) => {
+  const startEdit = (id: LongId, data: Partial<T>) => {
     editingId.value = id
     form.resetForm()
     form.setValues(data)

@@ -522,6 +522,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import RelationsPanel from '@/components/access/RelationsPanel.vue'
@@ -588,7 +589,7 @@ const allRoles = ref<Role[]>([])
 interface RoleAssignmentLocal {
   roleId: string | number
   scopeType: string
-  scopeId: number | string
+  scopeId: LongId | string
   expiresAt?: string
   reason?: string
 }
@@ -601,7 +602,7 @@ interface UserRoleDetailed {
   roleName: string
   roleCode?: string
   scopeType: string
-  scopeId: number | string
+  scopeId: LongId | string
   scopeName?: string
   expiresAt?: string
   isExpired: boolean
@@ -612,7 +613,7 @@ const currentUserRolesDetailed = ref<UserRoleDetailed[]>([])
 const userTypes = ref<UserTypeItem[]>([])
 const orgTree = ref<OrgUnitTreeNode[]>([])
 // 全量场所列表（独立于组织）
-interface PlaceItem { placeId: number; placeName: string }
+interface PlaceItem { placeId: LongId; placeName: string }
 const allPlaces = ref<PlaceItem[]>([])
 
 // 当前选中的用户类型
@@ -637,7 +638,7 @@ const getUserTypeName = (typeCode?: string): string => {
 }
 
 // 将组织树扁平化为列表（带缩进标记）
-interface FlatOrgItem { id: number | string; label: string }
+interface FlatOrgItem { id: LongId | string; label: string }
 const flatOrgUnits = computed<FlatOrgItem[]>(() => {
   const result: FlatOrgItem[] = []
   const flatten = (nodes: OrgUnitTreeNode[], depth: number) => {
@@ -663,7 +664,7 @@ const enabledCount = computed(() => userList.value.filter(u => normalizeStatus(u
 const disabledCount = computed(() => userList.value.filter(u => normalizeStatus(u.status) === 2).length)
 const todayLoginCount = ref(0)
 
-const formData = reactive<UserFormData & { placeId?: number; attributes: Record<string, any> }>({
+const formData = reactive<UserFormData & { placeId?: LongId; attributes: Record<string, any> }>({
   username: '',
   realName: '',
   password: '',
@@ -1032,7 +1033,7 @@ const updateRoleScopeType = (roleId: string | number, scopeType: string) => {
   }
 }
 
-const updateRoleScopeId = (roleId: string | number, scopeId: number) => {
+const updateRoleScopeId = (roleId: string | number, scopeId: LongId) => {
   const a = roleAssignments.value.find(a => String(a.roleId) === String(roleId))
   if (a) a.scopeId = scopeId
 }
@@ -1091,9 +1092,9 @@ const handleAssignRoles = async (row: UserListItem) => {
 }
 
 // 根据 orgId 查找组织名称
-const findOrgName = (orgId: number | string): string => {
+const findOrgName = (orgId: LongId | string): string => {
   if (!orgId || orgId === 0) return ''
-  const org = flatOrgUnits.value.find(o => o.id === Number(orgId))
+  const org = flatOrgUnits.value.find(o => o.id === orgId)
   return org?.label?.trim() || ''
 }
 

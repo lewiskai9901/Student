@@ -2,10 +2,11 @@
  * 统一实体类型配置 API
  * 查询 entity_type_configs 表
  */
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 
 export interface EntityTypeConfig {
-  id: number
+  id: LongId
   entityType: string       // ORG_UNIT / PLACE / USER
   typeCode: string
   typeName: string
@@ -69,14 +70,14 @@ export const entityTypeApi = {
     http.get<CategoryOption[]>('/entity-type-configs/categories', { params: { entityType } }),
 
   /** 管理员添加自定义字段 */
-  addCustomField: (id: number, field: FieldSchema) =>
+  addCustomField: (id: LongId, field: FieldSchema) =>
     http.post(`/entity-type-configs/${id}/custom-fields`, field),
 
   /** 管理员删除自定义字段 */
-  removeCustomField: (id: number, fieldKey: string) =>
+  removeCustomField: (id: LongId, fieldKey: string) =>
     http.delete(`/entity-type-configs/${id}/custom-fields/${fieldKey}`),
 
   /** 恢复某个字段为插件默认值 (从 overridden_fields 移除并回填插件声明) */
-  resetField: (id: number | string, field: string) =>
+  resetField: (id: LongId | string, field: string) =>
     http.post(`/entity-type-configs/${id}/reset-field`, null, { params: { field } }),
 }

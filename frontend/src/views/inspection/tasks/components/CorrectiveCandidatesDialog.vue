@@ -63,6 +63,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
@@ -86,8 +87,8 @@ const visible = ref(false)
 const loading = ref(false)
 const confirming = ref(false)
 const candidates = ref<CorrectiveCandidate[]>([])
-const submissionIdMap = ref<Map<number, number>>(new Map())  // detailId → submissionId
-const selected = ref<Record<number, boolean>>({})
+const submissionIdMap = ref<Map<LongId, number>>(new Map())  // detailId → submissionId
+const selected = ref<Record<LongId, boolean>>({})
 
 watch(
   () => props.modelValue,
@@ -144,7 +145,7 @@ function severityLabel(s: string) {
 
 async function handleConfirm() {
   // 按 submissionId 分组提交
-  const bySubmission: Record<number, number[]> = {}
+  const bySubmission: Record<LongId, number[]> = {}
   for (const [detailIdStr, on] of Object.entries(selected.value)) {
     if (!on) continue
     const detailId = Number(detailIdStr)

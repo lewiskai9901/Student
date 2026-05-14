@@ -156,6 +156,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { examApi } from '@/api/teaching'
@@ -180,7 +181,7 @@ const formErrors = reactive({ name: false, semesterId: false, examType: false, s
 
 const conflictDialogVisible = ref(false)
 const conflictLoading = ref(false)
-const conflicts = ref<{ type: string; description: string; arrangement1Id: number; arrangement2Id: number }[]>([])
+const conflicts = ref<{ type: string; description: string; arrangement1Id: LongId; arrangement2Id: LongId }[]>([])
 
 const queryParams = reactive<ExamBatchQueryParams>({
   semesterId: undefined,

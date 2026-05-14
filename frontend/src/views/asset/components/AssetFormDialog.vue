@@ -2,6 +2,7 @@
 /**
  * 资产表单对话框 - 简洁现代设计
  */
+import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { User, Close, Coin, Box } from '@element-plus/icons-vue'
@@ -99,7 +100,7 @@ const rules: FormRules = {
 
 // 展开分类选项
 const flatCategories = computed(() => {
-  const result: { id: number | string; label: string; level: number }[] = []
+  const result: { id: LongId | string; label: string; level: number }[] = []
 
   const flatten = (items: AssetCategory[], level = 0) => {
     items.forEach(item => {

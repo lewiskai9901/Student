@@ -26,6 +26,7 @@
  *
  * ⑤ **效率可见** — 显示当前字段已评 X/Y, 总进度, 平均每格用时.
  */
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -39,7 +40,7 @@ import type { InspTask, InspSubmission, SubmissionDetail } from '@/types/insp/pr
 
 const route = useRoute()
 const router = useRouter()
-const taskId = Number(route.params.id)
+const taskId = route.params.id as string
 
 // ── State ──
 const loading = ref(false)
@@ -59,7 +60,7 @@ const fieldIdx = ref(0)
 const targetIdx = ref(0)
 
 // Editing remark
-const editingRemarkId = ref<number | null>(null)
+const editingRemarkId = ref<LongId | null>(null)
 const remarkDraft = ref('')
 
 // Time tracking for "speed visible"
@@ -103,7 +104,7 @@ const currentField = computed(() => uniqueFields.value[fieldIdx.value] ?? null)
 
 // Detail map: { fieldCode: { submissionId: detail } }
 const detailIndex = computed(() => {
-  const map = new Map<string, Map<number, SubmissionDetail>>()
+  const map = new Map<string, Map<LongId, SubmissionDetail>>()
   for (const d of allDetails.value) {
     if (!map.has(d.itemCode)) map.set(d.itemCode, new Map())
     map.get(d.itemCode)!.set(d.submissionId, d)
@@ -170,10 +171,10 @@ async function loadAll() {
     }
     // 项目名 (顶栏上下文, 失败不致命)
     if (task.value.projectId) {
-      try { project.value = await getProject(Number(task.value.projectId)) } catch { /* non-fatal */ }
+      try { project.value = await getProject(task.value.projectId) } catch { /* non-fatal */ }
     }
     const subs = await getSubmissions({ taskId })
-    submissions.value = (subs || []).filter(s => Number(s.taskId) === taskId)
+    submissions.value = (subs || []).filter(s => s.taskId === taskId)
 
     const allDets: SubmissionDetail[] = []
     for (const sub of submissions.value) {

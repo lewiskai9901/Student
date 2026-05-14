@@ -69,6 +69,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { offeringApi, classAssignmentApi } from '@/api/teaching'
@@ -77,7 +78,7 @@ import type { SemesterOffering, ClassCourseAssignment } from '@/types/teaching'
 import type { SchoolClass } from '@/types/organization'
 
 const props = defineProps<{
-  semesterId: number | string | null
+  semesterId: LongId | string | null
 }>()
 
 // ==================== State ====================

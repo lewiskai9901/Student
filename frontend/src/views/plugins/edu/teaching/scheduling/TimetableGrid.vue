@@ -87,6 +87,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed } from 'vue'
 import type { ScheduleEntry, PeriodConfig } from '@/types/teaching'
 import { WEEKDAYS, DEFAULT_PERIODS } from '@/types/teaching'
@@ -95,7 +96,7 @@ interface Props {
   entries: ScheduleEntry[]
   periods?: PeriodConfig[]
   weekdays?: { value: number; label: string }[]
-  weekDates?: Record<number, string>  // dayOfWeek > date string (e.g. "9/1")
+  weekDates?: Record<LongId, string>  // dayOfWeek > date string (e.g. "9/1")
   todayWeekday?: number  // 1-7, 0=不在显示周内
   editable?: boolean
   constraintMatrix?: any[][]
@@ -114,7 +115,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   'entry-click': [entry: ScheduleEntry]
   'cell-click': [day: number, period: number]
-  'entry-drop': [entryId: number, newDay: number, newPeriod: number]
+  'entry-drop': [entryId: LongId, newDay: number, newPeriod: number]
 }>()
 
 const displayWeekdays = computed(() => props.weekdays ?? WEEKDAYS.slice(0, 5))

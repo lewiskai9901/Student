@@ -54,6 +54,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed } from 'vue'
 import { Search, Plus, Building2 } from 'lucide-vue-next'
 import OrgSidebarNode from './OrgSidebarNode.vue'
@@ -61,7 +62,7 @@ import type { DepartmentResponse } from '@/api/organization'
 
 interface Props {
   treeData: DepartmentResponse[]
-  selectedId: number | null
+  selectedId: LongId | null
 }
 
 const props = defineProps<Props>()

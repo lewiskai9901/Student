@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -10,7 +11,7 @@ const route = useRoute()
 const router = useRouter()
 
 const subjectType = route.params.subjectType as string
-const subjectId = Number(route.params.subjectId)
+const subjectId = route.params.subjectId as string
 
 // ========== State ==========
 const loading = ref(false)

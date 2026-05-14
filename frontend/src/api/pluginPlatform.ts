@@ -5,6 +5,7 @@
  *   - 全局: enable / disable / uninstall / health / metrics
  *   - 租户级: tenants/{id}/plugins 相关
  */
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 
 export interface PluginHealthInfo {
@@ -75,10 +76,10 @@ export const pluginPlatformApi = {
   metrics:   () => http.get<RegistrarMetrics>('/plugin-platform/metrics'),
 
   // ─── 租户级治理 ───
-  tenantPlugins:        (tenantId: number | string) =>
+  tenantPlugins:        (tenantId: LongId | string) =>
     http.get<TenantPluginRow[]>(`/plugin-platform/tenants/${tenantId}/plugins`),
-  enableForTenant:      (tenantId: number | string, code: string, notes = '') =>
+  enableForTenant:      (tenantId: LongId | string, code: string, notes = '') =>
     http.post(`/plugin-platform/tenants/${tenantId}/plugins/${code}/enable`, { notes }),
-  disableForTenant:     (tenantId: number | string, code: string, notes = '') =>
+  disableForTenant:     (tenantId: LongId | string, code: string, notes = '') =>
     http.post(`/plugin-platform/tenants/${tenantId}/plugins/${code}/disable`, { notes })
 }

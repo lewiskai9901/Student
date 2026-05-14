@@ -1,3 +1,4 @@
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 import type {
   Major,
@@ -44,11 +45,11 @@ export const getAllEnabledMajors = () => {
   return http.get<Major[]>(`${BASE}/majors/enabled`)
 }
 
-export const getMajorsByOrgUnit = (orgUnitId: number | string) => {
+export const getMajorsByOrgUnit = (orgUnitId: LongId | string) => {
   return http.get<Major[]>(`${BASE}/majors/org-unit/${orgUnitId}`)
 }
 
-export const getMajorDetail = (id: number | string) => {
+export const getMajorDetail = (id: LongId | string) => {
   return http.get<Major>(`${BASE}/majors/${id}`)
 }
 
@@ -56,11 +57,11 @@ export const addMajor = (data: MajorFormData) => {
   return http.post(`${BASE}/majors`, data)
 }
 
-export const updateMajor = (id: number | string, data: MajorFormData) => {
+export const updateMajor = (id: LongId | string, data: MajorFormData) => {
   return http.put(`${BASE}/majors/${id}`, data)
 }
 
-export const deleteMajor = (id: number | string) => {
+export const deleteMajor = (id: LongId | string) => {
   return http.delete(`${BASE}/majors/${id}`)
 }
 
@@ -97,11 +98,11 @@ export const getAllDirections = () => {
   return http.get<MajorDirection[]>(`${BASE}/major-directions/all`)
 }
 
-export const getDirectionsByMajor = (majorId: number | string) => {
+export const getDirectionsByMajor = (majorId: LongId | string) => {
   return http.get<MajorDirection[]>(`${BASE}/major-directions/major/${majorId}`)
 }
 
-export const getMajorDirectionDetail = (id: number | string) => {
+export const getMajorDirectionDetail = (id: LongId | string) => {
   return http.get<MajorDirection>(`${BASE}/major-directions/${id}`)
 }
 
@@ -109,11 +110,11 @@ export const addMajorDirection = (data: MajorDirection) => {
   return http.post<MajorDirection>(`${BASE}/major-directions`, data)
 }
 
-export const updateMajorDirection = (id: number | string, data: MajorDirection) => {
+export const updateMajorDirection = (id: LongId | string, data: MajorDirection) => {
   return http.put(`${BASE}/major-directions/${id}`, data)
 }
 
-export const deleteMajorDirection = (id: number | string) => {
+export const deleteMajorDirection = (id: LongId | string) => {
   return http.delete(`${BASE}/major-directions/${id}`)
 }
 
@@ -140,19 +141,19 @@ export const courseApi = {
 
   listAll: () => http.get<Course[]>(`${BASE}/courses/all`),
 
-  getById: (id: number | string) => http.get<Course>(`${BASE}/courses/${id}`),
+  getById: (id: LongId | string) => http.get<Course>(`${BASE}/courses/${id}`),
 
   getByCode: (code: string) => http.get<Course>(`${BASE}/courses/code/${code}`),
 
   create: (data: Partial<Course>) =>
     http.post<Course>(`${BASE}/courses`, data),
 
-  update: (id: number | string, data: Partial<Course>) =>
+  update: (id: LongId | string, data: Partial<Course>) =>
     http.put<Course>(`${BASE}/courses/${id}`, data),
 
-  delete: (id: number | string) => http.delete(`${BASE}/courses/${id}`),
+  delete: (id: LongId | string) => http.delete(`${BASE}/courses/${id}`),
 
-  updateStatus: (id: number | string, status: number) =>
+  updateStatus: (id: LongId | string, status: number) =>
     http.patch(`${BASE}/courses/${id}/status`, { status }),
 }
 
@@ -162,34 +163,34 @@ export const curriculumPlanApi = {
   list: (params?: CurriculumPlanQueryParams) =>
     http.get<PageResult<CurriculumPlan>>(`${BASE}/curriculum-plans`, { params }),
 
-  getById: (id: number | string) => http.get<CurriculumPlan>(`${BASE}/curriculum-plans/${id}`),
+  getById: (id: LongId | string) => http.get<CurriculumPlan>(`${BASE}/curriculum-plans/${id}`),
 
   create: (data: Partial<CurriculumPlan>) =>
     http.post<CurriculumPlan>(`${BASE}/curriculum-plans`, data),
 
-  update: (id: number | string, data: Partial<CurriculumPlan>) =>
+  update: (id: LongId | string, data: Partial<CurriculumPlan>) =>
     http.put<CurriculumPlan>(`${BASE}/curriculum-plans/${id}`, data),
 
-  delete: (id: number | string) => http.delete(`${BASE}/curriculum-plans/${id}`),
+  delete: (id: LongId | string) => http.delete(`${BASE}/curriculum-plans/${id}`),
 
-  publish: (id: number | string) =>
+  publish: (id: LongId | string) =>
     http.post(`${BASE}/curriculum-plans/${id}/publish`),
 
-  deprecate: (id: number | string) =>
+  deprecate: (id: LongId | string) =>
     http.post(`${BASE}/curriculum-plans/${id}/deprecate`),
 
-  getCourses: (planId: number | string) =>
+  getCourses: (planId: LongId | string) =>
     http.get<PlanCourse[]>(`${BASE}/curriculum-plans/${planId}/courses`),
 
-  addCourse: (planId: number | string, data: Partial<PlanCourse>) =>
+  addCourse: (planId: LongId | string, data: Partial<PlanCourse>) =>
     http.post<PlanCourse>(`${BASE}/curriculum-plans/${planId}/courses`, data),
 
-  updateCourse: (planId: number | string, courseId: number | string, data: Partial<PlanCourse>) =>
+  updateCourse: (planId: LongId | string, courseId: LongId | string, data: Partial<PlanCourse>) =>
     http.put<PlanCourse>(`${BASE}/curriculum-plans/${planId}/courses/${courseId}`, data),
 
-  removeCourse: (planId: number | string, courseId: number | string) =>
+  removeCourse: (planId: LongId | string, courseId: LongId | string) =>
     http.delete(`${BASE}/curriculum-plans/${planId}/courses/${courseId}`),
 
-  copyPlan: (id: number | string) =>
-    http.post<{ id: number; version: number; copiedCourses: number }>(`${BASE}/curriculum-plans/${id}/copy`),
+  copyPlan: (id: LongId | string) =>
+    http.post<{ id: LongId; version: number; copiedCourses: number }>(`${BASE}/curriculum-plans/${id}/copy`),
 }

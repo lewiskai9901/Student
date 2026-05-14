@@ -49,18 +49,19 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { computed } from 'vue'
 import type { DepartmentResponse } from '@/api/organization'
 
 const props = defineProps<{
   department: DepartmentResponse
-  selectedId: number | string | null
+  selectedId: LongId | string | null
   expandedIds: Set<number | string>
 }>()
 
 defineEmits<{
-  select: [id: number]
-  toggle: [id: number]
+  select: [id: LongId]
+  toggle: [id: LongId]
 }>()
 
 const hasChildren = computed(() => {

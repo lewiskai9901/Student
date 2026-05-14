@@ -3,6 +3,7 @@
  * 资产标签打印对话框
  * 显示资产的二维码和条形码，支持打印
  */
+import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Printer, Download } from '@element-plus/icons-vue'
@@ -12,7 +13,7 @@ import { assetCodeApi, type LabelData } from '@/api/assetCode'
 const props = defineProps<{
   modelValue: boolean
   assets: Array<{
-    id: number | string
+    id: LongId | string
     assetCode: string
     assetName: string
     location?: string | null

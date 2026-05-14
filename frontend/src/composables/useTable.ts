@@ -1,3 +1,4 @@
+import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
 import { usePagination } from './usePagination'
 import { useSimpleLoading } from './useLoading'
@@ -34,7 +35,7 @@ export function useTable<T, P = Record<string, unknown>>(options: UseTableOption
   // 选中项
   const selectedRows = ref<T[]>([]) as { value: T[] }
   const selectedIds = computed(() =>
-    selectedRows.value.map((row: T & { id?: number }) => row.id).filter(Boolean) as number[]
+    selectedRows.value.map((row: T & { id?: LongId }) => row.id).filter(Boolean) as number[]
   )
 
   // 是否有选中项

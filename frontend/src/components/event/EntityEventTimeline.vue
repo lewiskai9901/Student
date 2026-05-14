@@ -90,20 +90,21 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, watch } from 'vue'
 import { entityEventApi, eventTypeApi } from '@/api/event'
 import type { EntityEvent, EventType } from '@/types/event'
 
 const props = defineProps<{
   subjectType: 'USER' | 'ORG_UNIT' | 'PLACE'
-  subjectId: number | string
+  subjectId: LongId | string
 }>()
 
 // ==================== State ====================
 const loading = ref(false)
 const events = ref<EntityEvent[]>([])
 const eventTypes = ref<EventType[]>([])
-const expandedId = ref<number | null>(null)
+const expandedId = ref<LongId | null>(null)
 
 const polarityFilter = ref('')
 const categoryFilter = ref('')
@@ -193,7 +194,7 @@ function payloadEntries(evt: EntityEvent): [string, unknown][] {
   return Object.entries(payload as Record<string, unknown>)
 }
 
-function toggleExpand(id: number) {
+function toggleExpand(id: LongId) {
   expandedId.value = expandedId.value === id ? null : id
 }
 
@@ -205,7 +206,7 @@ async function loadEvents() {
   loading.value = true
   try {
     const [evtList, etList] = await Promise.all([
-      entityEventApi.bySubject(props.subjectType, Number(props.subjectId), 200),
+      entityEventApi.bySubject(props.subjectType, props.subjectId, 200),
       eventTypeApi.list(),
     ])
     events.value = (evtList as any) || []

@@ -3,6 +3,7 @@
  *
  * 注意: 响应拦截器已解包 ApiResponse，API 直接返回 data 内容
  */
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 import type {
   Permission,
@@ -43,7 +44,7 @@ export function getPermissionTree(): Promise<Permission[]> {
 /**
  * 获取权限详情
  */
-export function getPermission(id: number | string): Promise<Permission> {
+export function getPermission(id: LongId | string): Promise<Permission> {
   return http.get<Permission>(`${PERMISSION_URL}/${id}`)
 }
 
@@ -57,28 +58,28 @@ export function createPermission(data: CreatePermissionRequest): Promise<Permiss
 /**
  * 更新权限
  */
-export function updatePermission(id: number | string, data: UpdatePermissionRequest): Promise<Permission> {
+export function updatePermission(id: LongId | string, data: UpdatePermissionRequest): Promise<Permission> {
   return http.put<Permission>(`${PERMISSION_URL}/${id}`, data)
 }
 
 /**
  * 删除权限
  */
-export function deletePermission(id: number | string): Promise<void> {
+export function deletePermission(id: LongId | string): Promise<void> {
   return http.delete(`${PERMISSION_URL}/${id}`)
 }
 
 /**
  * 启用权限
  */
-export function enablePermission(id: number | string): Promise<void> {
+export function enablePermission(id: LongId | string): Promise<void> {
   return http.post(`${PERMISSION_URL}/${id}/enable`)
 }
 
 /**
  * 禁用权限
  */
-export function disablePermission(id: number | string): Promise<void> {
+export function disablePermission(id: LongId | string): Promise<void> {
   return http.post(`${PERMISSION_URL}/${id}/disable`)
 }
 
@@ -231,42 +232,42 @@ export function getRoleUsers(id: string | number, params?: PageParams): Promise<
 /**
  * 获取用户的角色
  */
-export function getUserRoles(userId: number | string): Promise<UserRole[]> {
+export function getUserRoles(userId: LongId | string): Promise<UserRole[]> {
   return http.get<UserRole[]>(`${USER_URL}/${userId}/roles`)
 }
 
 /**
  * 分配角色给用户（全局作用域）
  */
-export function assignRoleToUser(userId: number | string, roleId: number | string): Promise<void> {
+export function assignRoleToUser(userId: LongId | string, roleId: LongId | string): Promise<void> {
   return http.post(`${USER_URL}/${userId}/roles/${roleId}`)
 }
 
 /**
  * 分配角色给用户（带作用域）
  */
-export function assignRoleToUserWithScope(userId: number | string, roleId: number | string, data: AssignRoleWithScopeRequest): Promise<void> {
+export function assignRoleToUserWithScope(userId: LongId | string, roleId: LongId | string, data: AssignRoleWithScopeRequest): Promise<void> {
   return http.post(`${USER_URL}/${userId}/roles/${roleId}/scoped`, data)
 }
 
 /**
  * 设置用户角色（批量，带作用域）
  */
-export function setUserRoles(userId: number | string, data: SetUserRolesRequest): Promise<void> {
+export function setUserRoles(userId: LongId | string, data: SetUserRolesRequest): Promise<void> {
   return http.put(`${USER_URL}/${userId}/roles`, data)
 }
 
 /**
  * 移除用户角色（所有作用域）
  */
-export function removeUserRole(userId: number | string, roleId: number | string): Promise<void> {
+export function removeUserRole(userId: LongId | string, roleId: LongId | string): Promise<void> {
   return http.delete(`${USER_URL}/${userId}/roles/${roleId}`)
 }
 
 /**
  * 移除用户角色（指定作用域）
  */
-export function removeUserRoleWithScope(userId: number | string, roleId: number | string, scopeType: string, scopeId: number | string): Promise<void> {
+export function removeUserRoleWithScope(userId: LongId | string, roleId: LongId | string, scopeType: string, scopeId: LongId | string): Promise<void> {
   return http.delete(`${USER_URL}/${userId}/roles/${roleId}`, { params: { scopeType, scopeId } })
 }
 
@@ -460,11 +461,11 @@ export interface SimulateModulePermission {
   moduleCode: string
   scopeCode: string
   /** 兼容 List<Long> 或 List<{scopeId}> 两种格式 */
-  scopeItems?: (number | string | { scopeId?: number | string; id?: number | string })[]
+  scopeItems?: (number | string | { scopeId?: LongId | string; id?: LongId | string })[]
 }
 
 export interface SimulateRequest {
-  userId: number | string
+  userId: LongId | string
   modulePermissions: SimulateModulePermission[]
 }
 

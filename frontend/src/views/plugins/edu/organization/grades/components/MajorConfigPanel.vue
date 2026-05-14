@@ -191,6 +191,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -229,9 +230,9 @@ const isDragOver = ref(false)
 const isPoolDragging = ref(false)
 const showAddDialog = ref(false)
 const showCopyDialog = ref(false)
-const selectedMajorId = ref<number | null>(null)
+const selectedMajorId = ref<LongId | null>(null)
 const selectedDirectionIds = ref<(number | string)[]>([])
-const copySourceGradeId = ref<number | null>(null)
+const copySourceGradeId = ref<LongId | null>(null)
 
 // 按专业分组已配置的方向
 const groupedMajors = computed(() => {
@@ -270,7 +271,7 @@ const selectedMajorDirections = computed(() => {
 })
 
 // 其他年级（用于复制配置）
-const otherGrades = computed<Array<{ id: number | string; gradeName: string }>>(() => {
+const otherGrades = computed<Array<{ id: LongId | string; gradeName: string }>>(() => {
   // 这里需要从父组件传入其他年级列表
   return []
 })

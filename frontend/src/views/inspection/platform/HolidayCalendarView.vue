@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Pencil, Trash2, Star } from 'lucide-vue-next'
@@ -10,8 +11,8 @@ const store = useInspPlatformStore()
 const loading = ref(false)
 const calendars = ref<HolidayCalendar[]>([])
 const showDialog = ref(false)
-const editingId = ref<number | null>(null)
-const filterYear = ref<number | undefined>(undefined)
+const editingId = ref<LongId | null>(null)
+const filterYear = ref<LongId | undefined>(undefined)
 
 const currentYear = new Date().getFullYear()
 const yearOptions = computed(() => {

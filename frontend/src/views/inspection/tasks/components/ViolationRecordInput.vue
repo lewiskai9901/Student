@@ -6,6 +6,7 @@
  * allows adding new records with user search, severity, description, score,
  * and deleting existing records.
  */
+import type { LongId } from '@/types/common'
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Trash2, AlertTriangle } from 'lucide-vue-next'
@@ -16,10 +17,10 @@ import type { SimpleUser } from '@/types/user'
 import { ViolationSeverityConfig, type ViolationSeverity } from '@/types/insp/enums'
 
 const props = withDefaults(defineProps<{
-  submissionId: number
-  detailId: number
-  sectionId?: number | null
-  itemId?: number
+  submissionId: LongId
+  detailId: LongId
+  sectionId?: LongId | null
+  itemId?: LongId
   disabled?: boolean
 }>(), {
   disabled: false,
@@ -78,8 +79,8 @@ async function handleSearch(query: string) {
   searchLoading.value = false
 }
 
-function handleUserSelect(userId: number) {
-  const user = searchResults.value.find(u => Number(u.id) === userId)
+function handleUserSelect(userId: LongId) {
+  const user = searchResults.value.find(u => u.id === userId)
   if (user) {
     form.value.userId = userId
     form.value.userName = user.realName || user.username
@@ -240,9 +241,9 @@ onMounted(() => loadRecords())
           >
             <el-option
               v-for="u in searchResults"
-              :key="Number(u.id)"
+              :key="u.id"
               :label="(u.realName || u.username) + (u.orgUnitName ? ` (${u.orgUnitName})` : '')"
-              :value="Number(u.id)"
+              :value="u.id"
             />
           </el-select>
           <div v-if="form.userName" class="text-xs text-gray-500 mt-0.5">已选: {{ form.userName }}</div>

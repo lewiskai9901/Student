@@ -1,6 +1,7 @@
 /**
  * 检查平台 - 离线同步 API
  */
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 import type { InspSubmission, SubmissionDetail } from '@/types/insp/project'
 
@@ -9,7 +10,7 @@ const BASE = '/inspection/sync'
 // ==================== Types ====================
 
 export interface SyncPullRequest {
-  taskId: number
+  taskId: LongId
   lastSyncAt?: string | null
 }
 
@@ -20,13 +21,13 @@ export interface SyncPullResponse {
 }
 
 export interface SyncPushItem {
-  submissionId: number
+  submissionId: LongId
   formData: string
   clientSyncVersion: number
 }
 
 export interface SyncPushResult {
-  submissionId: number
+  submissionId: LongId
   status: 'SYNCED' | 'CONFLICT' | 'NOT_FOUND' | 'REJECTED'
   serverSyncVersion: number | null
   serverFormData: string | null

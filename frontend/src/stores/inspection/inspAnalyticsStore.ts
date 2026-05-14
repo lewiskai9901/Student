@@ -1,6 +1,7 @@
 /**
  * 检查平台 - 分析报表 Store
  */
+import type { LongId } from '@/types/common'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { DailySummary, PeriodSummary, CorrectiveSummary, InspectorSummary, ItemFrequencySummary, CorrectivePeriodSummary } from '@/types/insp/analytics'
@@ -24,7 +25,7 @@ export const useInspAnalyticsStore = defineStore('inspAnalytics', () => {
 
   // ========== Daily ==========
 
-  async function fetchDailyRanking(projectId: number, date: string) {
+  async function fetchDailyRanking(projectId: LongId, date: string) {
     loading.value = true
     try {
       dailyRanking.value = await inspAnalyticsApi.getDailyRanking(projectId, date)
@@ -33,7 +34,7 @@ export const useInspAnalyticsStore = defineStore('inspAnalytics', () => {
     }
   }
 
-  async function fetchDailySummary(projectId: number, date: string) {
+  async function fetchDailySummary(projectId: LongId, date: string) {
     loading.value = true
     try {
       dailySummary.value = await inspAnalyticsApi.getDailySummary(projectId, date)
@@ -44,7 +45,7 @@ export const useInspAnalyticsStore = defineStore('inspAnalytics', () => {
 
   // ========== Period ==========
 
-  async function fetchPeriodSummary(projectId: number, periodType: PeriodType, periodStart: string) {
+  async function fetchPeriodSummary(projectId: LongId, periodType: PeriodType, periodStart: string) {
     loading.value = true
     try {
       periodSummary.value = await inspAnalyticsApi.getPeriodSummary(projectId, periodType, periodStart)
@@ -55,7 +56,7 @@ export const useInspAnalyticsStore = defineStore('inspAnalytics', () => {
 
   // ========== Trend ==========
 
-  async function fetchTrend(projectId: number, targetType: string, targetId: number, startDate: string, endDate: string) {
+  async function fetchTrend(projectId: LongId, targetType: string, targetId: LongId, startDate: string, endDate: string) {
     loading.value = true
     try {
       trendData.value = await inspAnalyticsApi.getTrend(projectId, targetType, targetId, startDate, endDate)
@@ -66,7 +67,7 @@ export const useInspAnalyticsStore = defineStore('inspAnalytics', () => {
 
   // ========== Comparison ==========
 
-  async function fetchComparison(projectId: number, date: string) {
+  async function fetchComparison(projectId: LongId, date: string) {
     loading.value = true
     try {
       comparisonData.value = await inspAnalyticsApi.getComparison(projectId, date)
@@ -77,7 +78,7 @@ export const useInspAnalyticsStore = defineStore('inspAnalytics', () => {
 
   // ========== Dimension Breakdown ==========
 
-  async function fetchDimensionBreakdown(projectId: number, startDate: string, endDate: string) {
+  async function fetchDimensionBreakdown(projectId: LongId, startDate: string, endDate: string) {
     loading.value = true
     try {
       dimensionBreakdown.value = await inspAnalyticsApi.getDimensionBreakdown(projectId, startDate, endDate)
@@ -88,7 +89,7 @@ export const useInspAnalyticsStore = defineStore('inspAnalytics', () => {
 
   // ========== Inspector Performance ==========
 
-  async function fetchInspectorPerformance(projectId: number, periodType: PeriodType, periodStart: string) {
+  async function fetchInspectorPerformance(projectId: LongId, periodType: PeriodType, periodStart: string) {
     loading.value = true
     try {
       inspectorPerformance.value = await inspAnalyticsApi.getInspectorPerformance(projectId, periodType, periodStart)
@@ -99,7 +100,7 @@ export const useInspAnalyticsStore = defineStore('inspAnalytics', () => {
 
   // ========== Corrective Summary ==========
 
-  async function fetchCorrectiveSummary(projectId: number) {
+  async function fetchCorrectiveSummary(projectId: LongId) {
     loading.value = true
     try {
       correctiveSummary.value = await inspAnalyticsApi.getCorrectiveSummary(projectId)
@@ -110,17 +111,17 @@ export const useInspAnalyticsStore = defineStore('inspAnalytics', () => {
 
   // ========== Rebuild ==========
 
-  async function rebuildDaily(projectId: number, date: string) {
+  async function rebuildDaily(projectId: LongId, date: string) {
     await inspAnalyticsApi.rebuildDaily({ projectId, date })
   }
 
-  async function rebuildPeriod(projectId: number, periodType: PeriodType, periodStart: string) {
+  async function rebuildPeriod(projectId: LongId, periodType: PeriodType, periodStart: string) {
     await inspAnalyticsApi.rebuildPeriod({ projectId, periodType, periodStart })
   }
 
   // ========== Inspector Summary ==========
 
-  async function fetchInspectorSummaries(projectId: number, periodType: PeriodType, periodStart: string) {
+  async function fetchInspectorSummaries(projectId: LongId, periodType: PeriodType, periodStart: string) {
     loading.value = true
     try {
       inspectorSummaries.value = await inspAnalyticsApi.getInspectorSummaries(projectId, periodType, periodStart)
@@ -131,7 +132,7 @@ export const useInspAnalyticsStore = defineStore('inspAnalytics', () => {
 
   // ========== Item Frequency ==========
 
-  async function fetchItemFrequencies(projectId: number, periodType: PeriodType, periodStart: string) {
+  async function fetchItemFrequencies(projectId: LongId, periodType: PeriodType, periodStart: string) {
     loading.value = true
     try {
       itemFrequencies.value = await inspAnalyticsApi.getItemFrequencies(projectId, periodType, periodStart)
@@ -140,7 +141,7 @@ export const useInspAnalyticsStore = defineStore('inspAnalytics', () => {
     }
   }
 
-  async function fetchPareto(projectId: number, periodType: PeriodType, periodStart: string, limit = 20) {
+  async function fetchPareto(projectId: LongId, periodType: PeriodType, periodStart: string, limit = 20) {
     loading.value = true
     try {
       itemFrequencies.value = await inspAnalyticsApi.getPareto(projectId, periodType, periodStart, limit)
@@ -151,7 +152,7 @@ export const useInspAnalyticsStore = defineStore('inspAnalytics', () => {
 
   // ========== Corrective Period Summary ==========
 
-  async function fetchCorrectivePeriodSummary(projectId: number, periodType: PeriodType, periodStart: string) {
+  async function fetchCorrectivePeriodSummary(projectId: LongId, periodType: PeriodType, periodStart: string) {
     loading.value = true
     try {
       correctivePeriodSummary.value = await inspAnalyticsApi.getCorrectivePeriodSummary(projectId, periodType, periodStart)
@@ -160,7 +161,7 @@ export const useInspAnalyticsStore = defineStore('inspAnalytics', () => {
     }
   }
 
-  async function fetchCorrectiveSummaries(projectId: number) {
+  async function fetchCorrectiveSummaries(projectId: LongId) {
     loading.value = true
     try {
       correctiveSummaries.value = await inspAnalyticsApi.getCorrectiveSummaries(projectId)

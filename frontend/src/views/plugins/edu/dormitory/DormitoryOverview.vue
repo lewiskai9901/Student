@@ -469,6 +469,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { universalPlaceApi } from '@/api/universalPlace'
@@ -652,7 +653,7 @@ const loadBuildings = async () => {
   }
 }
 
-const loadRooms = async (buildingId: number | string) => {
+const loadRooms = async (buildingId: LongId | string) => {
   roomLoading.value = true
   rooms.value = []
   floors.value = []
@@ -770,7 +771,7 @@ function getFloorOccupancyRate(floor: PlaceTreeNode): number {
 }
 
 const roomCapacityDistribution = computed(() => {
-  const map = new Map<number, number>()
+  const map = new Map<LongId, number>()
   for (const r of filteredRooms.value) {
     const cap = r.capacity || 0
     if (cap > 0) map.set(cap, (map.get(cap) || 0) + 1)
@@ -794,7 +795,7 @@ const openRoomDetail = async (room: PlaceTreeNode) => {
   await loadOccupants(room.id)
 }
 
-const loadOccupants = async (placeId: number | string) => {
+const loadOccupants = async (placeId: LongId | string) => {
   occupantsLoading.value = true
   try {
     occupants.value = await universalPlaceApi.getOccupants(placeId)

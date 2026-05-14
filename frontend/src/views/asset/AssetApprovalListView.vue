@@ -3,6 +3,7 @@
  * 资产审批列表视图
  * UI优化版本 - 使用设计系统组件
  */
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
@@ -28,8 +29,8 @@ const pageSize = ref(20)
 
 // 筛选条件
 const activeTab = ref<'pending' | 'my' | 'all'>('pending')
-const filterType = ref<number | undefined>()
-const filterStatus = ref<number | undefined>()
+const filterType = ref<LongId | undefined>()
+const filterStatus = ref<LongId | undefined>()
 
 // 详情对话框
 const detailDialogVisible = ref(false)

@@ -303,6 +303,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -326,7 +327,7 @@ const activeTab = ref('records')
 // ==================== Shared State ====================
 const semesters = ref<Semester[]>([])
 const currentSemesterId = ref<number | string>()
-const classOptions = ref<{ id: number; name: string }[]>([])
+const classOptions = ref<{ id: LongId; name: string }[]>([])
 
 // ==================== Warning Records ====================
 const warnings = ref<any[]>([])
