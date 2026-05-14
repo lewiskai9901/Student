@@ -122,7 +122,7 @@ const emit = defineEmits<{
   calculated: []
 }>()
 
-const courseId = ref<number>()
+const courseId = ref<LongId>()
 const courses = ref<Course[]>([])
 const saving = ref(false)
 const calculating = ref(false)

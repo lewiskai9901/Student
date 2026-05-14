@@ -131,7 +131,7 @@ const conflictStatusFilter = ref<LongId | undefined>(undefined)
 const resolveDialogVisible = ref(false)
 const resolveNote = ref('')
 const resolveAction = ref<'resolve' | 'ignore'>('resolve')
-const resolveTargetId = ref<number>()
+const resolveTargetId = ref<LongId>()
 const resolveSaving = ref(false)
 
 async function loadConflicts() {

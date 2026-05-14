@@ -159,7 +159,7 @@
         <select
           class="tm-page-select"
           :value="queryParams.pageSize"
-          @change="queryParams.pageSize = Number(($event.target as HTMLSelectElement).value); loadUserList()"
+          @change="queryParams.pageSize = ($event.target as HTMLSelectElement).value; loadUserList()"
         >
           <option :value="10">10 条/页</option>
           <option :value="20">20 条/页</option>
@@ -455,7 +455,7 @@
                         </label>
                         <select
                           :value="getRoleScope(role.id).scopeId"
-                          @change="updateRoleScopeId(role.id, Number(($event.target as HTMLSelectElement).value))"
+                          @change="updateRoleScopeId(role.id, ($event.target as HTMLSelectElement).value)"
                           class="scope-select"
                           :disabled="getRoleScope(role.id).scopeType !== 'ORG_UNIT'"
                           :style="getRoleScope(role.id).scopeType !== 'ORG_UNIT' ? 'opacity: 0.3' : ''"
@@ -1013,7 +1013,7 @@ const isRoleSelected = (roleId: LongId) => {
 }
 
 const getRoleScope = (roleId: LongId) => {
-  return roleAssignments.value.find(a => String(a.roleId) === String(roleId)) || { scopeType: 'ALL', scopeId: 0, expiresAt: '', reason: '' }
+  return roleAssignments.value.find(a => String(a.roleId) === String(roleId)) || { scopeType: 'ALL', scopeId: '', expiresAt: '', reason: '' }
 }
 
 const toggleRole = (roleId: LongId) => {
@@ -1021,7 +1021,7 @@ const toggleRole = (roleId: LongId) => {
   if (idx > -1) {
     roleAssignments.value.splice(idx, 1)
   } else {
-    roleAssignments.value.push({ roleId: String(roleId), scopeType: 'ALL', scopeId: 0, expiresAt: '', reason: '' })
+    roleAssignments.value.push({ roleId: String(roleId), scopeType: 'ALL', scopeId: '', expiresAt: '', reason: '' })
   }
 }
 
@@ -1029,7 +1029,7 @@ const updateRoleScopeType = (roleId: LongId, scopeType: string) => {
   const a = roleAssignments.value.find(a => String(a.roleId) === String(roleId))
   if (a) {
     a.scopeType = scopeType
-    if (scopeType === 'ALL') a.scopeId = 0
+    if (scopeType === 'ALL') a.scopeId = ''
   }
 }
 
@@ -1069,7 +1069,7 @@ const handleAssignRoles = async (row: UserListItem) => {
         roleName,
         roleCode,
         scopeType: a.scopeType || 'ALL',
-        scopeId: a.scopeId || 0,
+        scopeId: a.scopeId || undefined,
         scopeName,
         expiresAt: a.expiresAt,
         isExpired: a.expiresAt ? a.expiresAt < now : false,
@@ -1081,7 +1081,7 @@ const handleAssignRoles = async (row: UserListItem) => {
     roleAssignments.value = existingArr.map((a: any) => ({
       roleId: String(a.roleId || a.id),
       scopeType: a.scopeType || 'ALL',
-      scopeId: a.scopeId || 0,
+      scopeId: a.scopeId || undefined,
       expiresAt: a.expiresAt ? String(a.expiresAt).substring(0, 10) : undefined,
       reason: a.reason || undefined
     }))
@@ -1093,7 +1093,7 @@ const handleAssignRoles = async (row: UserListItem) => {
 
 // 根据 orgId 查找组织名称
 const findOrgName = (orgId: LongId | string): string => {
-  if (!orgId || orgId === 0) return ''
+  if (!orgId) return ''
   const org = flatOrgUnits.value.find(o => o.id === orgId)
   return org?.label?.trim() || ''
 }
@@ -1117,7 +1117,7 @@ const handleRemoveSingleRole = async (ur: UserRoleDetailed) => {
 const handleRoleSubmit = async () => {
   if (!currentUserId.value) return
   // 校验：ORG_UNIT scope 必须选了具体组织
-  const invalid = roleAssignments.value.find(a => a.scopeType === 'ORG_UNIT' && (!a.scopeId || a.scopeId === 0))
+  const invalid = roleAssignments.value.find(a => a.scopeType === 'ORG_UNIT' && (!a.scopeId))
   if (invalid) {
     const role = allRoles.value.find(r => String(r.id) === String(invalid.roleId))
     ElMessage.error(`角色"${role?.roleName || invalid.roleId}"选择了指定组织但未选择具体组织`)
@@ -1129,7 +1129,7 @@ const handleRoleSubmit = async () => {
     const payload = roleAssignments.value.map(a => ({
       roleId: a.roleId,
       scopeType: a.scopeType || 'ALL',
-      scopeId: a.scopeId || 0,
+      scopeId: a.scopeId || undefined,
       expiresAt: a.expiresAt || undefined,
       reason: a.reason || undefined
     }))

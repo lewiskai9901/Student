@@ -1,3 +1,4 @@
+import type { LongId } from '@/types/common'
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { LoginRequest, LoginResponse } from '@/types/auth'

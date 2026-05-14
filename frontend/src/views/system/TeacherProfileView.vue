@@ -635,7 +635,7 @@ const flatOrgUnits = computed<FlatOrgItem[]>(() => {
 })
 
 // Form
-const editId = ref<number>()
+const editId = ref<LongId>()
 const formData = reactive<Partial<TeacherProfile>>({
   userId: undefined,
   employeeNo: '',
@@ -703,7 +703,7 @@ const detailFields = computed(() => {
 
 // Courses
 const allCourses = ref<{ id: LongId; name: string; code: string }[]>([])
-const courseForm = reactive({ courseId: 0, qualificationLevel: 1, remark: '' })
+const courseForm = reactive({ courseId: '', qualificationLevel: 1, remark: '' })
 
 // Methods
 const statusClass = (status: number) => {

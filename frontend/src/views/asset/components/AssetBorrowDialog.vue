@@ -2,6 +2,7 @@
 /**
  * 资产借用/领用对话框
  */
+import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Box, User, Calendar, Document, Check } from '@element-plus/icons-vue'
@@ -34,9 +35,9 @@ const borrowNo = ref('')
 
 const formData = ref<CreateBorrowRequest>({
   borrowType: BorrowType.BORROW,
-  assetId: 0,
+  assetId: '',
   quantity: 1,
-  borrowerId: 0,
+  borrowerId: '',
   borrowerName: '',
   borrowerDept: '',
   borrowerPhone: '',
@@ -109,7 +110,7 @@ watch(() => props.visible, (val) => {
       borrowType: BorrowType.BORROW,
       assetId: props.asset.id,
       quantity: 1,
-      borrowerId: 0,
+      borrowerId: '',
       borrowerName: '',
       borrowerDept: '',
       borrowerPhone: '',
@@ -147,7 +148,7 @@ function handleUserSelect(users: SelectedUser[]) {
 }
 
 function clearBorrower() {
-  formData.value.borrowerId = 0
+  formData.value.borrowerId = ''
   formData.value.borrowerName = ''
   formData.value.borrowerDept = ''
   formData.value.borrowerPhone = ''

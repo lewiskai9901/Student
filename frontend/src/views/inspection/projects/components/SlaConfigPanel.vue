@@ -49,14 +49,14 @@ const escalationChain = computed(() => props.modelValue.escalationChain ?? [])
 
 const addDialogVisible = ref(false)
 const addForm = ref({
-  userId: 0,
+  userId: '',
   userName: '',
   hours: 24,
 })
 
 function openAddEscalation() {
   const nextLevel = escalationChain.value.length + 1
-  addForm.value = { userId: 0, userName: '', hours: nextLevel * 24 }
+  addForm.value = { userId: '', userName: '', hours: nextLevel * 24 }
   addDialogVisible.value = true
 }
 

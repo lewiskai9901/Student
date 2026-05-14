@@ -109,6 +109,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed } from 'vue'
 import { Search, Loader2, ChevronDown, Plus, Building2, MapPin, User } from 'lucide-vue-next'
 import type { EntityTypeConfig } from '@/api/entityType'

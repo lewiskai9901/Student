@@ -40,7 +40,7 @@ const createMode = ref<'individual' | 'batch'>('individual')
 
 const formData = ref<BatchCreateAssetRequest>({
   assetName: '',
-  categoryId: 0,
+  categoryId: '',
   brand: '',
   model: '',
   unit: '',
@@ -134,7 +134,7 @@ watch(() => props.visible, (val) => {
     createMode.value = 'individual'
     formData.value = {
       assetName: '',
-      categoryId: 0,
+      categoryId: '',
       brand: '',
       model: '',
       unit: '',

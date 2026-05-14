@@ -97,7 +97,7 @@ const emit = defineEmits<{
 const showPublish = ref(false)
 const changeSummary = ref('')
 const publishing = ref(false)
-const expandedVersion = ref<LongId | null>(null)
+const expandedVersion = ref<number | null>(null)
 const snapshotPreview = ref<{
   dimensionCount: number
   gradeBandCount: number

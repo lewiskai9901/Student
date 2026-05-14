@@ -412,7 +412,7 @@ function openAddSchedule() {
 
 function openEditSchedule(plan: InspectionPlan) {
   editingPlan.value = plan
-  let sectionIds: number[] = [], inspectorIds: number[] = []
+  let sectionIds: LongId[] = [], inspectorIds: LongId[] = []
   let weekDays: number[] = [], monthDays: number[] = []
   let timeSlots: Array<{ start: string; end: string }> = []
   try { sectionIds = JSON.parse(plan.sectionIds || '[]') } catch {}
@@ -1161,7 +1161,7 @@ defineExpose({ reload: loadAll })
         <div class="fd-block">
           <label class="fd-lbl">检查分区</label>
           <div class="fd-readonly">
-            {{ sectionMap.get(editingSectionId) || flattenTree(props.sectionTree || []).find(n => n.id === editingSectionId)?.sectionName || '' }}
+            {{ (editingSectionId && sectionMap.get(editingSectionId)) || flattenTree(props.sectionTree || []).find(n => n.id === editingSectionId)?.sectionName || '' }}
             <span v-if="!editingSectionIsLeaf" class="ev-card-type-tag" style="margin-left:6px">分组</span>
           </div>
         </div>

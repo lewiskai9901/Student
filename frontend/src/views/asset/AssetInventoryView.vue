@@ -3,6 +3,7 @@
  * 资产盘点视图
  * UI优化版本 - 使用设计系统组件
  */
+import type { LongId } from '@/types/common'
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'

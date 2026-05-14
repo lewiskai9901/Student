@@ -171,7 +171,7 @@ const profileForm = reactive({
   precisionDigits: 2,
 })
 
-const templateId = ref<number>(0)
+const templateId = ref<LongId>('')
 
 // ==================== Health Checks ====================
 
@@ -247,7 +247,7 @@ const healthChecks = computed<HealthCheck[]>(() => {
 
 onMounted(async () => {
   const id = route.params.id ? route.params.id as string : null
-  const tid = route.query.templateId ? route.query.templateId : null
+  const tid = route.query.templateId ? String(route.query.templateId) : null
 
   try {
     if (id) {
@@ -293,7 +293,7 @@ function goBack() {
 }
 
 async function initProfile() {
-  const tid = templateId.value || (route.query.templateId ? route.query.templateId : 0)
+  const tid = templateId.value || (route.query.templateId ? String(route.query.templateId) : '')
   if (!tid) return
   const p = await store.createProfile(tid)
   profile.value = p

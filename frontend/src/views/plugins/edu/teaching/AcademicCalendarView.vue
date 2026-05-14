@@ -366,7 +366,7 @@ import CalendarActivitiesTab from './calendar/CalendarActivitiesTab.vue'
 
 // ==================== State ====================
 const academicYears = ref<AcademicYear[]>([])
-const currentYearId = ref<number>()
+const currentYearId = ref<LongId>()
 const semesters = ref<Semester[]>([])
 const events = ref<AcademicEvent[]>([])
 const selectedYear = ref<AcademicYear | null>(null)

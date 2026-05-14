@@ -131,7 +131,7 @@ const CLASS_PRESETS: Record<string, any[]> = {
 const loading = ref(false)
 const saving = ref(false)
 const config = ref<any>(null)
-const configId = ref<number>()
+const configId = ref<LongId>()
 const scheduleDays = ref<number[]>([1,2,3,4,5])
 const periods = ref<any[]>([])
 

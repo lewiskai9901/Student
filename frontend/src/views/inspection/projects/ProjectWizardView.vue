@@ -217,7 +217,7 @@ function prevStep() {
 // ========== Step 0: 选择模板 ==========
 function selectSection(section: TemplateSection) {
   if (!isPublished(section)) return
-  form.rootSectionId = section.id as number
+  form.rootSectionId = section.id
   if (!form.projectName) {
     form.projectName = section.sectionName + ' 检查'
   }
@@ -234,7 +234,7 @@ async function handleCreate() {
     // Bug 2: create 时传 rootSectionId, 否则项目和模板脱钩
     const project = await inspProjectApi.create({
       projectName: form.projectName,
-      rootSectionId: form.rootSectionId as number,
+      rootSectionId: form.rootSectionId,
       startDate: form.startDate,
     })
 

@@ -18,7 +18,7 @@ const props = defineProps<{ projectId: LongId }>()
 
 const loading = ref(false)
 const computing = ref(false)
-const lastComputedAt = ref<LongId | null>(null)
+const lastComputedAt = ref<number | null>(null)
 const indicators = ref<Indicator[]>([])
 const gradeSchemes = ref<GradeScheme[]>([])
 const scoreMap = ref<Map<LongId, IndicatorScore[]>>(new Map())

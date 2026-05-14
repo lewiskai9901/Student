@@ -44,7 +44,7 @@ const activeSection = ref('basic') // basic | finance | location
 
 const formData = ref<CreateAssetRequest>({
   assetName: '',
-  categoryId: 0,
+  categoryId: '',
   brand: '',
   model: '',
   unit: '',
@@ -171,7 +171,7 @@ watch(() => props.visible, (val) => {
       // 新建模式
       formData.value = {
         assetName: '',
-        categoryId: 0,
+        categoryId: '',
         brand: '',
         model: '',
         unit: '',

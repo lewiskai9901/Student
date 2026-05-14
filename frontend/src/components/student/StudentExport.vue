@@ -214,7 +214,7 @@ const fileName = ref(`学生列表_${new Date().toLocaleDateString().replace(/\/
 const exporting = ref(false)
 
 // 拖拽相关
-const dragIndex = ref<LongId | null>(null)
+const dragIndex = ref<number | null>(null)
 
 // 默认导出字段配置
 const defaultFields: ExportField[] = [

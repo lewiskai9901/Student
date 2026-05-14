@@ -771,7 +771,8 @@ function getFloorOccupancyRate(floor: PlaceTreeNode): number {
 }
 
 const roomCapacityDistribution = computed(() => {
-  const map = new Map<LongId, number>()
+  // 容量(数字)→ 房间数. Map key 是真 number 不是 ID.
+  const map = new Map<number, number>()
   for (const r of filteredRooms.value) {
     const cap = r.capacity || 0
     if (cap > 0) map.set(cap, (map.get(cap) || 0) + 1)

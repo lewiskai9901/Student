@@ -215,7 +215,7 @@ const dimensionGroups = computed<DimGroup[]>(() => {
   const dimMap = new Map(props.dimensions.map(d => [d.id, d]))
 
   // Group items by dimensionId
-  const groupedItems = new Map<number | null, SimItem[]>()
+  const groupedItems = new Map<LongId | null, SimItem[]>()
   for (const item of scoredItems.value) {
     const key = item.dimensionId
     if (!groupedItems.has(key)) groupedItems.set(key, [])

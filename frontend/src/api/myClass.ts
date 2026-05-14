@@ -3,6 +3,7 @@
  *
  * 注意: 响应拦截器已解包 ApiResponse，API 直接返回 data 内容
  */
+import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'
 import type {
   MyClassItem,

@@ -78,6 +78,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, watch, onMounted } from 'vue'
 import { Loader2, FolderOpen } from 'lucide-vue-next'
 import { getResourceTimeline } from '@/api/activityEvent'

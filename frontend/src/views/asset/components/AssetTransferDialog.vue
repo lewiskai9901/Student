@@ -2,6 +2,7 @@
 /**
  * 资产调拨对话框 - 简洁设计
  */
+import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { User, Close, Location, Right } from '@element-plus/icons-vue'
@@ -54,7 +55,7 @@ function clearResponsible() {
 
 const formData = ref<TransferAssetRequest>({
   locationType: '',
-  locationId: 0,
+  locationId: '',
   locationName: '',
   responsibleUserId: undefined,
   responsibleUserName: '',
@@ -70,7 +71,7 @@ watch(() => props.visible, (val) => {
   if (val) {
     formData.value = {
       locationType: '',
-      locationId: 0,
+      locationId: '',
       locationName: '',
       responsibleUserId: undefined,
       responsibleUserName: '',

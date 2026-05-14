@@ -10,6 +10,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { BarChart3 } from 'lucide-vue-next'
 
 defineProps<{

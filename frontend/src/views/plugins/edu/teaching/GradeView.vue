@@ -65,6 +65,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, onMounted } from 'vue'
 import { useSharedDataStore } from '@/stores/sharedData'
 import type { GradeBatch } from '@/types/teaching'
