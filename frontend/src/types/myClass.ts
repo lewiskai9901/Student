@@ -8,7 +8,7 @@ import type { LongId } from '@/types/common'
  * 我的班级 - 列表项
  */
 export interface MyClassItem {
-  id: string | number
+  id: LongId
   classCode: string
   className: string
   shortName?: string

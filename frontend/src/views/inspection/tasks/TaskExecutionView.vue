@@ -85,7 +85,7 @@ function setViewMode(m: ViewMode) {
 }
 
 // G3: 自动保存指示
-const lastSavedAt = ref<LongId | null>(null)
+const lastSavedAt = ref<number | null>(null)
 const savingActive = ref(false)
 const lastSavedText = computed(() => {
   if (!lastSavedAt.value) return ''
@@ -554,7 +554,7 @@ async function selectTarget(targetId: LongId) {
             try {
               const items = await inspTemplateApi.getItems(leaf.id)
               leafDets = items.map(item => ({
-                id: -(leaf.id * 10000 + item.id || ''),
+                id: `tmp-${leaf.id}-${item.id || 0}`,
                 submissionId: sub.id,
                 templateItemId: item.id,
                 itemCode: item.itemCode || '',
@@ -675,7 +675,8 @@ function isGroupEditable(group: TargetSectionGroup): boolean {
  * Returns the real (persisted) detail with a valid positive ID.
  */
 async function ensureDetailPersisted(detail: SubmissionDetail): Promise<SubmissionDetail> {
-  if (detail.id > 0) return detail // Already persisted
+  // Persisted IDs are real LongIds; placeholders are "tmp-XXX" strings
+  if (detail.id && !String(detail.id).startsWith('tmp-')) return detail
 
   // Create detail via API
   const created = await createDetailApi(detail.submissionId, {
@@ -1085,14 +1086,14 @@ async function loadData() {
           }
         }
         if (rsi) {
-          rootSectionId.value = Number(rsi)
+          rootSectionId.value = String(rsi)
           try {
-            allSections.value = await inspTemplateApi.getSections(Number(rsi))
+            allSections.value = await inspTemplateApi.getSections(String(rsi))
           } catch (e: any) {
             console.warn('getSections 失败，回退到 getChildSections', e)
             // 如果 getSections(tree) 失败，用 getChildSections
             try {
-              allSections.value = await inspTemplateApi.getChildSections(Number(rsi))
+              allSections.value = await inspTemplateApi.getChildSections(String(rsi))
             } catch (e2: any) { console.error('加载分区失败', e2); ElMessage.error('加载检查分区失败') }
           }
           // Build section tree for multi-level rendering
@@ -1193,7 +1194,7 @@ async function handleStartTask() {
 
 // V110: 整改候选确认对话框
 const correctiveDialogVisible = ref(false)
-const correctiveDialogSubmissions = ref<number[]>([])
+const correctiveDialogSubmissions = ref<LongId[]>([])
 
 // V110: 复发警示 - 该 target 在过去 30 天的 itemCode → recurCount 映射
 const recurrenceMap = ref<Record<string, { recurCount: number; lastSeenAt: string | null }>>({})

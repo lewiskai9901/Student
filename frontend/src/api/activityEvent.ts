@@ -13,7 +13,7 @@ export function listActivityEvents(params: ActivityEventQuery) {
 }
 
 /** 获取资源活动时间线 */
-export function getResourceTimeline(resourceType: string, resourceId: string | number, limit = 50) {
+export function getResourceTimeline(resourceType: string, resourceId: LongId, limit = 50) {
   return http.get<ActivityEvent[]>(`${BASE}/resource/${resourceType}/${resourceId}`, {
     params: { limit }
   })

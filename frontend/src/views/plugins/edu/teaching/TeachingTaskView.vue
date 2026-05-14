@@ -415,8 +415,8 @@ const queryParams = reactive<TeachingTaskQueryParams>({
 })
 
 const taskForm = ref<Partial<TeachingTask>>({})
-const assignForm = ref({ teacherIds: [] as (number | string)[], mainTeacherId: undefined as number | string | undefined })
-const batchForm = ref({ semesterId: undefined as number | string | undefined, planId: undefined as number | string | undefined, orgUnitIds: [] as (number | string)[] })
+const assignForm = ref({ teacherIds: [] as LongId[], mainTeacherId: undefined as LongId | undefined })
+const batchForm = ref({ semesterId: undefined as LongId | undefined, planId: undefined as LongId | undefined, orgUnitIds: [] as LongId[] })
 
 // Computed stats
 const statusCounts = computed(() => {

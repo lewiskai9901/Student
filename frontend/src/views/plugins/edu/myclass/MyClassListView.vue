@@ -103,7 +103,7 @@ const fetchClasses = async () => {
   }
 }
 
-const goToClassDetail = (orgUnitId: string | number) => {
+const goToClassDetail = (orgUnitId: LongId) => {
   router.push(`/my-class/${orgUnitId}`)
 }
 

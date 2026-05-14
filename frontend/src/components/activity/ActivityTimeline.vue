@@ -85,7 +85,7 @@ import type { ActivityEvent } from '@/types/activityEvent'
 
 const props = withDefaults(defineProps<{
   resourceType: string
-  resourceId: string | number
+  resourceId: LongId
   limit?: number
   title?: string
 }>(), {

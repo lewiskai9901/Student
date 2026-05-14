@@ -74,7 +74,7 @@ const sharedData = useSharedDataStore()
 const semesters = ref<any[]>([])
 
 const queryParams = reactive({
-  semesterId: undefined as number | string | undefined,
+  semesterId: undefined as LongId | undefined,
   examType: undefined as number | undefined,
   status: undefined as number | undefined,
 })

@@ -708,7 +708,7 @@ import type { PlaceTreeNode, UniversalPlace, UniversalPlaceType, PlaceOccupant, 
 // ========== Data ==========
 const loading = ref(false)
 const treeData = ref<PlaceTreeNode[]>([])
-const selectedNodeId = ref<number | string | null>(null)
+const selectedNodeId = ref<LongId | null>(null)
 const childPlaces = ref<UniversalPlace[]>([])
 const statistics = ref<PlaceStatistics | null>(null)
 const showDropdown = ref(false)

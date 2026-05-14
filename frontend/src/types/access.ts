@@ -16,12 +16,12 @@ export type DataScope = 'ALL' | 'DEPARTMENT_AND_BELOW' | 'DEPARTMENT' | 'CUSTOM'
 
 // 权限
 export interface Permission {
-  id: string | number
+  id: LongId
   permissionCode: string
   permissionName: string
   type: PermissionType
   scope: PermissionScope
-  parentId: string | number | null
+  parentId: LongId | null
   path?: string
   icon?: string
   sortOrder: number
@@ -61,7 +61,7 @@ export interface UpdatePermissionRequest {
 
 // 角色 - roleType 改为自由字符串
 export interface Role {
-  id: string | number
+  id: LongId
   roleCode: string
   roleName: string
   roleType: string
@@ -231,7 +231,7 @@ export interface ModulePermission {
  * 角色数据权限完整配置
  */
 export interface RolePermissionConfig {
-  roleId: string | number
+  roleId: LongId
   roleName: string
   modulePermissions: ModulePermission[]
 }

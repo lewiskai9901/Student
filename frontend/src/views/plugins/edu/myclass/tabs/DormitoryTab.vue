@@ -236,7 +236,7 @@ import StudentBedAssignmentDialog from '@/components/dormitory/StudentBedAssignm
 import { useAuthStore } from '@/stores/auth'
 
 const props = defineProps<{
-  orgUnitId: string | number
+  orgUnitId: LongId
 }>()
 
 const authStore = useAuthStore()

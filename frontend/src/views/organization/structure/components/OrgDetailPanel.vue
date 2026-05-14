@@ -447,12 +447,12 @@ const loadStats = async () => {
 
 // ==================== Members data ====================
 interface OrgMemberItem {
-  userId: string | number
+  userId: LongId
   userName: string
   userTypeCode?: string
   userTypeName?: string
   membershipType?: string
-  primaryOrgUnitId?: string | number
+  primaryOrgUnitId?: LongId
   primaryOrgUnitName?: string
 }
 
@@ -489,7 +489,7 @@ loadUserTypes()
 
 // ==================== Merged members (unified list) ====================
 interface MergedMember {
-  userId: string | number
+  userId: LongId
   userName: string
   userTypeCode?: string
 }
@@ -622,7 +622,7 @@ const showImportDialog = ref(false)
 
 // ==================== User Relation Drawer (Step 3) ====================
 const showUserRelation = ref(false)
-const userRelationUserId = ref<number | string | null>(null)
+const userRelationUserId = ref<LongId | null>(null)
 const userRelationUserName = ref('')
 
 const openUserRelation = (m: MergedMember) => {

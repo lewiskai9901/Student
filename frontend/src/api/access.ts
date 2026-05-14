@@ -90,7 +90,7 @@ export function disablePermission(id: LongId | string): Promise<void> {
  * 注意: id 为 string 类型，因为 Snowflake ID 超过 JavaScript 的 MAX_SAFE_INTEGER
  */
 export interface RoleResponse {
-  id: string | number  // 后端序列化为字符串，防止精度丢失
+  id: LongId  // 后端序列化为字符串，防止精度丢失
   roleCode: string
   roleName: string
   description?: string
@@ -153,7 +153,7 @@ export function getAllRoles(): Promise<RoleResponse[]> {
 /**
  * 获取角色详情
  */
-export function getRole(id: string | number): Promise<RoleResponse> {
+export function getRole(id: LongId): Promise<RoleResponse> {
   return http.get<RoleResponse>(`${ROLE_URL}/${id}`)
 }
 
@@ -167,14 +167,14 @@ export function createRole(data: CreateRoleRequest): Promise<RoleResponse> {
 /**
  * 更新角色
  */
-export function updateRole(id: string | number, data: UpdateRoleRequest): Promise<RoleResponse> {
+export function updateRole(id: LongId, data: UpdateRoleRequest): Promise<RoleResponse> {
   return http.put<RoleResponse>(`${ROLE_URL}/${id}`, data)
 }
 
 /**
  * 删除角色
  */
-export function deleteRole(id: string | number): Promise<void> {
+export function deleteRole(id: LongId): Promise<void> {
   return http.delete(`${ROLE_URL}/${id}`)
 }
 
@@ -188,42 +188,42 @@ export function batchDeleteRoles(ids: (string | number)[]): Promise<void[]> {
 /**
  * 启用角色
  */
-export function enableRole(id: string | number): Promise<void> {
+export function enableRole(id: LongId): Promise<void> {
   return http.post(`${ROLE_URL}/${id}/enable`)
 }
 
 /**
  * 禁用角色
  */
-export function disableRole(id: string | number): Promise<void> {
+export function disableRole(id: LongId): Promise<void> {
   return http.post(`${ROLE_URL}/${id}/disable`)
 }
 
 /**
  * 设置角色权限
  */
-export function setRolePermissions(id: string | number, permissionIds: (string | number)[]): Promise<RoleResponse> {
+export function setRolePermissions(id: LongId, permissionIds: (string | number)[]): Promise<RoleResponse> {
   return http.put<RoleResponse>(`${ROLE_URL}/${id}/permissions`, { permissionIds })
 }
 
 /**
  * 获取角色权限ID列表
  */
-export function getRolePermissionIds(id: string | number): Promise<(string | number)[]> {
+export function getRolePermissionIds(id: LongId): Promise<(string | number)[]> {
   return getRole(id).then(role => role.permissionIds || [])
 }
 
 /**
  * 获取角色权限详情
  */
-export function getRolePermissions(id: string | number): Promise<Permission[]> {
+export function getRolePermissions(id: LongId): Promise<Permission[]> {
   return http.get<Permission[]>(`${ROLE_URL}/${id}/permissions`)
 }
 
 /**
  * 获取角色下的用户
  */
-export function getRoleUsers(id: string | number, params?: PageParams): Promise<PageResponse<UserRole>> {
+export function getRoleUsers(id: LongId, params?: PageParams): Promise<PageResponse<UserRole>> {
   return http.get<PageResponse<UserRole>>(`${ROLE_URL}/${id}/users`, { params })
 }
 
@@ -381,14 +381,14 @@ const DATA_MODULE_URL = '/data-modules'
 /**
  * 获取角色数据权限配置
  */
-export function getRoleDataPermissions(roleId: string | number): Promise<RolePermissionConfig> {
+export function getRoleDataPermissions(roleId: LongId): Promise<RolePermissionConfig> {
   return http.get<RolePermissionConfig>(`${ROLE_URL}/${roleId}/data-permissions`)
 }
 
 /**
  * 保存角色数据权限配置
  */
-export function saveRoleDataPermissions(roleId: string | number, config: RolePermissionConfig): Promise<void> {
+export function saveRoleDataPermissions(roleId: LongId, config: RolePermissionConfig): Promise<void> {
   return http.put(`${ROLE_URL}/${roleId}/data-permissions`, config)
 }
 
@@ -423,7 +423,7 @@ export interface ForRoleModulesResponse {
 }
 
 export function getDataModulesForRole(params: {
-  roleId?: string | number
+  roleId?: LongId
   includeDisabled?: boolean
 }): Promise<ForRoleModulesResponse> {
   return http.get<ForRoleModulesResponse>(`${DATA_MODULE_URL}/for-role`, {

@@ -213,7 +213,7 @@ const autoScheduleDialogVisible = ref(false)
 const scheduling = ref(false)
 const autoProgress = ref(0)
 const autoResult = ref<any>(null)
-const autoScheduleParams = ref({ scheduleId: undefined as number | string | undefined, maxIterations: 1000, populationSize: 100, mutationRate: 0.1 })
+const autoScheduleParams = ref({ scheduleId: undefined as LongId | undefined, maxIterations: 1000, populationSize: 100, mutationRate: 0.1 })
 
 async function loadScheduleList() {
   if (!props.semesterId) return

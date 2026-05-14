@@ -248,7 +248,7 @@ async function loadMeta() {
   }
 }
 
-async function loadModulesForRole(roleId: string | number | null) {
+async function loadModulesForRole(roleId: LongId | null) {
   try {
     const data = await dataPermissionApi.getModulesForRole({
       roleId: roleId ?? undefined,

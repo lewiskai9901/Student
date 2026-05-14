@@ -136,7 +136,7 @@ import type { User } from '@/types/user'
 import DepartmentTreeNode from './DepartmentTreeNode.vue'
 
 interface SelectedUser {
-  id: string | number
+  id: LongId
   realName: string
   orgUnitName?: string
 }
@@ -160,7 +160,7 @@ const emit = defineEmits<{
 // 部门相关
 const departments = ref<DepartmentResponse[]>([])
 const orgUnitSearch = ref('')
-const selectedOrgUnitId = ref<number | string | null>(null)
+const selectedOrgUnitId = ref<LongId | null>(null)
 const expandedDeptIds = ref<Set<number | string>>(new Set())
 const includeChildren = ref(false)
 
@@ -258,7 +258,7 @@ function toggleDepartment(deptId: LongId | string) {
 }
 
 // 检查用户是否已选中
-function isSelected(userId: string | number): boolean {
+function isSelected(userId: LongId): boolean {
   return selectedUsers.value.some(u => String(u.id) === String(userId))
 }
 

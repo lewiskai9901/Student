@@ -84,10 +84,10 @@ export const AppointmentTypeConfig: Record<AppointmentType, { label: string }> =
 
 // 组织成员（基于岗位或归属）
 export interface OrgMember {
-  userPositionId?: string | number
-  userId: string | number
+  userPositionId?: LongId
+  userId: LongId
   userName: string
-  positionId?: string | number
+  positionId?: LongId
   positionName?: string
   appointmentType?: string
   isPrimary: boolean
@@ -98,18 +98,18 @@ export interface OrgMember {
   /** belonging = 归属成员, staff = 岗位人员 */
   membershipType?: string
   /** 用户归属组织ID */
-  primaryOrgUnitId?: string | number
+  primaryOrgUnitId?: LongId
   /** 用户归属组织名称 */
   primaryOrgUnitName?: string
   /** 岗位所在组织ID（递归查询时用） */
-  orgUnitId?: string | number
+  orgUnitId?: LongId
   /** 岗位所在组织名称 */
   orgUnitName?: string
 }
 
 // 组织统计
 export interface OrgStatistics {
-  orgUnitId: string | number
+  orgUnitId: LongId
   belongingCount: number
   staffCount: number
   countByUserType: Record<string, number>

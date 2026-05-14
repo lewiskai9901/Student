@@ -728,7 +728,7 @@ const resetQuery = () => {
 }
 
 // 检查角色ID是否已选中（处理字符串/数字混合比较）
-const isRoleSelected = (id: string | number): boolean => {
+const isRoleSelected = (id: LongId): boolean => {
   return selectedIds.value.some(sid => String(sid) === String(id))
 }
 
@@ -873,11 +873,11 @@ const handleModuleCheck = (module: PermissionModule) => {
 }
 
 // 检查权限ID是否已选中（处理字符串/数字混合比较）
-const isPermissionSelected = (id: string | number): boolean => {
+const isPermissionSelected = (id: LongId): boolean => {
   return selectedPermissionIds.value.some(pid => String(pid) === String(id))
 }
 
-const handlePermissionCheck = (id: string | number) => {
+const handlePermissionCheck = (id: LongId) => {
   const idx = selectedPermissionIds.value.findIndex(pid => String(pid) === String(id))
   idx > -1 ? selectedPermissionIds.value.splice(idx, 1) : selectedPermissionIds.value.push(id)
 }

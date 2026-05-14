@@ -28,7 +28,7 @@ interface EditAction {
   undo: () => Promise<void>
 }
 
-export function useTemplateEditor(rootSectionId: Ref<number>) {
+export function useTemplateEditor(rootSectionId: Ref<LongId>) {
   const sections = ref<TemplateSection[]>([])
   const itemsBySection = ref<Map<string, TemplateItem[]>>(new Map())
   const isDirty = ref(false)
@@ -41,7 +41,7 @@ export function useTemplateEditor(rootSectionId: Ref<number>) {
   const canRedo = computed(() => redoStack.value.length > 0)
 
   const sectionTree = computed(() => {
-    const map = new Map<number | null, TemplateSection[]>()
+    const map = new Map<LongId | null, TemplateSection[]>()
     for (const s of sections.value) {
       const key = s.parentSectionId ?? null
       if (!map.has(key)) map.set(key, [])
@@ -138,7 +138,7 @@ export function useTemplateEditor(rootSectionId: Ref<number>) {
     isDirty.value = true
   }
 
-  async function sortSections(sectionIds: number[]) {
+  async function sortSections(sectionIds: LongId[]) {
     await reorderSections(sectionIds)
     // Reorder local state
     const ordered: TemplateSection[] = []
@@ -229,7 +229,7 @@ export function useTemplateEditor(rootSectionId: Ref<number>) {
     isDirty.value = true
   }
 
-  async function sortItems(sectionId: LongId, itemIds: number[]) {
+  async function sortItems(sectionId: LongId, itemIds: LongId[]) {
     await reorderItems(sectionId, itemIds)
     const items = itemsBySection.value.get(String(sectionId)) || []
     const ordered: TemplateItem[] = []

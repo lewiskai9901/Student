@@ -255,7 +255,7 @@ watch(() => props.selectedTargets, () => {
 
 /* ==================== 拖拽排课 ==================== */
 const dragEntry = ref<any | null>(null)
-const dragRowId = ref<number | string | null>(null)
+const dragRowId = ref<LongId | null>(null)
 const dragOverKey = ref<string | null>(null)
 const dropConflict = ref<string | null>(null)
 

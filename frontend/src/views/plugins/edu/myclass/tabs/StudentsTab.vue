@@ -146,7 +146,7 @@ import type { MyClassStudent } from '@/types/myClass'
 import { StudentStatusConfig } from '@/types/myClass'
 
 const props = defineProps<{
-  orgUnitId: string | number
+  orgUnitId: LongId
 }>()
 
 // 状态

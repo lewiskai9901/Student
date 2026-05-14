@@ -187,7 +187,7 @@ import type { MyClassOverview, RecentCheckRecord } from '@/types/myClass'
 import TrendChart from '../components/TrendChart.vue'
 
 const props = defineProps<{
-  orgUnitId: string | number
+  orgUnitId: LongId
 }>()
 
 const emit = defineEmits<{

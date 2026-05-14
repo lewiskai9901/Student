@@ -116,7 +116,7 @@ import type { EntityTypeConfig } from '@/api/entityType'
 interface Props {
   types: EntityTypeConfig[]
   loading: boolean
-  selectedId: string | number | null
+  selectedId: LongId | null
 }
 
 const props = defineProps<Props>()

@@ -587,7 +587,7 @@ const total = ref(0)
 const allRoles = ref<Role[]>([])
 // 角色分配（含作用域、过期时间、原因）
 interface RoleAssignmentLocal {
-  roleId: string | number
+  roleId: LongId
   scopeType: string
   scopeId: LongId | string
   expiresAt?: string
@@ -598,7 +598,7 @@ const currentUserName = ref('')
 
 // 当前用户的角色详细信息（用于显示表格）
 interface UserRoleDetailed {
-  roleId: string | number
+  roleId: LongId
   roleName: string
   roleCode?: string
   scopeType: string
@@ -1008,15 +1008,15 @@ const handleResetPassword = async (row: UserListItem) => {
 
 // ==================== 角色 scope 辅助方法 ====================
 
-const isRoleSelected = (roleId: string | number) => {
+const isRoleSelected = (roleId: LongId) => {
   return roleAssignments.value.some(a => String(a.roleId) === String(roleId))
 }
 
-const getRoleScope = (roleId: string | number) => {
+const getRoleScope = (roleId: LongId) => {
   return roleAssignments.value.find(a => String(a.roleId) === String(roleId)) || { scopeType: 'ALL', scopeId: 0, expiresAt: '', reason: '' }
 }
 
-const toggleRole = (roleId: string | number) => {
+const toggleRole = (roleId: LongId) => {
   const idx = roleAssignments.value.findIndex(a => String(a.roleId) === String(roleId))
   if (idx > -1) {
     roleAssignments.value.splice(idx, 1)
@@ -1025,7 +1025,7 @@ const toggleRole = (roleId: string | number) => {
   }
 }
 
-const updateRoleScopeType = (roleId: string | number, scopeType: string) => {
+const updateRoleScopeType = (roleId: LongId, scopeType: string) => {
   const a = roleAssignments.value.find(a => String(a.roleId) === String(roleId))
   if (a) {
     a.scopeType = scopeType
@@ -1033,17 +1033,17 @@ const updateRoleScopeType = (roleId: string | number, scopeType: string) => {
   }
 }
 
-const updateRoleScopeId = (roleId: string | number, scopeId: LongId) => {
+const updateRoleScopeId = (roleId: LongId, scopeId: LongId) => {
   const a = roleAssignments.value.find(a => String(a.roleId) === String(roleId))
   if (a) a.scopeId = scopeId
 }
 
-const updateRoleExpiry = (roleId: string | number, expiresAt: string) => {
+const updateRoleExpiry = (roleId: LongId, expiresAt: string) => {
   const a = roleAssignments.value.find(a => String(a.roleId) === String(roleId))
   if (a) a.expiresAt = expiresAt || undefined
 }
 
-const updateRoleReason = (roleId: string | number, reason: string) => {
+const updateRoleReason = (roleId: LongId, reason: string) => {
   const a = roleAssignments.value.find(a => String(a.roleId) === String(roleId))
   if (a) a.reason = reason || undefined
 }

@@ -37,7 +37,7 @@ const formData = ref({
   locationType: '',
   locationId: undefined as LongId | undefined,
   locationName: '',
-  responsibleUserId: undefined as number | string | undefined,
+  responsibleUserId: undefined as LongId | undefined,
   responsibleUserName: '',
   remark: ''
 })
@@ -49,7 +49,7 @@ const rules: FormRules = {
 
 // 处理用户选择
 interface SelectedUser {
-  id: string | number
+  id: LongId
   realName: string
   orgUnitName?: string
 }

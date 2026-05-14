@@ -23,7 +23,7 @@ const route = useRoute()
 const router = useRouter()
 const tplStore = useInspTemplateStore()
 
-const rootSectionId = computed(() => route.params.id ? route.params.id : 0)
+const rootSectionId = computed(() => route.params.id ? String(route.params.id) : '')
 const rootSectionIdRef = ref(rootSectionId.value)
 const editor = useTemplateEditor(rootSectionIdRef)
 

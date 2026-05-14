@@ -117,7 +117,7 @@ export function deleteSection(sectionId: LongId): Promise<void> {
   return http.delete(`${SECTION_BASE}/${sectionId}`)
 }
 
-export function reorderSections(sectionIds: number[]): Promise<void> {
+export function reorderSections(sectionIds: LongId[]): Promise<void> {
   return http.put(`${SECTION_BASE}/reorder`, sectionIds)
 }
 
@@ -143,7 +143,7 @@ export function deleteItem(itemId: LongId): Promise<void> {
   return http.delete(`/inspection/items/${itemId}`)
 }
 
-export function reorderItems(sectionId: LongId, itemIds: number[]): Promise<void> {
+export function reorderItems(sectionId: LongId, itemIds: LongId[]): Promise<void> {
   return http.put(`${SECTION_BASE}/${sectionId}/items/reorder`, itemIds)
 }
 

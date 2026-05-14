@@ -433,7 +433,7 @@ const pageSize = ref(20)
 const query = reactive({
   name: undefined as string | undefined,
   username: undefined as string | undefined,
-  buildingId: undefined as number | string | undefined
+  buildingId: undefined as LongId | undefined
 })
 
 // Building options (dormitory buildings from place tree)
@@ -472,11 +472,11 @@ const paginatedRecords = computed(() => {
 
 const checkInDialogVisible = ref(false)
 const checkInData = reactive({
-  occupantId: undefined as number | string | undefined,
+  occupantId: undefined as LongId | undefined,
   occupantName: '',
   username: '',
-  buildingId: undefined as number | string | undefined,
-  roomId: undefined as number | string | undefined,
+  buildingId: undefined as LongId | undefined,
+  roomId: undefined as LongId | undefined,
   positionNo: '',
   remark: ''
 })
@@ -488,8 +488,8 @@ const availableRooms = ref<PlaceTreeNode[]>([])
 
 const batchCheckInDialogVisible = ref(false)
 const batchData = reactive({
-  buildingId: undefined as number | string | undefined,
-  roomId: undefined as number | string | undefined,
+  buildingId: undefined as LongId | undefined,
+  roomId: undefined as LongId | undefined,
   students: [] as Array<{ id: LongId | string; name: string; studentNo: string }>
 })
 const batchStudentSearch = ref('')
@@ -501,8 +501,8 @@ const batchAvailableRooms = ref<PlaceTreeNode[]>([])
 const transferDialogVisible = ref(false)
 const transferRecord = ref<PlaceOccupantWithPlace | null>(null)
 const transferData = reactive({
-  buildingId: undefined as number | string | undefined,
-  newRoomId: undefined as number | string | undefined,
+  buildingId: undefined as LongId | undefined,
+  newRoomId: undefined as LongId | undefined,
   newPositionNo: '',
   reason: ''
 })

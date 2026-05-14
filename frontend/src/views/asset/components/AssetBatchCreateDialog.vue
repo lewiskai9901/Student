@@ -105,7 +105,7 @@ const flatCategories = computed(() => {
 
 // 处理用户选择
 interface SelectedUser {
-  id: string | number
+  id: LongId
   realName: string
   orgUnitName?: string
 }

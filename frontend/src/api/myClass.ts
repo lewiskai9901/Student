@@ -26,14 +26,14 @@ export function getMyClasses(): Promise<MyClassItem[]> {
 /**
  * 获取班级概览数据
  */
-export function getClassOverview(orgUnitId: string | number): Promise<MyClassOverview> {
+export function getClassOverview(orgUnitId: LongId): Promise<MyClassOverview> {
   return http.get<MyClassOverview>(`${BASE_URL}/classes/${orgUnitId}/overview`)
 }
 
 /**
  * 获取班级学生列表
  */
-export function getClassStudents(orgUnitId: string | number, params?: {
+export function getClassStudents(orgUnitId: LongId, params?: {
   keyword?: string
   status?: string
 }): Promise<MyClassStudent[]> {
@@ -43,7 +43,7 @@ export function getClassStudents(orgUnitId: string | number, params?: {
 /**
  * 获取班级宿舍分布
  */
-export function getClassDormitoryDistribution(orgUnitId: string | number): Promise<DormitoryDistribution[]> {
+export function getClassDormitoryDistribution(orgUnitId: LongId): Promise<DormitoryDistribution[]> {
   console.log('[myClass API] getClassDormitoryDistribution called with orgUnitId:', orgUnitId, 'type:', typeof orgUnitId)
   console.log('[myClass API] Request URL:', `${BASE_URL}/classes/${orgUnitId}/dormitory-distribution`)
   return http.get<DormitoryDistribution[]>(`${BASE_URL}/classes/${orgUnitId}/dormitory-distribution`)

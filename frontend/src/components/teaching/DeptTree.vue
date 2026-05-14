@@ -44,7 +44,7 @@ const emit = defineEmits<{
 }>()
 
 const departments = ref<any[]>([])
-const selectedId = ref<number | string | null>(null)
+const selectedId = ref<LongId | null>(null)
 
 async function loadTree() {
   try {

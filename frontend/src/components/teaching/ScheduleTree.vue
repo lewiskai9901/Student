@@ -90,7 +90,7 @@ const emit = defineEmits<{
 }>()
 
 // 单选状态
-const selectedId = ref<number | string | null>(null)
+const selectedId = ref<LongId | null>(null)
 // 多选状态
 const selectedIdSet = ref<Set<number | string>>(new Set())
 const selectedNodes = ref<Map<number | string, { id: LongId | string; name: string }>>(new Map())

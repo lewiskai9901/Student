@@ -620,7 +620,7 @@ const editDialogVisible = ref(false)
 const importDialogVisible = ref(false)
 const exportDialogVisible = ref(false)
 const editMode = ref<'add' | 'edit'>('add')
-const currentStudentId = ref<number | string | null>(null)
+const currentStudentId = ref<LongId | null>(null)
 
 // 获取状态样式类 - V2 状态值: 0=在读, 1=休学, 2=退学, 3=毕业, 4=转学
 const getStatusClass = (status: StudentStatus) => {

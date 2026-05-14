@@ -11,7 +11,7 @@ export const useAuthStore = defineStore('auth', () => {
   const refreshTokenValue = ref<string>('')
   const user = ref<LoginResponse['userInfo'] | null>(null)
   const permissions = ref<string[]>([])
-  const tenantId = ref<number | string | undefined>(undefined)
+  const tenantId = ref<LongId | undefined>(undefined)
   const tenantName = ref<string | undefined>(undefined)
 
   // 计算属性

@@ -236,7 +236,7 @@ const copySourceGradeId = ref<LongId | null>(null)
 
 // 按专业分组已配置的方向
 const groupedMajors = computed(() => {
-  const groups = new Map<string, { majorId: string | number; majorName: string; directions: any[] }>()
+  const groups = new Map<string, { majorId: LongId; majorName: string; directions: any[] }>()
 
   for (const direction of props.configuredDirections) {
     const majorId = String(direction.majorId)

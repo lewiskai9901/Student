@@ -162,7 +162,7 @@ const props = defineProps<{
     bedCapacity?: number
     occupiedBeds?: number
   } | null
-  orgUnitId?: string | number
+  orgUnitId?: LongId
 }>()
 
 const emit = defineEmits<{

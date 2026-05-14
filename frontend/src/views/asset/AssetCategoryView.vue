@@ -51,7 +51,7 @@ function getCategoryLevel(categoryId: LongId): number {
 const dialogVisible = ref(false)
 const formRef = ref<FormInstance>()
 const isEdit = ref(false)
-const editingId = ref<string | number | null>(null)
+const editingId = ref<LongId | null>(null)
 
 const formData = ref<CreateCategoryRequest>({
   parentId: undefined,
