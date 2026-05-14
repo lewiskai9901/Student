@@ -70,7 +70,8 @@ test.describe('主链路 — 检查员/审核员双视角', () => {
     // 切矩阵
     await page.locator('.mode-btn:has-text("矩阵")').click()
     await page.waitForTimeout(300)
-    await expect(page.locator('.matrix, [class*="matrix"]')).toBeVisible({ timeout: 5000 })
+    // .matrix-wrap / .matrix-scroll / .matrix 多元素 — first() 取最外层
+    await expect(page.locator('.matrix, [class*="matrix"]').first()).toBeVisible({ timeout: 5000 })
 
     // 切聚焦
     await page.locator('.mode-btn:has-text("聚焦")').click()
@@ -98,10 +99,10 @@ test.describe('主链路 — 检查员/审核员双视角', () => {
     // 跳转时带 taskId 应预选
     await page.goto(`/inspection/tasks/review?taskId=${reviewableTask.id}`)
     await expect(page.locator('h1:has-text("检查任务审核工作台")')).toBeVisible({ timeout: 10000 })
-    // 队列侧栏存在
-    await expect(page.locator('.queue-list, [class*="queue"]')).toBeVisible()
+    // 队列侧栏存在 — queue 关键词匹配多, 用更精确 .queue-list
+    await expect(page.locator('.queue-list').first()).toBeVisible()
     // 详情头部 — 关键回归: getSubmissions(taskId) 不破, 详情应渲染
-    await expect(page.locator('.detail-code, [class*="detail-code"]')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('.detail-code, [class*="detail-code"]').first()).toBeVisible({ timeout: 10000 })
   })
 })
 
@@ -155,9 +156,11 @@ test.describe('S+ UI 规范守护 — 检查配置页', () => {
     const cards = page.locator('.cfg-quick__card')
     await expect(cards).toHaveCount(4)
 
-    // 点击 "检查项库" 跳路由
-    await cards.first().click()
-    await page.waitForURL(/library/, { timeout: 5000 })
+    // 点击 "评分方案" (cards[1]) — 它真跳 /inspection/scoring-profiles.
+    // 注: cards[0] "检查项库" 已合并到本页, /inspection/library redirect 回 /config,
+    // 所以不能用 first() 验证导航 — 改用 nth(1).
+    await cards.nth(1).click()
+    await page.waitForURL(/scoring-profiles/, { timeout: 5000 })
   })
 })
 
