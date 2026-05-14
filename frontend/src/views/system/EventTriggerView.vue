@@ -293,6 +293,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from 'lucide-vue-next'
@@ -482,7 +483,7 @@ function getFieldLabel(def: ContextFieldDef | string | unknown, key: string): st
 
 // ==================== Form ====================
 const triggerForm = reactive({
-  id: null as number | null,
+  id: null as LongId | null,
   name: '',
   description: '',
   triggerPointCode: '',

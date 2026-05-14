@@ -477,6 +477,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -521,7 +522,7 @@ const configTypes = [
 
 // 表单数据
 const formData = reactive({
-  id: null as number | null,
+  id: null as LongId | null,
   configKey: '',
   configValue: '',
   configType: 'string',

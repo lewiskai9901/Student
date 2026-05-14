@@ -573,7 +573,7 @@ const roleDialogVisible = ref(false)
 // dataScopeDialogVisible 已移除 - 数据权限现在在角色级别配置
 const isEdit = ref(false)
 const selectedIds = ref<(number | string)[]>([])
-const currentUserId = ref<number | string>()
+const currentUserId = ref<LongId>()
 const usernameError = ref('')
 const phoneError = ref('')
 

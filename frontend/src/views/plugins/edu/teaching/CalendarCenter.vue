@@ -57,6 +57,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, watch } from 'vue'
 import { semesterApi, academicEventApi } from '@/api/calendar'
 import type { CalendarGrid as CalendarGridType } from '@/types/teaching'
@@ -68,8 +69,8 @@ import PeriodSettings from './calendar-new/PeriodSettings.vue'
 import YearSetupDrawer from './calendar-new/YearSetupDrawer.vue'
 
 const semesters = ref<any[]>([])
-const semesterId = ref<number | string>()
-const yearId = ref<number | string>()
+const semesterId = ref<LongId>()
+const yearId = ref<LongId>()
 const tab = ref<'overview' | 'grid' | 'events' | 'periods'>('overview')
 const calendarGrid = ref<CalendarGridType | null>(null)
 

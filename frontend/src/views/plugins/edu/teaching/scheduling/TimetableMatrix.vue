@@ -108,7 +108,7 @@ const props = defineProps<{
   periods?: PeriodConfig[]
   options?: { id: LongId | string; name: string; group?: string }[]
   selectedTargets?: { id: LongId | string; name: string }[]
-  weekDates?: Record<LongId, string>
+  weekDates?: Record<number, string>
   dataSource?: 'schedule' | 'instance'
   /** 启用拖拽排课. 仅在 dataSource='schedule' 且 mode!='classroom' 时建议开启 */
   draggable?: boolean

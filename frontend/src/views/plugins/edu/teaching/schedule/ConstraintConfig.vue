@@ -300,7 +300,7 @@ const props = defineProps<{
 
 // State
 const activeLevel = ref<1 | 2 | 3 | 4>(1)
-const targetId = ref<number | string>('')
+const targetId = ref<LongId>('')
 const constraints = ref<SchedulingConstraint[]>([])
 const loading = ref(false)
 const matrixLoading = ref(false)
@@ -495,7 +495,7 @@ async function handleSave() {
     constraintType: form.value.constraintType, isHard: form.value.isHard, priority: form.value.isHard ? 100 : form.value.priority,
     params: buildParams(), effectiveWeeks: form.value.effectiveWeeks || undefined, enabled: true,
   }
-  if (activeLevel.value > 1 && targetId.value) payload.targetId = targetId.value as number
+  if (activeLevel.value > 1 && targetId.value) payload.targetId = targetId.value
   saving.value = true
   try {
     if (editingConstraint.value) { await constraintApi.update(editingConstraint.value.id, payload); ElMessage.success('约束已更新') }

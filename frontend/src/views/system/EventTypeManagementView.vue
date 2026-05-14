@@ -190,6 +190,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from 'lucide-vue-next'
@@ -388,7 +389,7 @@ async function handleSaveCategory() {
 const typeDialogVisible = ref(false)
 const typeMaskTarget = ref<EventTarget | null>(null)
 const typeForm = reactive({
-  id: null as number | null,
+  id: null as LongId | null,
   categoryCode: '',
   categoryName: '',
   typeCode: '',

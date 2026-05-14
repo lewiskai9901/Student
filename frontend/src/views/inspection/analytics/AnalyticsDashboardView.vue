@@ -185,7 +185,7 @@ const executionStore = useInspExecutionStore()
 const projects = ref<{ id: LongId; projectName: string }[]>([])
 
 const filters = reactive({
-  projectId: null as number | null,
+  projectId: null as LongId | null,
   date: new Date().toISOString().slice(0, 10),
   periodType: 'WEEKLY' as PeriodType,
 })

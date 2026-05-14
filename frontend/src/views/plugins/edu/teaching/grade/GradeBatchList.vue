@@ -176,12 +176,12 @@ const emit = defineEmits<{
 
 // Chip class helpers
 function gradeTypeChipClass(type: number) {
-  const map: Record<LongId, string> = { 1: 'tm-chip-gray', 2: 'tm-chip-amber', 3: 'tm-chip-blue', 4: 'tm-chip-green' }
+  const map: Record<number, string> = { 1: 'tm-chip-gray', 2: 'tm-chip-amber', 3: 'tm-chip-blue', 4: 'tm-chip-green' }
   return map[type] || 'tm-chip-gray'
 }
 
 function statusChipClass(status: number) {
-  const map: Record<LongId, string> = { 0: 'tm-chip-gray', 1: 'tm-chip-amber', 2: 'tm-chip-blue', 3: 'tm-chip-green' }
+  const map: Record<number, string> = { 0: 'tm-chip-gray', 1: 'tm-chip-amber', 2: 'tm-chip-blue', 3: 'tm-chip-green' }
   return map[status] || 'tm-chip-gray'
 }
 

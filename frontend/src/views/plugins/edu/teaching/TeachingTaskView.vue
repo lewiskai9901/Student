@@ -420,7 +420,7 @@ const batchForm = ref({ semesterId: undefined as number | string | undefined, pl
 
 // Computed stats
 const statusCounts = computed(() => {
-  const counts: Record<LongId, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 9: 0 }
+  const counts: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 9: 0 }
   tasks.value.forEach(t => {
     const s = t.taskStatus ?? 0
     if (counts[s] !== undefined) counts[s]++
@@ -629,7 +629,7 @@ const handleDelete = async (task: TeachingTask) => {
 }
 
 const getStatusName = (status: number) => {
-  const names: Record<LongId, string> = {
+  const names: Record<number, string> = {
     0: '待落实',
     1: '已分配教师',
     2: '已排课',
@@ -641,7 +641,7 @@ const getStatusName = (status: number) => {
 }
 
 const statusChipClass = (status: number) => {
-  const map: Record<LongId, string> = {
+  const map: Record<number, string> = {
     0: 'tm-chip-gray',
     1: 'tm-chip-blue',
     2: 'tm-chip-green',
@@ -653,17 +653,17 @@ const statusChipClass = (status: number) => {
 }
 
 const getConsecutiveLabel = (val?: number) => {
-  const map: Record<LongId, string> = { 1: '不连排', 2: '2节连', 3: '3节连', 4: '4节连' }
+  const map: Record<number, string> = { 1: '不连排', 2: '2节连', 3: '3节连', 4: '4节连' }
   return map[val ?? 2] ?? `${val}节`
 }
 
 const getAssessmentLabel = (val?: number) => {
-  const map: Record<LongId, string> = { 1: '考试', 2: '考查', 3: '技能考试', 4: '考试+考查' }
+  const map: Record<number, string> = { 1: '考试', 2: '考查', 3: '技能考试', 4: '考试+考查' }
   return map[val ?? 1] ?? '考试'
 }
 
 const getCourseNatureLabel = (val?: number) => {
-  const map: Record<LongId, string> = { 1: '理论', 2: '实验', 3: '实践', 4: '理论+实验' }
+  const map: Record<number, string> = { 1: '理论', 2: '实验', 3: '实践', 4: '理论+实验' }
   return map[val ?? 1] ?? '未知'
 }
 

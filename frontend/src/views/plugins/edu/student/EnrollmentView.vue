@@ -468,7 +468,7 @@ const plans = ref<any[]>([])
 const planTotal = ref(0)
 const plansLoading = ref(false)
 const planStats = ref<any>(null)
-const planFilter = reactive({ year: currentYear as number | null, majorId: null as number | null, status: null as number | null, page: 1, size: 20 })
+const planFilter = reactive({ year: currentYear as number | null, majorId: null as LongId | null, status: null as number | null, page: 1, size: 20 })
 
 async function loadPlans() {
   plansLoading.value = true
@@ -496,11 +496,11 @@ async function loadPlanStats() {
 const planDialogVisible = ref(false)
 const planSaving = ref(false)
 const planForm = reactive({
-  id: null as number | null,
+  id: null as LongId | null,
   academicYear: currentYear,
-  majorId: null as number | null,
-  majorDirectionId: null as number | null,
-  orgUnitId: null as number | null,
+  majorId: null as LongId | null,
+  majorDirectionId: null as LongId | null,
+  orgUnitId: null as LongId | null,
   plannedCount: 40,
   enrollmentTarget: '初中毕业生',
   remark: '',
@@ -601,7 +601,7 @@ const appsLoading = ref(false)
 const selectedAppIds = ref<number[]>([])
 const appFilter = reactive({
   year: currentYear as number | null,
-  majorId: null as number | null,
+  majorId: null as LongId | null,
   status: null as number | null,
   keyword: '',
   page: 1,
@@ -640,8 +640,8 @@ function appStatusType(s: number): any {
 const appDialogVisible = ref(false)
 const appSaving = ref(false)
 const appForm = reactive({
-  id: null as number | null,
-  planId: null as number | null,
+  id: null as LongId | null,
+  planId: null as LongId | null,
   applicantName: '',
   gender: null as number | null,
   idCard: '',
@@ -649,8 +649,8 @@ const appForm = reactive({
   guardianName: '',
   guardianPhone: '',
   graduateFrom: '',
-  majorId: null as number | null,
-  majorDirectionId: null as number | null,
+  majorId: null as LongId | null,
+  majorDirectionId: null as LongId | null,
   applicationDate: '',
   examScore: null as number | null,
   remark: '',

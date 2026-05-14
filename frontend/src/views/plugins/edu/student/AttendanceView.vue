@@ -688,15 +688,15 @@ function barWidth(count: number): string {
 // ==================== Tab 4: Leave Requests ====================
 const leaveFilter = reactive({
   approvalStatus: null as number | null,
-  orgUnitId: null as number | null,
+  orgUnitId: null as LongId | null,
 })
 const leaveList = ref<any[]>([])
 const leavesLoading = ref(false)
 const showLeaveDialog = ref(false)
 const leaveStudents = ref<any[]>([])
 const leaveForm = reactive({
-  orgUnitId: null as number | null,
-  studentId: null as number | null,
+  orgUnitId: null as LongId | null,
+  studentId: null as LongId | null,
   leaveType: 1,
   dateRange: null as [string, string] | null,
   reason: '',
@@ -787,7 +787,7 @@ async function confirmReject() {
 }
 
 function leaveTypeLabel(type: number) {
-  const map: Record<LongId, string> = { 1: '事假', 2: '病假', 3: '公假' }
+  const map: Record<number, string> = { 1: '事假', 2: '病假', 3: '公假' }
   return map[type] || '未知'
 }
 

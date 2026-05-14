@@ -114,7 +114,7 @@ export const assetDepreciationApi = {
 }
 
 // 折旧方法枚举
-export const DepreciationMethodMap: Record<LongId, string> = {
+export const DepreciationMethodMap: Record<number, string> = {
   0: '不计提折旧',
   1: '直线法',
   2: '双倍余额递减法',

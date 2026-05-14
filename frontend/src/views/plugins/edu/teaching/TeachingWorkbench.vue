@@ -92,6 +92,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, watch, onMounted } from 'vue'
 import { semesterApi } from '@/api/calendar'
 import { http } from '@/utils/request'
@@ -108,7 +109,7 @@ import StepAdjustment from './workbench/StepAdjustment.vue'
 // ==================== State ====================
 
 const semesters = ref<any[]>([])
-const semesterId = ref<number | string>()
+const semesterId = ref<LongId>()
 const currentStep = ref(0)
 const selectedOrg = ref<any>(undefined)
 const treeMode = ref<'class' | 'teacher' | 'classroom'>('class')

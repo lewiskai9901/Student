@@ -522,12 +522,12 @@ const courseRules: FormRules = {
 
 // Status helpers
 const getStatusName = (status: number) => {
-  const names: Record<LongId, string> = { 0: '草稿', 1: '已发布', 2: '已废弃' }
+  const names: Record<number, string> = { 0: '草稿', 1: '已发布', 2: '已废弃' }
   return names[status] || '未知'
 }
 
 const statusBadgeClass = (status: number) => {
-  const classes: Record<LongId, string> = {
+  const classes: Record<number, string> = {
     0: 'bg-gray-100 text-gray-600',
     1: 'bg-emerald-50 text-emerald-600',
     2: 'bg-orange-50 text-orange-600',
@@ -536,7 +536,7 @@ const statusBadgeClass = (status: number) => {
 }
 
 const getCategoryName = (category: number) => {
-  const names: Record<LongId, string> = {
+  const names: Record<number, string> = {
     1: '公共基础',
     2: '专业基础',
     3: '专业核心',
@@ -547,7 +547,7 @@ const getCategoryName = (category: number) => {
 }
 
 const categoryBadgeClass = (category: number) => {
-  const classes: Record<LongId, string> = {
+  const classes: Record<number, string> = {
     1: 'bg-blue-50 text-blue-600',
     2: 'bg-cyan-50 text-cyan-600',
     3: 'bg-purple-50 text-purple-600',

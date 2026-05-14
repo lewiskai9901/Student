@@ -142,6 +142,7 @@
 </template>
 
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useSharedDataStore } from '@/stores/sharedData'
 import { scheduleConfigApi } from '@/api/teaching'
@@ -162,7 +163,7 @@ const sharedData = useSharedDataStore()
 
 // State
 const semesters = ref<any[]>([])
-const semesterId = ref<number | string>()
+const semesterId = ref<LongId>()
 const dailyTab = ref<'timetable' | 'live' | 'adjustment' | 'hours' | 'export'>('timetable')
 const setupVisible = ref(false)
 const currentStep = ref(0)

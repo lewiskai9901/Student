@@ -155,8 +155,8 @@ import { useInspExecutionStore } from '@/stores/inspection/inspExecutionStore'
 const executionStore = useInspExecutionStore()
 const projects = ref<{ id: LongId; projectName: string }[]>([])
 
-const rank = reactive({ projectId: null as number | null, range: null as [string, string] | null })
-const corr = reactive({ projectId: null as number | null, status: null as string | null })
+const rank = reactive({ projectId: null as LongId | null, range: null as [string, string] | null })
+const corr = reactive({ projectId: null as LongId | null, status: null as string | null })
 const audit = reactive({ aggregateType: null as string | null })
 
 const loading = reactive({ rank: false, corr: false, appeal: false, audit: false })

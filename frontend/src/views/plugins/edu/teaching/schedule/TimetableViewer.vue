@@ -259,7 +259,7 @@ const periods = ref<PeriodConfig[]>(DEFAULT_PERIODS)
 const viewType = ref<'class' | 'teacher' | 'classroom' | 'overview'>('class')
 const overviewMode = ref<'class' | 'teacher' | 'classroom'>('class')
 const overviewSelected = ref<{ id: LongId | string; name: string }[]>([])
-const targetId = ref<number | string>()
+const targetId = ref<LongId>()
 
 function setViewType(t: typeof viewType.value) {
   if (viewType.value === t) return
@@ -314,10 +314,10 @@ const currentWeekMonday = computed<Date | null>(() => {
 })
 
 /** weekday(1-7) > "M/D" 字符串 */
-const weekDates = computed<Record<LongId, string>>(() => {
+const weekDates = computed<Record<number, string>>(() => {
   const monday = currentWeekMonday.value
   if (!monday) return {}
-  const out: Record<LongId, string> = {}
+  const out: Record<number, string> = {}
   for (let i = 0; i < 7; i++) {
     const d = new Date(monday)
     d.setDate(monday.getDate() + i)
@@ -347,7 +347,7 @@ const todayWeekday = computed<number>(() => {
   return diffDays + 1
 })
 const entries = ref<ScheduleEntry[]>([])
-const week = ref<LongId | undefined>()
+const week = ref<number | undefined>()
 const weekType = ref(0)
 
 // 统计当前班级/教师/教室的单双周课程数量
@@ -387,7 +387,7 @@ const selectedEntry = ref<ScheduleEntry | null>(null)
 
 // Compare mode state
 const compareMode = ref(false)
-const compareTargetId = ref<number | string>()
+const compareTargetId = ref<LongId>()
 const compareEntries = ref<ScheduleEntry[]>([])
 const compareTargetName = computed(() => {
   const cls = classList.value.find(c => String(c.id) === String(compareTargetId.value))
@@ -429,7 +429,7 @@ async function loadCompareTimetable() {
 // Quick schedule state
 const quickDialogVisible = ref(false)
 const quickSlot = ref({ day: 1, period: 1 })
-const quickTaskId = ref<number | string>()
+const quickTaskId = ref<LongId>()
 const quickSaving = ref(false)
 const availableTasks = ref<any[]>([])
 

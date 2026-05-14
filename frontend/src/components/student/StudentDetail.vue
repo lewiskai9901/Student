@@ -368,7 +368,7 @@ const statusChangesLoading = ref(false)
 
 // 获取状态样式类 - V2: 0=在读, 1=休学, 2=退学, 3=毕业, 4=转学
 const getStatusClass = (status: number) => {
-  const classMap: Record<LongId, string> = {
+  const classMap: Record<number, string> = {
     0: 'bg-green-50 text-green-700',
     1: 'bg-amber-50 text-amber-700',
     2: 'bg-gray-100 text-gray-700',
@@ -394,7 +394,7 @@ const maskIdCard = (idCard?: string) => {
 
 // 住宿状态样式类 (UniversalPlace: 1=在住, 0=已退)
 const getDormitoryStatusClass = (status: number) => {
-  const classMap: Record<LongId, string> = {
+  const classMap: Record<number, string> = {
     1: 'bg-green-50 text-green-700',
     0: 'bg-gray-100 text-gray-700'
   }
@@ -403,7 +403,7 @@ const getDormitoryStatusClass = (status: number) => {
 
 // 住宿状态文本
 const getDormitoryStatusText = (status: number) => {
-  const statusMap: Record<LongId, string> = {
+  const statusMap: Record<number, string> = {
     1: '在住',
     0: '已退宿'
   }

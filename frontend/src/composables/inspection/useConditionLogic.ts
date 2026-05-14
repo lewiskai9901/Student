@@ -61,7 +61,7 @@ export function useConditionLogic() {
             disabled[itemId] = match
             break
           case 'setScore':
-            scores[itemId] = match ? (action.value as number ?? null) : null
+            scores[itemId] = match ? (action.value ?? null) : null
             break
           case 'clearValue':
             if (match) clears.add(itemId)

@@ -109,7 +109,7 @@ const evalSaving = ref(false)
 
 const evalForm = ref({
   evaluationPeriod: 'PER_TASK',
-  gradeSchemeId: null as number | null,
+  gradeSchemeId: null as LongId | null,
   evaluationMethod: 'PERCENT_RANGE',
   sourceAggregation: 'AVG',
   normalization: 'NONE',
@@ -142,7 +142,7 @@ const compositeForm = ref({
   evaluationPeriod: 'WEEKLY',
   compositeAggregation: 'WEIGHTED_AVG',
   missingPolicy: 'SKIP',
-  gradeSchemeId: null as number | null,
+  gradeSchemeId: null as LongId | null,
   evaluationMethod: 'PERCENT_RANGE',
   normalization: 'NONE',
 })
@@ -211,12 +211,12 @@ const inspectorMap = computed(() => {
 })
 
 // ── Plan matching ──
-function parsePlanSectionIds(plan: InspectionPlan): number[] {
-  try { return JSON.parse(plan.sectionIds || '[]') } catch { return [] }
+function parsePlanSectionIds(plan: InspectionPlan): LongId[] {
+  try { return (JSON.parse(plan.sectionIds || '[]') as Array<string | number>).map(String) } catch { return [] }
 }
 
-function parsePlanInspectorIds(plan: InspectionPlan): number[] {
-  try { return JSON.parse(plan.inspectorIds || '[]') } catch { return [] }
+function parsePlanInspectorIds(plan: InspectionPlan): LongId[] {
+  try { return (JSON.parse(plan.inspectorIds || '[]') as Array<string | number>).map(String) } catch { return [] }
 }
 
 // Which plans cover a given section (empty sectionIds = all sections)

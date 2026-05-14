@@ -233,7 +233,7 @@ const defaultFields: ExportField[] = [
   { key: 'studyLength', label: '学制', selected: false },
   { key: 'degreeType', label: '入学前学历', selected: false },
   { key: 'studentStatus', label: '学生状态', selected: true, format: (v) => {
-    const map: Record<LongId, string> = { 1: '在校', 2: '休学', 3: '毕业', 4: '退学' }
+    const map: Record<number, string> = { 1: '在校', 2: '休学', 3: '毕业', 4: '退学' }
     return map[v] || '-'
   }},
   { key: 'admissionDate', label: '入学日期', selected: true },

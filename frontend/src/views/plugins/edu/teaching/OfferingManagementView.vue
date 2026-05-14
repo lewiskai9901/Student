@@ -54,7 +54,7 @@ import TaskFulfillmentTab from './offering/TaskFulfillmentTab.vue'
 const route = useRoute()
 const sharedData = useSharedDataStore()
 const semesters = ref<any[]>([])
-const semesterId = ref<number | string>('')
+const semesterId = ref<LongId>('')
 const activeTab = ref((route.query.tab as string) || 'offerings')
 
 watch(() => route.query.tab, (tab) => {

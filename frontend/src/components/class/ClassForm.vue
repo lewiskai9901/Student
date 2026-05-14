@@ -241,23 +241,23 @@ const flattenTree = (nodes: any[], level = 0): any[] => {
 }
 
 const formData = reactive({
-  gradeId: null as number | null,
-  gradeLevel: null as number | null,  // 后端需要的年级等级
-  majorId: null as number | null,
-  majorDirectionId: null as number | null,
-  classSequence: null as number | null,
+  gradeId: null as LongId | null,
+  gradeLevel: null as number | null,  // 后端需要的年级等级 (1-12 真 number)
+  majorId: null as LongId | null,
+  majorDirectionId: null as LongId | null,
+  classSequence: null as number | null,  // 班级序号 (1, 2, 3 真 number)
   className: '',
   classCode: '',  // 后端必填: 班级编码
-  orgUnitId: null as number | null,
-  enrollmentYear: null as number | null,
-  graduationYear: null as number | null,  // 后端必填: 毕业年份
+  orgUnitId: null as LongId | null,
+  enrollmentYear: null as number | null,  // 入学年 (年份真 number)
+  graduationYear: null as number | null,  // 毕业年 (年份真 number)
   classType: 1 as number,  // 后端必填: 班级类型 1普通班 2重点班 3实验班
-  teacherId: null as number | null,  // 班主任ID
-  assistantTeacherId: null as number | null,  // 副班主任ID
+  teacherId: null as LongId | null,  // 班主任ID
+  assistantTeacherId: null as LongId | null,  // 副班主任ID
   classroomLocation: '',  // 教室位置
   educationSystem: '',
   skillLevel: '',
-  duration: null as number | null,
+  duration: null as number | null,  // 学制时长 (年数真 number)
   status: 1  // 后端: 1启用 0禁用
 })
 

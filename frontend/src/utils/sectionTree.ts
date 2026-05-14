@@ -19,7 +19,7 @@ export interface SectionTreeNode {
  * @param sections 扁平分区列表（从 getSections API 返回）
  * @param rootId 根分区 ID（不包含在树中，其直接子分区为树的根节点）
  */
-export function buildSectionTree(sections: Array<any>, rootId: LongId | string): SectionTreeNode[] {
+export function buildSectionTree(sections: Array<any>, rootId: LongId | string | number): SectionTreeNode[] {
   const rid = rootId
   const map = new Map<LongId, SectionTreeNode>()
 
@@ -85,7 +85,7 @@ export function getLeafSections(nodes: SectionTreeNode[]): SectionTreeNode[] {
 /**
  * 获取节点深度
  */
-export function getDepth(nodes: SectionTreeNode[], targetId: LongId): number {
+export function getDepth(nodes: SectionTreeNode[], targetId: LongId | number): number {
   const find = (list: SectionTreeNode[], depth: number): number => {
     for (const n of list) {
       if (n.id === targetId) return depth

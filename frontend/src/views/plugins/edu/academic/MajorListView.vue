@@ -914,7 +914,7 @@ const newCertName = ref('')
 
 const directionForm = reactive({
   id: null as number | undefined | null,
-  majorId: null as number | null,
+  majorId: null as LongId | null,
   directionCode: '',
   directionName: '',
   trainingMode: 'direct' as 'direct' | 'segmented',

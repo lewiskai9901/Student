@@ -17,6 +17,17 @@ use warnings;
 my $file = $ARGV[0];
 die "Usage: perl bulk-longid-fixup.pl <file>" unless $file;
 
+# 排除已知的 enum-helper 文件 (key 是 number 字面量, 不是 ID)
+my @excluded = qw(
+  src/views/plugins/edu/teaching/exam/examUtils.ts
+  src/views/plugins/edu/teaching/grade/gradeHelpers.ts
+);
+for my $ex (@excluded) {
+  if (index($file, $ex) != -1) {
+    exit 0;  # skip
+  }
+}
+
 local $/;
 open my $fh, '<', $file or die "open $file: $!";
 my $content = <$fh>;
@@ -46,6 +57,9 @@ $content =~ s/\bNumber\((id|\w+Id)\s*\|\|\s*0\)/$1 || ''/g;
 # Pattern 6: ref<number | null>(null) / ref<number | undefined>(undefined) — many are IDs in this codebase
 $content =~ s/\bref<number\s*\|\s*null>/ref<LongId | null>/g;
 $content =~ s/\bref<number\s*\|\s*undefined>/ref<LongId | undefined>/g;
+
+# Pattern 6b: `(xxxId|id): null as number | null` in reactive() literals
+$content =~ s/((\w+Id|id):\s*null\s+as\s+)number(\s*\|\s*null)/$1LongId$3/g;
 
 # Pattern 7: `as number` 类型断言 — when applied to an ID context, should be LongId
 # 但这个很难区分真 number 与 ID. 保守: 仅当上下文有 .id / xxxId 时改.

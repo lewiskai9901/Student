@@ -573,7 +573,7 @@ const dialogVisible = ref(false)
 const permissionDialogVisible = ref(false)
 const isEdit = ref(false)
 const selectedIds = ref<(string | number)[]>([])
-const currentRoleId = ref<string | number>()
+const currentRoleId = ref<LongId>()
 const expandedModules = ref<string[]>([])
 
 const router = useRouter()

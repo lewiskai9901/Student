@@ -95,7 +95,7 @@ const form = ref({
   itemName: '',
   description: '',
   itemType: 'TEXT' as ItemType,
-  responseSetId: null as number | null,
+  responseSetId: null as LongId | null,
   helpContent: '',
   validationRules: '',
   scoringConfig: '',

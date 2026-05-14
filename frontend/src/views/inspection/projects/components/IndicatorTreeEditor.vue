@@ -36,10 +36,10 @@ const dialogParentId = ref<LongId | null>(null)
 const form = ref({
   name: '',
   evaluationPeriod: 'PER_TASK',
-  gradeSchemeId: null as number | null,
+  gradeSchemeId: null as LongId | null,
   evaluationMethod: 'PERCENT_RANGE',
   gradeThresholds: null as string | null,
-  sourceSectionId: null as number | null,
+  sourceSectionId: null as LongId | null,
   sourceAggregation: 'AVG',
   compositeAggregation: 'WEIGHTED_AVG',
   missingPolicy: 'SKIP',

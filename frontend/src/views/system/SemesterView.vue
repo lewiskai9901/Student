@@ -386,7 +386,7 @@ const loading = ref(false)
 const submitLoading = ref(false)
 const dialogVisible = ref(false)
 const isEdit = ref(false)
-const currentSemesterId = ref<number | string>()
+const currentSemesterId = ref<LongId>()
 
 const semesterList = ref<Semester[]>([])
 const currentSemester = ref<Semester | null>(null)

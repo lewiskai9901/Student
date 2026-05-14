@@ -213,7 +213,7 @@ const formData = reactive({
   unitName: '',
   unitCode: '',
   unitType: '',
-  parentId: null as number | null,
+  parentId: null as LongId | null,
   sortOrder: 0,
   attributes: {} as Record<string, any>,
 })

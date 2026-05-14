@@ -252,11 +252,11 @@ const membersDialogVisible = ref(false)
 const membersLoading = ref(false)
 const selectedTC = ref<TeachingClass | null>(null)
 const currentMembers = ref<TeachingClassMember[]>([])
-const newMemberClassId = ref<number | string>('')
+const newMemberClassId = ref<LongId>('')
 
 // Helpers
 function getClassTypeName(type: number) {
-  const map: Record<LongId, string> = { 1: '普通', 2: '合堂', 3: '走班' }
+  const map: Record<number, string> = { 1: '普通', 2: '合堂', 3: '走班' }
   return map[type] || '-'
 }
 

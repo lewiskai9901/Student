@@ -96,7 +96,7 @@ interface Props {
   entries: ScheduleEntry[]
   periods?: PeriodConfig[]
   weekdays?: { value: number; label: string }[]
-  weekDates?: Record<LongId, string>  // dayOfWeek > date string (e.g. "9/1")
+  weekDates?: Record<number, string>  // dayOfWeek > date string (e.g. "9/1")
   todayWeekday?: number  // 1-7, 0=不在显示周内
   editable?: boolean
   constraintMatrix?: any[][]

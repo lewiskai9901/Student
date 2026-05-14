@@ -18,7 +18,7 @@ const props = defineProps<{ projectId: LongId }>()
 
 const loading = ref(false)
 const computing = ref(false)
-const lastComputedAt = ref<LongId | null>(null)
+const lastComputedAt = ref<number | null>(null)
 const indicators = ref<Indicator[]>([])
 const gradeSchemes = ref<GradeScheme[]>([])
 const scoreMap = ref<Map<LongId, IndicatorScore[]>>(new Map())
@@ -49,11 +49,11 @@ const periodRange = computed(() => {
 
 // ═══ Derived data ═══
 const rootIndicators = computed(() => indicators.value.filter(i => !i.parentIndicatorId).sort((a, b) => a.sortOrder - b.sortOrder))
-function getChildren(pid: number) { return indicators.value.filter(i => i.parentIndicatorId === pid).sort((a, b) => a.sortOrder - b.sortOrder) }
+function getChildren(pid: LongId) { return indicators.value.filter(i => i.parentIndicatorId === pid).sort((a, b) => a.sortOrder - b.sortOrder) }
 function schemeName(id: LongId | null) { return id ? (gradeSchemes.value.find(s => s.id === id)?.displayName || '') : '' }
 
 // All sections from indicators
-const allSections = computed(() => indicators.value.filter(i => i.sourceSectionId).map(i => ({ id: i.sourceSectionId, name: i.name })))
+const allSections = computed(() => indicators.value.filter(i => i.sourceSectionId).map(i => ({ id: i.sourceSectionId as LongId, name: i.name })))
 // All inspectors from tasks
 const allInspectors = computed(() => {
   const m = new Map<string, string>()
@@ -102,6 +102,7 @@ const targetRows = computed<TargetRow[]>(() => {
     if (score < row.min) row.min = score
     // Section breakdown
     const secId = s.sectionId
+    if (!secId) continue  // skip null sections
     if (!row.sections.has(secId)) row.sections.set(secId, { score: 0, count: 0 })
     const sec = row.sections.get(secId)!; sec.score += score; sec.count++
   }
@@ -123,6 +124,7 @@ const sectionStats = computed<SectionStat[]>(() => {
   const targetSets = new Map<LongId, Set<LongId>>()
   for (const s of filteredSubmissions.value) {
     const secId = s.sectionId
+    if (!secId) continue  // skip submissions without a section (Long→string types: LongId | null)
     const secName = allSections.value.find(x => x.id === secId)?.name || `分区#${secId}`
     if (!map.has(secId)) { map.set(secId, { sectionId: secId, sectionName: secName, totalScore: 0, count: 0, avg: 0, max: -Infinity, min: Infinity, targets: 0 }); targetSets.set(secId, new Set()) }
     const stat = map.get(secId)!; const score = s.finalScore!

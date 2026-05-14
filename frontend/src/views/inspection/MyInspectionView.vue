@@ -33,7 +33,7 @@ const adhocDialog = ref(false)
 const adhocSubmitting = ref(false)
 const adhocLoadingProjects = ref(false)
 const adhocProjects = ref<{ id: LongId; projectName: string }[]>([])
-const adhocForm = reactive({ projectId: null as number | null, reason: '' })
+const adhocForm = reactive({ projectId: null as LongId | null, reason: '' })
 
 async function loadAdhocProjects() {
   adhocLoadingProjects.value = true

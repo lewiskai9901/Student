@@ -396,9 +396,9 @@ import { CONSTRAINT_LEVELS, CONSTRAINT_TYPES, WEEKDAYS, DEFAULT_PERIODS } from '
 // ==================== State ====================
 
 const semesters = ref<Semester[]>([])
-const semesterId = ref<number | string>('')
+const semesterId = ref<LongId>('')
 const activeLevel = ref<1 | 2 | 3 | 4>(1)
-const targetId = ref<number | string>('')
+const targetId = ref<LongId>('')
 const constraints = ref<SchedulingConstraint[]>([])
 const loading = ref(false)
 const matrixLoading = ref(false)
@@ -787,7 +787,7 @@ async function handleSave() {
   }
 
   const payload: Partial<SchedulingConstraint> = {
-    semesterId: semesterId.value as number,
+    semesterId: semesterId.value,
     constraintName: form.value.constraintName,
     constraintLevel: activeLevel.value,
     constraintType: form.value.constraintType,
@@ -798,7 +798,7 @@ async function handleSave() {
     enabled: true,
   }
   if (activeLevel.value > 1 && targetId.value) {
-    payload.targetId = targetId.value as number
+    payload.targetId = targetId.value
   }
 
   saving.value = true

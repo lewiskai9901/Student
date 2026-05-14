@@ -84,7 +84,7 @@ const props = defineProps<{
 // ==================== State ====================
 
 const classes = ref<SchoolClass[]>([])
-const assignClassId = ref<number | string>('')
+const assignClassId = ref<LongId>('')
 const assignments = ref<ClassCourseAssignment[]>([])
 const assignmentLoading = ref(false)
 

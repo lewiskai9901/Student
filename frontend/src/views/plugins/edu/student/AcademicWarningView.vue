@@ -326,7 +326,7 @@ const activeTab = ref('records')
 
 // ==================== Shared State ====================
 const semesters = ref<Semester[]>([])
-const currentSemesterId = ref<number | string>()
+const currentSemesterId = ref<LongId>()
 const classOptions = ref<{ id: LongId; name: string }[]>([])
 
 // ==================== Warning Records ====================
@@ -338,7 +338,7 @@ const filters = reactive({
   warningLevel: undefined as number | undefined,
   status: undefined as number | undefined,
   warningType: undefined as string | undefined,
-  orgUnitId: undefined as number | undefined,
+  orgUnitId: undefined as LongId | undefined,
   pageNum: 1,
   pageSize: 20,
 })
@@ -353,7 +353,7 @@ const ruleFormRef = ref<FormInstance>()
 
 const defaultConditionParams = () => ({ minFailCount: 2, minAttendanceRate: 80, expectedCredits: 30, actualCreditsBelow: 20 })
 const ruleForm = reactive({
-  id: undefined as number | undefined,
+  id: undefined as LongId | undefined,
   ruleName: '',
   ruleType: 'GRADE_FAIL',
   warningLevel: 1 as 1 | 2 | 3,
@@ -371,7 +371,7 @@ const noteDialogVisible = ref(false)
 const noteDialogTitle = ref('')
 const noteText = ref('')
 const noteSaving = ref(false)
-let noteTargetId = 0
+let noteTargetId: LongId = ''
 let noteAction: 'intervene' | 'dismiss' = 'intervene'
 
 // ==================== Helpers ====================
@@ -443,7 +443,7 @@ const loadWarnings = async () => {
   try {
     const res: any = await getWarnings({
       ...filters,
-      semesterId: currentSemesterId.value as number,
+      semesterId: currentSemesterId.value,
     })
     const data = res.data || res
     warnings.value = data.records || []
@@ -457,7 +457,7 @@ const loadWarnings = async () => {
 
 const loadStats = async () => {
   try {
-    const res: any = await getStatistics(currentSemesterId.value as number)
+    const res: any = await getStatistics(currentSemesterId.value)
     const data = res.data || res
     const byLevel = data.byLevel || []
     const byStatus = data.byStatus || []
@@ -503,7 +503,7 @@ const handleScan = async () => {
   }
   scanning.value = true
   try {
-    const res: any = await scanWarnings(currentSemesterId.value as number)
+    const res: any = await scanWarnings(currentSemesterId.value)
     const data = res.data || res
     ElMessage.success(`扫描完成，共扫描${data.rulesScanned}条规则，生成${data.totalWarnings}条预警`)
     loadWarnings()

@@ -33,7 +33,7 @@ import { scheduleApi } from '@/api/teaching'
 const props = defineProps<{ semesterId: LongId | string | undefined }>()
 
 const dimension = ref<'class' | 'teacher'>('class')
-const targetId = ref<number | string>('')
+const targetId = ref<LongId>('')
 const exporting = ref(false)
 const classList = ref<{ id: LongId; name: string }[]>([])
 const teacherList = ref<{ id: LongId; name: string }[]>([])

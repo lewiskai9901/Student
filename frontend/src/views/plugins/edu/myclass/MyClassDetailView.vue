@@ -84,7 +84,7 @@ const router = useRouter()
 
 const activeTab = ref('overview')
 const allClasses = ref<MyClassItem[]>([])
-const currentClassId = ref<string | number>('')
+const currentClassId = ref<LongId>('')
 
 const currentClass = computed(() =>
   allClasses.value.find(c => String(c.id) === String(currentClassId.value))

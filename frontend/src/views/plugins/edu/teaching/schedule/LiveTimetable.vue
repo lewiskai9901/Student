@@ -162,7 +162,7 @@ import { DEFAULT_PERIODS } from '@/types/teaching'
 const props = defineProps<{ semesterId: LongId | string | undefined }>()
 
 const viewType = ref<'class' | 'teacher' | 'classroom'>('class')
-const targetId = ref<number | string>()
+const targetId = ref<LongId>()
 const instances = ref<any[]>([])
 const weeks = ref<any[]>([]) // academic_weeks
 const events = ref<any[]>([]) // academic_events

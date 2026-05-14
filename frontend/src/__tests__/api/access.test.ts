@@ -44,7 +44,7 @@ describe('access API', () => {
 
     it('getPermission GET /permissions/{id}', async () => {
       vi.mocked(http.get).mockResolvedValueOnce({} as any)
-      await accessApi.getPermission(42)
+      await accessApi.getPermission('42')
       expect(http.get).toHaveBeenCalledWith('/permissions/42')
     })
 
@@ -62,15 +62,15 @@ describe('access API', () => {
 
     it('deletePermission DELETE', async () => {
       vi.mocked(http.delete).mockResolvedValueOnce(undefined)
-      await accessApi.deletePermission(7)
+      await accessApi.deletePermission('7')
       expect(http.delete).toHaveBeenCalledWith('/permissions/7')
     })
 
     it('enable / disable POST', async () => {
       vi.mocked(http.post).mockResolvedValue(undefined)
-      await accessApi.enablePermission(1)
+      await accessApi.enablePermission('1')
       expect(http.post).toHaveBeenLastCalledWith('/permissions/1/enable')
-      await accessApi.disablePermission(2)
+      await accessApi.disablePermission('2')
       expect(http.post).toHaveBeenLastCalledWith('/permissions/2/disable')
     })
   })
@@ -140,19 +140,19 @@ describe('access API', () => {
   describe('用户角色 API', () => {
     it('getUserRoles GET /users/{id}/roles', async () => {
       vi.mocked(http.get).mockResolvedValueOnce([])
-      await accessApi.getUserRoles(7)
+      await accessApi.getUserRoles('7')
       expect(http.get).toHaveBeenCalledWith('/users/7/roles')
     })
 
     it('assignRoleToUser POST URL 拼接', async () => {
       vi.mocked(http.post).mockResolvedValueOnce(undefined)
-      await accessApi.assignRoleToUser(1, 2)
+      await accessApi.assignRoleToUser('1', '2')
       expect(http.post).toHaveBeenCalledWith('/users/1/roles/2')
     })
 
     it('removeUserRoleWithScope 携带 scopeType / scopeId', async () => {
       vi.mocked(http.delete).mockResolvedValueOnce(undefined)
-      await accessApi.removeUserRoleWithScope(1, 2, 'ORG_UNIT', 99)
+      await accessApi.removeUserRoleWithScope('1', '2', 'ORG_UNIT', '99')
       expect(http.delete).toHaveBeenCalledWith('/users/1/roles/2', {
         params: { scopeType: 'ORG_UNIT', scopeId: 99 },
       })
