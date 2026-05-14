@@ -603,7 +603,7 @@ const queryParams = reactive({
   pageNum: 1,
   pageSize: 20,
   keyword: undefined as string | undefined,
-  orgUnitId: undefined as number | undefined,
+  orgUnitId: undefined as LongId | undefined,
   title: undefined as string | undefined,
   status: undefined as number | undefined
 })
@@ -707,7 +707,7 @@ const courseForm = reactive({ courseId: 0, qualificationLevel: 1, remark: '' })
 
 // Methods
 const statusClass = (status: number) => {
-  const map: Record<number, string> = {
+  const map: Record<LongId, string> = {
     1: 'rounded bg-green-50 px-1.5 py-0.5 text-xs text-green-600',
     2: 'rounded bg-red-50 px-1.5 py-0.5 text-xs text-red-600',
     3: 'rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500',

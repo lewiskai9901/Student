@@ -123,7 +123,7 @@ const filteredActivities = computed(() => {
 })
 
 const getActivityTypeName = (type: number) => {
-  const map: Record<number, string> = {
+  const map: Record<LongId, string> = {
     1: '军训', 2: '入学教育', 3: '专业实习', 4: '社会实践',
     5: '毕业实习', 6: '毕业设计', 7: '毕业答辩', 8: '毕业典礼',
     9: '就业指导', 10: '其他'

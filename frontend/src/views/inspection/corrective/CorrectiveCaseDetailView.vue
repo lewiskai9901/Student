@@ -21,8 +21,8 @@ const correctionDialogVisible = ref(false)
 const verifyDialogVisible = ref(false)
 const rejectDialogVisible = ref(false)
 
-const assignForm = ref({ assigneeId: undefined as number | undefined, assigneeName: '' })
-const correctionForm = ref({ correctionNote: '', evidenceIds: [] as number[] })
+const assignForm = ref({ assigneeId: undefined as LongId | undefined, assigneeName: '' })
+const correctionForm = ref({ correctionNote: '', evidenceIds: [] as LongId[] })
 const verifyForm = ref({ verifierName: '', note: '' })
 const rejectForm = ref({ verifierName: '', reason: '' })
 

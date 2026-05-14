@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { UserMinus, UserCheck } from 'lucide-vue-next'
@@ -6,10 +7,10 @@ import { reassignDepartedUser } from '@/api/inspection/correctiveCase'
 import { reassignDepartedInspector } from '@/api/inspection/task'
 
 const form = ref({
-  userId: undefined as number | undefined,
+  userId: undefined as LongId | undefined,
   reason: '',
   scope: 'BOTH' as 'BOTH' | 'CORRECTIVE' | 'TASK',
-  fallbackUserId: undefined as number | undefined,
+  fallbackUserId: undefined as LongId | undefined,
   fallbackUserName: '',
 })
 

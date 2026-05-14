@@ -238,7 +238,7 @@ const tcErrors = reactive({ className: false, courseId: false })
 
 const tcForm = ref({
   className: '',
-  courseId: undefined as number | undefined,
+  courseId: undefined as LongId | undefined,
   classType: 1 as 1 | 2 | 3,
   weeklyHours: 2,
   startWeek: 1,
@@ -256,7 +256,7 @@ const newMemberClassId = ref<LongId>('')
 
 // Helpers
 function getClassTypeName(type: number) {
-  const map: Record<number, string> = { 1: '普通', 2: '合堂', 3: '走班' }
+  const map: Record<LongId, string> = { 1: '普通', 2: '合堂', 3: '走班' }
   return map[type] || '-'
 }
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@/types/common'
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search } from 'lucide-vue-next'
@@ -12,7 +13,7 @@ const entries = ref<AuditTrailEntry[]>([])
 
 const filters = reactive({
   resourceType: '' as string,
-  userId: undefined as number | undefined,
+  userId: undefined as LongId | undefined,
   dateRange: null as [string, string] | null,
 })
 

@@ -587,11 +587,11 @@ const editWeek = (_week: TeachingWeek) => {
 }
 
 const getWeekTypeName = (type: number) => {
-  const map: Record<number, string> = { 1: '教学周', 2: '考试周', 3: '假期', 4: '机动周' }
+  const map: Record<LongId, string> = { 1: '教学周', 2: '考试周', 3: '假期', 4: '机动周' }
   return map[type] || '未知'
 }
 const getWeekTypeTag = (type: number): string => {
-  const map: Record<number, string> = { 1: 'success', 2: 'warning', 3: 'info', 4: '' }
+  const map: Record<LongId, string> = { 1: 'success', 2: 'warning', 3: 'info', 4: '' }
   return map[type] || ''
 }
 

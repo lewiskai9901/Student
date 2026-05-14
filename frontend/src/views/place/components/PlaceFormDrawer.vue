@@ -188,8 +188,8 @@ const formData = ref({
   status: 1 as number,
   capacity: undefined as number | undefined,
   gender: undefined as string | undefined,
-  orgUnitId: undefined as number | undefined,
-  responsibleUserId: undefined as number | undefined,
+  orgUnitId: undefined as LongId | undefined,
+  responsibleUserId: undefined as LongId | undefined,
   clearOrgOverride: false as boolean,
   reason: '' as string
 })

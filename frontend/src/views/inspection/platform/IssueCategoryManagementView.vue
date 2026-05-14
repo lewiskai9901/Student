@@ -16,7 +16,7 @@ const editingId = ref<LongId | null>(null)
 const form = ref({
   categoryCode: '',
   categoryName: '',
-  parentId: undefined as number | undefined,
+  parentId: undefined as LongId | undefined,
   icon: '',
   sortOrder: 0,
 })

@@ -39,7 +39,7 @@ const searchLoading = ref(false)
 
 // New record form
 const form = ref({
-  userId: undefined as number | undefined,
+  userId: undefined as LongId | undefined,
   userName: '',
   severity: 'MINOR' as ViolationSeverity,
   occurredAt: '',

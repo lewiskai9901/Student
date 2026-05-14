@@ -787,7 +787,7 @@ async function confirmReject() {
 }
 
 function leaveTypeLabel(type: number) {
-  const map: Record<number, string> = { 1: '事假', 2: '病假', 3: '公假' }
+  const map: Record<LongId, string> = { 1: '事假', 2: '病假', 3: '公假' }
   return map[type] || '未知'
 }
 

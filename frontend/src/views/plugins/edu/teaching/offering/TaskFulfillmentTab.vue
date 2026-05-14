@@ -607,7 +607,7 @@ async function executeBatchAssign() {
 // ==================== Helpers ====================
 
 function getStatusName(status: number) {
-  const names: Record<number, string> = {
+  const names: Record<LongId, string> = {
     0: '待落实',
     1: '已分配教师',
     2: '已排课',
@@ -619,12 +619,12 @@ function getStatusName(status: number) {
 }
 
 function getAssessmentLabel(val?: number) {
-  const map: Record<number, string> = { 1: '考试', 2: '考查', 3: '技能考试', 4: '考试+考查' }
+  const map: Record<LongId, string> = { 1: '考试', 2: '考查', 3: '技能考试', 4: '考试+考查' }
   return map[val ?? 1] ?? '考试'
 }
 
 function statusChipClass(status: number) {
-  const map: Record<number, string> = {
+  const map: Record<LongId, string> = {
     0: 'tm-chip-gray',
     1: 'tm-chip-blue',
     2: 'tm-chip-green',

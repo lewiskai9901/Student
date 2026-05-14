@@ -180,12 +180,12 @@ function getWeekBlockStyle(w: any) {
 }
 
 function getEventTypeName(type: number) {
-  const map: Record<number, string> = { 1: '放假', 2: '考试', 3: '活动', 4: '会议', 5: '其他' }
+  const map: Record<LongId, string> = { 1: '放假', 2: '考试', 3: '活动', 4: '会议', 5: '其他' }
   return map[type] || '事件'
 }
 
 function getEventChip(type: number) {
-  const map: Record<number, string> = { 1: 'tm-chip-red', 2: 'tm-chip-purple', 3: 'tm-chip-blue', 4: 'tm-chip-amber', 5: 'tm-chip-gray' }
+  const map: Record<LongId, string> = { 1: 'tm-chip-red', 2: 'tm-chip-purple', 3: 'tm-chip-blue', 4: 'tm-chip-amber', 5: 'tm-chip-gray' }
   return map[type] || 'tm-chip-gray'
 }
 

@@ -441,7 +441,7 @@ const getTypeText = (type: string) => {
 
 // 获取优先级样式
 const getPriorityClass = (priority: number) => {
-  const classes: Record<number, string> = {
+  const classes: Record<LongId, string> = {
     1: 'rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600',
     2: 'rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700',
     3: 'rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700'
@@ -450,7 +450,7 @@ const getPriorityClass = (priority: number) => {
 }
 
 const getPriorityText = (priority: number) => {
-  const texts: Record<number, string> = { 1: '普通', 2: '重要', 3: '紧急' }
+  const texts: Record<LongId, string> = { 1: '普通', 2: '重要', 3: '紧急' }
   return texts[priority] || '普通'
 }
 

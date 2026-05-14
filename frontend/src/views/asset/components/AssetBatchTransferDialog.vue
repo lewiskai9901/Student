@@ -2,6 +2,7 @@
 /**
  * 批量调拨对话框 - 将多件资产一次性调拨到新位置
  */
+import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { User, Close, Position, Check, Warning } from '@element-plus/icons-vue'
@@ -34,7 +35,7 @@ const transferResult = ref<BatchTransferResult | null>(null)
 
 const formData = ref({
   locationType: '',
-  locationId: undefined as number | undefined,
+  locationId: undefined as LongId | undefined,
   locationName: '',
   responsibleUserId: undefined as number | string | undefined,
   responsibleUserName: '',

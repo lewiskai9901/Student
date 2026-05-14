@@ -1047,12 +1047,12 @@ function openSeatArrangement(bk: PlaceBooking) {
 }
 
 function bookingStatusLabel(status: number): string {
-  const map: Record<number, string> = { 0: '已取消', 1: '待使用', 2: '使用中', 3: '已完成' }
+  const map: Record<LongId, string> = { 0: '已取消', 1: '待使用', 2: '使用中', 3: '已完成' }
   return map[status] || '未知'
 }
 
 function bookingStatusClass(status: number): string {
-  const map: Record<number, string> = {
+  const map: Record<LongId, string> = {
     0: 'bg-gray-100 text-gray-500',
     1: 'bg-blue-50 text-blue-600',
     2: 'bg-emerald-50 text-emerald-600',

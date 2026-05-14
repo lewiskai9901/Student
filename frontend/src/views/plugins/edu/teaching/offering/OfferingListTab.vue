@@ -246,7 +246,7 @@ const editingOffering = ref<SemesterOffering | null>(null)
 const errors = reactive({ courseId: false, applicableGrade: false, weeklyHours: false, startWeek: false })
 
 const offeringForm = ref({
-  courseId: undefined as number | undefined,
+  courseId: undefined as LongId | undefined,
   applicableGrade: '',
   weeklyHours: 2,
   startWeek: 1,
@@ -263,8 +263,8 @@ const offeringForm = ref({
 const importDialogVisible = ref(false)
 const importLoading = ref(false)
 const importForm = ref({
-  planId: undefined as number | undefined,
-  orgUnitIds: [] as number[],
+  planId: undefined as LongId | undefined,
+  orgUnitIds: [] as LongId[],
 })
 
 // ==================== Computed ====================
@@ -297,13 +297,13 @@ const offeringTotalWeeklyHours = computed(() => filteredOfferings.value.reduce((
 
 function getCourseTypeName(type: number | undefined) {
   if (type == null) return '其他'
-  const map: Record<number, string> = { 1: '必修', 2: '选修', 3: '通识' }
+  const map: Record<LongId, string> = { 1: '必修', 2: '选修', 3: '通识' }
   return map[type] || '其他'
 }
 
 function getCourseTypeChip(type: number | undefined) {
   if (type == null) return 'tm-chip-gray'
-  const map: Record<number, string> = { 1: 'tm-chip-red', 2: 'tm-chip-blue', 3: 'tm-chip-gray' }
+  const map: Record<LongId, string> = { 1: 'tm-chip-red', 2: 'tm-chip-blue', 3: 'tm-chip-gray' }
   return map[type] || 'tm-chip-gray'
 }
 

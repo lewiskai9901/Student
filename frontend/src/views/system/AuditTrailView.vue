@@ -313,7 +313,7 @@ const queryParams = reactive({
   module: undefined as string | undefined,
   action: undefined as string | undefined,
   resourceType: undefined as string | undefined,
-  operatorId: undefined as number | undefined,
+  operatorId: undefined as LongId | undefined,
   startDate: undefined as string | undefined,
   endDate: undefined as string | undefined
 })

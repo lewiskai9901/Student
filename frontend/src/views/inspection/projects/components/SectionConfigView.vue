@@ -79,14 +79,14 @@ const MONTH_DAYS = Array.from({ length: 31 }, (_, i) => i + 1)
 
 const scheduleForm = ref({
   planName: '',
-  sectionIds: [] as number[],
+  sectionIds: [] as LongId[],
   freqMode: 'DAILY' as FreqMode,
   frequency: 1,
   weekDays: [] as number[],
   monthDays: [] as number[],
   timeSlots: [] as Array<{ start: string; end: string }>,
   skipHolidays: false,
-  inspectorIds: [] as number[],
+  inspectorIds: [] as LongId[],
 })
 
 // ── Evaluation Dialog ──

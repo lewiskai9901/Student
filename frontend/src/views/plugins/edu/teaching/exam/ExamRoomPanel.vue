@@ -134,7 +134,7 @@ watch(() => props.arrangement, (val) => {
 const saving = ref(false)
 const assignedRooms = ref<any[]>([])
 const addRoomDialogVisible = ref(false)
-const newRoomForm = ref({ classroomId: undefined as number | undefined })
+const newRoomForm = ref({ classroomId: undefined as LongId | undefined })
 
 const teacherOptions = ref<{ id: LongId | string; username: string; realName?: string }[]>([])
 const classroomOptions = ref<any[]>([])

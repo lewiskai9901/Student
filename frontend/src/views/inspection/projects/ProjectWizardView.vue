@@ -28,7 +28,7 @@ const flatOrgUnits = ref<(OrgUnit & { depth: number })[]>([])
 
 const form = reactive({
   projectName: '',
-  rootSectionId: undefined as number | undefined,
+  rootSectionId: undefined as LongId | undefined,
   scopeType: 'ORG' as ScopeType,
   scopeIds: [] as string[],
   startDate: '',
