@@ -191,7 +191,7 @@ export function resolveItemState(
         state.disabled = true
         break
       case 'setScore':
-        state.scoreOverride = typeof action.value === 'number' ? action.value : action.value
+        state.scoreOverride = typeof action.value === 'number' ? action.value : Number(action.value)
         break
       case 'clearValue':
         state.clearValue = true

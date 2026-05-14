@@ -154,7 +154,7 @@ describe('access API', () => {
       vi.mocked(http.delete).mockResolvedValueOnce(undefined)
       await accessApi.removeUserRoleWithScope('1', '2', 'ORG_UNIT', '99')
       expect(http.delete).toHaveBeenCalledWith('/users/1/roles/2', {
-        params: { scopeType: 'ORG_UNIT', scopeId: 99 },
+        params: { scopeType: 'ORG_UNIT', scopeId: '99' },
       })
     })
 
