@@ -74,20 +74,20 @@ import {
 
 interface Props {
   modelValue: boolean
-  submissionIds: number[]
+  submissionIds: LongId[]
 }
 
 const props = defineProps<Props>()
 const emit = defineEmits<{
   (e: 'update:modelValue', v: boolean): void
-  (e: 'confirmed', caseIds: number[]): void
+  (e: 'confirmed', caseIds: LongId[]): void
 }>()
 
 const visible = ref(false)
 const loading = ref(false)
 const confirming = ref(false)
 const candidates = ref<CorrectiveCandidate[]>([])
-const submissionIdMap = ref<Map<LongId, number>>(new Map())  // detailId → submissionId
+const submissionIdMap = ref<Map<LongId, LongId>>(new Map())  // detailId → submissionId
 const selected = ref<Record<LongId, boolean>>({})
 
 watch(
@@ -145,10 +145,10 @@ function severityLabel(s: string) {
 
 async function handleConfirm() {
   // 按 submissionId 分组提交
-  const bySubmission: Record<LongId, number[]> = {}
+  const bySubmission: Record<LongId, LongId[]> = {}
   for (const [detailIdStr, on] of Object.entries(selected.value)) {
     if (!on) continue
-    const detailId = Number(detailIdStr)
+    const detailId = detailIdStr
     const sid = submissionIdMap.value.get(detailId)
     if (sid == null) continue
     ;(bySubmission[sid] ??= []).push(detailId)
@@ -161,10 +161,10 @@ async function handleConfirm() {
   }
 
   confirming.value = true
-  const allCreated: number[] = []
+  const allCreated: LongId[] = []
   try {
     for (const sid of sids) {
-      const ids = await confirmCorrectiveCandidates(Number(sid), bySubmission[Number(sid)])
+      const ids = await confirmCorrectiveCandidates(sid, bySubmission[sid])
       allCreated.push(...ids)
     }
     ElMessage.success(`已建立 ${allCreated.length} 条整改单`)

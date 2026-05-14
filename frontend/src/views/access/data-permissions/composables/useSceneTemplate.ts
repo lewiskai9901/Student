@@ -126,13 +126,13 @@ export function sceneToModuleScopes(
   const customItems: ScopeItem[] = []
   if (decision.primary === 'CUSTOM') {
     decision.customOrgIds?.forEach(id =>
-      customItems.push({ itemTypeCode: 'ORG_UNIT', scopeId: id, scopeName: '', includeChildren: true })
+      customItems.push({ itemTypeCode: 'ORG_UNIT', scopeId: String(id), scopeName: '', includeChildren: true })
     )
     decision.customGradeIds?.forEach(id =>
-      customItems.push({ itemTypeCode: 'GRADE', scopeId: id, scopeName: '', includeChildren: false })
+      customItems.push({ itemTypeCode: 'GRADE', scopeId: String(id), scopeName: '', includeChildren: false })
     )
     decision.customClassIds?.forEach(id =>
-      customItems.push({ itemTypeCode: 'CLASS', scopeId: id, scopeName: '', includeChildren: false })
+      customItems.push({ itemTypeCode: 'CLASS', scopeId: String(id), scopeName: '', includeChildren: false })
     )
   }
 

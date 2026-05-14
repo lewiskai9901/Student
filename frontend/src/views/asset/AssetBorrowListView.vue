@@ -41,7 +41,7 @@ const statistics = ref<BorrowStatistics>({
 
 // 筛选
 const activeStatus = ref<'all' | number>('all')
-const borrowType = ref<LongId | undefined>(undefined)
+const borrowType = ref<number | undefined>(undefined)
 const keyword = ref('')
 
 // 对话框
@@ -49,7 +49,7 @@ const returnDialogVisible = ref(false)
 const selectedBorrow = ref<AssetBorrow | null>(null)
 
 // 状态标签选项
-const statusTabs = computed(() => [
+const statusTabs = computed<Array<{ label: string; value: 'all' | number; count: number | null; color?: string }>>(() => [
   { label: '全部', value: 'all', count: null },
   { label: '借出中', value: BorrowStatus.BORROWED, count: statistics.value.borrowedCount, color: 'text-blue-600' },
   { label: '已逾期', value: BorrowStatus.OVERDUE, count: statistics.value.overdueCount, color: 'text-red-600' },
@@ -69,7 +69,7 @@ async function loadBorrowList() {
       pageSize: pageSize.value
     }
     const result = await assetBorrowApi.listBorrows(params)
-    borrowList.value = result.records || result.list || []
+    borrowList.value = result.records || []
     total.value = result.total || 0
   } catch (error) {
     console.error('Load borrow list failed:', error)

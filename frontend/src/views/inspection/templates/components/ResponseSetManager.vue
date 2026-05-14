@@ -6,11 +6,11 @@ import { responseSetApi } from '@/api/inspection/responseSet'
 import type { ResponseSet, ResponseSetOption } from '@/types/insp/template'
 
 const props = defineProps<{
-  modelValue: number | null
+  modelValue: LongId | null
 }>()
 
 const emit = defineEmits<{
-  'update:modelValue': [value: number | null]
+  'update:modelValue': [value: LongId | null]
 }>()
 
 const sets = ref<ResponseSet[]>([])
@@ -50,7 +50,7 @@ onMounted(() => {
       <select
         :value="modelValue"
         class="flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-400"
-        @change="handleSelect(($event.target as HTMLSelectElement).value ? Number(($event.target as HTMLSelectElement).value) : null)"
+        @change="handleSelect(($event.target as HTMLSelectElement).value || null)"
       >
         <option :value="null">-- 选择选项集 --</option>
         <option v-for="s in sets" :key="s.id" :value="s.id">{{ s.setName }} ({{ s.setCode }})</option>

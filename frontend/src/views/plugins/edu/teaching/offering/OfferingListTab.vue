@@ -226,7 +226,7 @@ import type { SchoolClass } from '@/types/organization'
 import { EduOrgTypes } from '@/types/plugins/education-types'
 
 const props = defineProps<{
-  semesterId: LongId | string | null
+  semesterId: LongId | undefined
   selectedOrg?: any
 }>()
 const emit = defineEmits<{ allConfirmed: [] }>()
@@ -357,7 +357,7 @@ async function loadOfferings() {
 // ==================== Offering CRUD ====================
 
 function onOfferingCourseChange(event: Event) {
-  const courseId = Number((event.target as HTMLSelectElement).value)
+  const courseId = (event.target as HTMLSelectElement).value
   const course = allCourses.value.find(c => c.id === courseId)
   if (course) {
     offeringForm.value.courseType = course.courseType

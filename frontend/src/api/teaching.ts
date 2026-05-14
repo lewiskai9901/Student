@@ -398,7 +398,7 @@ export const offeringApi = {
     http.delete(`${BASE_URL}/offerings/${id}`),
   confirm: (id: LongId | string) =>
     http.post(`${BASE_URL}/offerings/${id}/confirm`),
-  importFromPlan: (data: { semesterId: LongId; planId: LongId; orgUnitIds?: number[] }) =>
+  importFromPlan: (data: { semesterId: LongId; planId: LongId; orgUnitIds?: LongId[] }) =>
     http.post(`${BASE_URL}/offerings/import-from-plan`, data),
   generateTasks: (semesterId: LongId | string) =>
     http.post(`${BASE_URL}/offerings/generate-tasks`, { semesterId }),

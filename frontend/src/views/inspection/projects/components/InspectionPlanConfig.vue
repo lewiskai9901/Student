@@ -64,7 +64,7 @@ function removeTimeSlot(i: number) {
 // ── Format for display ──
 function fmtSections(json: string): string {
   try {
-    const ids: number[] = JSON.parse(json)
+    const ids = (JSON.parse(json) as Array<string | number>).map(String)
     if (!ids.length) return '全部分区'
     return ids.map(id => sectionMap.value.get(id) || `#${id}`).join('、')
   } catch { return '全部分区' }
@@ -129,7 +129,7 @@ function openAdd() {
 
 function openEdit(plan: InspectionPlan) {
   editingPlan.value = plan
-  let sectionIds: number[] = [], inspectorIds: number[] = []
+  let sectionIds: LongId[] = [], inspectorIds: LongId[] = []
   let weekDays: number[] = [], monthDays: number[] = []
   let timeSlots: Array<{ start: string; end: string }> = []
   try { sectionIds = JSON.parse(plan.sectionIds || '[]') } catch {}
