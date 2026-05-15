@@ -16,9 +16,20 @@ import type {
   CreateHolidayCalendarRequest,
   UpdateHolidayCalendarRequest,
 } from '@/types/insp/platform'
-import { search as searchAuditTrail, findRecent as findRecentAuditTrail } from '@/api-generated/sdk.gen'
-import { issueCategoryApi } from '@/api/inspection/issueCategory'
-import { holidayCalendarApi } from '@/api/inspection/holidayCalendar'
+import {
+  search as searchAuditTrail,
+  findRecent as findRecentAuditTrail,
+  list15 as listIssueCategoriesSdk,
+  create10 as createIssueCategorySdk,
+  update9 as updateIssueCategorySdk,
+  delete11 as deleteIssueCategorySdk,
+  list16 as listHolidayCalendarsSdk,
+  findByYear as findHolidayByYearSdk,
+  findById as findHolidayByIdSdk,
+  create11 as createHolidayCalendarSdk,
+  update10 as updateHolidayCalendarSdk,
+  delete12 as deleteHolidayCalendarSdk,
+} from '@/api-generated/sdk.gen'
 
 export const useInspPlatformStore = defineStore('inspPlatform', () => {
   const auditEntries = ref<AuditTrailEntry[]>([])
@@ -57,7 +68,8 @@ export const useInspPlatformStore = defineStore('inspPlatform', () => {
   async function fetchIssueCategories() {
     loading.value = true
     try {
-      const flat = await issueCategoryApi.list()
+      const res = await listIssueCategoriesSdk()
+      const flat = (res.data?.data ?? []) as IssueCategory[]
       const map = new Map<LongId, IssueCategory & { children?: IssueCategory[] }>()
       for (const cat of flat) {
         map.set(cat.id, { ...cat, children: [] })
@@ -77,29 +89,32 @@ export const useInspPlatformStore = defineStore('inspPlatform', () => {
   }
 
   async function createIssueCategory(data: Partial<IssueCategory>) {
-    const created = await issueCategoryApi.create(data)
+    const res = await createIssueCategorySdk({ body: data as any })
+    const created = (res.data?.data ?? {}) as IssueCategory
     issueCategories.value.unshift(created)
     return created
   }
 
   async function updateIssueCategory(id: LongId, data: Partial<IssueCategory>) {
-    const updated = await issueCategoryApi.update(id, data)
+    const res = await updateIssueCategorySdk({ path: { id }, body: data as any })
+    const updated = (res.data?.data ?? {}) as IssueCategory
     const idx = issueCategories.value.findIndex(c => c.id === id)
     if (idx !== -1) issueCategories.value[idx] = updated
     return updated
   }
 
   async function deleteIssueCategory(id: LongId) {
-    await issueCategoryApi.delete(id)
+    await deleteIssueCategorySdk({ path: { id } })
     issueCategories.value = issueCategories.value.filter(c => c.id !== id)
   }
 
   async function fetchHolidayCalendars(year?: number) {
     loading.value = true
     try {
-      holidayCalendars.value = year
-        ? await holidayCalendarApi.getByYear(year)
-        : await holidayCalendarApi.list()
+      const res = year
+        ? await findHolidayByYearSdk({ query: { year } })
+        : await listHolidayCalendarsSdk()
+      holidayCalendars.value = (res.data?.data ?? []) as HolidayCalendar[]
     } finally {
       loading.value = false
     }
@@ -108,20 +123,23 @@ export const useInspPlatformStore = defineStore('inspPlatform', () => {
   async function fetchHolidayCalendar(id: LongId) {
     loading.value = true
     try {
-      currentCalendar.value = await holidayCalendarApi.getById(id)
+      const res = await findHolidayByIdSdk({ path: { id } })
+      currentCalendar.value = (res.data?.data ?? null) as HolidayCalendar | null
     } finally {
       loading.value = false
     }
   }
 
   async function createHolidayCalendar(data: CreateHolidayCalendarRequest) {
-    const created = await holidayCalendarApi.create(data)
+    const res = await createHolidayCalendarSdk({ body: data as any })
+    const created = (res.data?.data ?? {}) as HolidayCalendar
     holidayCalendars.value.unshift(created)
     return created
   }
 
   async function updateHolidayCalendar(id: LongId, data: UpdateHolidayCalendarRequest) {
-    const updated = await holidayCalendarApi.update(id, data)
+    const res = await updateHolidayCalendarSdk({ path: { id }, body: data as any })
+    const updated = (res.data?.data ?? {}) as HolidayCalendar
     const idx = holidayCalendars.value.findIndex(c => c.id === id)
     if (idx !== -1) holidayCalendars.value[idx] = updated
     if (currentCalendar.value?.id === id) currentCalendar.value = updated
@@ -129,7 +147,7 @@ export const useInspPlatformStore = defineStore('inspPlatform', () => {
   }
 
   async function deleteHolidayCalendar(id: LongId) {
-    await holidayCalendarApi.delete(id)
+    await deleteHolidayCalendarSdk({ path: { id } })
     holidayCalendars.value = holidayCalendars.value.filter(c => c.id !== id)
     if (currentCalendar.value?.id === id) currentCalendar.value = null
   }

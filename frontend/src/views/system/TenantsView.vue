@@ -68,7 +68,12 @@ import type { LongId } from '@/types/common'
 import { ref, onMounted } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
-import { listTenants, createTenant, updateTenant, deleteTenant } from '@/api/tenant'
+import {
+  list2 as listTenantsSdk,
+  create as createTenantSdk,
+  update as updateTenantSdk,
+  delete_ as deleteTenantSdk
+} from '@/api-generated/sdk.gen'
 import type { Tenant } from '@/types/tenant'
 
 const loading = ref(false)
@@ -94,7 +99,8 @@ const rules: FormRules = {
 async function loadTenants() {
   loading.value = true
   try {
-    tenants.value = await listTenants()
+    const res = await listTenantsSdk()
+    tenants.value = (res.data?.data ?? []) as Tenant[]
   } catch (e) {
     ElMessage.error('加载租户列表失败')
   } finally {
@@ -128,17 +134,22 @@ async function handleSave() {
   saving.value = true
   try {
     if (isEditing.value && editingId.value) {
-      await updateTenant(editingId.value, {
-        tenantName: form.value.tenantName,
-        domain: form.value.domain || undefined,
-        enabled: form.value.enabled
+      await updateTenantSdk({
+        path: { id: editingId.value },
+        body: {
+          tenantName: form.value.tenantName,
+          domain: form.value.domain || undefined,
+          enabled: form.value.enabled
+        }
       })
       ElMessage.success('更新成功')
     } else {
-      await createTenant({
-        tenantCode: form.value.tenantCode,
-        tenantName: form.value.tenantName,
-        domain: form.value.domain || undefined
+      await createTenantSdk({
+        body: {
+          tenantCode: form.value.tenantCode,
+          tenantName: form.value.tenantName,
+          domain: form.value.domain || undefined
+        }
       })
       ElMessage.success('创建成功')
     }
@@ -153,7 +164,7 @@ async function handleSave() {
 
 async function handleDelete(id: LongId) {
   try {
-    await deleteTenant(id)
+    await deleteTenantSdk({ path: { id } })
     ElMessage.success('删除成功')
     await loadTenants()
   } catch (e) {

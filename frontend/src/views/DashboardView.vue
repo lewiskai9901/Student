@@ -155,7 +155,8 @@ import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { getDashboardOverview, type DashboardOverview } from '@/api/dashboard'
+import { getOverview as getDashboardOverview } from '@/api-generated/sdk.gen'
+import type { DashboardOverview } from '@/types/dashboard'
 import MyInspectionWidget from '@/components/inspection/MyInspectionWidget.vue'
 
 // F7 i18n 演示 — 后续按模块逐步把硬编码文案改为 t()
@@ -246,7 +247,8 @@ const goTo = (path: string) => {
 
 const loadData = async () => {
   try {
-    const data: DashboardOverview = await getDashboardOverview()
+    const res = await getDashboardOverview()
+    const data = (res.data?.data ?? {}) as unknown as DashboardOverview
 
     // Organization
     Object.assign(org, data.organization)

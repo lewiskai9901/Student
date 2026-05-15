@@ -280,7 +280,7 @@ import {
   Search, RotateCcw, X, Loader2, FileText,
   ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight
 } from 'lucide-vue-next'
-import { auditApi } from '@/api/audit'
+import { list21 as listAuditTrail } from '@/api-generated/sdk.gen'
 import { getSimpleUserList } from '@/api/user'
 import type { SimpleUser } from '@/types/user'
 
@@ -401,9 +401,10 @@ const loadList = async () => {
     if (queryParams.startDate) params.startDate = queryParams.startDate
     if (queryParams.endDate) params.endDate = queryParams.endDate
 
-    const res = await auditApi.list(params)
-    list.value = res?.records || res || []
-    total.value = res?.total || (Array.isArray(res) ? res.length : 0)
+    const res = await listAuditTrail({ query: params })
+    const payload: any = res.data?.data ?? []
+    list.value = payload?.records || payload || []
+    total.value = payload?.total || (Array.isArray(payload) ? payload.length : 0)
   } catch {
     ElMessage.error('加载审计日志失败')
   } finally {

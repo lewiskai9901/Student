@@ -579,7 +579,16 @@ import {
   Search, RotateCcw, Plus, Pencil, Eye, Trash2, X,
   Loader2, UserX, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight
 } from 'lucide-vue-next'
-import { teacherProfileApi } from '@/api/teacher'
+import {
+  listProfiles,
+  createProfile,
+  updateProfile,
+  deleteProfile,
+  getProfile,
+  getCourses as getTeacherCourses,
+  addCourse as addTeacherCourse,
+  removeCourse as removeTeacherCourse,
+} from '@/api-generated/sdk.gen'
 import { getSimpleUserList } from '@/api/user'
 import { getOrgUnitTree } from '@/api/organization'
 import { courseApi } from '@/api/academic'
@@ -718,16 +727,19 @@ const statusClass = (status: number) => {
 const loadList = async () => {
   loading.value = true
   try {
-    const res = await teacherProfileApi.list({
-      pageNum: queryParams.pageNum,
-      pageSize: queryParams.pageSize,
-      keyword: queryParams.keyword || undefined,
-      orgUnitId: queryParams.orgUnitId,
-      title: queryParams.title || undefined,
-      status: queryParams.status
+    const res = await listProfiles({
+      query: {
+        pageNum: queryParams.pageNum,
+        pageSize: queryParams.pageSize,
+        keyword: queryParams.keyword || undefined,
+        orgUnitId: queryParams.orgUnitId,
+        title: queryParams.title || undefined,
+        status: queryParams.status
+      }
     })
-    list.value = res.records || []
-    total.value = res.total || 0
+    const payload: any = res.data?.data ?? {}
+    list.value = (payload.records || []) as TeacherProfile[]
+    total.value = payload.total || 0
   } catch {
     ElMessage.error('加载教师列表失败')
   } finally {
@@ -802,10 +814,10 @@ const handleSubmit = async () => {
   submitLoading.value = true
   try {
     if (isEdit.value && editId.value) {
-      await teacherProfileApi.update(editId.value, formData)
+      await updateProfile({ path: { id: editId.value }, body: formData as any })
       ElMessage.success('更新成功')
     } else {
-      await teacherProfileApi.create(formData)
+      await createProfile({ body: formData as any })
       ElMessage.success('创建成功')
     }
     dialogVisible.value = false
@@ -820,7 +832,7 @@ const handleSubmit = async () => {
 const handleDelete = async (row: TeacherProfile) => {
   try {
     await ElMessageBox.confirm('确认删除该教师档案？', '确认', { type: 'warning' })
-    await teacherProfileApi.delete(row.id)
+    await deleteProfile({ path: { id: row.id } })
     ElMessage.success('删除成功')
     loadList()
   } catch {
@@ -830,8 +842,10 @@ const handleDelete = async (row: TeacherProfile) => {
 
 const handleDetail = async (row: TeacherProfile) => {
   try {
-    detailData.value = await teacherProfileApi.getById(row.id)
-    courses.value = await teacherProfileApi.getCourses(row.id)
+    const dRes = await getProfile({ path: { id: row.id } })
+    detailData.value = (dRes.data?.data ?? null) as TeacherProfile | null
+    const cRes = await getTeacherCourses({ path: { id: row.id } })
+    courses.value = (cRes.data?.data ?? []) as unknown as TeacherCourseQualification[]
     activeTab.value = '基本信息'
     drawerVisible.value = true
   } catch {
@@ -855,14 +869,18 @@ const removeSpecialty = (idx: number) => {
 const handleAddCourse = async () => {
   if (!courseForm.courseId || !detailData.value) return
   try {
-    await teacherProfileApi.addCourse(detailData.value.id, {
-      courseId: courseForm.courseId,
-      qualificationLevel: courseForm.qualificationLevel,
-      remark: courseForm.remark || undefined
+    await addTeacherCourse({
+      path: { id: detailData.value.id },
+      body: {
+        courseId: courseForm.courseId,
+        qualificationLevel: courseForm.qualificationLevel,
+        remark: courseForm.remark || undefined
+      } as any
     })
     ElMessage.success('添加成功')
     courseDialogVisible.value = false
-    courses.value = await teacherProfileApi.getCourses(detailData.value.id)
+    const cRes = await getTeacherCourses({ path: { id: detailData.value.id } })
+    courses.value = (cRes.data?.data ?? []) as unknown as TeacherCourseQualification[]
     courseForm.courseId = ''
     courseForm.qualificationLevel = 1
     courseForm.remark = ''
@@ -875,9 +893,10 @@ const handleRemoveCourse = async (c: TeacherCourseQualification) => {
   if (!detailData.value) return
   try {
     await ElMessageBox.confirm(`确认移除课程「${c.courseName}」？`, '确认', { type: 'warning' })
-    await teacherProfileApi.removeCourse(detailData.value.id, c.courseId)
+    await removeTeacherCourse({ path: { id: detailData.value.id, courseId: c.courseId } })
     ElMessage.success('已移除')
-    courses.value = await teacherProfileApi.getCourses(detailData.value.id)
+    const cRes = await getTeacherCourses({ path: { id: detailData.value.id } })
+    courses.value = (cRes.data?.data ?? []) as unknown as TeacherCourseQualification[]
   } catch {
     // cancelled
   }

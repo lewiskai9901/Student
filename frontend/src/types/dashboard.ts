@@ -1,6 +1,5 @@
-import { http } from '@/utils/request'
-
 // Dashboard overview response types
+
 export interface OrgStats {
   orgUnitCount: number
   majorCount: number
@@ -33,9 +32,4 @@ export interface DashboardOverview {
   teaching: TeachingStats
   inspection: InspectionStats
   system: SystemStats
-}
-
-// Fetch dashboard overview
-export function getDashboardOverview(): Promise<DashboardOverview> {
-  return http.get<DashboardOverview>('/dashboard/overview')
 }
