@@ -173,11 +173,16 @@ jobs:
         run: npm run lint
 
       # Phase 6 (2026-04-20 升级): type-check 走 ceiling gate — 不回退, 但允许暂未清理的 baseline
-      # 当前基线: frontend/.typecheck-baseline (158 errors / 73 files, 2026-04-20)
-      # 目标: 每次 PR 把基线降一点, 最终归 0.
+      # 2026-05-15 起 baseline 推到 0, 任何新增 TS 错误 PR 红.
       - name: Run type check (ceiling gate)
         working-directory: ./frontend
         run: npm run type-check:ceiling
+
+      # 2026-05-13 起: types/ 内禁止新增 `xxxId: number` 字段 (LongId 契约门禁).
+      # baseline 0, 任何回退会 fail.
+      - name: Check ID:number ceiling (LongId 契约)
+        working-directory: ./frontend
+        run: npm run id-number-check
 
       # Phase 6 (2026-05-05 前端冲 A+ 收官): vitest 单测必须全绿
       # 当前 12 文件 / 155 例, 含 useFeature/useEntityLabel/useTheme/useI18n/
@@ -311,6 +316,36 @@ jobs:
           echo "Backend failed to start within 120s. Last log:" >&2
           tail -n 200 backend.log >&2 || true
           exit 1
+
+      # 2026-05-15 OpenAPI SDK 自动同步: 双闸守护.
+      # 闸 1: backend 实际生成的 openapi.json 必须等于 git 中 commit 的版本
+      # 闸 2: 重新跑 codegen 后, frontend/src/api-generated/ 必须等于 commit 的版本
+      # 任何一闸失败说明开发者改了接口但忘了 export/regenerate.
+      - name: Check OpenAPI spec drift (backend → openapi.json)
+        run: bash backend/scripts/check-openapi-drift.sh
+
+      - name: Check generated SDK drift (frontend)
+        working-directory: ./frontend
+        run: |
+          npm run openapi:generate
+          if ! git diff --exit-code src/api-generated/; then
+            echo "::error::Generated frontend SDK 与 commit 版本不一致." >&2
+            echo "Backend 接口改了但 SDK 没重生. 本地修复:" >&2
+            echo "  cd frontend && npm run openapi:generate && git add src/api-generated/" >&2
+            exit 1
+          fi
+
+      - name: Check generated SDK drift (miniprogram)
+        working-directory: ./miniprogram
+        run: |
+          npm ci --no-audit --no-fund
+          npm run openapi:generate
+          if ! git diff --exit-code src/api-generated/; then
+            echo "::error::Generated miniprogram types 与 commit 版本不一致." >&2
+            echo "Backend 接口改了但 miniprogram types 没重生. 本地修复:" >&2
+            echo "  cd miniprogram && npm run openapi:generate && git add src/api-generated/" >&2
+            exit 1
+          fi
 
       - name: Run Playwright E2E tests
         working-directory: ./frontend
