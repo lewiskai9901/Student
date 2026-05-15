@@ -23,7 +23,9 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, AlertTriangle, EyeOff, Eye, Inbox, Keyboard } from 'lucide-vue-next'
 import { useInspExecutionStore } from '@/stores/inspection/inspExecutionStore'
 import { useAuthStore } from '@/stores/auth'
-import { inspProjectApi, type ProjectStatsSummary } from '@/api/inspection/project'
+// 2026-05-15: 第一个真实迁移 — 用 @hey-api/openapi-ts 生成的 SDK 替代手写 inspProjectApi
+import { listProjectsWithStats } from '@/api-generated/sdk.gen'
+import type { ProjectStatsSummary } from '@/api/inspection/project'
 import { ProjectStatusConfig, type ProjectStatus } from '@/types/insp/enums'
 import type { InspProject } from '@/types/insp/project'
 import InspButton from '../shared/InspButton.vue'
@@ -85,7 +87,10 @@ watch(
 async function loadData() {
   loading.value = true
   try {
-    summaries.value = await inspProjectApi.getListWithStats()
+    // hey-api 客户端返回 { data, error } 形状; data 即 axios interceptor 已解开 Result envelope 的实际数组
+    const res = await listProjectsWithStats()
+    // sdkAxios 不撸 envelope, hey-api 返回 { data: Result<T>, response, ... } — 真数据在 res.data.data
+    summaries.value = (res.data?.data as ProjectStatsSummary[] | undefined) ?? []
   } catch (e: any) {
     ElMessage.error(e.message || '加载项目列表失败')
   } finally {

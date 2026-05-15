@@ -14,6 +14,21 @@ const service: AxiosInstance = axios.create({
   }
 })
 
+/**
+ * 给 @hey-api/openapi-ts 生成的 SDK 用的 axios 实例.
+ *
+ * 与 `service` 共享 baseURL / JWT 注入, 但 **不解构 Result envelope** —
+ * 因为生成的 SDK 期望完整响应 ({ code, message, data }), 自己消费 envelope.
+ * 用法见 src/api-generated-client.ts.
+ */
+export const sdkAxios: AxiosInstance = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+})
+
 // 防止重复弹窗的标志
 let isShowingAuthError = false
 let authErrorTimer: ReturnType<typeof setTimeout> | null = null
@@ -49,27 +64,37 @@ function handleAuthExpired() {
 // 不需要添加Authorization header的请求路径
 const noAuthPaths = ['/auth/login', '/auth/refresh']
 
-// 请求拦截器
-service.interceptors.request.use(
-  (config) => {
-    const authStore = useAuthStore()
-
-    // 对于登录和刷新token请求，不添加Authorization header
-    const requestUrl = config.url || ''
-    const shouldSkipAuth = noAuthPaths.some(path => requestUrl.includes(path))
-
-    // 添加认证token（排除登录和刷新请求）
-    if (authStore.token && !shouldSkipAuth) {
-      config.headers.Authorization = `Bearer ${authStore.token}`
-    }
-
-    return config
-  },
-  (error) => {
-    console.error('请求错误:', error)
-    return Promise.reject(error)
+// 共享请求拦截: JWT 注入 (service + sdkAxios 都用)
+function attachAuthHeader(config: any) {
+  const authStore = useAuthStore()
+  const requestUrl = config.url || ''
+  const shouldSkipAuth = noAuthPaths.some(path => requestUrl.includes(path))
+  if (authStore.token && !shouldSkipAuth) {
+    config.headers.Authorization = `Bearer ${authStore.token}`
   }
-)
+  return config
+}
+
+// 请求拦截器 — service (业务代码用, 已解构 Result envelope)
+service.interceptors.request.use(attachAuthHeader, (error) => {
+  console.error('请求错误:', error)
+  return Promise.reject(error)
+})
+
+// 请求拦截器 — sdkAxios (codegen SDK 用, 保留完整响应)
+// !! hey-api 的 client.gen.ts 硬编码 baseURL: '' 覆盖 axios 实例的 baseURL,
+// 所以 SDK 的 url='/inspection/...' 不会走我们配的 baseURL '/api'.
+// 这里在请求时把 '/api' 前缀补回去 (避开已经带 /api 或绝对 URL 的情况).
+function prefixApiPath(config: any) {
+  attachAuthHeader(config)
+  const url: string | undefined = config.url
+  if (url && !/^https?:\/\//i.test(url) && !url.startsWith('/api/') && url !== '/api') {
+    config.url = '/api' + (url.startsWith('/') ? url : '/' + url)
+  }
+  // hey-api 强制 baseURL '', 反正会被覆盖, 这里不动它
+  return config
+}
+sdkAxios.interceptors.request.use(prefixApiPath, (error) => Promise.reject(error))
 
 // 响应拦截器
 service.interceptors.response.use(
