@@ -1,7 +1,7 @@
 {
   "name": "student-management-frontend",
   "version": "1.0.0",
-  "description": "学生管理系统前端",
+  "description": "ѧ������ϵͳǰ��",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -20,11 +20,14 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "depcheck": "depcruise --config .dependency-cruiser.cjs src",
-    "depcheck:graph": "depcruise --config .dependency-cruiser.cjs src --output-type dot --output-to dependency-graph.dot"
+    "depcheck:graph": "depcruise --config .dependency-cruiser.cjs src --output-type dot --output-to dependency-graph.dot",
+    "openapi:generate": "openapi-ts && node scripts/post-process-openapi-sdk.mjs",
+    "openapi:check": "bash ../backend/scripts/check-openapi-drift.sh"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.1.0",
     "@heroicons/vue": "^2.1.1",
+    "@hey-api/client-axios": "^0.9.1",
     "axios": "^1.5.0",
     "bpmn-js": "^17.11.1",
     "diagram-js": "^14.11.3",
@@ -40,6 +43,7 @@
     "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
+    "@hey-api/openapi-ts": "^0.97.1",
     "@playwright/test": "^1.56.1",
     "@rushstack/eslint-patch": "^1.16.1",
     "@tailwindcss/forms": "^0.5.7",
