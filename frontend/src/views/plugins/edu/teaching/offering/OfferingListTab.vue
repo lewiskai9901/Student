@@ -485,7 +485,7 @@ async function doImportFromPlan() {
   importLoading.value = true
   try {
     await offeringApi.importFromPlan({
-      semesterId: props.semesterId,
+      semesterId: props.semesterId!,
       planId: importForm.value.planId,
       orgUnitIds: importForm.value.orgUnitIds.length > 0 ? importForm.value.orgUnitIds : undefined,
     })

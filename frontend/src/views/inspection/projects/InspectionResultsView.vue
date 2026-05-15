@@ -32,7 +32,7 @@ async function loadData() {
     const loaded: ProjectResult[] = []
     for (const project of projects.value) {
       try {
-        const submissions = await getSubmissions(project.id).catch(() => [])
+        const submissions = await getSubmissions({ taskId: project.id }).catch(() => [])
         const completed = submissions.filter(
           (s: InspSubmission) => s.status === 'COMPLETED' && s.finalScore != null
         )

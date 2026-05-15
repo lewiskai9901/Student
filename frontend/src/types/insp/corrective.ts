@@ -64,7 +64,7 @@ export interface AssignCaseRequest {
 
 export interface SubmitCorrectionRequest {
   correctionNote: string
-  evidenceIds: number[]
+  evidenceIds: LongId[]
 }
 
 export interface VerifyCaseRequest {

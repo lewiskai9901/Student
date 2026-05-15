@@ -70,7 +70,7 @@ async function searchUsers() {
     const res = await request.get('/api/users', {
       params: { keyword: searchKeyword.value, size: 20 },
     })
-    const records = res.data?.records ?? res.records ?? []
+    const records = (res as any).data?.records ?? (res as any).records ?? []
     userSearchResults.value = records.map((u: any) => ({
       id: u.id,
       name: u.realName || u.username || `ID:${u.id}`,

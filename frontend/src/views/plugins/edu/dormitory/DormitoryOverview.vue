@@ -502,7 +502,7 @@ const occupants = ref<PlaceOccupant[]>([])
 const checkInDialogVisible = ref(false)
 const checkInForm = ref({
   occupantType: 'STUDENT' as string,
-  occupantId: null as number | string | null,
+  occupantId: null as LongId | null,
   occupantName: '',
   username: '',
   orgUnitName: '',

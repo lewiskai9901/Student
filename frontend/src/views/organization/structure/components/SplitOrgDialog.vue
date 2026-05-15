@@ -131,7 +131,7 @@ import { splitOrgUnit, type DepartmentResponse } from '@/api/organization'
 interface SplitItem {
   unitName: string
   unitCode: string
-  childIds: number[]
+  childIds: LongId[]
 }
 
 interface Props {

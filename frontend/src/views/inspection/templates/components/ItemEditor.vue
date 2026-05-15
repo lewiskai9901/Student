@@ -368,7 +368,7 @@ function serializeScoringConfig(): string {
       obj.unit = scoring.unit
       obj.thresholds = scoring.thresholds.map(t => ({
         ...t,
-        max: (t.max === '' || t.max === undefined || (typeof t.max === 'number' && isNaN(t.max))) ? null : t.max,
+        max: ((t.max as any) === '' || t.max === undefined || t.max === null || (typeof t.max === 'number' && isNaN(t.max))) ? null : t.max,
       }))
       break
     case 'FORMULA':

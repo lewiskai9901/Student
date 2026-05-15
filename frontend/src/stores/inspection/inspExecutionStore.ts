@@ -285,7 +285,7 @@ export const useInspExecutionStore = defineStore('inspExecution', () => {
       if (project.rootSectionId) {
         const sections = await getSections(project.rootSectionId)
         sectionConditions.value = sections
-          .map(s => ({ sectionId: s.id }))
+          .map(s => ({ sectionId: s.id, conditionLogic: null }))
       } else {
         sectionConditions.value = []
       }

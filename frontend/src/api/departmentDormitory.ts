@@ -61,7 +61,7 @@ export interface AssignDormitoryRequest {
  */
 export interface BatchAssignRequest {
   orgUnitId: LongId
-  dormitoryIds: number[]
+  dormitoryIds: LongId[]
 }
 
 /**

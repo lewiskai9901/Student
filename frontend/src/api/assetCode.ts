@@ -7,7 +7,7 @@ export interface LabelRequest {
   assetId: LongId | string
   assetCode: string
   assetName: string
-  location?: string
+  location?: string | null
 }
 
 export interface LabelData {

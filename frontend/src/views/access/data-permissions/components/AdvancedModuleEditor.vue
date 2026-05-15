@@ -351,7 +351,7 @@ function onScopeItemsChange(
   const others = (mp?.scopeItems || []).filter(i => i.itemTypeCode !== type)
   const added: ScopeItem[] = ids.map(id => ({
     itemTypeCode: type,
-    scopeId: id,
+    scopeId: String(id),
     scopeName: '',
     includeChildren: type === 'ORG_UNIT',
   }))

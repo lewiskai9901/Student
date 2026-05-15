@@ -41,7 +41,7 @@ export interface UpdateAlertRuleRequest {
   severity?: AlertSeverity
   notificationChannels?: string
   isEnabled?: boolean
-  projectId?: LongId
+  projectId?: LongId | null
 }
 
 // ==================== 预警记录 ====================

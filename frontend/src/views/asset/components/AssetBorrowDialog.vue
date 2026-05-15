@@ -159,7 +159,7 @@ async function handleSubmit() {
   if (!valid) return
 
   // 批量模式下检查库存
-  if (isBatchManagement.value && formData.value.quantity > availableQuantity.value) {
+  if (isBatchManagement.value && (formData.value.quantity ?? 0) > availableQuantity.value) {
     ElMessage.error(`库存不足，当前可用库存为 ${availableQuantity.value}`)
     return
   }

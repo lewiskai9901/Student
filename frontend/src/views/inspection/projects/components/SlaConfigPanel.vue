@@ -185,7 +185,7 @@ function formatHours(hours: number): string {
                 size="small"
                 controls-position="right"
                 class="!w-24"
-                @update:model-value="(val: number) => updateEscalationHours($index, val)"
+                @update:model-value="(val) => updateEscalationHours($index, Number(val))"
               />
               <span class="text-xs text-gray-400">小时</span>
             </div>

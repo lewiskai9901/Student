@@ -105,6 +105,7 @@ export interface CreateOrgUnitRequest {
   parentId?: LongId | string
   sortOrder?: number
   selectedPositions?: Array<{ positionName: string; headcount: number }>
+  attributes?: Record<string, any>
 }
 
 // 更新组织单元请求

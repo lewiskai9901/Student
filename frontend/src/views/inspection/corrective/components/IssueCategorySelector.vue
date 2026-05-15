@@ -10,7 +10,7 @@ import { computed } from 'vue'
 import type { IssueCategory } from '@/types/insp/platform'
 
 const props = defineProps<{
-  modelValue: number
+  modelValue: LongId
   categories: IssueCategory[]
 }>()
 

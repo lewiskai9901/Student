@@ -36,7 +36,7 @@ const statistics = ref({
 })
 
 // 筛选条件
-const filterType = ref<LongId | undefined>()
+const filterType = ref<number | undefined>()
 const filterIsRead = ref<boolean | undefined>()
 const filterIsHandled = ref<boolean | undefined>(false) // 默认显示未处理
 

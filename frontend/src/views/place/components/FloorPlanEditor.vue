@@ -1085,7 +1085,7 @@ function handleStageMouseDown(e: any) {
       return
     }
 
-    if (activeTool.value !== 'select' && activeTool.value !== 'hand') {
+    if ((activeTool.value as string) !== 'select' && (activeTool.value as string) !== 'hand') {
       // Place new element
       const pos = getCanvasPoint(e)
       if (!pos) return

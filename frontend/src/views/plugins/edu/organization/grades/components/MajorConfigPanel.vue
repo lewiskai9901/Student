@@ -134,18 +134,18 @@
 
         <div v-if="selectedMajorDirections.length > 0">
           <label class="mb-2 block text-sm font-medium text-gray-700">选择要添加的方向</label>
-          <div class="max-h-60 space-y-2 overflow-y-auto rounded-lg border border-gray-200 p-3">
+          <el-checkbox-group v-model="selectedDirectionIds" class="max-h-60 space-y-2 overflow-y-auto rounded-lg border border-gray-200 p-3">
             <div
               v-for="direction in selectedMajorDirections"
               :key="direction.id"
               class="flex items-center gap-3 rounded-lg border border-gray-100 p-2 transition-colors hover:bg-gray-50"
             >
-              <el-checkbox v-model="selectedDirectionIds" :value="direction.id">
+              <el-checkbox :value="direction.id">
                 <span class="text-sm">{{ direction.directionName || direction.level }}</span>
                 <span class="ml-2 text-xs text-gray-400">{{ direction.years }}年制</span>
               </el-checkbox>
             </div>
-          </div>
+          </el-checkbox-group>
           <div class="mt-2 flex items-center justify-between text-xs text-gray-400">
             <span>已选 {{ selectedDirectionIds.length }} 个方向</span>
             <button @click="selectAllDirections" class="text-emerald-600 hover:text-emerald-700">

@@ -863,7 +863,7 @@ const handleAddCourse = async () => {
     ElMessage.success('添加成功')
     courseDialogVisible.value = false
     courses.value = await teacherProfileApi.getCourses(detailData.value.id)
-    courseForm.courseId = 0
+    courseForm.courseId = ''
     courseForm.qualificationLevel = 1
     courseForm.remark = ''
   } catch {

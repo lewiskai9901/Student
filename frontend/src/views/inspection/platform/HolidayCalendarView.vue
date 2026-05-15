@@ -12,7 +12,7 @@ const loading = ref(false)
 const calendars = ref<HolidayCalendar[]>([])
 const showDialog = ref(false)
 const editingId = ref<LongId | null>(null)
-const filterYear = ref<LongId | undefined>(undefined)
+const filterYear = ref<number | undefined>(undefined)
 
 const currentYear = new Date().getFullYear()
 const yearOptions = computed(() => {

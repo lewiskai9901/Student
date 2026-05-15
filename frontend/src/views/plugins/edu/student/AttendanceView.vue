@@ -624,7 +624,7 @@ async function doExportRecords() {
 
 // Edit record
 const editDialogVisible = ref(false)
-const editForm = reactive({ id: 0, status: 1, remark: '' })
+const editForm = reactive<{ id: LongId; status: number; remark: string }>({ id: '', status: 1, remark: '' })
 
 function editRecord(row: any) {
   editForm.id = row.id

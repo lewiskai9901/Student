@@ -114,7 +114,7 @@ async function handleSubmit() {
   if (formData.scopeType === InventoryScopeType.CATEGORY && formData.categoryId) {
     scopeValue = formData.categoryId.toString()
   } else if (formData.scopeType === InventoryScopeType.LOCATION) {
-    scopeValue = formData.scopeValue
+    scopeValue = formData.scopeValue || ''
   }
 
   loading.value = true

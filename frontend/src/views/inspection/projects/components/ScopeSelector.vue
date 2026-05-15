@@ -50,7 +50,7 @@ const selectedIds = computed({
 })
 
 const selectedCount = computed(() => selectedIds.value.length)
-const targetPreviewCount = ref<LongId | null>(null)
+const targetPreviewCount = ref<number | null>(null)
 const previewLoading = ref(false)
 
 const scopeLabel = computed(() => {

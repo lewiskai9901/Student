@@ -601,7 +601,7 @@ async function saveWeekType() {
   if (!selectedEntry.value) return
   editSaving.value = true
   try {
-    await scheduleApi.updateEntry(0, selectedEntry.value.id, { weekType: editWeekType.value })
+    await scheduleApi.updateEntry('', selectedEntry.value.id, { weekType: editWeekType.value })
     // 更新本地数据
     const idx = entries.value.findIndex(e => e.id === selectedEntry.value!.id)
     if (idx >= 0) entries.value[idx].weekType = editWeekType.value

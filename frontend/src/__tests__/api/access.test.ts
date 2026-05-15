@@ -202,7 +202,7 @@ describe('access API', () => {
 
     it('getDataModulesForRole 把 roleId 转字符串', async () => {
       vi.mocked(http.get).mockResolvedValueOnce({} as any)
-      await accessApi.getDataModulesForRole({ roleId: 99 })
+      await accessApi.getDataModulesForRole({ roleId: '99' })
       const [, opts] = vi.mocked(http.get).mock.calls[0]
       expect((opts as any).params.roleId).toBe('99')
       expect((opts as any).params.includeDisabled).toBe(false)

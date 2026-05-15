@@ -349,7 +349,7 @@ const loadTypes = async () => {
       // Edit mode: show only the current type (locked)
       const typeCode = props.department.unitType
       const typeName = props.department.typeName || typeCode
-      availableTypes.value = [{ typeCode, typeName, category: '', parentTypeCode: '', defaultPositions: [] }]
+      availableTypes.value = [{ id: '', typeCode, typeName, category: '', parentTypeCode: '', defaultPositions: [] } as any]
     } else if (props.parentDepartment) {
       // Add child: get allowed children from parent type
       const parentTypeCode = props.parentDepartment.unitType

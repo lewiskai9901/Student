@@ -155,7 +155,7 @@ export const useInspAnalyticsStore = defineStore('inspAnalytics', () => {
   async function fetchCorrectivePeriodSummary(projectId: LongId, periodType: PeriodType, periodStart: string) {
     loading.value = true
     try {
-      correctivePeriodSummary.value = await inspAnalyticsApi.getCorrectivePeriodSummary(projectId, periodType, periodStart)
+      correctivePeriodSummary.value = await inspAnalyticsApi.getCorrectiveSummaryByPeriod(projectId, periodType, periodStart)
     } finally {
       loading.value = false
     }

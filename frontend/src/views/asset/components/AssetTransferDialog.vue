@@ -92,7 +92,7 @@ async function handleSubmit() {
 
     await assetApi.transferAsset(props.asset.id, {
       locationType: formData.value.locationType,
-      locationId: formData.value.locationId || 0,
+      locationId: formData.value.locationId || '',
       locationName: formData.value.locationName,
       responsibleUserId: formData.value.responsibleUserId,
       responsibleUserName: formData.value.responsibleUserName || undefined,

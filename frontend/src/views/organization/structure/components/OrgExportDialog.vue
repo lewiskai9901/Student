@@ -160,7 +160,7 @@ async function fetchAllMembers(
 ): Promise<Record<string, string>[]> {
   const results: Record<string, string>[] = []
   const promises = orgIds.map(async (orgId) => {
-    const members: OrgMember[] = await orgMemberApi.getBelongingMembers(orgId)
+    const members: OrgMember[] = await orgMemberApi.getBelongingMembers(String(orgId))
     const orgName = orgNameMap.get(String(orgId)) || String(orgId)
     for (const m of members) {
       results.push({

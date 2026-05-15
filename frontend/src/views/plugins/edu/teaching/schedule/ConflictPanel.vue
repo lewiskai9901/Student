@@ -126,7 +126,7 @@ const conflictsLoading = ref(false)
 const conflictDetecting = ref(false)
 const feasibilityLoading = ref(false)
 const feasibilityReport = ref<FeasibilityReport | null>(null)
-const conflictStatusFilter = ref<LongId | undefined>(undefined)
+const conflictStatusFilter = ref<number | undefined>(undefined)
 
 const resolveDialogVisible = ref(false)
 const resolveNote = ref('')

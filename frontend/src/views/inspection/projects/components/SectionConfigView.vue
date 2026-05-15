@@ -575,7 +575,7 @@ async function handleSaveEval() {
   if (sectionNode?.parentSectionId) {
     const parentInd = indicators.value.find(i =>
       i.sourceSectionId === sectionNode.parentSectionId ||
-      (i.indicatorType === 'COMPOSITE' && i.name === sectionMap.value.get(sectionNode.parentSectionId))
+      (i.indicatorType === 'COMPOSITE' && sectionNode.parentSectionId != null && i.name === sectionMap.value.get(sectionNode.parentSectionId))
     )
     if (parentInd) parentIndicatorId = parentInd.id
   }

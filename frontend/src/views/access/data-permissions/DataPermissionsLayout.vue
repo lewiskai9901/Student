@@ -349,7 +349,7 @@ async function onCompare(ids: (number | string)[]) {
     for (const id of ids) {
       const role = allRoles.value.find(r => String(r.id) === String(id))
       if (!role) continue
-      const cfg = await dataPermissionApi.getConfig(id)
+      const cfg = await dataPermissionApi.getConfig(String(id))
       const mps = cfg.modulePermissions || []
       list.push({ role, mps, decision: moduleScopesToScene(mps) })
     }

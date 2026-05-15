@@ -173,8 +173,8 @@ const sortedItems = computed(() =>
 
 function createEmptyForm(): EditForm {
   return {
-    id: 0,
-    sectionId: props?.sectionId ?? 0,
+    id: '',
+    sectionId: props?.sectionId ?? '',
     itemName: '',
     description: '',
     itemType: 'TEXT',

@@ -234,7 +234,7 @@ async function handleCreate() {
     // Bug 2: create 时传 rootSectionId, 否则项目和模板脱钩
     const project = await inspProjectApi.create({
       projectName: form.projectName,
-      rootSectionId: form.rootSectionId,
+      rootSectionId: form.rootSectionId!,
       startDate: form.startDate,
     })
 

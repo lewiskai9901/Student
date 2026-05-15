@@ -319,7 +319,7 @@
     <OrgImportDialog
       v-model:visible="showImportDialog"
       :org-unit-id="node.id"
-      @imported="Promise.all([loadMembers(), loadStats()])"
+      @imported="onImported"
     />
 
     <!-- 用户关系抽屉 (Step 3) -->
@@ -634,6 +634,10 @@ const openUserRelation = (m: MergedMember) => {
 const onUserRelationChanged = () => {
   loadMembers()
   loadStats()
+}
+
+const onImported = async () => {
+  await Promise.all([loadMembers(), loadStats()])
 }
 </script>
 

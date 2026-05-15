@@ -1,5 +1,5 @@
 <template>
-  <OfferingListTab :semester-id="semesterId ?? null" :selected-org="selectedOrg" />
+  <OfferingListTab :semester-id="semesterId ?? undefined" :selected-org="selectedOrg" />
 </template>
 
 <script setup lang="ts">

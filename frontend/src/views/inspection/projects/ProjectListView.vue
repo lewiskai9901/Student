@@ -493,7 +493,7 @@ function strictnessHint(s?: string): string {
 }
 async function loadPolicies() {
   // 并发加载所有项目策略
-  const ids = summaries.value.map(s => s.project.id).filter(Boolean) as number[]
+  const ids = summaries.value.map(s => s.project.id).filter(Boolean) as LongId[]
   await Promise.all(ids.map(async id => {
     try {
       const p = await http.get<any>(`/inspection/corrective/projects/${id}/policy`)

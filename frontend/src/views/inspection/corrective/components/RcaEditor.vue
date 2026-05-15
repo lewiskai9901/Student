@@ -81,7 +81,7 @@ function hasFishboneContent(): boolean {
     <el-tabs
       :model-value="currentMethod"
       type="border-card"
-      @tab-change="(name: string) => handleMethodChange(name)"
+      @tab-change="(name) => handleMethodChange(String(name))"
     >
       <el-tab-pane label="5-Why 分析法" name="5WHY">
         <template v-if="readonly">

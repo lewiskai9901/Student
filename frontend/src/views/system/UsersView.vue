@@ -159,7 +159,7 @@
         <select
           class="tm-page-select"
           :value="queryParams.pageSize"
-          @change="queryParams.pageSize = ($event.target as HTMLSelectElement).value; loadUserList()"
+          @change="queryParams.pageSize = Number(($event.target as HTMLSelectElement).value); loadUserList()"
         >
           <option :value="10">10 条/页</option>
           <option :value="20">20 条/页</option>

@@ -410,10 +410,10 @@ const childTypes = computed(() => {
 })
 
 const tabs = computed(() => [
-  { key: 'basic',     label: '基本信息', badge: null },
-  { key: 'fields',    label: '字段定义', badge: form.value.metadataSchema.fields.length },
-  { key: 'hierarchy', label: '父子关系', badge: form.value.allowedChildCodesArr.length },
-  { key: 'json',      label: 'JSON',    badge: null },
+  { key: 'basic'     as const, label: '基本信息', badge: null as number | null },
+  { key: 'fields'    as const, label: '字段定义', badge: form.value.metadataSchema.fields.length },
+  { key: 'hierarchy' as const, label: '父子关系', badge: form.value.allowedChildCodesArr.length },
+  { key: 'json'      as const, label: 'JSON',    badge: null as number | null },
 ])
 
 const schemaJson = computed(() => JSON.stringify(form.value.metadataSchema, null, 2))

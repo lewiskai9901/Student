@@ -182,7 +182,7 @@ export function deleteRole(id: LongId): Promise<void> {
  * 批量删除角色
  */
 export function batchDeleteRoles(ids: (string | number)[]): Promise<void[]> {
-  return Promise.all(ids.map(id => deleteRole(id)))
+  return Promise.all(ids.map(id => deleteRole(String(id))))
 }
 
 /**

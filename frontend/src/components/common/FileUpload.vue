@@ -135,7 +135,7 @@ const handleSuccess: UploadProps['onSuccess'] = (response, uploadFile) => {
     emit('update:modelValue', fileList.value)
   } else {
     ElMessage.error(response.message || '上传失败')
-    handleError(new Error(response.message), uploadFile, fileList.value)
+    handleError(new Error(response.message), uploadFile, fileList.value as any)
   }
 }
 
