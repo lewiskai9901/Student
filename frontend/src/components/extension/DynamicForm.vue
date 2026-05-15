@@ -175,12 +175,12 @@ function displayValue(field: FieldSchema): string {
 
   if (field.type === 'relation') {
     const opts = relationCache.value[field.config?.target || ''] || []
-    const found = opts.find(o => o.id === Number(val) || String(o.id) === String(val))
+    const found = opts.find(o => String(o.id) === String(val))
     return found?.label || String(val)
   }
 
   if (field.type === 'user') {
-    const found = userOptions.value.find(u => u.id === Number(val) || String(u.id) === String(val))
+    const found = userOptions.value.find(u => String(u.id) === String(val))
     return found?.name || String(val)
   }
 

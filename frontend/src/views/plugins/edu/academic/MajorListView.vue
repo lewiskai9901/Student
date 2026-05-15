@@ -797,11 +797,11 @@ const majorDialogVisible = ref(false)
 const majorSaving = ref(false)
 const majorFormRef = ref<FormInstance>()
 const majorForm = reactive({
-  id: null as number | string | null,
+  id: null as LongId | null,
   majorCode: '',
   majorName: '',
   majorCategoryCode: '',
-  orgUnitId: null as number | string | null,
+  orgUnitId: null as LongId | null,
   enrollmentTarget: '初中毕业生',
   educationForm: '全日制',
   approvalYear: undefined as number | undefined,
@@ -913,7 +913,7 @@ const directionParentMajor = ref<Major | null>(null)
 const newCertName = ref('')
 
 const directionForm = reactive({
-  id: null as number | undefined | null,
+  id: null as LongId | null | undefined,
   majorId: null as LongId | null,
   directionCode: '',
   directionName: '',

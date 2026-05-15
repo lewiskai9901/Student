@@ -44,7 +44,7 @@ const showRejectInline = ref(false)
 const appealDialog = ref(false)
 const appealDetailId = ref<LongId | null>(null)
 const appealItemName = ref<string | undefined>(undefined)
-const appealCurrentScore = ref<LongId | undefined>(undefined)
+const appealCurrentScore = ref<number | undefined>(undefined)
 
 const selectedTask = computed(() =>
   submittedTasks.value.find(t => t.id === selectedTaskId.value) ?? null

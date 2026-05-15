@@ -436,7 +436,7 @@ export const teachingClassApi = {
     http.get<TeachingClassMember[]>(`${BASE_URL}/teaching-classes/${id}/members`),
   addMembers: (id: LongId | string, members: Partial<TeachingClassMember>[]) =>
     http.post(`${BASE_URL}/teaching-classes/${id}/members`, members),
-  removeMembers: (id: LongId | string, memberIds: number[]) =>
+  removeMembers: (id: LongId | string, memberIds: LongId[]) =>
     http.delete(`${BASE_URL}/teaching-classes/${id}/members`, { data: memberIds }),
 }
 

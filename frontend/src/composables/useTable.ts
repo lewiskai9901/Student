@@ -35,7 +35,7 @@ export function useTable<T, P = Record<string, unknown>>(options: UseTableOption
   // 选中项
   const selectedRows = ref<T[]>([]) as { value: T[] }
   const selectedIds = computed(() =>
-    selectedRows.value.map((row: T & { id?: LongId }) => row.id).filter(Boolean) as number[]
+    (selectedRows.value as Array<T & { id?: LongId }>).map(row => row.id).filter((id): id is LongId => !!id)
   )
 
   // 是否有选中项

@@ -231,7 +231,7 @@ const isPoolDragging = ref(false)
 const showAddDialog = ref(false)
 const showCopyDialog = ref(false)
 const selectedMajorId = ref<LongId | null>(null)
-const selectedDirectionIds = ref<(number | string)[]>([])
+const selectedDirectionIds = ref<LongId[]>([])
 const copySourceGradeId = ref<LongId | null>(null)
 
 // 按专业分组已配置的方向
@@ -298,7 +298,7 @@ const confirmAddMajor = async () => {
     for (const directionId of selectedDirectionIds.value) {
       await addDirectionToYear({
         academicYear: props.grade.enrollmentYear,
-        majorDirectionId: directionId as number,
+        majorDirectionId: directionId,
         remarks: ''
       })
     }

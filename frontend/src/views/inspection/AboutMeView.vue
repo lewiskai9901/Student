@@ -41,7 +41,7 @@ const myAppeals = ref<InspAppeal[]>([])
 const appealDialog = ref(false)
 const appealDetailId = ref<LongId | null>(null)
 const appealItemName = ref<string | undefined>('')
-const appealCurrentScore = ref<LongId | undefined>(undefined)
+const appealCurrentScore = ref<number | undefined>(undefined)
 
 // Period filter
 const period = ref<'7d' | '30d' | '90d' | 'all'>('30d')

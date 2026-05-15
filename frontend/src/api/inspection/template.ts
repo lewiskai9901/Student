@@ -82,7 +82,7 @@ export function getVersions(rootSectionId: LongId): Promise<TemplateVersion[]> {
 }
 
 /** P1-160: 批量查询模板使用计数 — { rootSectionId: count } */
-export function getRootSectionUsage(ids: number[]): Promise<Record<LongId, number>> {
+export function getRootSectionUsage(ids: LongId[]): Promise<Record<LongId, number>> {
   if (!ids.length) return Promise.resolve({})
   return http.get<Record<LongId, number>>(`${TEMPLATE_BASE}/usage`, { params: { ids: ids.join(',') } })
 }

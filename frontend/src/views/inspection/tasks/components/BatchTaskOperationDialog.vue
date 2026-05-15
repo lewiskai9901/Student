@@ -18,13 +18,13 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:visible': [value: boolean]
-  execute: [action: string, taskIds: number[]]
+  execute: [action: string, taskIds: LongId[]]
 }>()
 
 // ---------- State ----------
 
 const selectedAction = ref<string>('PUBLISH')
-const selectedTaskIds = ref<number[]>([])
+const selectedTaskIds = ref<LongId[]>([])
 const isExecuting = ref(false)
 
 // ---------- Operations ----------

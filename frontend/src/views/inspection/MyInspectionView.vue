@@ -73,8 +73,8 @@ async function submitAdhoc() {
 function roleInTask(t: InspTask): 'inspector' | 'reviewer' | null {
   const me = authStore.user?.userId ?? authStore.user?.id
   if (!me) return null
-  if (t.inspectorId === Number(me)) return 'inspector'
-  if (t.reviewerId === Number(me)) return 'reviewer'
+  if (t.inspectorId === String(me)) return 'inspector'
+  if (t.reviewerId === String(me)) return 'reviewer'
   return null
 }
 function isReviewable(t: InspTask): boolean {

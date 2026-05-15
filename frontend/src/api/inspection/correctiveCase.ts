@@ -107,9 +107,9 @@ export function getCorrectiveCandidates(submissionId: LongId): Promise<Correctiv
 /** 批量确认建单. */
 export function confirmCorrectiveCandidates(
   submissionId: LongId,
-  detailIds: number[],
-): Promise<number[]> {
-  return http.post<number[]>('/inspection/corrective/candidates/confirm', {
+  detailIds: LongId[],
+): Promise<LongId[]> {
+  return http.post<LongId[]>('/inspection/corrective/candidates/confirm', {
     submissionId,
     detailIds,
   })

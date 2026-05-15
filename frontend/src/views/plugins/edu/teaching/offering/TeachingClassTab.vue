@@ -216,7 +216,7 @@ import type { TeachingClass, TeachingClassMember, Course } from '@/types/teachin
 import type { SchoolClass } from '@/types/organization'
 
 const props = defineProps<{
-  semesterId: LongId | string | null
+  semesterId: LongId | undefined
 }>()
 
 // Data

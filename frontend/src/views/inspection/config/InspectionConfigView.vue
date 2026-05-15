@@ -102,7 +102,7 @@ async function showPreview(sec: TemplateSection, e: MouseEvent) {
           const items = await inspTemplateApi.getItems(leaf.id)
           itemTotal += (items || []).length
           for (const it of (items || [])) {
-            const m = (it.scoringMode || 'OTHER') as string
+            const m = ((it as any).scoringMode || 'OTHER') as string
             modes[m] = (modes[m] || 0) + 1
           }
         } catch { /* skip */ }

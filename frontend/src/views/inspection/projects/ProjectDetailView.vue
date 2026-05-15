@@ -567,12 +567,12 @@ function syncForm() {
   if (!project.value) return; const p = project.value
   let rawIds: (number | string)[] = []; try { rawIds = p.scopeConfig ? JSON.parse(p.scopeConfig) : [] } catch (e: any) { console.warn('解析 scopeConfig 失败', e) }
   const ids: string[] = rawIds.map(String)
-  cf.value = { scopeType: p.scopeType || 'ORG', scopeIds: ids, startDate: p.startDate || '', endDate: p.endDate || '', assignmentMode: p.assignmentMode || 'FREE', reviewRequired: p.reviewRequired ?? true, autoPublish: p.autoPublish ?? false, projectName: p.projectName, evaluationMode: (p as any).evaluationMode || 'SINGLE', multiRaterMode: (p as any).multiRaterMode || 'AVERAGE', trendEnabled: (p as any).trendEnabled ?? false, decayEnabled: (p as any).decayEnabled ?? false, calibrationEnabled: (p as any).calibrationEnabled ?? false,
+  cf.value = { ...cf.value, scopeType: (p.scopeType as string) || 'ORG', scopeIds: ids, startDate: p.startDate || '', endDate: p.endDate || '', assignmentMode: (p.assignmentMode as string) || 'FREE', reviewRequired: p.reviewRequired ?? true, autoPublish: p.autoPublish ?? false, projectName: p.projectName, evaluationMode: String((p as any).evaluationMode || 'SINGLE'), multiRaterMode: String((p as any).multiRaterMode || 'AVERAGE'), trendEnabled: (p as any).trendEnabled ?? false, decayEnabled: (p as any).decayEnabled ?? false, calibrationEnabled: (p as any).calibrationEnabled ?? false,
     // V108
     inspectionMode: ((p as any).inspectionMode || 'PLANNED') as any,
     allowAdHoc: !!((p as any).allowAdHoc),
     allowSelfCheck: !!((p as any).allowSelfCheck),
-    adHocQuotaPerInspector: (p as any).adHocQuotaPerInspector ?? null,
+    adHocQuotaPerInspector: ((p as any).adHocQuotaPerInspector ?? null) as number | null,
   }
   // V108: project DTO 可能没暴露 inspection_mode 字段, 单独 GET 一次
   loadInspectionModeFallback()

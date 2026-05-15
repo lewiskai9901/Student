@@ -29,8 +29,8 @@ const pageSize = ref(20)
 
 // 筛选条件
 const activeTab = ref<'pending' | 'my' | 'all'>('pending')
-const filterType = ref<LongId | undefined>()
-const filterStatus = ref<LongId | undefined>()
+const filterType = ref<number | undefined>()
+const filterStatus = ref<number | undefined>()
 
 // 详情对话框
 const detailDialogVisible = ref(false)

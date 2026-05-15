@@ -328,7 +328,7 @@ const loading = ref(false)
 const savingTaskId = ref<LongId | null>(null)
 const batchAssignVisible = ref(false)
 const batchTeacherId = ref<LongId>('')
-const batchWeeklyHours = ref<LongId | null>(null)
+const batchWeeklyHours = ref<number | null>(null)
 const batchAssigning = ref(false)
 
 // Per-task edit state for teacher assignments
@@ -347,7 +347,7 @@ function getTaskEditState(task: TeachingTask) {
     const serverTeachers = task.teachers || []
     taskEditStates[key] = {
       teachers: serverTeachers.map(t => ({
-        teacherId: t.teacher_id || t.teacherId || '',
+        teacherId: String(t.teacher_id || t.teacherId || ''),
         role: t.teacher_role || t.role || 2,
         weeklyHours: t.weekly_hours ?? t.weeklyHours ?? null,
       })),

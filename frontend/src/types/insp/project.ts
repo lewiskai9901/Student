@@ -37,8 +37,8 @@ export interface InspProject {
   reviewRequired: boolean
   autoPublish: boolean
   status: ProjectStatus
-  createdBy: number | null
-  updatedBy: number | null
+  createdBy: LongId | null
+  updatedBy: LongId | null
   createdAt: string
   updatedAt: string
 }

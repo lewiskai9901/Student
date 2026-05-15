@@ -491,7 +491,7 @@ function openEditDialog(c: SchedulingConstraint) {
 async function handleSave() {
   if (!form.value.constraintName?.trim() || !form.value.constraintType) { ElMessage.warning('请填写约束名称和类型'); return }
   const payload: Partial<SchedulingConstraint> = {
-    semesterId: props.semesterId as number, constraintName: form.value.constraintName, constraintLevel: activeLevel.value,
+    semesterId: props.semesterId, constraintName: form.value.constraintName, constraintLevel: activeLevel.value,
     constraintType: form.value.constraintType, isHard: form.value.isHard, priority: form.value.isHard ? 100 : form.value.priority,
     params: buildParams(), effectiveWeeks: form.value.effectiveWeeks || undefined, enabled: true,
   }

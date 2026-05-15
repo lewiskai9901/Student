@@ -19,7 +19,7 @@ const emit = defineEmits<{
 }>()
 
 interface TreeNode {
-  value: number
+  value: LongId
   label: string
   disabled: boolean
   children?: TreeNode[]

@@ -171,8 +171,8 @@ export function useFloorPlan() {
   const clipboard = ref<FloorPlanElement[]>([])
 
   // Smart guide lines (shown during drag)
-  const guideLineX = ref<LongId | null>(null)
-  const guideLineY = ref<LongId | null>(null)
+  const guideLineX = ref<number | null>(null)
+  const guideLineY = ref<number | null>(null)
 
   // Rubber band selection
   const rubberBand = ref<{ x: number; y: number; w: number; h: number } | null>(null)

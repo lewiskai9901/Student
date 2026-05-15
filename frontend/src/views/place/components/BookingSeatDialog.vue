@@ -71,7 +71,7 @@
         <div v-if="placeLayout" class="relative h-full">
           <FloorPlanEditor
             ref="floorPlanRef"
-            :place-id="booking?.placeId ?? 0"
+            :place-id="String(booking?.placeId ?? '')"
             :initial-layout="placeLayout"
             :occupants="occupantsForFloorPlan"
             :show-seat-labels="showSeatLabels"
@@ -172,8 +172,8 @@ const filteredAttendees = computed(() => {
 // Convert assignments > PlaceOccupant[] for FloorPlanEditor
 const occupantsForFloorPlan = computed<PlaceOccupant[]>(() =>
   Object.entries(assignments.value).map(([positionNo, user]) => ({
-    id: 0,
-    placeId: props.booking?.placeId ?? 0,
+    id: '',
+    placeId: String(props.booking?.placeId ?? ''),
     occupantType: 'ATTENDEE',
     occupantId: user.userId,
     occupantName: user.userName,

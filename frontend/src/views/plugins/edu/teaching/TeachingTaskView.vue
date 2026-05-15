@@ -543,9 +543,9 @@ const saveTask = async () => {
 const showAssignDialog = (task: TeachingTask) => {
   currentTask.value = task
   assignForm.value = {
-    teacherIds: task.teachers?.map(t => t.teacher_id || t.teacherId) || [],
-    mainTeacherId: task.teachers?.find(t => (t.teacher_role || t.role) === 1)?.teacher_id
-      || task.teachers?.find(t => (t.teacher_role || t.role) === 1)?.teacherId,
+    teacherIds: (task.teachers?.map(t => String(t.teacher_id || t.teacherId || '')) || []).filter(Boolean),
+    mainTeacherId: String(task.teachers?.find(t => (t.teacher_role || t.role) === 1)?.teacher_id
+      || task.teachers?.find(t => (t.teacher_role || t.role) === 1)?.teacherId || '') || undefined,
   }
   assignDialogVisible.value = true
 }
