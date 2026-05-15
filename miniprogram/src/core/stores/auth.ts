@@ -2,13 +2,14 @@ import { defineStore } from 'pinia'
 import { authApi, toUserInfo } from '../api/auth'
 import { capability } from '../platform/auto'
 import type { UserInfo } from '../plugin/context'
+import type { LongId } from '../types'
 
 interface State {
   user: UserInfo | null
   permissions: string[]
   enabledPlugins: string[]
-  tenantId: number | null
-  orgUnitId: number | null
+  tenantId: LongId | null
+  orgUnitId: LongId | null
 }
 
 export const useAuth = defineStore('auth', {
@@ -16,8 +17,8 @@ export const useAuth = defineStore('auth', {
     user: capability.storage.get<UserInfo>('user') ?? null,
     permissions: capability.storage.get<string[]>('permissions') ?? [],
     enabledPlugins: capability.storage.get<string[]>('enabledPlugins') ?? [],
-    tenantId: capability.storage.get<number>('tenantId') ?? null,
-    orgUnitId: capability.storage.get<number>('orgUnitId') ?? null
+    tenantId: capability.storage.get<LongId>('tenantId') ?? null,
+    orgUnitId: capability.storage.get<LongId>('orgUnitId') ?? null
   }),
   getters: {
     loggedIn: (s) => s.user !== null,

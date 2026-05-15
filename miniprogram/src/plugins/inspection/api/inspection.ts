@@ -31,7 +31,7 @@ export const inspectionApi = {
       url: `/inspection/corrective-cases/${id}/start-work`,
       method: 'POST'
     }),
-  submitCorrection: (id: LongId, correctionNote: string, evidenceIds: number[] = []) =>
+  submitCorrection: (id: LongId, correctionNote: string, evidenceIds: LongId[] = []) =>
     requestWrapped<CorrectiveCase>({
       url: `/inspection/corrective-cases/${id}/submit-correction`,
       method: 'POST',

@@ -19,18 +19,18 @@ describe('V4: cross-plugin event via bus (demo ← inspection)', () => {
 
     const bus = createEventBus()
     await activatePlugins(d, {
-      user: { id: 1, username: 'u', name: 'U', roles: [] },
+      user: { id: '1', username: 'u', name: 'U', roles: [] },
       permissions: [],
       tenantPlugins: ['demo', 'inspection'],
       capability: { platform: 'mp-weixin' } as any,
       bus
     })
 
-    bus.emit('inspection.task.submitted', { taskId: 1, submitterId: 99 })
+    bus.emit('inspection.task.submitted', { taskId: '1', submitterId: 99 })
 
     expect(_crossPluginAuditLog).toHaveLength(1)
     expect(_crossPluginAuditLog[0].event).toBe('inspection.task.submitted')
-    expect(_crossPluginAuditLog[0].payload).toEqual({ taskId: 1, submitterId: 99 })
+    expect(_crossPluginAuditLog[0].payload).toEqual({ taskId: '1', submitterId: 99 })
   })
 
   it('subscription persists across activations (bus is namespace-routing, not lifecycle-coupled)', async () => {
@@ -41,7 +41,7 @@ describe('V4: cross-plugin event via bus (demo ← inspection)', () => {
     const bus = createEventBus()
     // Only demo activated (inspection not in tenantPlugins)
     await activatePlugins(d, {
-      user: { id: 1, username: 'u', name: 'U', roles: [] },
+      user: { id: '1', username: 'u', name: 'U', roles: [] },
       permissions: [],
       tenantPlugins: ['demo'],
       capability: { platform: 'mp-weixin' } as any,
@@ -50,7 +50,7 @@ describe('V4: cross-plugin event via bus (demo ← inspection)', () => {
 
     // demo's bootstrap ran, subscription is live. If something emits the event, demo still receives.
     // In real usage inspection wouldn't emit when not active. This test documents the routing semantics.
-    bus.emit('inspection.task.submitted', { taskId: 2 })
+    bus.emit('inspection.task.submitted', { taskId: '2' })
     expect(_crossPluginAuditLog).toHaveLength(1)
   })
 })

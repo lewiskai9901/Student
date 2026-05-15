@@ -24,10 +24,10 @@ describe('placeApi', () => {
 
   it('tree() returns nested place nodes with capacity', async () => {
     const sample = [{
-      id: 1, placeCode: 'BLD-A', placeName: 'A 楼', typeCode: 'BUILDING',
+      id: '1', placeCode: 'BLD-A', placeName: 'A 楼', typeCode: 'BUILDING',
       hasCapacity: false, leaf: false,
       children: [{
-        id: 2, parentId: 1, placeCode: 'A-101', placeName: '101 室',
+        id: '2', parentId: 1, placeCode: 'A-101', placeName: '101 室',
         typeCode: 'ROOM', hasCapacity: true, capacity: 30, currentOccupancy: 18, leaf: true
       }]
     }]

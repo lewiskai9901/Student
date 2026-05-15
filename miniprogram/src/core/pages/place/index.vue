@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@core/types'
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { placeApi, type PlaceTreeNode } from '../../api/place'
@@ -7,7 +8,7 @@ import { BizError } from '../../api/request'
 declare const uni: any
 
 interface FlatNode {
-  id: number
+  id: LongId
   placeName: string
   typeCode: string
   typeName?: string
@@ -17,15 +18,15 @@ interface FlatNode {
   capacityUnit?: string
   depth: number
   hasChildren: boolean
-  parentChain: number[]
+  parentChain: LongId[]
 }
 
 const tree = ref<PlaceTreeNode[]>([])
-const expanded = ref<Set<number>>(new Set())
+const expanded = ref<Set<LongId>>(new Set())
 const loading = ref(true)
 const errMsg = ref('')
 
-function flatten(nodes: PlaceTreeNode[], depth: number, chain: number[], out: FlatNode[]) {
+function flatten(nodes: PlaceTreeNode[], depth: number, chain: LongId[], out: FlatNode[]) {
   for (const n of nodes) {
     out.push({
       id: n.id,

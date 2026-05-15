@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@core/types'
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { inspectionApi } from '../api/inspection'
@@ -38,7 +39,7 @@ async function load() {
   }
 }
 
-function go(id: number) {
+function go(id: LongId) {
   uni.navigateTo({ url: `/plugins/inspection/pages/correction-detail?id=${id}` })
 }
 

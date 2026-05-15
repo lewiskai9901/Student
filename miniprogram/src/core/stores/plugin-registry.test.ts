@@ -22,7 +22,7 @@ describe('activatePlugins', () => {
       bootstrap: () => { bootedB++ }
     }))
     const active = await activatePlugins(d, {
-      user: { id: 1, username: 'u', name: 'U', roles: [] },
+      user: { id: '1', username: 'u', name: 'U', roles: [] },
       permissions: [],
       tenantPlugins: ['a'],
       capability: { platform: 'mp-weixin' } as any,
@@ -41,7 +41,7 @@ describe('activatePlugins', () => {
       enabled: (ctx) => ctx.permissions.includes('gated:enter')
     }))
     const ctxBase = {
-      user: { id: 1, username: 'u', name: 'U', roles: [] },
+      user: { id: '1', username: 'u', name: 'U', roles: [] },
       tenantPlugins: ['gated'],
       capability: { platform: 'mp-weixin' } as any,
       bus: createEventBus()

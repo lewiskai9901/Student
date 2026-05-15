@@ -18,27 +18,27 @@ beforeEach(() => requestWrappedMock.mockReset())
 
 describe('inspection write paths → event bus contract', () => {
   it('submitTask success then emit reaches a cross-plugin listener', async () => {
-    requestWrappedMock.mockResolvedValueOnce({ id: 7, status: 'SUBMITTED' })
+    requestWrappedMock.mockResolvedValueOnce({ id: '7', status: 'SUBMITTED' })
     const bus = createEventBus()
     const seen: any[] = []
     bus.on('inspection.task.submitted', (p) => seen.push(p))
 
-    await inspectionApi.submitTask(7)
-    bus.emit('inspection.task.submitted', { taskId: 7, submitterId: 42 })
+    await inspectionApi.submitTask('7')
+    bus.emit('inspection.task.submitted', { taskId: '7', submitterId: 42 })
 
-    expect(seen).toEqual([{ taskId: 7, submitterId: 42 }])
+    expect(seen).toEqual([{ taskId: '7', submitterId: 42 }])
   })
 
   it('submitCorrection success then emit reaches listener', async () => {
-    requestWrappedMock.mockResolvedValueOnce({ id: 9, status: 'SUBMITTED' })
+    requestWrappedMock.mockResolvedValueOnce({ id: '9', status: 'SUBMITTED' })
     const bus = createEventBus()
     const seen: any[] = []
     bus.on('inspection.case.processed', (p) => seen.push(p))
 
-    await inspectionApi.submitCorrection(9, '已完成 5 项整改')
-    bus.emit('inspection.case.processed', { caseId: 9, action: 'submitted' })
+    await inspectionApi.submitCorrection('9', '已完成 5 项整改')
+    bus.emit('inspection.case.processed', { caseId: '9', action: 'submitted' })
 
-    expect(seen).toEqual([{ caseId: 9, action: 'submitted' }])
+    expect(seen).toEqual([{ caseId: '9', action: 'submitted' }])
   })
 
   it('submitTask BizError propagates and prevents downstream emit', async () => {
@@ -49,7 +49,7 @@ describe('inspection write paths → event bus contract', () => {
 
     let caught: unknown = null
     try {
-      await inspectionApi.submitTask(7)
+      await inspectionApi.submitTask('7')
       // page handler would emit here; we deliberately do NOT emit when API rejects
     } catch (e) {
       caught = e

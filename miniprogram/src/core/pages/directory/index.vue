@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@core/types'
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useAuth } from '../../stores/auth'
@@ -12,7 +13,7 @@ const users = ref<UserListItem[]>([])
 const loading = ref(true)
 const errMsg = ref('')
 const keyword = ref('')
-const expandedId = ref<number | null>(null)
+const expandedId = ref<LongId | null>(null)
 
 onShow(async () => {
   if (!auth.loggedIn || !auth.orgUnitId) {

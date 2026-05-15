@@ -12,7 +12,7 @@ describe('inspection activation integration', () => {
   // Note: inspection.enabled 是 () => true (后端核心通用层),所以 tenantPlugins 不影响激活.
   // perm 字符串在 Phase 6 真机测试时对齐到后端实际下发的 perm code.
   const baseInput = () => ({
-    user: { id: 1, username: 'u', name: 'U', roles: [] },
+    user: { id: '1', username: 'u', name: 'U', roles: [] },
     permissions: [
       'inspection:task:view',          // 我的任务/可领任务/扫码
       'inspection:corrective:view',    // 我的整改

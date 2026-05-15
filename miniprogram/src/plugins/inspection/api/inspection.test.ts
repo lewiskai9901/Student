@@ -30,22 +30,22 @@ describe('inspectionApi', () => {
   })
 
   it('myTasks() GETs /inspection/tasks/my-tasks', async () => {
-    mockOk([{ id: 1, projectId: 9, templateId: 1, status: 'PENDING' }])
+    mockOk([{ id: '1', projectId: '9', templateId: '1', status: 'PENDING' }])
     const tasks = await inspectionApi.myTasks()
     expect(mockUni.request).toHaveBeenCalledWith(
       expect.objectContaining({ url: expect.stringContaining('/inspection/tasks/my-tasks') })
     )
     expect(tasks).toHaveLength(1)
-    expect(tasks[0].id).toBe(1)
+    expect(tasks[0].id).toBe('1')
   })
 
   it('taskById(id) GETs /inspection/tasks/{id}', async () => {
-    mockOk({ id: 42, projectId: 9, templateId: 1, status: 'IN_PROGRESS' })
-    const t = await inspectionApi.taskById(42)
+    mockOk({ id: '42', projectId: '9', templateId: '1', status: 'IN_PROGRESS' })
+    const t = await inspectionApi.taskById('42')
     expect(mockUni.request).toHaveBeenCalledWith(
       expect.objectContaining({ url: expect.stringContaining('/inspection/tasks/42') })
     )
-    expect(t.id).toBe(42)
+    expect(t.id).toBe('42')
   })
 
   it('availableTasks() GETs /inspection/tasks/available', async () => {
@@ -65,12 +65,12 @@ describe('inspectionApi', () => {
   })
 
   it('caseById(id) GETs /inspection/corrective-cases/{id}', async () => {
-    mockOk({ id: 7, projectId: 9, status: 'IN_PROGRESS' })
-    const c = await inspectionApi.caseById(7)
+    mockOk({ id: '7', projectId: '9', status: 'IN_PROGRESS' })
+    const c = await inspectionApi.caseById('7')
     expect(mockUni.request).toHaveBeenCalledWith(
       expect.objectContaining({ url: expect.stringContaining('/inspection/corrective-cases/7') })
     )
-    expect(c.id).toBe(7)
+    expect(c.id).toBe('7')
   })
 
   it('myAppeals() GETs /inspection/appeals/my', async () => {
@@ -82,12 +82,12 @@ describe('inspectionApi', () => {
   })
 
   it('appealById(id) GETs /inspection/appeals/{id}', async () => {
-    mockOk({ id: 5, submissionDetailId: 100, submitterId: 1, reason: 'r', status: 'PENDING' })
-    const a = await inspectionApi.appealById(5)
+    mockOk({ id: '5', submissionDetailId: '100', submitterId: 1, reason: 'r', status: 'PENDING' })
+    const a = await inspectionApi.appealById('5')
     expect(mockUni.request).toHaveBeenCalledWith(
       expect.objectContaining({ url: expect.stringContaining('/inspection/appeals/5') })
     )
-    expect(a.id).toBe(5)
+    expect(a.id).toBe('5')
   })
 
   it('propagates BizError from non-200 envelope', async () => {

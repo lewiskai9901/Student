@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@core/types'
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { inspectionApi } from '../api/inspection'
@@ -16,11 +17,11 @@ const task = ref<InspTask | null>(null)
 const loading = ref(true)
 const submitting = ref(false)
 const errMsg = ref('')
-let taskId = 0
+let taskId: LongId = ''
 
 onLoad(async (query: any) => {
-  taskId = Number(query?.id)
-  if (!Number.isFinite(taskId) || taskId <= 0) {
+  taskId = String(query?.id ?? '')
+  if (!taskId) {
     errMsg.value = '任务 ID 缺失或非法'
     loading.value = false
     return

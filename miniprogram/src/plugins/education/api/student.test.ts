@@ -30,7 +30,7 @@ describe('studentApi', () => {
   })
 
   it('list() GETs /user_student with paging query string', async () => {
-    mockOk({ records: [{ id: 1, studentNo: 'S001', name: 'Alice' }], total: 1, size: 20, current: 1 })
+    mockOk({ records: [{ id: '1', studentNo: 'S001', name: 'Alice' }], total: 1, size: 20, current: 1 })
     const result = await studentApi.list({ keyword: 'al', pageNum: 1, pageSize: 20 })
     expect(mockUni.request).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -42,17 +42,17 @@ describe('studentApi', () => {
   })
 
   it('byId(id) GETs /user_student/{id}', async () => {
-    mockOk({ id: 42, studentNo: 'S042', name: 'Bob' })
-    const s = await studentApi.byId(42)
+    mockOk({ id: '42', studentNo: 'S042', name: 'Bob' })
+    const s = await studentApi.byId('42')
     expect(mockUni.request).toHaveBeenCalledWith(
       expect.objectContaining({ url: expect.stringContaining('/user_student/42') })
     )
-    expect(s.id).toBe(42)
+    expect(s.id).toBe('42')
   })
 
   it('byClass(classId) GETs /user_student/by-class/{classId}', async () => {
     mockOk([])
-    await studentApi.byClass(7)
+    await studentApi.byClass('7')
     expect(mockUni.request).toHaveBeenCalledWith(
       expect.objectContaining({ url: expect.stringContaining('/user_student/by-class/7') })
     )

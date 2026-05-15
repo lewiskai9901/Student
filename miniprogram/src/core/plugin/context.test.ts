@@ -6,7 +6,7 @@ describe('PluginContext', () => {
     const ctx: PluginContext = {
       tenantPlugins: ['inspection'],
       permissions: ['inspection:task:view'],
-      user: { id: 1, username: 'admin', name: '管理员', roles: [] },
+      user: { id: '1', username: 'admin', name: '管理员', roles: [] },
       capability: {} as any,
       bus: {} as any
     }

@@ -16,10 +16,10 @@ describe('requestWrapped (Result envelope)', () => {
 
   it('unwraps Result.data on code=200', async () => {
     mockUni.request.mockImplementation((o: any) =>
-      o.success({ statusCode: 200, data: { code: 200, message: 'ok', data: { id: 1, name: 'Demo' }, timestamp: 1 } })
+      o.success({ statusCode: 200, data: { code: 200, message: 'ok', data: { id: '1', name: 'Demo' }, timestamp: 1 } })
     )
     const r = await requestWrapped<{ id: number; name: string }>({ url: '/x' })
-    expect(r).toEqual({ id: 1, name: 'Demo' })
+    expect(r).toEqual({ id: '1', name: 'Demo' })
   })
 
   it('throws BizError on non-200 result code', async () => {

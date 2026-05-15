@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@core/types'
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useAuth } from '../../stores/auth'
@@ -13,7 +14,7 @@ const refreshing = ref(false)
 const profileExtras = ref<{
   phone?: string
   email?: string
-  orgUnitId?: number
+  orgUnitId?: LongId
   userTypeCode?: string
 }>({})
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@core/types'
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { inspectionApi } from '../api/inspection'
@@ -20,17 +21,17 @@ const submitting = ref(false)
 const errMsg = ref('')
 const note = ref('')
 interface AttachedEvidence {
-  evidenceId: number
+  evidenceId: LongId
   fileUrl: string
   fileName: string
 }
 const evidences = ref<AttachedEvidence[]>([])
 const adding = ref(false)
-let caseId = 0
+let caseId: LongId = ''
 
 onLoad(async (query: any) => {
-  caseId = Number(query?.id)
-  if (!Number.isFinite(caseId) || caseId <= 0) {
+  caseId = String(query?.id ?? '')
+  if (!caseId) {
     errMsg.value = '整改单 ID 缺失或非法'
     loading.value = false
     return

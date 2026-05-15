@@ -1,8 +1,9 @@
 import type { PlatformCapability } from '../platform/capability'
 import type { PluginEventBus } from './event-bus'
+import type { LongId } from '../types'
 
 export interface UserInfo {
-  id: number
+  id: LongId
   username: string
   name: string
   avatar?: string

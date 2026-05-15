@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@core/types'
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { inspectionApi } from '../api/inspection'
@@ -13,15 +14,15 @@ const registry = usePluginRegistry()
 const reason = ref('')
 const submitting = ref(false)
 const itemName = ref('')
-let detailId = 0
+let detailId: LongId = ''
 
 onLoad((query: any) => {
-  detailId = Number(query?.detailId)
+  detailId = String(query?.detailId ?? '')
   itemName.value = String(query?.itemName ?? '')
 })
 
 const valid = () => {
-  if (!detailId || detailId <= 0) return '评分项 ID 缺失'
+  if (!detailId) return '评分项 ID 缺失'
   if (!auth.user) return '请先登录'
   const t = reason.value.trim()
   if (t.length < 5) return '申诉理由至少 5 字'
@@ -59,7 +60,7 @@ async function doSubmit() {
 
 <template>
   <view class="page">
-    <view v-if="!detailId || detailId <= 0" class="state err">评分项 ID 缺失</view>
+    <view v-if="!detailId" class="state err">评分项 ID 缺失</view>
 
     <template v-else>
       <view class="hero">

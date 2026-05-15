@@ -28,9 +28,9 @@ describe('authApi.login', () => {
           expiresIn: 7200,
           enabledPlugins: ['inspection', 'demo'],
           userInfo: {
-            userId: 1, username: 'admin', realName: '管理员',
+            userId: '1', username: 'admin', realName: '管理员',
             roles: ['admin'], permissions: ['inspection:task:list', 'inspection:correction:list'],
-            tenantId: 1
+            tenantId: '1'
           }
         }
       }
@@ -39,9 +39,9 @@ describe('authApi.login', () => {
     expect(r.accessToken).toBe('a-token')
     expect(r.refreshToken).toBe('r-token')
     expect(r.enabledPlugins).toEqual(['inspection', 'demo'])
-    expect(r.userInfo.userId).toBe(1)
+    expect(r.userInfo.userId).toBe('1')
     expect(r.userInfo.permissions).toContain('inspection:task:list')
-    expect(r.userInfo.tenantId).toBe(1)
+    expect(r.userInfo.tenantId).toBe('1')
   })
 
   it('me() GETs /auth/me without skipAuth and returns LoginUserInfo', async () => {
@@ -50,10 +50,10 @@ describe('authApi.login', () => {
       data: {
         code: 200, message: 'ok', timestamp: 1,
         data: {
-          userId: 7, username: 'alice', realName: '艾丽斯', phone: '13800000000',
+          userId: '7', username: 'alice', realName: '艾丽斯', phone: '13800000000',
           email: 'a@x.com', avatar: 'https://cdn/a.jpg', status: 1,
           roles: ['INSPECTOR'], permissions: ['inspection:task:list'],
-          orgUnitId: 100, tenantId: 1, userTypeCode: 'STAFF'
+          orgUnitId: '100', tenantId: '1', userTypeCode: 'STAFF'
         }
       }
     }))
@@ -61,7 +61,7 @@ describe('authApi.login', () => {
     expect(mockUni.request).toHaveBeenCalledWith(expect.objectContaining({
       url: expect.stringContaining('/auth/me')
     }))
-    expect(r.userId).toBe(7)
+    expect(r.userId).toBe('7')
     expect(r.realName).toBe('艾丽斯')
   })
 
@@ -70,7 +70,7 @@ describe('authApi.login', () => {
       statusCode: 200,
       data: { code: 200, message: 'ok', timestamp: 1, data: {
         accessToken: 'a', refreshToken: 'r', tokenType: 'Bearer', expiresIn: 7200,
-        enabledPlugins: [], userInfo: { userId: 1, username: 'u', realName: 'U', roles: [], permissions: [] }
+        enabledPlugins: [], userInfo: { userId: '1', username: 'u', realName: 'U', roles: [], permissions: [] }
       }}
     }))
     await authApi.login('admin', 'pw')
@@ -88,23 +88,23 @@ describe('authApi.login', () => {
 describe('toUserInfo', () => {
   it('flattens LoginUserInfo into PluginContext.UserInfo', () => {
     const u: LoginUserInfo = {
-      userId: 1, username: 'u', realName: 'U', avatar: 'av',
-      roles: ['admin'], permissions: ['p:a'], tenantId: 1
+      userId: '1', username: 'u', realName: 'U', avatar: 'av',
+      roles: ['admin'], permissions: ['p:a'], tenantId: '1'
     }
     expect(toUserInfo(u)).toEqual({
-      id: 1, username: 'u', name: 'U', avatar: 'av', roles: ['admin']
+      id: '1', username: 'u', name: 'U', avatar: 'av', roles: ['admin']
     })
   })
 
   it('handles missing avatar gracefully', () => {
     const u: LoginUserInfo = {
-      userId: 2, username: 'x', realName: 'X', roles: [], permissions: []
+      userId: '2', username: 'x', realName: 'X', roles: [], permissions: []
     }
     expect(toUserInfo(u).avatar).toBeUndefined()
   })
 
   it('defaults roles to empty array if missing', () => {
-    const u = { userId: 3, username: 'y', realName: 'Y', permissions: [] } as any
+    const u = { userId: '3', username: 'y', realName: 'Y', permissions: [] } as any
     expect(toUserInfo(u).roles).toEqual([])
   })
 })

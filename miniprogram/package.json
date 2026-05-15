@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "verify-manifest": "node scripts/verify-manifest.js",
     "smoke:h5": "bash scripts/smoke-h5.sh",
+    "openapi:generate": "openapi-ts && node scripts/post-process-openapi-sdk.mjs",
     "ci": "npm run lint && npm run type-check && npm run verify-manifest && npm run test"
   },
   "dependencies": {
@@ -29,6 +30,7 @@
     "@dcloudio/types": "^3.4.8",
     "@dcloudio/uni-cli-shared": "3.0.0-4080420251103001",
     "@dcloudio/vite-plugin-uni": "3.0.0-4080420251103001",
+    "@hey-api/openapi-ts": "^0.97.1",
     "@types/node": "^20.11.0",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",

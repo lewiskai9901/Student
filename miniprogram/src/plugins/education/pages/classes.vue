@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@core/types'
 import { ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { classApi } from '../api/class'
@@ -58,7 +59,7 @@ function loadMore() {
   load(false)
 }
 
-function go(id: number) {
+function go(id: LongId) {
   uni.navigateTo({ url: `/plugins/education/pages/class-detail?id=${id}` })
 }
 

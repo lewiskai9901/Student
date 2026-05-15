@@ -48,27 +48,27 @@ describe('inspection attachment flow → submitCorrection', () => {
 
     // Step 2: addEvidence registers the upload, returns InspEvidence with id
     requestWrappedMock.mockResolvedValueOnce({
-      id: 501, submissionId: 7, detailId: 21,
+      id: '501', submissionId: '7', detailId: '21',
       evidenceType: 'PHOTO', fileName: 'wm.jpg', fileUrl: 'https://cdn/wm.jpg'
     })
-    const ev = await inspectionApi.addEvidence(7, {
-      detailId: 21,
+    const ev = await inspectionApi.addEvidence('7', {
+      detailId: '21',
       evidenceType: 'PHOTO',
       fileName: uploaded.fileName,
       fileUrl: uploaded.fileUrl
     })
-    expect(ev.id).toBe(501)
+    expect(ev.id).toBe('501')
 
     // Step 3: page collects evidenceIds, calls submitCorrection
     const evidenceIds = [ev.id]
-    requestWrappedMock.mockResolvedValueOnce({ id: 9, status: 'SUBMITTED' })
-    await inspectionApi.submitCorrection(9, '已完成,见附件', evidenceIds)
+    requestWrappedMock.mockResolvedValueOnce({ id: '9', status: 'SUBMITTED' })
+    await inspectionApi.submitCorrection('9', '已完成,见附件', evidenceIds)
 
     // Final assertion: submitCorrection POST body contains the evidenceIds
     expect(requestWrappedMock).toHaveBeenLastCalledWith({
       url: '/inspection/corrective-cases/9/submit-correction',
       method: 'POST',
-      data: { correctionNote: '已完成,见附件', evidenceIds: [501] }
+      data: { correctionNote: '已完成,见附件', evidenceIds: ['501'] }
     })
   })
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@core/types'
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { classApi } from '../api/class'
@@ -16,8 +17,8 @@ const studentsLoading = ref(false)
 const errMsg = ref('')
 
 onLoad(async (query: any) => {
-  const id = Number(query?.id)
-  if (!Number.isFinite(id) || id <= 0) {
+  const id = String(query?.id ?? '')
+  if (!id) {
     errMsg.value = '班级 ID 缺失或非法'
     loading.value = false
     return
@@ -40,7 +41,7 @@ onLoad(async (query: any) => {
   }
 })
 
-function goStudent(sid: number) {
+function goStudent(sid: LongId) {
   uni.navigateTo({ url: `/plugins/education/pages/student-detail?id=${sid}` })
 }
 </script>

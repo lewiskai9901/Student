@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@core/types'
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { studentApi } from '../api/student'
@@ -11,8 +12,8 @@ const loading = ref(true)
 const errMsg = ref('')
 
 onLoad(async (query: any) => {
-  const id = Number(query?.id)
-  if (!Number.isFinite(id) || id <= 0) {
+  const id = String(query?.id ?? '')
+  if (!id) {
     errMsg.value = '学生 ID 缺失或非法'
     loading.value = false
     return

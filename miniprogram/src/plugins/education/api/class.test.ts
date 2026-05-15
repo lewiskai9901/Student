@@ -31,7 +31,7 @@ describe('classApi', () => {
 
   it('list() GETs /user_student/classes with paging query string', async () => {
     mockOk({
-      records: [{ id: 1, classCode: 'C01', className: '班1' }],
+      records: [{ id: '1', classCode: 'C01', className: '班1' }],
       total: 1,
       size: 20,
       current: 1
@@ -46,12 +46,12 @@ describe('classApi', () => {
   })
 
   it('byId(id) GETs /user_student/classes/{id}', async () => {
-    mockOk({ id: 99, classCode: 'C99', className: '班99' })
-    const c = await classApi.byId(99)
+    mockOk({ id: '99', classCode: 'C99', className: '班99' })
+    const c = await classApi.byId('99')
     expect(mockUni.request).toHaveBeenCalledWith(
       expect.objectContaining({ url: expect.stringContaining('/user_student/classes/99') })
     )
-    expect(c.id).toBe(99)
+    expect(c.id).toBe('99')
   })
 
   it('propagates BizError from non-200 envelope', async () => {

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { LongId } from '@core/types'
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { inspectionApi } from '../api/inspection'
@@ -18,12 +19,12 @@ const details = ref<SubmissionDetail[]>([])
 const loading = ref(true)
 const submitting = ref(false)
 const errMsg = ref('')
-const saving = ref<Set<number>>(new Set())
-let taskId = 0
+const saving = ref<Set<LongId>>(new Set())
+let taskId: LongId = ''
 
 onLoad(async (query: any) => {
-  taskId = Number(query?.taskId)
-  if (!Number.isFinite(taskId) || taskId <= 0) {
+  taskId = String(query?.taskId ?? '')
+  if (!taskId) {
     errMsg.value = '任务 ID 缺失或非法'
     loading.value = false
     return
@@ -67,7 +68,7 @@ const allComplete = computed(() => {
 const isInteractive = (mode?: ScoringMode) =>
   mode === 'PASS_FAIL' || mode === 'DIRECT'
 
-const isSaving = (id: number) => saving.value.has(id)
+const isSaving = (id: LongId) => saving.value.has(id)
 
 async function setPassFail(detail: SubmissionDetail, pass: boolean) {
   if (isSaving(detail.id)) return
