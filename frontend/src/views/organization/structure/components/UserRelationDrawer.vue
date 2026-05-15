@@ -148,7 +148,7 @@ import type { LongId } from '@/types/common'
 import { ref, watch, computed } from 'vue'
 import { UserCircle, Loader2, X, ArrowRightLeft } from 'lucide-vue-next'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { orgMemberApi } from '@/api/orgMember'
+import { addMember as addOrgMember } from '@/api-generated/sdk.gen'
 import { getSimpleUserList } from '@/api/user'
 import type { UserPosition } from '@/types/position'
 import { AppointmentTypeLabels } from '@/types/position'
@@ -234,7 +234,7 @@ const handleChangeOrg = async () => {
   if (!changeOrgTarget.value || !props.userId) return
   changeOrgSubmitting.value = true
   try {
-    await orgMemberApi.addMember(changeOrgTarget.value, props.userId)
+    await addOrgMember({ path: { id: changeOrgTarget.value, userId: props.userId } })
     ElMessage.success('归属组织已变更')
     showChangeOrg.value = false
     changeOrgTarget.value = null

@@ -361,7 +361,12 @@ import UserSelectorDialog from '@/components/common/UserSelectorDialog.vue'
 import OrgExportDialog from './OrgExportDialog.vue'
 import OrgImportDialog from './OrgImportDialog.vue'
 import type { SimpleUser } from '@/types/user'
-import { orgMemberApi } from '@/api/orgMember'
+import {
+  getOrgStatistics,
+  getBelongingMembers,
+  addMember as addOrgMember,
+  removeMember as removeOrgMember
+} from '@/api-generated/sdk.gen'
 import type { OrgStatistics } from '@/types/position'
 import ActivityTimeline from '@/components/activity/ActivityTimeline.vue'
 
@@ -439,7 +444,8 @@ const stats = ref<OrgStatistics | null>(null)
 
 const loadStats = async () => {
   try {
-    stats.value = await orgMemberApi.getOrgStatistics(props.node.id)
+    const res = await getOrgStatistics({ path: { id: props.node.id } })
+    stats.value = (res.data?.data ?? null) as OrgStatistics | null
   } catch (e: any) {
     console.error('Failed to load stats', e)
   }
@@ -462,7 +468,8 @@ const membersLoading = ref(false)
 const loadMembers = async () => {
   membersLoading.value = true
   try {
-    belongingMembers.value = await orgMemberApi.getBelongingMembers(props.node.id)
+    const res = await getBelongingMembers({ path: { id: props.node.id } })
+    belongingMembers.value = (res.data?.data ?? []) as OrgMemberItem[]
   } catch (e: any) {
     console.error('Failed to load members', e)
   } finally {
@@ -592,7 +599,7 @@ const handleAddMemberFromSelector = async (users: SimpleUser[]) => {
     }
   }
   try {
-    await orgMemberApi.addMember(props.node.id, user.id)
+    await addOrgMember({ path: { id: props.node.id, userId: user.id } })
     ElMessage.success('成员添加成功')
     await Promise.all([loadMembers(), loadStats()])
   } catch (e: any) {
@@ -607,7 +614,7 @@ const handleRemoveMember = async (m: MergedMember) => {
       '确认移除成员',
       { type: 'warning' }
     )
-    await orgMemberApi.removeMember(props.node.id, m.userId)
+    await removeOrgMember({ path: { id: props.node.id, userId: m.userId } })
     ElMessage.success('已移除成员')
     await Promise.all([loadMembers(), loadStats()])
   } catch {

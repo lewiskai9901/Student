@@ -142,7 +142,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Download } from '@element-plus/icons-vue'
 import { useDebounceFn } from '@vueuse/core'
-import { getClassStudents } from '@/api/myClass'
+import { getClassStudents } from '@/api-generated/sdk.gen'
 import type { MyClassStudent } from '@/types/myClass'
 import { StudentStatusConfig } from '@/types/myClass'
 
@@ -167,8 +167,8 @@ const loadStudents = async () => {
     if (statusFilter.value) {
       params.status = statusFilter.value
     }
-    const response = await getClassStudents(props.orgUnitId, params)
-    students.value = response || []
+    const res = await getClassStudents({ path: { orgUnitId: props.orgUnitId }, query: params })
+    students.value = (res.data?.data ?? []) as MyClassStudent[]
   } catch (error: any) {
     console.error('加载学生列表失败:', error)
     ElMessage.error(error.response?.data?.message || '加载学生列表失败')

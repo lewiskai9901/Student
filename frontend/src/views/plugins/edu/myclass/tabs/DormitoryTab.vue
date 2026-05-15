@@ -229,7 +229,7 @@ import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Building, Users, LayoutGrid, List, UserPlus, Edit } from 'lucide-vue-next'
-import { getClassDormitoryDistribution } from '@/api/myClass'
+import { getDormitoryDistribution as getClassDormitoryDistribution } from '@/api-generated/sdk.gen'
 import { getDormitory } from '@/api/dormitory'
 import type { DormitoryDistribution, DormitoryRoom, DormitoryStudent } from '@/types/myClass'
 import StudentBedAssignmentDialog from '@/components/dormitory/StudentBedAssignmentDialog.vue'
@@ -398,10 +398,8 @@ const loadData = async () => {
 
   loading.value = true
   try {
-    console.log('[DormitoryTab] Calling getClassDormitoryDistribution with orgUnitId:', props.orgUnitId)
-    distribution.value = await getClassDormitoryDistribution(props.orgUnitId)
-    console.log('[DormitoryTab] Distribution data received:', distribution.value?.length, 'buildings')
-    console.log('[DormitoryTab] Distribution data:', JSON.stringify(distribution.value, null, 2))
+    const res = await getClassDormitoryDistribution({ path: { orgUnitId: props.orgUnitId } })
+    distribution.value = (res.data?.data ?? []) as DormitoryDistribution[]
   } catch (error) {
     console.error('[DormitoryTab] Failed to load dormitory distribution:', error)
     ElMessage.error('加载宿舍分布数据失败')

@@ -144,7 +144,7 @@ import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { User, Search, Check, Loading } from '@element-plus/icons-vue'
-import { getClassStudents } from '@/api/myClass'
+import { getClassStudents } from '@/api-generated/sdk.gen'
 import { universalPlaceApi } from '@/api/universalPlace'
 import type { PlaceOccupant } from '@/types/universalPlace'
 import type { MyClassStudent } from '@/types/myClass'
@@ -249,7 +249,8 @@ const loadClassStudents = async () => {
 
   studentsLoading.value = true
   try {
-    classStudents.value = await getClassStudents(props.orgUnitId)
+    const res = await getClassStudents({ path: { orgUnitId: props.orgUnitId } })
+    classStudents.value = (res.data?.data ?? []) as MyClassStudent[]
   } catch (error: any) {
     ElMessage.error(error.message || '加载学生列表失败')
     classStudents.value = []

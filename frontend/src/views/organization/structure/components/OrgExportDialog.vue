@@ -58,7 +58,7 @@ import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import * as XLSX from 'xlsx'
-import { orgMemberApi } from '@/api/orgMember'
+import { getBelongingMembers } from '@/api-generated/sdk.gen'
 import type { OrgMember } from '@/types/position'
 
 interface OrgNode {
@@ -160,7 +160,8 @@ async function fetchAllMembers(
 ): Promise<Record<string, string>[]> {
   const results: Record<string, string>[] = []
   const promises = orgIds.map(async (orgId) => {
-    const members: OrgMember[] = await orgMemberApi.getBelongingMembers(String(orgId))
+    const res = await getBelongingMembers({ path: { id: String(orgId) } })
+    const members = (res.data?.data ?? []) as OrgMember[]
     const orgName = orgNameMap.get(String(orgId)) || String(orgId)
     for (const m of members) {
       results.push({

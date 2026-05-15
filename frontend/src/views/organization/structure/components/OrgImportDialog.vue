@@ -124,7 +124,7 @@ import { UploadFilled, Download, CircleCheckFilled, WarningFilled } from '@eleme
 import * as XLSX from 'xlsx'
 import { userApi } from '@/api/user'
 import { getOrgUnits } from '@/api/organization'
-import { orgMemberApi } from '@/api/orgMember'
+import { addMember as addOrgMember } from '@/api-generated/sdk.gen'
 import type { OrgUnit } from '@/types'
 import type { SimpleUser } from '@/types/user'
 import type { Position } from '@/types/position'
@@ -390,7 +390,7 @@ async function handleImport() {
   for (const row of toImport) {
     try {
       const targetOrg = row._orgUnitId ?? props.orgUnitId
-      await orgMemberApi.addMember(targetOrg, row._userId!)
+      await addOrgMember({ path: { id: targetOrg, userId: row._userId! } })
       successCount.value++
     } catch (e: any) {
       failCount.value++

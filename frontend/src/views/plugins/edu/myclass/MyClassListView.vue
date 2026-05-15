@@ -80,7 +80,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Trophy, DataAnalysis, ArrowRight, School } from '@element-plus/icons-vue'
-import { getMyClasses } from '@/api/myClass'
+import { getMyClasses1 } from '@/api-generated/sdk.gen'
 import type { MyClassItem } from '@/types/myClass'
 import MiniTrendChart from './components/MiniTrendChart.vue'
 
@@ -91,7 +91,8 @@ const classes = ref<MyClassItem[]>([])
 const fetchClasses = async () => {
   try {
     loading.value = true
-    classes.value = await getMyClasses()
+    const res = await getMyClasses1()
+    classes.value = (res.data?.data ?? []) as MyClassItem[]
 
     // 如果只有一个班级，直接跳转详情页
     if (classes.value.length === 1) {

@@ -184,6 +184,12 @@ jobs:
         working-directory: ./frontend
         run: npm run id-number-check
 
+      # 2026-05-15 起: 防止新代码继续写手写 axios 调用, 强制走 @/api-generated/sdk.gen
+      # baseline 335 (OpenAPI SDK 化收官时的快照), 任何新增会 fail.
+      - name: Check handwritten API import ceiling
+        working-directory: ./frontend
+        run: npm run handwritten-api-check
+
       # Phase 6 (2026-05-05 前端冲 A+ 收官): vitest 单测必须全绿
       # 当前 12 文件 / 155 例, 含 useFeature/useEntityLabel/useTheme/useI18n/
       # sectionTree/token/date/RiskMatrixEditor 等核心 composable 与组件

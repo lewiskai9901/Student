@@ -10,6 +10,7 @@
     "type-check": "vue-tsc --noEmit",
     "type-check:ceiling": "bash scripts/type-check-ceiling.sh",
     "id-number-check": "bash scripts/check-no-id-number-types.sh",
+    "handwritten-api-check": "bash scripts/check-handwritten-api-ceiling.sh",
     "preview": "vite preview",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
     "format": "prettier --write src/",

@@ -73,7 +73,7 @@ import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, DataLine, User, House, TrendCharts } from '@element-plus/icons-vue'
-import { getMyClasses } from '@/api/myClass'
+import { getMyClasses1 } from '@/api-generated/sdk.gen'
 import type { MyClassItem } from '@/types/myClass'
 import OverviewTab from './tabs/OverviewTab.vue'
 import StudentsTab from './tabs/StudentsTab.vue'
@@ -92,7 +92,8 @@ const currentClass = computed(() =>
 )
 
 const fetchClasses = async () => {
-  allClasses.value = await getMyClasses()
+  const res = await getMyClasses1()
+  allClasses.value = (res.data?.data ?? []) as MyClassItem[]
 
   // 从路由参数获取orgUnitId (保持字符串，避免大整数精度丢失)
   const orgUnitId = route.params.orgUnitId as string

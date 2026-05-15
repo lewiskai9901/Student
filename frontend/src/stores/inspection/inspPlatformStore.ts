@@ -16,7 +16,7 @@ import type {
   CreateHolidayCalendarRequest,
   UpdateHolidayCalendarRequest,
 } from '@/types/insp/platform'
-import { auditTrailApi } from '@/api/inspection/auditTrail'
+import { search as searchAuditTrail, findRecent as findRecentAuditTrail } from '@/api-generated/sdk.gen'
 import { issueCategoryApi } from '@/api/inspection/issueCategory'
 import { holidayCalendarApi } from '@/api/inspection/holidayCalendar'
 
@@ -37,7 +37,8 @@ export const useInspPlatformStore = defineStore('inspPlatform', () => {
   }) {
     loading.value = true
     try {
-      auditEntries.value = await auditTrailApi.search(params || {})
+      const res = await searchAuditTrail({ query: params || {} })
+      auditEntries.value = (res.data?.data ?? []) as AuditTrailEntry[]
     } finally {
       loading.value = false
     }
@@ -46,7 +47,8 @@ export const useInspPlatformStore = defineStore('inspPlatform', () => {
   async function fetchRecentAuditEntries(limit?: number) {
     loading.value = true
     try {
-      auditEntries.value = await auditTrailApi.getRecent(limit)
+      const res = await findRecentAuditTrail({ query: limit !== undefined ? { limit } : {} })
+      auditEntries.value = (res.data?.data ?? []) as AuditTrailEntry[]
     } finally {
       loading.value = false
     }

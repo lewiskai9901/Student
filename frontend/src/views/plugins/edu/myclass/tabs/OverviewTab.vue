@@ -183,7 +183,7 @@ import {
   BarChart3,
   ChevronRight
 } from 'lucide-vue-next'
-import { getClassOverview } from '@/api/myClass'
+import { getClassOverview } from '@/api-generated/sdk.gen'
 import type { MyClassOverview, RecentCheckRecord } from '@/types/myClass'
 import TrendChart from '../components/TrendChart.vue'
 
@@ -205,7 +205,8 @@ const loadOverview = async () => {
 
   loading.value = true
   try {
-    overview.value = await getClassOverview(props.orgUnitId)
+    const res = await getClassOverview({ path: { orgUnitId: props.orgUnitId } })
+    overview.value = (res.data?.data ?? null) as MyClassOverview | null
   } catch (error: any) {
     console.error('加载概览数据失败:', error)
     ElMessage.error(error.response?.data?.message || '加载概览数据失败')
