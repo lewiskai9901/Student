@@ -1,6 +1,7 @@
 package com.school.management.interfaces.rest.system;
 
 import com.school.management.common.result.Result;
+import com.school.management.domain.access.service.PolicyEnforcementService;
 import com.school.management.infrastructure.casbin.CasbinAccess;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -23,6 +24,7 @@ public class PermissionSyncController {
 
     private final JdbcTemplate jdbcTemplate;
     private final RequestMappingHandlerMapping requestMappingHandlerMapping;
+    private final PolicyEnforcementService policyEnforcementService;
 
     /**
      * Scan all @CasbinAccess annotations at runtime and compare with the permissions table.
@@ -77,6 +79,30 @@ public class PermissionSyncController {
         result.put("potentiallyObsoleteInDb", potentiallyObsolete);
         result.put("potentiallyObsoleteCount", potentiallyObsolete.size());
         result.put("codeResourceActions", codeByResource);
+        return Result.success(result);
+    }
+
+    /**
+     * 手动触发 Casbin enforcer 重载 role_permissions + user_roles → 内存策略.
+     *
+     * <p>使用场景:
+     * <ul>
+     *   <li>SQL 直接修改 role_permissions / user_roles 后(如 migration), 需要让
+     *       内存 enforcer 与 DB 一致</li>
+     *   <li>通过 admin UI 改了大量角色绑定后, 一次性刷新, 比逐条 in-memory 调用快</li>
+     *   <li>排障: 怀疑 enforcer 状态漂了, 强制 reset</li>
+     * </ul>
+     *
+     * <p>注:正常业务路径走 PermissionsRefreshedEvent + AccessApplicationService 的
+     * 单条 in-memory 调用, 不需要走此端点. 此端点是"管理员保险栓".
+     */
+    @PostMapping("/refresh-casbin")
+    @CasbinAccess(resource = "system:permission", action = "manage")
+    public Result<Map<String, Object>> refreshCasbin() {
+        policyEnforcementService.syncFromDatabase();
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("status", "ok");
+        result.put("message", "Casbin enforcer reloaded from role_permissions + user_roles");
         return Result.success(result);
     }
 }

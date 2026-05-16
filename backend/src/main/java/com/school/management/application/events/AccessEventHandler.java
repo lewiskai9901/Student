@@ -1,6 +1,8 @@
 package com.school.management.application.events;
 
 import com.school.management.domain.access.event.*;
+import com.school.management.domain.access.repository.RoleRepository;
+import com.school.management.domain.access.service.PolicyEnforcementService;
 import com.school.management.infrastructure.event.DomainEventStore;
 import com.school.management.infrastructure.external.NotificationService;
 import com.school.management.infrastructure.activity.ActivityEventPublisher;
@@ -26,6 +28,8 @@ public class AccessEventHandler {
     private final DomainEventStore eventStore;
     private final NotificationService notificationService;
     private final ActivityEventPublisher activityEventPublisher;
+    private final PolicyEnforcementService policyEnforcementService;
+    private final RoleRepository roleRepository;
 
     /**
      * 处理角色创建事件
@@ -86,6 +90,17 @@ public class AccessEventHandler {
         log.info("Role {} permissions changed, added={}, removed={}",
                 event.getRoleId(), event.getAddedPermissionIds().size(), event.getRemovedPermissionIds().size());
 
+        // 同步 Casbin enforcer 内存策略 — role_permissions 已经被 application service 写入 DB,
+        // 这里只 reload 一次让内存与 DB 一致. 比逐条 add/remove 简单, 适合批量变更场景.
+        try {
+            policyEnforcementService.syncFromDatabase();
+            log.debug("[Casbin] in-memory policy reloaded after role {} permission change",
+                event.getRoleId());
+        } catch (Exception e) {
+            log.error("[Casbin] failed to reload policy after role permission change: {}",
+                e.getMessage(), e);
+        }
+
         // 记录审计日志
         String changeDesc = String.format("角色权限变更: 新增%d个权限, 移除%d个权限",
                 event.getAddedPermissionIds().size(), event.getRemovedPermissionIds().size());
@@ -103,6 +118,20 @@ public class AccessEventHandler {
     private void handleUserRoleAssigned(UserRoleAssignedEvent event) {
         log.info("User {} assigned role {} with scope {}:{}",
                  event.getUserId(), event.getRoleId(), event.getScopeType(), event.getScopeId());
+
+        // 同步到 Casbin enforcer 内存策略 — 单条 addGroupingPolicy 比全量 reload 快得多.
+        // tenantId 从 Role 取(每个 Role 属于一个租户).
+        try {
+            roleRepository.findById(event.getRoleId()).ifPresent(role -> {
+                policyEnforcementService.assignRole(event.getUserId(), role.getRoleCode(),
+                    role.getTenantId());
+                log.debug("[Casbin] grouping policy added: user={}, role={}",
+                    event.getUserId(), role.getRoleCode());
+            });
+        } catch (Exception e) {
+            log.error("[Casbin] failed to add grouping policy for user {}: {}",
+                event.getUserId(), e.getMessage(), e);
+        }
 
         // 发送通知给用户
         notificationService.sendInAppMessage(
