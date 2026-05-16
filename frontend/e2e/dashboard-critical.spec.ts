@@ -36,7 +36,7 @@ test.describe('Critical dashboard access-control flow', () => {
 
   // ============ Admin tests ============
 
-  test('admin login lands on /dashboard and API returns full-school student count', async ({ page }) => {
+  test('admin login then visit /dashboard, API returns full-school student count', async ({ page }) => {
     let overviewPayload: any = null
     page.on('response', async (resp: Response) => {
       if (resp.url().includes('/dashboard/overview') && resp.status() === 200) {
@@ -46,7 +46,9 @@ test.describe('Critical dashboard access-control flow', () => {
 
     await page.goto('/login')
     await fillLogin(page, ADMIN)
-    await page.waitForURL(/\/dashboard($|\?)/, { timeout: 10000 })
+    // 2026-05-01 起非教师登录后落地 /inspection (commit 6c85a261); admin 手动导航到 dashboard
+    await page.waitForURL(/\/inspection/, { timeout: 10000 })
+    await page.goto('/dashboard')
     await page.waitForLoadState('networkidle')
 
     await expect(page.locator('text=组织概览').first()).toBeVisible({ timeout: 5000 })
