@@ -13,6 +13,8 @@
     "handwritten-api-check": "bash scripts/check-handwritten-api-ceiling.sh",
     "preview": "vite preview",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
+    "lint:check": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --no-fix",
+    "lint:ceiling": "bash scripts/lint-ceiling.sh",
     "format": "prettier --write src/",
     "test": "vitest run",
     "test:watch": "vitest",

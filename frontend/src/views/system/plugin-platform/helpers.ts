@@ -129,7 +129,7 @@ export function shortClass(fqcn?: string): string {
 
 export function parseOrigin(origin?: string): { kind: 'PLUGIN' | 'TENANT' | 'UNKNOWN'; code: string; version?: string } {
   if (!origin) return { kind: 'UNKNOWN', code: '' }
-  const m1 = origin.match(/^PLUGIN:([A-Z_]+)@([\w\.\-]+)(?::.*)?$/)
+  const m1 = origin.match(/^PLUGIN:([A-Z_]+)@([\w.-]+)(?::.*)?$/)
   if (m1) return { kind: 'PLUGIN', code: m1[1], version: m1[2] }
   if (origin.startsWith('TENANT:CUSTOM')) return { kind: 'TENANT', code: 'CUSTOM' }
   return { kind: 'UNKNOWN', code: origin }

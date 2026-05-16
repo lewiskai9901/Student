@@ -533,7 +533,7 @@ onMounted(() => {
     <!-- Footer -->
     <footer class="wz-foot">
       <button v-if="currentStep > 0" class="insp-btn" @click="prevStep">
-        < 上一步
+        &lt; 上一步
       </button>
       <span v-else />
       <div class="wz-foot__spacer" />

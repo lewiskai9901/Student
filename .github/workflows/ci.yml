@@ -168,9 +168,11 @@ jobs:
         run: npm ci
 
       # Lint 已于 2026-04-14 修复 (.eslintignore + noisy-rule 降级为 warn), 现为阻断门禁.
-      - name: Run linter
+      # 2026-05-16 起补 lint-ceiling ratchet: error baseline = 0, 新增 error 阻断.
+      # `npm run lint` 是开发用的 --fix 版, CI 走 lint:ceiling (--no-fix + baseline).
+      - name: Run linter (ceiling gate, error baseline 0)
         working-directory: ./frontend
-        run: npm run lint
+        run: npm run lint:ceiling
 
       # Phase 6 (2026-04-20 升级): type-check 走 ceiling gate — 不回退, 但允许暂未清理的 baseline
       # 2026-05-15 起 baseline 推到 0, 任何新增 TS 错误 PR 红.

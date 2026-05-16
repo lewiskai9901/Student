@@ -21,7 +21,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const FRONTEND_ROOT = path.resolve(__dirname, '..')
 const SPEC_PATH = path.resolve(FRONTEND_ROOT, '../backend/openapi.json')
 const TYPES_PATH = path.resolve(FRONTEND_ROOT, 'src/api-generated/types.gen.ts')
-const SDK_PATH = path.resolve(FRONTEND_ROOT, 'src/api-generated/sdk.gen.ts')
 
 function buildLongIdMap(spec) {
   /**
@@ -58,7 +57,6 @@ function patchTypeBlock(content, schemaName, fieldNames) {
   // Find the type block: `export type X = {\n ... \n}` (greedy until matching brace at same indent)
   // We use a simpler approach: locate the type declaration and walk braces
   const decl = new RegExp(`(export type ${escapeRegex(schemaName)}\\s*=\\s*\\{)`, 'g')
-  let modified = false
   let result = content.replace(decl, (_match, prefix) => {
     // Find this block's end (matching closing brace) and patch within
     return prefix + '__BLOCK_START__'
@@ -87,17 +85,17 @@ function patchTypeBlock(content, schemaName, fieldNames) {
       // `realFname?: Array<string>` → `Array<LongId>`
       block = block.replace(
         new RegExp(`(${escapeRegex(realFname)}\\??:\\s*)Array<string>`, 'g'),
-        (_m, prefix) => { modified = true; return prefix + 'Array<LongId>' }
+        (_m, prefix) => prefix + 'Array<LongId>'
       )
       block = block.replace(
         new RegExp(`(${escapeRegex(realFname)}\\??:\\s*)string\\[\\]`, 'g'),
-        (_m, prefix) => { modified = true; return prefix + 'LongId[]' }
+        (_m, prefix) => prefix + 'LongId[]'
       )
     } else {
       // `realFname?: string` → `LongId` (don't touch union types like `string | null`)
       block = block.replace(
         new RegExp(`(${escapeRegex(realFname)}\\??:\\s*)string(?=\\s*[,;\\n}])`, 'g'),
-        (_m, prefix) => { modified = true; return prefix + 'LongId' }
+        (_m, prefix) => prefix + 'LongId'
       )
     }
   }

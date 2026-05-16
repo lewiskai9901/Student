@@ -34,7 +34,7 @@
       </select>
       <span class="live-sep" />
       <div class="live-week-pager">
-        <button class="live-arrow" :disabled="weekNumber <= 1" @click="weekNumber > 1 && (weekNumber--, loadInstances())"><</button>
+        <button class="live-arrow" :disabled="weekNumber <= 1" @click="weekNumber > 1 && (weekNumber--, loadInstances())">&lt;</button>
         <span class="live-week-label">
           第 {{ weekNumber }} 周
           <span class="live-week-range">{{ weekRangeLabel }}</span>
@@ -101,7 +101,7 @@
                   </div>
                   <!-- 调入链接：显示来自哪 -->
                   <div v-if="parseLink(inst.movedFrom)" class="live-entry-link link-in">
-                    < 来自 {{ formatLink(parseLink(inst.movedFrom)!) }}
+                    &lt; 来自 {{ formatLink(parseLink(inst.movedFrom)!) }}
                   </div>
                   <!-- 班级视图: 教师 + 教室 -->
                   <template v-if="viewType === 'class' && inst.status !== 2">

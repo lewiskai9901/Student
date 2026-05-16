@@ -47,6 +47,7 @@ async function loginViaApi(): Promise<SharedToken> {
 export const test = base.extend<AuthFixtures, { sharedToken: SharedToken }>({
   // worker-scoped: 整个 worker 进程只跑一次
   sharedToken: [
+    // eslint-disable-next-line no-empty-pattern -- playwright fixture 签名要求空解构
     async ({}, use) => {
       const tok = await loginViaApi()
       await use(tok)
