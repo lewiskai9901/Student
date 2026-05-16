@@ -413,6 +413,30 @@
                         <exclude>**/valueobject/**</exclude>
                         <exclude>**/exception/**</exclude>
                     </excludes>
+                    <!--
+                      <rules> 也放 plugin 顶层 configuration, 让 `mvn jacoco:check -B`
+                      default-cli 调用也能找到. 2026-05-16 修复: 之前只放在 <execution> 里,
+                      default-cli 报 "rules missing or invalid".
+                    -->
+                    <rules>
+                        <rule>
+                            <element>BUNDLE</element>
+                            <limits>
+                                <!-- 行覆盖率要求 15% (逐步提升) -->
+                                <limit>
+                                    <counter>LINE</counter>
+                                    <value>COVEREDRATIO</value>
+                                    <minimum>0.15</minimum>
+                                </limit>
+                                <!-- 分支覆盖率要求 10% -->
+                                <limit>
+                                    <counter>BRANCH</counter>
+                                    <value>COVEREDRATIO</value>
+                                    <minimum>0.10</minimum>
+                                </limit>
+                            </limits>
+                        </rule>
+                    </rules>
                 </configuration>
                 <executions>
                     <execution>
@@ -433,27 +457,6 @@
                         <goals>
                             <goal>check</goal>
                         </goals>
-                        <configuration>
-                            <rules>
-                                <rule>
-                                    <element>BUNDLE</element>
-                                    <limits>
-                                        <!-- 行覆盖率要求 15% (逐步提升) -->
-                                        <limit>
-                                            <counter>LINE</counter>
-                                            <value>COVEREDRATIO</value>
-                                            <minimum>0.15</minimum>
-                                        </limit>
-                                        <!-- 分支覆盖率要求 10% -->
-                                        <limit>
-                                            <counter>BRANCH</counter>
-                                            <value>COVEREDRATIO</value>
-                                            <minimum>0.10</minimum>
-                                        </limit>
-                                    </limits>
-                                </rule>
-                            </rules>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>

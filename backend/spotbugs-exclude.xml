@@ -56,6 +56,15 @@
     </Match>
 
     <!--
+      3b) Spring ApplicationEvent 子类: 仅进程内派发, 不走 Java 序列化.
+      字段持有 PolicyContext / List 等非 Serializable 类型是合法的.
+    -->
+    <Match>
+        <Class name="~.*\.event\..*Event"/>
+        <Bug pattern="SE_BAD_FIELD,SE_BAD_FIELD_INNER_CLASS,SE_NO_SERIALVERSIONID"/>
+    </Match>
+
+    <!--
       4) MyBatis Mapper 接口 (注解+XML 混合, 常见误报)
     -->
     <Match>
@@ -64,6 +73,18 @@
     <Match>
         <Class name="~.*\.infrastructure\.persistence\..*"/>
         <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2,SE_BAD_FIELD"/>
+    </Match>
+
+    <!--
+      4b) Controller 内部嵌套 DTO 类 (View / Request / Response)
+      这些 public class 字段由 Jackson 反射读写, SpotBugs 不识别 → 误报 URF / UWF.
+      模式: 类名形如 com.x.y.z.SomeController$ViewName / RequestName / ResponseName.
+      2026-05-16 加 — 之前 baseline 把 UWF_UNWRITTEN_FIELD 全 exclude 太粗,
+      这里只针对 Controller 内的嵌套 DTO, 不影响外部业务类.
+    -->
+    <Match>
+        <Class name="~.*\.interfaces\.rest\..*Controller\$[A-Z][A-Za-z0-9]*(View|Request|Response|Kpi|Result|Item|Dto)"/>
+        <Bug pattern="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD,UWF_UNWRITTEN_PUBLIC_OR_PROTECTED_FIELD,UWF_UNWRITTEN_FIELD"/>
     </Match>
 
     <!--

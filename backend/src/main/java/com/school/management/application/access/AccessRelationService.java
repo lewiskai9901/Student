@@ -615,11 +615,19 @@ public class AccessRelationService {
                                        String relation,
                                        String resourceType, Long resourceId,
                                        String reason) {
+            return of(subjectType, subjectId, relation, resourceType, resourceId, reason, null);
+        }
+
+        public static RevokeRequest of(String subjectType, Long subjectId,
+                                       String relation,
+                                       String resourceType, Long resourceId,
+                                       String reason, Long revokedBy) {
             RevokeRequest r = new RevokeRequest();
             r.subjectType = subjectType; r.subjectId = subjectId;
             r.relation = relation;
             r.resourceType = resourceType; r.resourceId = resourceId;
             r.reason = reason;
+            r.revokedBy = revokedBy;
             return r;
         }
     }

@@ -46,6 +46,18 @@ public final class SemVer {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof SemVer other)) return false;
+        return major == other.major && minor == other.minor && patch == other.patch;
+    }
+
+    @Override
+    public int hashCode() {
+        return ((major * 31) + minor) * 31 + patch;
+    }
+
+    @Override
     public String toString() { return major + "." + minor + "." + patch; }
 
     /**

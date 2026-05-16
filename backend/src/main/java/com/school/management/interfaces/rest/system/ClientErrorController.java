@@ -44,7 +44,8 @@ public class ClientErrorController {
 
     private static final ConcurrentHashMap<String, Long> recentFingerprints = new ConcurrentHashMap<>();
     private static final AtomicLong globalCounter = new AtomicLong(0);
-    private static volatile long counterResetAt = System.currentTimeMillis();
+    /** 用 AtomicLong 而非裸 long, 让 reset 真正原子, 防并发下两线程同时进入 reset 段. */
+    private static final AtomicLong counterResetAt = new AtomicLong(System.currentTimeMillis());
 
     public record ClientError(
             String level,        // ERROR | WARN | INFO
@@ -58,11 +59,11 @@ public class ClientErrorController {
 
     @PostMapping("/log")
     public Result<Map<String, Object>> log(@RequestBody ClientError err, HttpServletRequest req) {
-        // 全局限流
+        // 全局限流 — compareAndSet 保证 reset 段在多线程下只跑一次
         long now = System.currentTimeMillis();
-        if (now - counterResetAt > 60_000L) {
+        long lastReset = counterResetAt.get();
+        if (now - lastReset > 60_000L && counterResetAt.compareAndSet(lastReset, now)) {
             globalCounter.set(0);
-            counterResetAt = now;
         }
         if (globalCounter.incrementAndGet() > GLOBAL_RATE_LIMIT_PER_MINUTE) {
             return Result.success(Map.of("dropped", true, "reason", "global_rate_limit"));

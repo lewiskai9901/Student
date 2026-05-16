@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -163,7 +162,7 @@ public class TriggerService {
                     + "业务代码传入的 context 缺少 trigger_points.context_schema.required 声明的字段，"
                     + "相关触发器会因 subjectId/idSource 找不到而跳过。",
                 pointCode, missing,
-                context != null ? context.keySet() : Collections.emptySet());
+                context.keySet());
         }
     }
 
@@ -263,7 +262,7 @@ public class TriggerService {
                         + "在 context 中缺失或为 null，跳过该主体。providedKeys={}",
                     pointCode, triggerId, triggerName,
                     subjectType, idSource,
-                    context != null ? context.keySet() : Collections.emptySet());
+                    context.keySet());
                 skipped++;
                 continue;
             }

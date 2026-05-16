@@ -884,13 +884,6 @@ public class AutoSchedulingService {
      * @param studentCount 需要容纳的学生数(0=不限)
      * @param weekType 周类型(用于冲突检测: 单双周不冲突)
      */
-    private Long findRoom(int day, int periodStart, int periodEnd,
-            Set<String> roomOcc, List<Map<String, Object>> classrooms,
-            int studentCount, int weekType) {
-        return findRoom(day, periodStart, periodEnd, roomOcc, classrooms,
-                studentCount, weekType, null);
-    }
-
     /**
      * 选教室. preferredRoomIds 非空时优先匹配教师偏好教室 (LinkedHashSet 保留优先级).
      * 偏好教室不可用时回落到普通搜索, 不视为失败.
@@ -939,12 +932,6 @@ public class AutoSchedulingService {
             }
         }
         return true;
-    }
-
-    // 兼容旧调用
-    private Long findRoom(int day, int periodStart, int periodEnd,
-            Set<String> roomOcc, List<Map<String, Object>> classrooms) {
-        return findRoom(day, periodStart, periodEnd, roomOcc, classrooms, 0, 0);
     }
 
     private void markOccupied(ScheduleSlot slot,
