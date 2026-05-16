@@ -44,4 +44,25 @@ public class RequestContextHelper {
         HttpServletRequest req = currentRequest();
         return req != null ? req.getHeader("User-Agent") : null;
     }
+
+    /** 请求路径 (URI), null 当无 HTTP 上下文. */
+    public static String requestUri() {
+        HttpServletRequest req = currentRequest();
+        return req != null ? req.getRequestURI() : null;
+    }
+
+    /** HTTP method (GET/POST/PUT/DELETE), null 当无 HTTP 上下文. */
+    public static String httpMethod() {
+        HttpServletRequest req = currentRequest();
+        return req != null ? req.getMethod() : null;
+    }
+
+    /** request id (X-Request-Id / X-Trace-Id), null 当无 HTTP 上下文. */
+    public static String requestId() {
+        HttpServletRequest req = currentRequest();
+        if (req == null) return null;
+        String id = req.getHeader("X-Request-Id");
+        if (id == null || id.isBlank()) id = req.getHeader("X-Trace-Id");
+        return id;
+    }
 }

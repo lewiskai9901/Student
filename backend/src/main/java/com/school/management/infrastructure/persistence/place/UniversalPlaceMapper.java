@@ -32,30 +32,35 @@ public interface UniversalPlaceMapper extends BaseMapper<UniversalPlacePO> {
     /**
      * 查询子空间
      */
+    @DataPermission(module = "place", orgUnitField = "org_unit_id")
     @Select("SELECT * FROM places WHERE parent_id = #{parentId} AND deleted = 0 ORDER BY place_name")
     List<UniversalPlacePO> findChildren(@Param("parentId") Long parentId);
 
     /**
      * 根据路径前缀查询所有后代
      */
+    @DataPermission(module = "place", orgUnitField = "org_unit_id")
     @Select("SELECT * FROM places WHERE path LIKE CONCAT(#{pathPrefix}, '%') AND deleted = 0 ORDER BY level, place_name")
     List<UniversalPlacePO> findByPathPrefix(@Param("pathPrefix") String pathPrefix);
 
     /**
      * 根据类型查询
      */
+    @DataPermission(module = "place", orgUnitField = "org_unit_id")
     @Select("SELECT * FROM places WHERE type_code = #{typeCode} AND deleted = 0 ORDER BY place_name")
     List<UniversalPlacePO> findByTypeCode(@Param("typeCode") String typeCode);
 
     /**
      * 根据组织单元查询
      */
+    @DataPermission(module = "place", orgUnitField = "org_unit_id")
     @Select("SELECT * FROM places WHERE org_unit_id = #{orgUnitId} AND deleted = 0 ORDER BY place_name")
     List<UniversalPlacePO> findByOrgUnitId(@Param("orgUnitId") Long orgUnitId);
 
     /**
      * 根据负责人查询
      */
+    @DataPermission(module = "place", orgUnitField = "org_unit_id")
     @Select("SELECT * FROM places WHERE responsible_user_id = #{userId} AND deleted = 0 ORDER BY place_name")
     List<UniversalPlacePO> findByResponsibleUserId(@Param("userId") Long userId);
 

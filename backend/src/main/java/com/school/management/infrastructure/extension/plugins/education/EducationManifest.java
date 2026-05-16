@@ -122,7 +122,15 @@ public class EducationManifest implements PluginPackage {
 
             // PARENT — 末端 SELF
             Contribution.RoleScopeBindingContribution.bind("PARENT", "student", "SELF"),
-            Contribution.RoleScopeBindingContribution.bind("PARENT", "attendance", "SELF")
+            Contribution.RoleScopeBindingContribution.bind("PARENT", "attendance", "SELF"),
+
+            // teacher_preference — 三级 (P6-2 修二极化, V20260516_8)
+            Contribution.RoleScopeBindingContribution.bind("TEACHER", "teacher_preference", "SELF"),
+            Contribution.RoleScopeBindingContribution.bind("CLASS_TEACHER", "teacher_preference", "SELF"),
+            Contribution.RoleScopeBindingContribution.bind("SUBJECT_TEACHER", "teacher_preference", "SELF"),
+            Contribution.RoleScopeBindingContribution.bind("DEPT_ADMIN", "teacher_preference", "DEPARTMENT_AND_BELOW"),
+            Contribution.RoleScopeBindingContribution.bind("ACADEMIC_DIRECTOR", "teacher_preference", "ALL"),
+            Contribution.RoleScopeBindingContribution.bind("SCHOOL_ADMIN", "teacher_preference", "ALL")
         );
     }
 
