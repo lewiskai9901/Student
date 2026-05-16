@@ -25,11 +25,14 @@ class NoBypassAuthServiceTest {
     //   - OrgMemberService               : 成员 add/remove lifecycle (exists 判断已迁至 AuthorizationService)
     //   - UniversalPlaceApplicationService: 入住/退房写关系
     //   - UserApplicationService         : 用户创建/删除时的关系管理
+    //   - AccessEventHandler             : P3-2 — 角色分配 event listener 自动写 access_relations,
+    //                                       是审计/同步副作用, 不是授权判断 (用 findActiveByTuple 幂等 + insertDirect).
     private static final String WHITELIST_REGEX =
         "com\\.school\\.management\\.application\\.organization\\.OrgUnitApplicationService"
         + "|com\\.school\\.management\\.application\\.organization\\.OrgMemberService"
         + "|com\\.school\\.management\\.application\\.place\\.UniversalPlaceApplicationService"
-        + "|com\\.school\\.management\\.application\\.user\\.UserApplicationService";
+        + "|com\\.school\\.management\\.application\\.user\\.UserApplicationService"
+        + "|com\\.school\\.management\\.application\\.events\\.AccessEventHandler";
 
     @Test
     void applicationLayerDoesNotBypassAuthServiceForJudgment() {
