@@ -1,14 +1,20 @@
 package com.school.management.application.events;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.domain.organization.event.*;
+import com.school.management.infrastructure.access.UserContextHolder;
 import com.school.management.infrastructure.event.DomainEventStore;
 import com.school.management.infrastructure.external.NotificationService;
 import com.school.management.infrastructure.activity.ActivityEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 
 /**
@@ -26,6 +32,8 @@ public class OrganizationEventHandler {
     private final DomainEventStore eventStore;
     private final NotificationService notificationService;
     private final ActivityEventPublisher activityEventPublisher;
+    private final JdbcTemplate jdbcTemplate;
+    private final ObjectMapper objectMapper;
 
     /**
      * 处理组织单元创建事件
@@ -38,6 +46,13 @@ public class OrganizationEventHandler {
 
         // 存储事件
         eventStore.store(event);
+
+        // 写 org_change_logs (审计)
+        Map<String, Object> changes = new LinkedHashMap<>();
+        changes.put("unitCode", event.getUnitCode());
+        changes.put("unitName", event.getUnitName());
+        changes.put("unitType", event.getUnitType());
+        writeOrgChangeLog("ORG_UNIT", event.getOrgUnitId(), "CREATE", changes, null);
 
         // 记录操作日志
         saveOperationLog("CREATE", "ORG_UNIT", event.getOrgUnitId(),
@@ -56,6 +71,38 @@ public class OrganizationEventHandler {
         log.info("Handling OrgUnitUpdatedEvent: unitId={}", event.getOrgUnitId());
 
         eventStore.store(event);
+
+        // 写 org_change_logs (审计) — 简单记录"发生了 update", 字段级 diff 留给上层 service 填
+        Map<String, Object> changes = new LinkedHashMap<>();
+        changes.put("event", "OrgUnitUpdated");
+        writeOrgChangeLog("ORG_UNIT", event.getOrgUnitId(), "UPDATE", changes, null);
+    }
+
+    /**
+     * 写 org_change_logs 审计表 — 直接 JDBC, 不走 MyBatis 防递归.
+     *
+     * @param entityType  实体类型 (ORG_UNIT / ROLE / USER_ROLE 等)
+     * @param entityId    实体 id
+     * @param changeType  CREATE / UPDATE / DELETE / MOVE
+     * @param changes     变更详情 (序列化为 JSON)
+     * @param reason      可选原因
+     */
+    private void writeOrgChangeLog(String entityType, Long entityId, String changeType,
+                                    Map<String, Object> changes, String reason) {
+        try {
+            Long operatorId = UserContextHolder.getUserId();
+            if (operatorId == null) operatorId = 0L;   // 系统调用 fallback
+            String operatorName = UserContextHolder.getUsername();
+            String changesJson = objectMapper.writeValueAsString(changes != null ? changes : Map.of());
+            jdbcTemplate.update(
+                "INSERT INTO org_change_logs (entity_type, entity_id, change_type, changes, " +
+                "reason, operator_id, operator_name, tenant_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                entityType, entityId, changeType, changesJson,
+                reason, operatorId, operatorName, 1L);
+        } catch (Exception e) {
+            log.warn("[OrgChangeLog] write failed for {} {}: {}",
+                entityType, entityId, e.getMessage());
+        }
     }
 
     /**

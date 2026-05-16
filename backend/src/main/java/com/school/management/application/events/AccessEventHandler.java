@@ -4,12 +4,14 @@ import com.school.management.domain.access.event.*;
 import com.school.management.domain.access.repository.AccessRelationRepository;
 import com.school.management.domain.access.repository.RoleRepository;
 import com.school.management.domain.access.service.PolicyEnforcementService;
+import com.school.management.infrastructure.access.UserContextHolder;
 import com.school.management.infrastructure.event.DomainEventStore;
 import com.school.management.infrastructure.external.NotificationService;
 import com.school.management.infrastructure.activity.ActivityEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
@@ -32,6 +34,7 @@ public class AccessEventHandler {
     private final PolicyEnforcementService policyEnforcementService;
     private final RoleRepository roleRepository;
     private final AccessRelationRepository accessRelationRepository;
+    private final JdbcTemplate jdbcTemplate;
 
     /**
      * 处理角色创建事件
@@ -108,6 +111,11 @@ public class AccessEventHandler {
                 event.getAddedPermissionIds().size(), event.getRemovedPermissionIds().size());
         saveOperationLog("UPDATE", "ROLE_PERMISSION", event.getRoleId(), changeDesc);
 
+        // 写 permission_audit_log
+        writePermissionAudit("UPDATE_PERMISSIONS", "ROLE", String.valueOf(event.getRoleId()),
+            event.getRemovedPermissionIds().toString(),
+            event.getAddedPermissionIds().toString());
+
         log.info("角色权限变更处理完成: roleId={}", event.getRoleId());
     }
 
@@ -181,7 +189,40 @@ public class AccessEventHandler {
                 String.format("分配角色: userId=%d, roleId=%d, scope=%s:%d",
                         event.getUserId(), event.getRoleId(), event.getScopeType(), event.getScopeId()));
 
+        // 写 permission_audit_log (权限治理审计)
+        writePermissionAudit("ASSIGN_ROLE", "USER_ROLE", String.valueOf(event.getUserId()),
+            null,   // old_value
+            String.format("role_id=%d, scope=%s:%d", event.getRoleId(),
+                event.getScopeType(), event.getScopeId()));
+
         log.info("用户角色分配处理完成: userId={}, roleId={}", event.getUserId(), event.getRoleId());
+    }
+
+    /**
+     * 写 permission_audit_log — 权限治理审计 (谁改了哪个权限/角色/scope, 何时, 什么变更).
+     *
+     * @param actionType  GRANT/REVOKE/ASSIGN_ROLE/UPDATE_SCOPE 等
+     * @param targetType  USER_ROLE/ROLE_PERMISSION/ROLE_SCOPE 等
+     * @param targetId    目标 id (字符串以支持组合 key)
+     * @param oldValue    旧值 (可 null)
+     * @param newValue    新值 (可 null)
+     */
+    private void writePermissionAudit(String actionType, String targetType, String targetId,
+                                       String oldValue, String newValue) {
+        try {
+            Long operatorId = UserContextHolder.getUserId();
+            if (operatorId == null) operatorId = 0L;
+            String operatorName = UserContextHolder.getUsername();
+            jdbcTemplate.update(
+                "INSERT INTO permission_audit_log (action_type, target_type, target_id, " +
+                "old_value, new_value, operator_id, operator_name, tenant_id) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                actionType, targetType, targetId, oldValue, newValue,
+                operatorId, operatorName, 1L);
+        } catch (Exception e) {
+            log.warn("[PermissionAudit] write failed for {} {} {}: {}",
+                actionType, targetType, targetId, e.getMessage());
+        }
     }
 
     /**
