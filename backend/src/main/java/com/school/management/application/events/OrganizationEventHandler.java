@@ -79,6 +79,63 @@ public class OrganizationEventHandler {
     }
 
     /**
+     * 处理组织删除事件 (P8-2 新加).
+     */
+    @Async
+    @EventListener
+    public void handle(OrgUnitDeletedEvent event) {
+        log.info("Handling OrgUnitDeletedEvent: unitId={} ({})",
+            event.getOrgUnitId(), event.getUnitName());
+
+        eventStore.store(event);
+
+        Map<String, Object> changes = new LinkedHashMap<>();
+        changes.put("unitCode", event.getUnitCode());
+        changes.put("unitName", event.getUnitName());
+        changes.put("unitType", event.getUnitType());
+        changes.put("parentId", event.getParentId());
+        writeOrgChangeLog("ORG_UNIT", event.getOrgUnitId(), "DELETE", changes, null);
+
+        saveOperationLog("DELETE", "ORG_UNIT", event.getOrgUnitId(),
+            "删除组织单元: " + event.getUnitName() + " (" + event.getUnitCode() + ")");
+    }
+
+    /**
+     * 处理组织合并事件 (P8-2 新加).
+     */
+    @Async
+    @EventListener
+    public void handle(OrgUnitMergedEvent event) {
+        log.info("Handling OrgUnitMergedEvent: source={} → target={}",
+            event.getSourceOrgUnitId(), event.getTargetOrgUnitId());
+
+        eventStore.store(event);
+
+        Map<String, Object> changes = new LinkedHashMap<>();
+        changes.put("sourceUnitCode", event.getSourceUnitCode());
+        changes.put("targetUnitCode", event.getTargetUnitCode());
+        changes.put("targetOrgUnitId", event.getTargetOrgUnitId());
+        writeOrgChangeLog("ORG_UNIT", event.getSourceOrgUnitId(), "MERGE", changes, event.getReason());
+    }
+
+    /**
+     * 处理组织拆分事件 (P8-2 新加).
+     */
+    @Async
+    @EventListener
+    public void handle(OrgUnitSplitEvent event) {
+        log.info("Handling OrgUnitSplitEvent: source={} → {} new units",
+            event.getSourceOrgUnitId(), event.getNewOrgUnitIds().size());
+
+        eventStore.store(event);
+
+        Map<String, Object> changes = new LinkedHashMap<>();
+        changes.put("sourceUnitCode", event.getSourceUnitCode());
+        changes.put("newOrgUnitIds", event.getNewOrgUnitIds());
+        writeOrgChangeLog("ORG_UNIT", event.getSourceOrgUnitId(), "SPLIT", changes, event.getReason());
+    }
+
+    /**
      * 写 org_change_logs 审计表 — 直接 JDBC, 不走 MyBatis 防递归.
      *
      * @param entityType  实体类型 (ORG_UNIT / ROLE / USER_ROLE 等)

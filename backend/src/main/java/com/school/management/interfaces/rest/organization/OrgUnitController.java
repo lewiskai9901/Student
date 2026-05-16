@@ -19,10 +19,13 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -37,6 +40,7 @@ public class OrgUnitController {
 
     private final OrgUnitApplicationService orgUnitService;
     private final OrgMemberService orgMemberService;
+    private final JdbcTemplate jdbcTemplate;
 
     @Operation(summary = "Create organization unit")
     @PostMapping
@@ -156,6 +160,85 @@ public class OrgUnitController {
             @Parameter(description = "Parent ID") @PathVariable Long id) {
         List<OrgUnitDTO> result = orgUnitService.getChildren(id);
         return Result.success(result);
+    }
+
+    @Operation(summary = "Org unit impact analysis — 删除/合并前查依赖统计 (P8-4)",
+        description = "Returns counts of dependent entities (descendants, students, classes, " +
+                      "teachers, places, access_relations) under this org_unit subtree. " +
+                      "Used by admin UI to warn before destructive operations.")
+    @GetMapping("/{id}/impact")
+    @CasbinAccess(resource = "system:org", action = "view")
+    public Result<Map<String, Object>> getImpact(
+            @Parameter(description = "Organization unit ID") @PathVariable Long id) {
+        Map<String, Object> impact = new LinkedHashMap<>();
+        impact.put("orgUnitId", id);
+
+        // 1. 组织树后代数 (走 tree_path 子树)
+        String treePath;
+        try {
+            treePath = jdbcTemplate.queryForObject(
+                "SELECT tree_path FROM org_units WHERE id = ? AND deleted = 0",
+                String.class, id);
+        } catch (Exception e) {
+            return Result.error(404, "OrgUnit not found: " + id);
+        }
+        if (treePath == null) treePath = "";
+
+        Integer descendants = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM org_units WHERE deleted = 0 AND tree_path LIKE ? AND id != ?",
+            Integer.class, treePath + "%", id);
+        impact.put("descendantOrgCount", descendants != null ? descendants : 0);
+
+        // 2. 子树下的 students (含本节点 + 后代)
+        Integer studentCount = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM user_student WHERE deleted = 0 AND org_unit_id IN " +
+            "(SELECT id FROM org_units WHERE deleted = 0 AND tree_path LIKE ?)",
+            Integer.class, treePath + "%");
+        impact.put("studentCount", studentCount != null ? studentCount : 0);
+
+        // 3. 子树下的 classes
+        Integer classCount = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM classes WHERE deleted = 0 AND org_unit_id IN " +
+            "(SELECT id FROM org_units WHERE deleted = 0 AND tree_path LIKE ?)",
+            Integer.class, treePath + "%");
+        impact.put("classCount", classCount != null ? classCount : 0);
+
+        // 4. 子树下的 places
+        Integer placeCount = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM places WHERE deleted = 0 AND org_unit_id IN " +
+            "(SELECT id FROM org_units WHERE deleted = 0 AND tree_path LIKE ?)",
+            Integer.class, treePath + "%");
+        impact.put("placeCount", placeCount != null ? placeCount : 0);
+
+        // 5. 子树下的 teachers (primary_org_unit_id 在子树)
+        Integer teacherCount = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM users WHERE deleted = 0 AND user_type_code = 'TEACHER' " +
+            "AND primary_org_unit_id IN " +
+            "(SELECT id FROM org_units WHERE deleted = 0 AND tree_path LIKE ?)",
+            Integer.class, treePath + "%");
+        impact.put("teacherCount", teacherCount != null ? teacherCount : 0);
+
+        // 6. access_relations 引用本子树 org_unit 的关系数
+        Integer relationCount = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM access_relations WHERE deleted = 0 " +
+            "AND resource_type = 'org_unit' AND resource_id IN " +
+            "(SELECT id FROM org_units WHERE deleted = 0 AND tree_path LIKE ?)",
+            Integer.class, treePath + "%");
+        impact.put("accessRelationCount", relationCount != null ? relationCount : 0);
+
+        // 7. 警告级别 (用于 UI 是否显示二次确认)
+        int total = (descendants != null ? descendants : 0)
+                  + (studentCount != null ? studentCount : 0)
+                  + (classCount != null ? classCount : 0)
+                  + (teacherCount != null ? teacherCount : 0);
+        String severity = total == 0 ? "NONE"
+                        : total < 10 ? "LOW"
+                        : total < 100 ? "MEDIUM"
+                        : "HIGH";
+        impact.put("severity", severity);
+        impact.put("totalAffected", total);
+
+        return Result.success(impact);
     }
 
     @Operation(summary = "Delete organization unit")

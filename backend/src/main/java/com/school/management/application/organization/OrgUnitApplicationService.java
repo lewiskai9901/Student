@@ -223,16 +223,26 @@ public class OrgUnitApplicationService {
         List<OrgUnit> allDescendants = new ArrayList<>();
         collectDescendantsByParentId(id, allDescendants);
 
+        Long currentUserId = com.school.management.common.util.SecurityUtils.getCurrentUserId();
+
         // Delete deepest first (reverse order)
         for (int i = allDescendants.size() - 1; i >= 0; i--) {
             OrgUnit desc = allDescendants.get(i);
             cleanupOrgUnitData(desc.getId(), desc.getUnitName(), "组织删除");
             orgUnitRepository.deleteById(desc.getId());
+            // P8-2: fire delete event for descendant audit
+            eventPublisher.publish(new com.school.management.domain.organization.event.OrgUnitDeletedEvent(
+                desc.getId(), desc.getUnitCode(), desc.getUnitName(),
+                desc.getUnitType(), desc.getParentId(), currentUserId));
         }
 
         // Clean up and delete the target unit itself
         cleanupOrgUnitData(id, orgUnit.getUnitName(), "组织删除");
         orgUnitRepository.deleteById(id);
+        // P8-2: fire delete event for the root removed
+        eventPublisher.publish(new com.school.management.domain.organization.event.OrgUnitDeletedEvent(
+            id, orgUnit.getUnitCode(), orgUnit.getUnitName(),
+            orgUnit.getUnitType(), orgUnit.getParentId(), currentUserId));
     }
 
     /**
@@ -325,6 +335,12 @@ public class OrgUnitApplicationService {
 
     @Transactional
     public OrgUnitDTO mergeOrgUnit(Long sourceId, Long targetId, String reason, Long updatedBy) {
+        // 先查 source/target unitCode 给事件用
+        OrgUnit sourceUnit = orgUnitRepository.findById(sourceId)
+            .orElseThrow(() -> new IllegalArgumentException("Source not found: " + sourceId));
+        OrgUnit targetUnit = orgUnitRepository.findById(targetId)
+            .orElseThrow(() -> new IllegalArgumentException("Target not found: " + targetId));
+
         List<OrgUnit> movedChildren = orgUnitDomainService.mergeOrgUnits(sourceId, targetId, reason, updatedBy);
 
         activityEventPublisher.newEvent("organization", "ORG_UNIT", "MERGE", "合并组织单元")
@@ -332,6 +348,11 @@ public class OrgUnitApplicationService {
             .changedFields(List.of(new FieldChange("mergedIntoId", null, targetId.toString())))
             .reason(reason)
             .publish();
+
+        // P8-2: fire domain event for audit listener (org_change_logs)
+        eventPublisher.publish(new com.school.management.domain.organization.event.OrgUnitMergedEvent(
+            sourceId, targetId, sourceUnit.getUnitCode(), targetUnit.getUnitCode(),
+            reason, updatedBy));
 
         OrgUnit target = orgUnitRepository.findById(targetId)
             .orElseThrow(() -> new IllegalArgumentException("Target not found: " + targetId));
@@ -344,6 +365,9 @@ public class OrgUnitApplicationService {
             .map(s -> new OrgUnitDomainService.SplitSpec(s.getUnitCode(), s.getUnitName(), s.getChildIds()))
             .collect(Collectors.toList());
 
+        OrgUnit sourceUnit = orgUnitRepository.findById(sourceId)
+            .orElseThrow(() -> new IllegalArgumentException("Source not found: " + sourceId));
+
         List<OrgUnit> newUnits = orgUnitDomainService.splitOrgUnit(sourceId, specs, reason, createdBy);
 
         activityEventPublisher.newEvent("organization", "ORG_UNIT", "SPLIT", "拆分组织单元")
@@ -352,6 +376,12 @@ public class OrgUnitApplicationService {
                 newUnits.stream().map(u -> u.getId().toString()).collect(Collectors.joining(",")))))
             .reason(reason)
             .publish();
+
+        // P8-2: fire domain event for audit listener (org_change_logs)
+        eventPublisher.publish(new com.school.management.domain.organization.event.OrgUnitSplitEvent(
+            sourceId, sourceUnit.getUnitCode(),
+            newUnits.stream().map(OrgUnit::getId).collect(Collectors.toList()),
+            reason, createdBy));
 
         return newUnits.stream().map(this::toDTO).collect(Collectors.toList());
     }

@@ -20,6 +20,7 @@ public interface OrgUnitMapper extends BaseMapper<OrgUnitPO> {
     /**
      * 根据树路径前缀查询所有后代节点
      */
+    @DataPermission(module = "org_unit", orgUnitField = "id")
     @Select("SELECT * FROM org_units WHERE tree_path LIKE CONCAT(#{treePath}, '%') AND deleted = 0 ORDER BY tree_level, sort_order")
     List<OrgUnitPO> selectDescendants(@Param("treePath") String treePath);
 
@@ -52,24 +53,28 @@ public interface OrgUnitMapper extends BaseMapper<OrgUnitPO> {
     /**
      * 查询根节点（无父节点）
      */
+    @DataPermission(module = "org_unit", orgUnitField = "id")
     @Select("SELECT * FROM org_units WHERE parent_id IS NULL AND deleted = 0 ORDER BY sort_order")
     List<OrgUnitPO> findRoots();
 
     /**
      * 根据父节点ID查询子节点
      */
+    @DataPermission(module = "org_unit", orgUnitField = "id")
     @Select("SELECT * FROM org_units WHERE parent_id = #{parentId} AND deleted = 0 ORDER BY sort_order")
     List<OrgUnitPO> findByParentId(@Param("parentId") Long parentId);
 
     /**
      * 根据组织类型查询
      */
+    @DataPermission(module = "org_unit", orgUnitField = "id")
     @Select("SELECT * FROM org_units WHERE unit_type = #{unitType} AND status = 'ACTIVE' AND deleted = 0 ORDER BY tree_level, sort_order")
     List<OrgUnitPO> findByUnitType(@Param("unitType") String unitType);
 
     /**
      * 批量根据多个父节点ID查询所有子节点
      */
+    @DataPermission(module = "org_unit", orgUnitField = "id")
     @Select("<script>SELECT * FROM org_units WHERE parent_id IN "
             + "<foreach collection='parentIds' item='id' open='(' separator=',' close=')'>#{id}</foreach>"
             + " AND deleted = 0 ORDER BY sort_order</script>")
