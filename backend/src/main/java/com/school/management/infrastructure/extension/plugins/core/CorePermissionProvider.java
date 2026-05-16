@@ -44,6 +44,7 @@ public class CorePermissionProvider implements PermissionProvider {
             of("system:permission:add", "新增权限", ""),
             of("system:permission:edit", "编辑权限", ""),
             of("system:permission:delete", "删除权限", ""),
+            of("system:permission:manage", "权限治理(Casbin sync/refresh)", ""),
 
             // ─── system:config ───
             of("system:config:view", "查看配置", ""),

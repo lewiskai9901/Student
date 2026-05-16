@@ -18,7 +18,8 @@ async function loginAsAdmin(page: Page) {
   await page.locator('input[placeholder="请输入账号"]').first().fill('admin')
   await page.locator('input[placeholder="请输入密码"]').first().fill('admin123')
   await page.locator('button[type="submit"]:has-text("登录")').first().click()
-  await page.waitForURL(/\/dashboard/, { timeout: 10000 })
+  // 2026-05-01 起非教师登录后落地 /inspection (commit 6c85a261)
+  await page.waitForURL(/\/inspection/, { timeout: 10000 })
 }
 
 test.describe('Organization management critical flows', () => {

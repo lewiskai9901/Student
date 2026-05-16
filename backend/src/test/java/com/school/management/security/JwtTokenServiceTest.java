@@ -103,9 +103,14 @@ class JwtTokenServiceTest {
     @DisplayName("篡改的 token 校验失败")
     void tamperedTokenFailsValidation() {
         String token = svc.generateToken(USER_ID, USERNAME, ROLES);
-        // 改最后一个字符破坏签名
-        String tampered = token.substring(0, token.length() - 1) + (token.endsWith("a") ? 'b' : 'a');
-        assertFalse(svc.validateToken(tampered));
+        // JWT 结构 header.payload.signature, 把 payload 中段改一个字符破坏签名验证
+        String[] parts = token.split("\\.");
+        assertEquals(3, parts.length);
+        char[] payload = parts[1].toCharArray();
+        int midIdx = payload.length / 2;
+        payload[midIdx] = (payload[midIdx] == 'A') ? 'B' : 'A';
+        String tampered = parts[0] + "." + new String(payload) + "." + parts[2];
+        assertFalse(svc.validateToken(tampered), "篡改 payload 后签名不匹配, 校验必须失败");
     }
 
     @Test

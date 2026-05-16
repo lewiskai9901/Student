@@ -40,14 +40,19 @@ public class DomainEventStore {
         try {
             String payload = objectMapper.writeValueAsString(event);
 
+            // 用 INSERT IGNORE 保证幂等 — SpringDomainEventPublisher.publish() 内部已经
+            // store 一次, 然后 @EventListener handler 又会调 store(). 没有 IGNORE 时
+            // 第二次 INSERT 触发 DuplicateKeyException 让 handler 整段抛出, 后续业务
+            // 副作用 (audit / casbin sync / access_relations 自动写) 全部跳过.
+            // 用 INSERT IGNORE 让 store() 真幂等, 重复调用安全.
             String sql = """
-                INSERT INTO domain_events
+                INSERT IGNORE INTO domain_events
                 (event_id, event_type, aggregate_type, aggregate_id, aggregate_version,
                  payload, occurred_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
                 """;
 
-            jdbcTemplate.update(sql,
+            int rowsAffected = jdbcTemplate.update(sql,
                 event.getEventId(),
                 event.getEventType(),
                 event.getAggregateType(),
@@ -57,7 +62,11 @@ public class DomainEventStore {
                 Timestamp.from(event.getOccurredAt())
             );
 
-            log.debug("Stored domain event: {}", event.getEventId());
+            if (rowsAffected == 0) {
+                log.debug("Domain event {} already stored (idempotent skip)", event.getEventId());
+            } else {
+                log.debug("Stored domain event: {}", event.getEventId());
+            }
         } catch (Exception e) {
             log.error("Failed to store domain event: {}", event.getEventId(), e);
             throw new RuntimeException("Failed to store domain event: " + event.getEventId(), e);

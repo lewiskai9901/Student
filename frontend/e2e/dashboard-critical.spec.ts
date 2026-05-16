@@ -48,10 +48,15 @@ test.describe('Critical dashboard access-control flow', () => {
     await fillLogin(page, ADMIN)
     // 2026-05-01 起非教师登录后落地 /inspection (commit 6c85a261); admin 手动导航到 dashboard
     await page.waitForURL(/\/inspection/, { timeout: 10000 })
+    // 不用 networkidle (现在 audit listener / scheduler 等保持网络长期忙).
+    // 用 waitForResponse 显式等 dashboard/overview API 响应, 比 networkidle 更确定.
+    const responsePromise = page.waitForResponse(
+      r => r.url().includes('/dashboard/overview') && r.status() === 200,
+      { timeout: 15000 }
+    );
     await page.goto('/dashboard')
-    await page.waitForLoadState('networkidle')
-
-    await expect(page.locator('text=组织概览').first()).toBeVisible({ timeout: 5000 })
+    await responsePromise
+    await expect(page.locator('text=组织概览').first()).toBeVisible({ timeout: 10000 })
 
     expect(overviewPayload, 'dashboard/overview API should have been called').toBeTruthy()
     const studentCount = overviewPayload?.data?.organization?.studentCount ?? 0

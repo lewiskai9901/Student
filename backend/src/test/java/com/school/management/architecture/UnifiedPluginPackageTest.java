@@ -55,11 +55,13 @@ class UnifiedPluginPackageTest {
     }
 
     @Test
-    @DisplayName("Contribution 恰好有 14 个 permitted 子类型 (Phase 5: +workflow)")
-    void contributionPermitsExactly14Subtypes() {
+    @DisplayName("Contribution 恰好有 15 个 permitted 子类型 (P5-1: +role-scope-binding)")
+    void contributionPermitsExactly15Subtypes() {
         Class<?>[] permitted = Contribution.class.getPermittedSubclasses();
-        assertEquals(14, permitted.length,
-            "Phase 5 扩展后约定 14 种 Contribution: entity/relation/event-domain/trigger-point/event-type/perm/role/menu/data-scope/route/policy/target-mode/domain/workflow, 实际=" + permitted.length);
+        assertEquals(15, permitted.length,
+            "完美架构 P5-1 加 RoleScopeBindingContribution permit. 共 15 种: entity/relation/event-domain/" +
+            "trigger-point/event-type/perm/role/role-scope/menu/data-scope/route/policy/target-mode/domain/workflow. " +
+            "实际=" + permitted.length);
     }
 
     @Test
