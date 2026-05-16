@@ -26,6 +26,7 @@ public sealed interface Contribution permits
     Contribution.EventTypeContribution,
     Contribution.PermissionContribution,
     Contribution.RoleContribution,
+    Contribution.RoleScopeBindingContribution,
     Contribution.MenuContribution,
     Contribution.DataScopeContribution,
     Contribution.RouteContribution,
@@ -101,6 +102,41 @@ public sealed interface Contribution permits
     /** 预置角色贡献 */
     record RoleContribution(RolePresetPlugin.RolePresetDef def) implements Contribution {
         @Override public String uniqueKey() { return "role:" + def.roleCode(); }
+    }
+
+    /**
+     * 角色 × 资源 × scope 默认绑定贡献 (Phase 5 P5-1, 真完美架构补全).
+     *
+     * <p>之前缺口:插件能声明 PermissionContribution / RoleContribution /
+     * DataScopeContribution 三件 building block, 但"默认 wiring"——即
+     * CLASS_TEACHER 应该对 student 资源走 BY_CLASS scope 这种映射——必须靠
+     * SQL migration 手动写. 17 个 production 角色因此 0 规则裸奔.
+     *
+     * <p>P5-1 加此 permit 后, 插件可在 manifest.contribute() 声明:
+     * <pre>
+     *   RoleScopeBindingContribution.bind("CLASS_TEACHER", "student", "BY_CLASS"),
+     *   RoleScopeBindingContribution.bind("GRADE_DIRECTOR", "student", "BY_GRADE"),
+     *   RoleScopeBindingContribution.bind("SCHOOL_ADMIN", "student", "DEPARTMENT_AND_BELOW"),
+     * </pre>
+     * 启动期 Registrar UPSERT 到 role_data_scopes (不覆盖 admin 手动调整).
+     *
+     * <p>语义: 这是 "default wiring", 不是 "强制 wiring". admin 可在 UI 上改,
+     * 重启不被覆盖 (用 INSERT IGNORE 而非 INSERT ... ON DUPLICATE KEY UPDATE).
+     *
+     * @param roleCode      角色码 (必须在 RoleContribution 里声明过)
+     * @param resourceCode  资源码 (必须在 data_resources 注册过)
+     * @param scopeType     scope 类型 (ALL / DEPARTMENT_AND_BELOW / SELF / CUSTOM /
+     *                       BY_MAJOR / BY_GRADE / BY_CLASS / 插件维度)
+     */
+    record RoleScopeBindingContribution(String roleCode, String resourceCode, String scopeType)
+            implements Contribution {
+        @Override public String uniqueKey() {
+            return "role-scope:" + roleCode + "/" + resourceCode + "=" + scopeType;
+        }
+
+        public static RoleScopeBindingContribution bind(String role, String resource, String scope) {
+            return new RoleScopeBindingContribution(role, resource, scope);
+        }
     }
 
     /** 菜单贡献 */

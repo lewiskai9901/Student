@@ -40,6 +40,7 @@ public class ContributionDispatcher implements ApplicationRunner {
     private final List<PluginPackage> packages;
     private final MessagingRegistrar messagingRegistrar;
     private final RelationTypeUpserter relationTypeUpserter;
+    private final RoleScopeBindingRegistrar roleScopeBindingRegistrar;
 
     @Override
     public void run(ApplicationArguments args) {
@@ -63,6 +64,7 @@ public class ContributionDispatcher implements ApplicationRunner {
         AtomicInteger targetModes = new AtomicInteger();
         AtomicInteger domains = new AtomicInteger();
         AtomicInteger workflows = new AtomicInteger();
+        AtomicInteger roleScopes = new AtomicInteger();
 
         Set<String> seenKeys = new HashSet<>();
 
@@ -118,6 +120,19 @@ public class ContributionDispatcher implements ApplicationRunner {
                 }
                 else if (c instanceof Contribution.PermissionContribution)   perms.incrementAndGet();
                 else if (c instanceof Contribution.RoleContribution)         roles.incrementAndGet();
+                else if (c instanceof Contribution.RoleScopeBindingContribution rsbc) {
+                    roleScopes.incrementAndGet();
+                    try {
+                        // tenantId 从 PluginPackageRegistrar 上下文不易拿, 用默认 1
+                        RoleScopeBindingRegistrar.Result r = roleScopeBindingRegistrar.upsert(
+                            rsbc.roleCode(), rsbc.resourceCode(), rsbc.scopeType(), 1L);
+                        log.debug("[ContributionDispatcher] RoleScopeBinding {}: {} × {} = {}",
+                            r, rsbc.roleCode(), rsbc.resourceCode(), rsbc.scopeType());
+                    } catch (Exception e) {
+                        log.error("[ContributionDispatcher] role-scope binding 写入失败 {}: {}",
+                            rsbc.uniqueKey(), e.getMessage());
+                    }
+                }
                 else if (c instanceof Contribution.MenuContribution)         menus.incrementAndGet();
                 else if (c instanceof Contribution.DataScopeContribution)    scopes.incrementAndGet();
                 else if (c instanceof Contribution.RouteContribution)        routes.incrementAndGet();
@@ -143,11 +158,11 @@ public class ContributionDispatcher implements ApplicationRunner {
         }
 
         log.info("[ContributionDispatcher] 扫描 {} 个包, 收到 {} 条 Contribution " +
-                "(entity {}, relation {}, event-domain {}, trigger-point {}, event-type {}, perm {}, role {}, menu {}, scope {}, route {}, policy {}, target-mode {}, domain {}, workflow {})",
+                "(entity {}, relation {}, event-domain {}, trigger-point {}, event-type {}, perm {}, role {}, role-scope {}, menu {}, scope {}, route {}, policy {}, target-mode {}, domain {}, workflow {})",
             packages.size(), total.get(),
             entities.get(), relations.get(), events.get(),
             triggerPoints.get(), eventTypes.get(),
-            perms.get(), roles.get(), menus.get(), scopes.get(), routes.get(),
+            perms.get(), roles.get(), roleScopes.get(), menus.get(), scopes.get(), routes.get(),
             policies.get(), targetModes.get(), domains.get(), workflows.get());
     }
 }
