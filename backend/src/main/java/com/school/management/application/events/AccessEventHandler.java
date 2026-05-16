@@ -1,6 +1,7 @@
 package com.school.management.application.events;
 
 import com.school.management.domain.access.event.*;
+import com.school.management.domain.access.repository.AccessRelationRepository;
 import com.school.management.domain.access.repository.RoleRepository;
 import com.school.management.domain.access.service.PolicyEnforcementService;
 import com.school.management.infrastructure.event.DomainEventStore;
@@ -30,6 +31,7 @@ public class AccessEventHandler {
     private final ActivityEventPublisher activityEventPublisher;
     private final PolicyEnforcementService policyEnforcementService;
     private final RoleRepository roleRepository;
+    private final AccessRelationRepository accessRelationRepository;
 
     /**
      * 处理角色创建事件
@@ -131,6 +133,39 @@ public class AccessEventHandler {
         } catch (Exception e) {
             log.error("[Casbin] failed to add grouping policy for user {}: {}",
                 event.getUserId(), e.getMessage(), e);
+        }
+
+        // ORG_UNIT scope 的角色分配 — 自动写 access_relations 让 ReBAC 子查询和 plugin
+        // Resolver 反查能命中. relation 用 role_code, resource_type=org_unit, resource_id=scope_id.
+        // 这是单一写入路径, 业务层只调 assignRoleToUserWithScope, access_relations 自动写.
+        if ("ORG_UNIT".equals(event.getScopeType()) && event.getScopeId() != null && event.getScopeId() > 0) {
+            try {
+                roleRepository.findById(event.getRoleId()).ifPresent(role -> {
+                    java.util.Optional<Long> existing = accessRelationRepository.findActiveByTuple(
+                        "org_unit", event.getScopeId(),
+                        role.getRoleCode(),
+                        "user", event.getUserId());
+                    if (existing.isPresent()) {
+                        log.debug("[AccessRelation] already exists for user={} role={} org={}",
+                            event.getUserId(), role.getRoleCode(), event.getScopeId());
+                        return;
+                    }
+                    AccessRelationRepository.InsertDirectCommand cmd =
+                        new AccessRelationRepository.InsertDirectCommand(
+                            "org_unit", event.getScopeId(),
+                            role.getRoleCode(),
+                            "user", event.getUserId(),
+                            false, null, null, null, null,
+                            "auto-created from role assignment",
+                            role.getTenantId(), event.getAssignedBy());
+                    Long arId = accessRelationRepository.insertDirect(cmd);
+                    log.info("[AccessRelation] auto-created from role assignment: id={} user={} role={} org={}",
+                        arId, event.getUserId(), role.getRoleCode(), event.getScopeId());
+                });
+            } catch (Exception e) {
+                log.error("[AccessRelation] failed to auto-create from role assignment user={}: {}",
+                    event.getUserId(), e.getMessage(), e);
+            }
         }
 
         // 发送通知给用户
