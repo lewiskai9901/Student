@@ -7,6 +7,7 @@ import {
   deleteGradeScheme, cloneGradeScheme,
 } from '@/api/inspection/gradeScheme'
 import type { GradeScheme } from '@/types/insp/gradeScheme'
+import { useSearchHighlight } from '@/composables/useSearchHighlight'
 import { eventTypeApi } from '@/api/event'
 import type { EventType } from '@/types/event'
 
@@ -157,13 +158,9 @@ async function handleDelete(scheme: GradeScheme) {
   } catch (e: any) { if (e !== 'cancel') ElMessage.error(e.message || '删除失败') }
 }
 
-// ============== S+ 设计样板 ==============
+// ============== S+ 设计样板 (J7: composable) ==============
 const searchKw = ref('')
-function highlightHtml(text: string, kw: string): string {
-  if (!kw) return text
-  const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  return text.replace(new RegExp(`(${escaped})`, 'gi'), '<mark class="gs-mark">$1</mark>')
-}
+const { highlightHtml } = useSearchHighlight()
 function matchesSearch(s: GradeScheme): boolean {
   const q = searchKw.value.trim().toLowerCase()
   if (!q) return true
@@ -428,7 +425,7 @@ onMounted(() => loadSchemes())
   color: var(--insp-ink-tertiary, #999);
   font-weight: 400;
 }
-:deep(.gs-mark) {
+:deep(.search-mark) {  /* J7: 统一 class */
   background: rgba(245, 200, 70, 0.4);
   color: var(--insp-ink-primary, #1f2937);
   padding: 0 2px;

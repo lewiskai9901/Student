@@ -9,6 +9,8 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Keyboard } from 'lucide-vue-next'
 import { useInspCorrectiveStore } from '@/stores/inspection/inspCorrectiveStore'
+import { useSearchHighlight } from '@/composables/useSearchHighlight'
+import { useKbdHint } from '@/composables/useKbdHint'
 import {
   CaseStatusConfig, CasePriorityConfig,
   type CaseStatus, type CasePriority,
@@ -135,11 +137,8 @@ function goDetail(c: CorrectiveCase) {
 
 // ============== S+ 设计样板 ==============
 const searchKw = ref('')
-function highlightHtml(text: string, kw: string): string {
-  if (!kw) return text
-  const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  return text.replace(new RegExp(`(${escaped})`, 'gi'), '<mark class="cc-mark">$1</mark>')
-}
+// J7: 抽到 composable, 7 个 view 共用
+const { highlightHtml } = useSearchHighlight()
 const filteredCases = computed(() => {
   let list = cases.value
   if (sourceFilter.value === 'engine') {
@@ -171,8 +170,8 @@ function scrollFocused() {
   document.querySelector(`[data-cc-id="${cur.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
 }
 
-const showKbdHint = ref(localStorage.getItem('insp_cc_kbd_hint_dismissed') !== '1')
-function dismissKbdHint() { showKbdHint.value = false; localStorage.setItem('insp_cc_kbd_hint_dismissed', '1') }
+// J7: 抽到 composable, 自动 try/catch localStorage
+const { showKbdHint, dismissKbdHint } = useKbdHint('insp_cc_kbd_hint_dismissed')
 
 function onGlobalKeyCC(e: KeyboardEvent) {
   const t = e.target as HTMLElement
@@ -720,8 +719,8 @@ onUnmounted(() => window.removeEventListener('keydown', onGlobalKeyCC))
   .row-issue, .row-deadline, .row-actions { grid-column: 2; }
 }
 
-/* ─ S+ 搜索高亮 ─────── */
-:deep(.cc-mark) {
+/* ─ S+ 搜索高亮 (J7: class 改 search-mark 与 composable 一致) ─────── */
+:deep(.search-mark) {
   background: rgba(245, 200, 70, 0.4);
   color: var(--insp-ink-primary);
   padding: 0 2px;

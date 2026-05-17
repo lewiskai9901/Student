@@ -11,6 +11,8 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search, ExternalLink, Keyboard } from 'lucide-vue-next'
 import { getProfiles } from '@/api/inspection/scoring'
+import { useSearchHighlight } from '@/composables/useSearchHighlight'
+import { useKbdHint } from '@/composables/useKbdHint'
 import type { ScoringProfile } from '@/types/insp/scoring'
 
 const router = useRouter()
@@ -53,12 +55,8 @@ function goSection(sectionId: LongId) {
   router.push(`/inspection/templates/${sectionId}/edit`)
 }
 
-// ============== S+ 设计样板 ==============
-function highlightHtml(text: string, kw: string): string {
-  if (!kw) return text
-  const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  return text.replace(new RegExp(`(${escaped})`, 'gi'), '<mark class="sp-mark">$1</mark>')
-}
+// ============== S+ 设计样板 (J7: composable) ==============
+const { highlightHtml } = useSearchHighlight()
 
 const focusedIdx = ref<number>(-1)
 function focusNext() { focusedIdx.value = Math.min(focusedIdx.value + 1, filtered.value.length - 1); nextTick(scrollFocused) }
@@ -69,8 +67,8 @@ function scrollFocused() {
   document.querySelector(`[data-sp-id="${cur.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
 }
 
-const showKbdHint = ref(localStorage.getItem('insp_sp_kbd_hint_dismissed') !== '1')
-function dismissKbdHint() { showKbdHint.value = false; localStorage.setItem('insp_sp_kbd_hint_dismissed', '1') }
+// J7: composable
+const { showKbdHint, dismissKbdHint } = useKbdHint('insp_sp_kbd_hint_dismissed')
 
 function onKeySP(e: KeyboardEvent) {
   const t = e.target as HTMLElement
@@ -367,7 +365,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeySP))
 .col-actions { display: flex; gap: 4px; justify-content: flex-end; }
 
 /* ─ S+ 设计样板 ─────── */
-:deep(.sp-mark) { background: rgba(245, 200, 70, 0.4); color: var(--insp-ink-primary); padding: 0 2px; border-radius: 2px; font-weight: 600; }
+:deep(.search-mark) { background: rgba(245, 200, 70, 0.4); color: var(--insp-ink-primary); padding: 0 2px; border-radius: 2px; font-weight: 600; }  /* J7: 统一 class */
 .sp-row.is-focused { outline: 2px solid var(--insp-accent); outline-offset: -2px; }
 .sp-kbd-hint { display: flex; align-items: center; gap: 14px; padding: 6px 12px; margin-bottom: 10px; background: linear-gradient(90deg, rgba(26,109,255,0.06) 0%, transparent 100%); border: 1px solid rgba(26,109,255,0.18); border-radius: var(--insp-radius-md); font-size: 11px; color: var(--insp-ink-secondary); }
 .sp-kbd-hint__group { display: inline-flex; align-items: center; gap: 4px; }

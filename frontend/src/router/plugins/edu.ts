@@ -32,6 +32,7 @@ const eduRoutes: RouteRecordRaw[] = [
         meta: {
           title: '班级列表',
           requiresAuth: true,
+          permission: 'student:info:view',   // J6: 补 meta 缺口, requiresClass 守卫从不读
           hidden: true
         }
       },
@@ -42,6 +43,7 @@ const eduRoutes: RouteRecordRaw[] = [
         meta: {
           title: '班级详情',
           requiresAuth: true,
+          permission: 'student:info:view',   // J6: 补 meta 缺口
           hidden: true
         }
       }

@@ -8,6 +8,8 @@ import { ref, computed, onMounted, onUnmounted, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
+import { useSearchHighlight } from '@/composables/useSearchHighlight'
+import { useKbdHint } from '@/composables/useKbdHint'
 import {
   getMyTasks, getAvailableTasks,
   claimTask, withdrawTask, startTask,
@@ -179,11 +181,8 @@ const grouped = computed((): DateBucket[] => {
 
 // ── S+ 搜索高亮 ──
 const searchKeyword = ref('')
-function highlightHtml(text: string, kw: string): string {
-  if (!kw) return text
-  const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  return text.replace(new RegExp(`(${escaped})`, 'gi'), '<mark class="my-mark">$1</mark>')
-}
+// J7: 抽到 composable
+const { highlightHtml } = useSearchHighlight()
 
 // ── S+ 任务悬浮预览卡 ──
 const previewVisible = ref(false)
@@ -213,9 +212,8 @@ function hideTaskPreview() {
 }
 function keepTaskPreview() { clearTimeout(previewHideTimer) }
 
-// ── S+ 键盘提示条 ──
-const showKbdHint = ref(localStorage.getItem('insp_my_kbd_hint_dismissed') !== '1')
-function dismissKbdHint() { showKbdHint.value = false; localStorage.setItem('insp_my_kbd_hint_dismissed', '1') }
+// ── S+ 键盘提示条 (J7: composable) ──
+const { showKbdHint, dismissKbdHint } = useKbdHint('insp_my_kbd_hint_dismissed')
 
 // 显示用任务列表 (按 keyword 过滤)
 const filteredAfterSearch = computed(() => {
@@ -857,7 +855,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 }
 
 /* ─ S+ 搜索高亮 ─────── */
-:deep(.my-mark) {
+:deep(.search-mark) {  /* J7: 统一 class */
   background: rgba(245, 200, 70, 0.4);
   color: var(--insp-ink-primary);
   padding: 0 2px;

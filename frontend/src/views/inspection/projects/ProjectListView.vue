@@ -23,6 +23,8 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, AlertTriangle, EyeOff, Eye, Inbox, Keyboard } from 'lucide-vue-next'
 import { useInspExecutionStore } from '@/stores/inspection/inspExecutionStore'
 import { useAuthStore } from '@/stores/auth'
+import { useSearchHighlight } from '@/composables/useSearchHighlight'
+import { useKbdHint } from '@/composables/useKbdHint'
 // 2026-05-15: 第一个真实迁移 — 用 @hey-api/openapi-ts 生成的 SDK 替代手写 inspProjectApi
 import { listProjectsWithStats } from '@/api-generated/sdk.gen'
 import type { ProjectStatsSummary } from '@/api/inspection/project'
@@ -98,12 +100,8 @@ async function loadData() {
   }
 }
 
-// ── S+ 搜索高亮 ──
-function highlightHtml(text: string, kw: string): string {
-  if (!kw) return text
-  const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  return text.replace(new RegExp(`(${escaped})`, 'gi'), '<mark class="prj-mark">$1</mark>')
-}
+// J7: 抽到 composable, 7 个 view 共用
+const { highlightHtml } = useSearchHighlight()
 
 // ── S+ 键盘聚焦 ──
 const focusedIdx = ref<number>(-1)
@@ -127,8 +125,8 @@ function cycleViewMode() {
   view.value = order[(i + 1) % order.length]
 }
 
-const showKbdHint = ref(localStorage.getItem('insp_prj_kbd_hint_dismissed') !== '1')
-function dismissKbdHint() { showKbdHint.value = false; localStorage.setItem('insp_prj_kbd_hint_dismissed', '1') }
+// J7: 抽到 composable, 自动 try/catch localStorage
+const { showKbdHint, dismissKbdHint } = useKbdHint('insp_prj_kbd_hint_dismissed')
 
 function onGlobalKeyPrj(e: KeyboardEvent) {
   const t = e.target as HTMLElement
@@ -1140,8 +1138,8 @@ onMounted(async () => {
   .prj-kpi { flex-wrap: wrap; }
 }
 
-/* ─ S+ 搜索高亮 ─────── */
-:deep(.prj-mark) {
+/* ─ S+ 搜索高亮 (J7: class 改 search-mark 与 composable 一致) ─────── */
+:deep(.search-mark) {
   background: rgba(245, 200, 70, 0.4);
   color: var(--insp-ink-primary);
   padding: 0 2px;

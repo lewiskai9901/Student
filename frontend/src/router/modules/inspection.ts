@@ -233,6 +233,7 @@ const inspectionRoutes: RouteRecordRaw[] = [
         meta: {
           title: '检查员驾驶舱',
           requiresAuth: true,
+          permission: 'insp:task:view',   // J6: 补 meta 缺口, 之前只 requiresAuth 任意登录可进
           hidden: true,
         }
       },

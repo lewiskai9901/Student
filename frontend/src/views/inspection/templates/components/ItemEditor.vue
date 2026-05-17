@@ -12,6 +12,7 @@ import {
 } from '@/types/insp/enums'
 import type { TemplateItem, ResponseSet, ResponseSetOption } from '@/types/insp/template'
 import { responseSetApi } from '@/api/inspection/responseSet'
+import { useKbdHint } from '@/composables/useKbdHint'
 import { eventTypeApi } from '@/api/event'
 import type { EventType } from '@/types/event'
 import ConditionBuilder from '@/components/insp/ConditionBuilder.vue'
@@ -83,8 +84,8 @@ function onItemEditorKey(e: KeyboardEvent) {
   }
 }
 
-const showKbdHint = ref(localStorage.getItem('insp_ie_kbd_hint_dismissed') !== '1')
-function dismissKbdHint() { showKbdHint.value = false; localStorage.setItem('insp_ie_kbd_hint_dismissed', '1') }
+// J7: composable
+const { showKbdHint, dismissKbdHint } = useKbdHint('insp_ie_kbd_hint_dismissed')
 
 onMounted(() => window.addEventListener('keydown', onItemEditorKey))
 onUnmounted(() => window.removeEventListener('keydown', onItemEditorKey))

@@ -26,6 +26,7 @@ const healthRoutes: RouteRecordRaw[] = [
         meta: {
           title: '病人列表',
           requiresAuth: true,
+          permission: 'health:patient:view',   // J6: 示例插件之前完全无 perm 门控
           order: 1
         }
       }

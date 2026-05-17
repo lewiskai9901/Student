@@ -227,8 +227,8 @@ const allQuickActions = [
   { label: '成绩管理', path: '/teaching/grades',    perm: 'teaching:grade:view' },
   { label: '用户管理', path: '/system/users',       perm: 'system:user:view' },
   { label: '角色管理', path: '/system/roles',       perm: 'system:role:view' },
-  { label: '检查项目', path: '/inspection/projects',  perm: 'inspection:project:view' },
-  { label: '模板管理', path: '/inspection/templates', perm: 'inspection:template:view' },
+  { label: '检查项目', path: '/inspection/projects',  perm: 'insp:project:view' },
+  { label: '模板管理', path: '/inspection/templates', perm: 'insp:template:view' },
   { label: '系统配置', path: '/system/configs',     perm: 'system:config:view' },
 ]
 

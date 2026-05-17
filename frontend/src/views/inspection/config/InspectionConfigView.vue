@@ -11,6 +11,8 @@ import {
 } from 'lucide-vue-next'
 import { useInspTemplateStore } from '@/stores/inspection/inspTemplateStore'
 import { inspTemplateApi } from '@/api/inspection/template'
+import { useSearchHighlight } from '@/composables/useSearchHighlight'
+import { useKbdHint } from '@/composables/useKbdHint'
 import { TemplateStatusConfig, TargetTypeConfig, type TemplateStatus, type TargetType } from '@/types/insp/enums'
 import type { TemplateSection } from '@/types/insp/template'
 
@@ -49,12 +51,8 @@ function thumbGradient(name: string): string {
   return `linear-gradient(135deg, hsl(${h}, 65%, 55%) 0%, hsl(${(h + 35) % 360}, 60%, 45%) 100%)`
 }
 
-// ==================== 搜索高亮 ====================
-function highlightHtml(text: string, kw: string): string {
-  if (!kw) return text
-  const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  return text.replace(new RegExp(`(${escaped})`, 'gi'), '<mark class="cfg-mark">$1</mark>')
-}
+// ==================== 搜索高亮 (J7: composable) ====================
+const { highlightHtml } = useSearchHighlight()
 
 // ==================== Hover 预览悬浮卡 (S+ 标志) ====================
 interface PreviewData {
@@ -390,8 +388,8 @@ function onGlobalKey(e: KeyboardEvent) {
   }
 }
 import { nextTick } from 'vue'
-const showKbdHint = ref(localStorage.getItem('insp_cfg_kbd_hint_dismissed') !== '1')
-function dismissKbdHint() { showKbdHint.value = false; localStorage.setItem('insp_cfg_kbd_hint_dismissed', '1') }
+// J7: composable
+const { showKbdHint, dismissKbdHint } = useKbdHint('insp_cfg_kbd_hint_dismissed')
 
 onMounted(() => {
   document.addEventListener('click', onDocClick)
@@ -1892,7 +1890,7 @@ onMounted(() => { loadTemplates() })
 }
 
 /* ─ 搜索高亮 ─────── */
-:deep(.cfg-mark) {
+:deep(.search-mark) {  /* J7: 统一 class */
   background: rgba(245, 200, 70, 0.4);
   color: var(--insp-ink-primary);
   padding: 0 2px;
