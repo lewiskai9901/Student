@@ -610,10 +610,20 @@ public class InspTaskApplicationService {
             return;
         }
 
-        // P1#7: 模板版本快照漂移检查 — 项目锁定的快照与模板当前最新版本不一致时记 WARN.
-        // 表示项目发布后模板又被修改并重新 publish, 任务执行将基于 live 数据 (与快照不一致).
-        // 真正的快照重放暂未实现, 这里仅记录漂移让运维感知.
+        // J1 真重放: 加载项目锁定的模板版本快照. 有 → populate 走 snapshot tree;
+        // 无 → fallback live. drift 检查仅 log.warn (I5 informational).
         checkTemplateVersionDrift(project, task);
+        com.school.management.domain.inspection.model.template.snapshot.SnapshotTree snapshotTree = null;
+        if (project.getTemplateVersionId() != null) {
+            snapshotTree = templateVersionRepository.findById(project.getTemplateVersionId())
+                    .flatMap(v -> com.school.management.domain.inspection.model.template.snapshot.SnapshotTree.from(v, objectMapper))
+                    .orElse(null);
+            if (snapshotTree != null) {
+                log.info("[Snapshot Replay] 任务 {} 走快照填充 (templateVersionId={}, {} sections + {} items)",
+                        task.getTaskCode(), project.getTemplateVersionId(),
+                        snapshotTree.getSections().size(), snapshotTree.getItems().size());
+            }
+        }
 
         // V66: rootSectionId 优先从项目取，为空则从检查计划取
         Long rootSectionId = project.getRootSectionId();
@@ -629,7 +639,7 @@ public class InspTaskApplicationService {
             return;
         }
 
-        List<TemplateSection> firstLevelSections = sectionRepository.findByParentSectionId(rootSectionId);
+        List<TemplateSection> firstLevelSections = lookupSectionsByParent(rootSectionId, snapshotTree);
 
         if (firstLevelSections.isEmpty()) {
             log.info("项目 {} 的根分区 {} 无子分区", project.getProjectCode(), rootSectionId);
@@ -647,7 +657,7 @@ public class InspTaskApplicationService {
         for (TemplateSection section : firstLevelSections) {
             collectSectionSubmissions(
                     task, project, section, rootTargets, "ORG", null, null,
-                    submissionBatch, pendingDetails);
+                    submissionBatch, pendingDetails, snapshotTree);
         }
 
         // totalTargets = distinct target count (not submission count)
@@ -665,8 +675,7 @@ public class InspTaskApplicationService {
             InspSubmission submission = entry.getKey();
             for (TemplateItem item : entry.getValue()) {
                 ScoringMode scoringMode = parseScoringMode(item.getScoringConfig());
-                TemplateSection itemSection = sectionRepository.findById(item.getSectionId())
-                        .orElse(null);
+                TemplateSection itemSection = lookupSectionById(item.getSectionId(), snapshotTree).orElse(null);
                 String sectionName = itemSection != null ? itemSection.getSectionName() : null;
                 detailBatch.add(SubmissionDetail.create(
                         submission.getId(), item.getId(),
@@ -698,7 +707,8 @@ public class InspTaskApplicationService {
                                            String parentTargetType,
                                            Long rootTargetId, String rootTargetName,
                                            List<InspSubmission> submissionBatch,
-                                           List<Map.Entry<InspSubmission, List<TemplateItem>>> pendingDetails) {
+                                           List<Map.Entry<InspSubmission, List<TemplateItem>>> pendingDetails,
+                                           com.school.management.domain.inspection.model.template.snapshot.SnapshotTree snapshotTree) {
         TargetType sectionTargetType = section.getTargetType();
         String sourceMode = section.getTargetSourceMode();
 
@@ -712,13 +722,13 @@ public class InspTaskApplicationService {
                     String effRootName = rootTargetName != null ? rootTargetName : parent.getName();
                     collectSubmissionWithDetails(task, section, null,
                             parent.getId(), parent.getName(), effRoot, effRootName,
-                            submissionBatch, pendingDetails);
+                            submissionBatch, pendingDetails, snapshotTree);
                     count++;
                 }
                 return count;
             }
             collectSubmissionWithDetails(task, section, null, null, null, rootTargetId, rootTargetName,
-                    submissionBatch, pendingDetails);
+                    submissionBatch, pendingDetails, snapshotTree);
             return 1;
         }
 
@@ -744,7 +754,7 @@ public class InspTaskApplicationService {
         int count = 0;
 
         // 检查是否有子分区也有目标配置（多层派生）
-        List<TemplateSection> childSections = sectionRepository.findByParentSectionId(section.getId());
+        List<TemplateSection> childSections = lookupSectionsByParent(section.getId(), snapshotTree);
         boolean hasTargetChildren = childSections.stream()
                 .anyMatch(c -> c.getTargetType() != null);
 
@@ -756,7 +766,7 @@ public class InspTaskApplicationService {
             // 为当前分区收集 submission（含当前分区和无目标子分区的字段）
             collectSubmissionWithDetails(task, section, sectionTargetType,
                     target.getId(), target.getName(), effectiveRootId, effectiveRootName,
-                    submissionBatch, pendingDetails);
+                    submissionBatch, pendingDetails, snapshotTree);
             count++;
 
             // 递归处理有目标配置的子分区
@@ -766,7 +776,7 @@ public class InspTaskApplicationService {
                         count += collectSectionSubmissions(task, project, child,
                                 List.of(target), sectionTargetType.name(),
                                 effectiveRootId, effectiveRootName,
-                                submissionBatch, pendingDetails);
+                                submissionBatch, pendingDetails, snapshotTree);
                     }
                 }
             }
@@ -783,7 +793,8 @@ public class InspTaskApplicationService {
                                                TargetType targetType, Long targetId, String targetName,
                                                Long rootTargetId, String rootTargetName,
                                                List<InspSubmission> submissionBatch,
-                                               List<Map.Entry<InspSubmission, List<TemplateItem>>> pendingDetails) {
+                                               List<Map.Entry<InspSubmission, List<TemplateItem>>> pendingDetails,
+                                               com.school.management.domain.inspection.model.template.snapshot.SnapshotTree snapshotTree) {
         InspSubmission submission = InspSubmission.reconstruct(InspSubmission.builder()
                 .taskId(task.getId())
                 .sectionId(section.getId())
@@ -797,23 +808,63 @@ public class InspTaskApplicationService {
         submissionBatch.add(submission);
 
         // 收集当前分区及其无目标子分区的所有 items（延迟创建 details 直到 ID 分配后）
-        List<TemplateItem> items = collectItemsForSubmission(section);
+        List<TemplateItem> items = collectItemsForSubmission(section, snapshotTree);
         pendingDetails.add(Map.entry(submission, items));
     }
 
     /**
-     * 收集分区及其无目标子分区的所有字段（铺平）
+     * 收集分区及其无目标子分区的所有字段（铺平）.
+     * J1: snapshot 优先, fallback live.
      */
-    private List<TemplateItem> collectItemsForSubmission(TemplateSection section) {
-        List<TemplateItem> items = new java.util.ArrayList<>(itemRepository.findBySectionId(section.getId()));
+    private List<TemplateItem> collectItemsForSubmission(
+            TemplateSection section,
+            com.school.management.domain.inspection.model.template.snapshot.SnapshotTree snapshotTree) {
+        List<TemplateItem> items = new java.util.ArrayList<>(lookupItemsBySection(section.getId(), snapshotTree));
         // 递归收集无目标子分区的字段
-        List<TemplateSection> children = sectionRepository.findByParentSectionId(section.getId());
+        List<TemplateSection> children = lookupSectionsByParent(section.getId(), snapshotTree);
         for (TemplateSection child : children) {
             if (child.getTargetType() == null) {
-                items.addAll(collectItemsForSubmission(child));
+                items.addAll(collectItemsForSubmission(child, snapshotTree));
             }
         }
         return items;
+    }
+
+    // ========== J1: snapshot-aware lookup helpers ==========
+
+    /** sections by parent — snapshot 优先, fallback live repo. */
+    private List<TemplateSection> lookupSectionsByParent(
+            Long parentId,
+            com.school.management.domain.inspection.model.template.snapshot.SnapshotTree tree) {
+        if (tree != null) {
+            return tree.findByParentSectionId(parentId).stream()
+                    .map(com.school.management.domain.inspection.model.template.snapshot.SnapshotTree::toLiveSection)
+                    .collect(java.util.stream.Collectors.toList());
+        }
+        return sectionRepository.findByParentSectionId(parentId);
+    }
+
+    /** section by id — snapshot 优先, fallback live repo. */
+    private Optional<TemplateSection> lookupSectionById(
+            Long id,
+            com.school.management.domain.inspection.model.template.snapshot.SnapshotTree tree) {
+        if (tree != null) {
+            return tree.findSectionById(id)
+                    .map(com.school.management.domain.inspection.model.template.snapshot.SnapshotTree::toLiveSection);
+        }
+        return sectionRepository.findById(id);
+    }
+
+    /** items by section — snapshot 优先, fallback live repo. */
+    private List<TemplateItem> lookupItemsBySection(
+            Long sectionId,
+            com.school.management.domain.inspection.model.template.snapshot.SnapshotTree tree) {
+        if (tree != null) {
+            return tree.findItemsBySectionId(sectionId).stream()
+                    .map(com.school.management.domain.inspection.model.template.snapshot.SnapshotTree::toLiveItem)
+                    .collect(java.util.stream.Collectors.toList());
+        }
+        return itemRepository.findBySectionId(sectionId);
     }
 
     /**
