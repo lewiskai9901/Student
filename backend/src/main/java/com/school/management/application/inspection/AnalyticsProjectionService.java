@@ -8,10 +8,11 @@ import com.school.management.domain.inspection.repository.*;
 import com.school.management.infrastructure.event.SpringDomainEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -45,7 +46,7 @@ public class AnalyticsProjectionService {
     // ========== Event-Driven Projection ==========
 
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onTaskPublished(TaskPublishedEvent event) {
         log.info("Analytics projection triggered by TaskPublishedEvent: taskId={}, projectId={}",
                 event.getTaskId(), event.getProjectId());
@@ -60,7 +61,7 @@ public class AnalyticsProjectionService {
     }
 
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onSubmissionCompleted(SubmissionCompletedEvent event) {
         log.info("Analytics projection: SubmissionCompletedEvent submissionId={}", event.getSubmissionId());
         try {
@@ -85,7 +86,7 @@ public class AnalyticsProjectionService {
     }
 
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onCorrectiveCaseCreated(CorrectiveCaseCreatedEvent event) {
         log.info("Analytics projection: CorrectiveCaseCreatedEvent caseId={}", event.getCaseId());
         try {
@@ -96,7 +97,7 @@ public class AnalyticsProjectionService {
     }
 
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onCaseClosed(CaseClosedEvent event) {
         log.info("Analytics projection: CaseClosedEvent caseId={}", event.getCaseId());
         try {
@@ -107,7 +108,7 @@ public class AnalyticsProjectionService {
     }
 
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onEffectivenessFailed(EffectivenessFailedEvent event) {
         log.info("Analytics projection: EffectivenessFailedEvent caseId={}", event.getCaseId());
         try {
@@ -118,7 +119,7 @@ public class AnalyticsProjectionService {
     }
 
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onTaskCancelled(TaskCancelledEvent event) {
         log.info("Analytics projection: TaskCancelledEvent taskId={}", event.getTaskId());
         try {

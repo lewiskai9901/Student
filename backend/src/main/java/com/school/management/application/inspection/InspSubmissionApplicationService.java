@@ -2,7 +2,7 @@ package com.school.management.application.inspection;
 
 import com.school.management.application.event.EntityEventApplicationService;
 import com.school.management.application.event.TriggerService;
-import static com.school.management.infrastructure.extension.plugins.core.constants.InspectionTriggerPoints.*;
+import static com.school.management.domain.inspection.event.InspectionTriggerPoints.*;
 import com.school.management.common.util.SecurityUtils;
 import com.school.management.domain.inspection.model.execution.*;
 import com.school.management.domain.inspection.model.scoring.*;

@@ -1,6 +1,7 @@
 package com.school.management.interfaces.rest.inspection;
 
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import com.school.management.infrastructure.inspection.InspectionScopeHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
@@ -38,6 +39,7 @@ import java.util.Map;
 public class InspectionExportController {
 
     private final JdbcTemplate jdbcTemplate;
+    private final InspectionScopeHelper scopeHelper;
 
     @GetMapping("/ranking")
     @CasbinAccess(resource = "insp:analytics", action = "view")
@@ -59,6 +61,7 @@ public class InspectionExportController {
                 ? new Object[]{start, end, projectId}
                 : new Object[]{start, end};
         if (projectId != null) sql.append(" AND project_id = ?");
+        sql.append(scopeHelper.orgScopeClause("org_unit_id"));   // I1: 旁路加数据权限
         sql.append(" ORDER BY summary_date DESC, ranking ASC");
 
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql.toString(), params);
@@ -86,6 +89,7 @@ public class InspectionExportController {
         java.util.List<Object> params = new java.util.ArrayList<>();
         if (projectId != null) { sql.append(" AND project_id = ?"); params.add(projectId); }
         if (status != null) { sql.append(" AND status = ?"); params.add(status); }
+        sql.append(scopeHelper.orgScopeClause("org_unit_id"));   // I1
         sql.append(" ORDER BY created_at DESC LIMIT 5000");
 
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql.toString(), params.toArray());
@@ -102,14 +106,14 @@ public class InspectionExportController {
     @GetMapping("/appeals")
     @CasbinAccess(resource = "insp:appeal", action = "view")
     public ResponseEntity<byte[]> exportAppeals() {
-        List<Map<String, Object>> rows = jdbcTemplate.queryForList("""
-            SELECT appeal_code, submitter_name, reason, status, expected_adjustment,
-                   final_adjustment, reviewer_name, reviewer_comment,
-                   created_at, reviewed_at
-            FROM inspection_appeals
-            WHERE deleted = 0
-            ORDER BY created_at DESC LIMIT 5000
-            """);
+        // I1: 旁路加数据权限
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+            "SELECT appeal_code, submitter_name, reason, status, expected_adjustment, " +
+            "       final_adjustment, reviewer_name, reviewer_comment, " +
+            "       created_at, reviewed_at " +
+            "FROM inspection_appeals " +
+            "WHERE deleted = 0" + scopeHelper.orgScopeClause("org_unit_id") +
+            " ORDER BY created_at DESC LIMIT 5000");
 
         return buildExcel("申诉记录", new String[]{
                 "申诉编号", "申诉人", "申诉理由", "状态", "期望调整", "最终调整",
@@ -132,6 +136,16 @@ public class InspectionExportController {
             """);
         java.util.List<Object> params = new java.util.ArrayList<>();
         if (aggregateType != null) { sql.append(" AND entity_type = ?"); params.add(aggregateType); }
+        // I4: 加 org_unit_id scope (允许 NULL 通过, 兼容历史无 org 数据)
+        var ids = scopeHelper.allowedOrgIds();
+        if (ids != null) {
+            if (ids.isEmpty()) {
+                sql.append(" AND 1=0");
+            } else {
+                String csv = ids.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
+                sql.append(" AND (org_unit_id IS NULL OR org_unit_id IN (").append(csv).append("))");
+            }
+        }
         sql.append(" ORDER BY occurred_at DESC LIMIT 5000");
 
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql.toString(), params.toArray());

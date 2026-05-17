@@ -2,6 +2,7 @@ package com.school.management.application.inspection;
 
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.school.management.application.event.TriggerService;
+import com.school.management.domain.inspection.event.InspectionTriggerPoints;
 import com.school.management.domain.inspection.model.appeal.AppealStatus;
 import com.school.management.domain.inspection.model.appeal.InspAppeal;
 import com.school.management.domain.inspection.model.execution.InspProject;

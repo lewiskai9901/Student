@@ -30,8 +30,11 @@ public class MyInspectionTaskTodoSource implements MyTodoSourcePlugin {
     public List<TodoItem> fetch(Long userId) {
         if (userId == null) return List.of();
         try {
+            // I1: 表名修复 inspection_tasks → insp_tasks (历史 bug, 之前一直返回空)
+            //     URL 修复 /inspection/v7/tasks → /inspection/tasks (V7 后缀已去)
+            //     inspector_id 已是用户自身 scope, 不需额外 org_unit_id 过滤
             List<Map<String, Object>> rows = jdbcTemplate.queryForList(
-                "SELECT id, title, deadline, status FROM inspection_tasks " +
+                "SELECT id, task_code, deadline, status FROM insp_tasks " +
                 "WHERE inspector_id = ? AND deleted = 0 " +
                 "  AND status IN ('PENDING', 'CLAIMED', 'IN_PROGRESS') " +
                 "ORDER BY deadline ASC LIMIT 100",
@@ -40,10 +43,10 @@ public class MyInspectionTaskTodoSource implements MyTodoSourcePlugin {
                 "inspection-task:" + row.get("id"),
                 sourceCode(),
                 sourceName(),
-                String.valueOf(row.getOrDefault("title", "检查任务")),
+                String.valueOf(row.getOrDefault("task_code", "检查任务")),
                 "状态:" + row.get("status"),
                 "MEDIUM",
-                "/inspection/v7/tasks/" + row.get("id"),
+                "/inspection/tasks/" + row.get("id"),
                 null,
                 row.get("deadline") instanceof Timestamp ts ? ts.toLocalDateTime() : null
             )).collect(Collectors.toList());

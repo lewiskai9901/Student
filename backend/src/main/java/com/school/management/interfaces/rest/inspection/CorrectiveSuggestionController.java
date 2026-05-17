@@ -15,6 +15,7 @@ import com.school.management.domain.inspection.repository.InspSubmissionReposito
 import com.school.management.domain.inspection.repository.InspTaskRepository;
 import com.school.management.domain.inspection.repository.SubmissionDetailRepository;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import com.school.management.infrastructure.inspection.InspectionScopeHelper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
@@ -46,6 +47,7 @@ public class CorrectiveSuggestionController {
     private final InspSubmissionRepository submissionRepository;
     private final InspTaskRepository taskRepository;
     private final JdbcTemplate jdbcTemplate;
+    private final InspectionScopeHelper scopeHelper;
 
     private static final AtomicLong CODE_SEQ = new AtomicLong(System.currentTimeMillis() % 100000);
 
@@ -227,7 +229,7 @@ public class CorrectiveSuggestionController {
             throw new IllegalArgumentException("projectId 与 subjectId 必填");
         }
 
-        // 单 SQL 拿所有 itemCode 复发数
+        // 单 SQL 拿所有 itemCode 复发数 — I1: 加 t.org_unit_id scope
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(
                 "SELECT d.item_code AS itemCode, " +
                 "       MAX(d.item_name) AS itemName, " +
@@ -244,6 +246,7 @@ public class CorrectiveSuggestionController {
                 "      OR (d.score IS NOT NULL AND d.item_weight > 0 " +
                 "          AND d.score / d.item_weight < 0.5) " +
                 "      OR d.is_flagged = 1 ) " +
+                scopeHelper.orgScopeClause("t.org_unit_id") +
                 " GROUP BY d.item_code " +
                 "HAVING recurCount >= 1",
                 projectId, subjectId);
@@ -278,7 +281,9 @@ public class CorrectiveSuggestionController {
     @CasbinAccess(resource = "insp:corrective", action = "view")
     public Result<EngineKpi> kpi(@RequestParam(required = false) Long projectId) {
         EngineKpi kpi = new EngineKpi();
-        String pidFilter = projectId == null ? "" : " AND project_id = " + projectId.longValue();
+        // I1: org_unit_id scope 加入 pidFilter (insp_corrective_cases 有 org_unit_id 列)
+        String scopeClause = scopeHelper.orgScopeClause("org_unit_id");
+        String pidFilter = (projectId == null ? "" : " AND project_id = " + projectId.longValue()) + scopeClause;
 
         // 1. 系统建议 vs 人工
         Map<String, Object> srcRow = jdbcTemplate.queryForMap(
@@ -324,7 +329,9 @@ public class CorrectiveSuggestionController {
                 : Math.round(avgSev * 1000.0) / 1000.0;
 
         // 5. Top10 复发 itemCode (基于 submission_details 30 天)
-        String pidJoin = projectId == null ? "" : " AND t.project_id = " + projectId.longValue();
+        // I1: join t 后用 t.org_unit_id 收窄
+        String pidJoin = (projectId == null ? "" : " AND t.project_id = " + projectId.longValue())
+                + scopeHelper.orgScopeClause("t.org_unit_id");
         List<Map<String, Object>> top = jdbcTemplate.queryForList(
                 "SELECT d.item_code AS itemCode, MAX(d.item_name) AS itemName, " +
                 "       COUNT(DISTINCT d.submission_id) AS recur " +

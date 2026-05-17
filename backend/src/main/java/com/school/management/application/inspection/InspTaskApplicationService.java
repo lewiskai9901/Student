@@ -2,6 +2,7 @@ package com.school.management.application.inspection;
 
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.school.management.application.event.TriggerService;
+import com.school.management.domain.inspection.event.InspectionTriggerPoints;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 import com.school.management.domain.inspection.model.execution.*;
@@ -50,6 +51,7 @@ public class InspTaskApplicationService {
     private final TransactionTemplate transactionTemplate;
     private final JdbcTemplate jdbcTemplate;
     private final com.school.management.infrastructure.metrics.InspectionMetrics metrics;
+    private final com.school.management.infrastructure.inspection.InspectionScopeHelper scopeHelper;
 
     @Autowired(required = false)
     private TriggerService triggerService;
@@ -240,9 +242,11 @@ public class InspTaskApplicationService {
     public java.util.Map<String, Object> getTaskTypeKpi(Long projectId) {
         java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
 
+        // I1: org_unit_id scope (JdbcTemplate 旁路, 不走 DataPermissionInterceptor)
+        String scopeClause = scopeHelper.orgScopeClause("org_unit_id");
         String byType = projectId != null
-                ? "WHERE project_id = " + projectId.longValue() + " AND deleted = 0"
-                : "WHERE deleted = 0";
+                ? "WHERE project_id = " + projectId.longValue() + " AND deleted = 0" + scopeClause
+                : "WHERE deleted = 0" + scopeClause;
 
         // 1) SCHEDULED 计划完成率
         java.util.Map<String, Object> scheduled = jdbcTemplate.queryForMap(
@@ -320,10 +324,12 @@ public class InspTaskApplicationService {
 
     /** V108: 列出允许抽查的项目 (jdbcTemplate 直查 DB, 不依赖 InspProject 字段) */
     public java.util.List<java.util.Map<String, Object>> listAdHocAllowedProjects() {
+        // I1: org_unit_id scope
         return jdbcTemplate.queryForList(
                 "SELECT id, project_name, project_code, inspection_mode, allow_ad_hoc " +
-                "FROM insp_projects WHERE deleted = 0 AND allow_ad_hoc = 1 " +
-                "ORDER BY id DESC LIMIT 200");
+                "FROM insp_projects WHERE deleted = 0 AND allow_ad_hoc = 1" +
+                scopeHelper.orgScopeClause("org_unit_id") +
+                " ORDER BY id DESC LIMIT 200");
     }
 
     /** V108: 读项目检查模式配置 */
@@ -392,7 +398,14 @@ public class InspTaskApplicationService {
         return false;
     }
 
-    /** review #6: 创建 task 前预检模板漂移 — 一致才允许创建 */
+    /**
+     * 创建 task 前预检模板漂移.
+     *
+     * <p>I5 (2026-05-17): 从 hard-throw 改为 log.warn — 真重放未实现, 但 SubmissionDetail
+     * 创建时已冻结 itemCode/scoringConfig 等关键字段, 历史 record 数据不会被改动.
+     * 新建 task 接受 live structure 与项目原契约可能略有差异 (开发期可接受).
+     * 真正实现 SnapshotTree 反序列化后此处可恢复 hard-block 或直接走 snapshot 填充.
+     */
     private void preCheckTemplateDrift(InspProject project) {
         Long lockedVersionId = project.getTemplateVersionId();
         Long rootSectionId = project.getRootSectionId();
@@ -401,10 +414,11 @@ public class InspTaskApplicationService {
         if (root == null || root.getTemplateId() == null) return;
         templateVersionRepository.findLatestByTemplateId(root.getTemplateId()).ifPresent(latest -> {
             if (!lockedVersionId.equals(latest.getId())) {
-                throw new IllegalStateException(String.format(
-                        "TEMPLATE_DRIFT: 项目 %s 锁定 templateVersionId=%d, 但模板 %d 最新版本是 %d. " +
-                        "请管理员先调用 POST /inspection/projects/{id}/upgrade-template-version 升级版本.",
-                        project.getProjectCode(), lockedVersionId, root.getTemplateId(), latest.getId()));
+                log.warn("TEMPLATE_DRIFT (informational): 项目 {} 锁定 templateVersionId={}, " +
+                        "模板 {} 最新版本是 {}. 新 task 将用 live structure, " +
+                        "建议管理员评估并调用 POST /inspection/projects/{}/upgrade-template-version.",
+                        project.getProjectCode(), lockedVersionId,
+                        root.getTemplateId(), latest.getId(), project.getId());
             }
         });
     }
@@ -947,22 +961,22 @@ public class InspTaskApplicationService {
      * </ul>
      */
     private void checkTemplateVersionDrift(InspProject project, InspTask task) {
+        // I5: 从 hard-throw 改为 log.warn — 与 preCheckTemplateDrift 一致.
+        // SubmissionDetail 创建时已冻结 itemCode / scoringConfig 等关键字段 (denormalization),
+        // 历史 record 数据不会被改动. 新建 task 接受 live structure.
         Long lockedVersionId = project.getTemplateVersionId();
         Long rootSectionId = project.getRootSectionId();
         if (lockedVersionId == null || rootSectionId == null) {
-            return; // 多模板项目或未锁定 — 不做漂移检查
+            return;
         }
         TemplateSection root = sectionRepository.findById(rootSectionId).orElse(null);
         if (root == null || root.getTemplateId() == null) return;
         templateVersionRepository.findLatestByTemplateId(root.getTemplateId()).ifPresent(latest -> {
             if (!lockedVersionId.equals(latest.getId())) {
-                String msg = String.format(
-                        "TEMPLATE_DRIFT: 项目 %s 锁定 templateVersionId=%d, 但模板 %d 最新版本是 %d. " +
-                        "任务 %s 拒绝填充 — 请管理员决定: 升级项目至最新版本, 或回滚模板新版本.",
+                log.warn("TEMPLATE_DRIFT (informational): 项目 {} 锁定 templateVersionId={}, " +
+                        "模板 {} 最新版本是 {}. 任务 {} 用 live structure 填充.",
                         project.getProjectCode(), lockedVersionId,
                         root.getTemplateId(), latest.getId(), task.getTaskCode());
-                log.error(msg);
-                throw new IllegalStateException(msg);
             }
         });
     }

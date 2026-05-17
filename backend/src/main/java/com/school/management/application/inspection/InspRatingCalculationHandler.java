@@ -11,10 +11,11 @@ import com.school.management.domain.rating.repository.RatingResultRepository;
 import com.school.management.domain.shared.event.DomainEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -38,7 +39,7 @@ public class InspRatingCalculationHandler {
     private final DomainEventPublisher eventPublisher;
 
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onPeriodSummaryCalculated(PeriodSummaryCalculatedEvent event) {
         log.info("Rating calculation triggered: projectId={}, periodType={}, period={}-{}",
                 event.getProjectId(), event.getPeriodType(), event.getPeriodStart(), event.getPeriodEnd());

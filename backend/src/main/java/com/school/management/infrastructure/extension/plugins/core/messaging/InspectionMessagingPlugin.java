@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Map;
 
-import static com.school.management.infrastructure.extension.plugins.core.constants.InspectionTriggerPoints.*;
+import static com.school.management.domain.inspection.event.InspectionTriggerPoints.*;
 
 /**
  * 检查平台消息插件 — 检查是通用能力,触发点放 core.
