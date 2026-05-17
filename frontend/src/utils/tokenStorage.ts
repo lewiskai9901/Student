@@ -6,9 +6,13 @@
  * - Refresh Token: 存储在 localStorage (长期)
  * - User Info: 存储在 localStorage (非敏感信息)
  *
+ * K1 (2026-05-17): 所有 localStorage/sessionStorage 调用走 safeStorage,
+ * Safari 隐私模式 / 配额耗尽时静默 fallback, 不再 throw QuotaExceededError 崩登录流.
+ *
  * 注意: 理想情况下 Refresh Token 应存储在 HttpOnly Cookie 中
  * TODO: 未来版本考虑迁移到 HttpOnly Cookie
  */
+import { safeLocalStorage, safeSessionStorage } from '@/utils/safeStorage'
 
 const ACCESS_TOKEN_KEY = 'access_token'
 const REFRESH_TOKEN_KEY = 'refresh_token'
@@ -27,7 +31,7 @@ export const tokenStorage = {
       return memoryAccessToken
     }
     // 页面刷新后从 sessionStorage 恢复
-    const sessionToken = sessionStorage.getItem(ACCESS_TOKEN_KEY)
+    const sessionToken = safeSessionStorage.getItem(ACCESS_TOKEN_KEY)
     if (sessionToken) {
       memoryAccessToken = sessionToken
     }
@@ -40,15 +44,15 @@ export const tokenStorage = {
    */
   setAccessToken(token: string): void {
     memoryAccessToken = token
-    // 备份到 sessionStorage (页面刷新后恢复)
-    sessionStorage.setItem(ACCESS_TOKEN_KEY, token)
+    // 备份到 sessionStorage (页面刷新后恢复) — 隐私模式失败时仍保留内存 token
+    safeSessionStorage.setItem(ACCESS_TOKEN_KEY, token)
   },
 
   /**
    * 获取 Refresh Token
    */
   getRefreshToken(): string | null {
-    return localStorage.getItem(REFRESH_TOKEN_KEY)
+    return safeLocalStorage.getItem(REFRESH_TOKEN_KEY)
   },
 
   /**
@@ -56,29 +60,21 @@ export const tokenStorage = {
    * TODO: 未来应改为 HttpOnly Cookie
    */
   setRefreshToken(token: string): void {
-    localStorage.setItem(REFRESH_TOKEN_KEY, token)
+    safeLocalStorage.setItem(REFRESH_TOKEN_KEY, token)
   },
 
   /**
    * 获取用户信息
    */
   getUserInfo<T = unknown>(): T | null {
-    const info = localStorage.getItem(USER_INFO_KEY)
-    if (info) {
-      try {
-        return JSON.parse(info) as T
-      } catch {
-        return null
-      }
-    }
-    return null
+    return safeLocalStorage.getJSON<T>(USER_INFO_KEY)
   },
 
   /**
    * 设置用户信息
    */
   setUserInfo(userInfo: unknown): void {
-    localStorage.setItem(USER_INFO_KEY, JSON.stringify(userInfo))
+    safeLocalStorage.setJSON(USER_INFO_KEY, userInfo)
   },
 
   /**
@@ -86,9 +82,9 @@ export const tokenStorage = {
    */
   clearAll(): void {
     memoryAccessToken = null
-    sessionStorage.removeItem(ACCESS_TOKEN_KEY)
-    localStorage.removeItem(REFRESH_TOKEN_KEY)
-    localStorage.removeItem(USER_INFO_KEY)
+    safeSessionStorage.removeItem(ACCESS_TOKEN_KEY)
+    safeLocalStorage.removeItem(REFRESH_TOKEN_KEY)
+    safeLocalStorage.removeItem(USER_INFO_KEY)
   },
 
   /**

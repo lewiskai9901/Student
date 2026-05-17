@@ -2,6 +2,7 @@ import type { LongId } from '@/types/common'
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { http } from '@/utils/request'
+import { safeLocalStorage } from '@/utils/safeStorage'
 import type { LoginCustomizationConfig, LoginFeature, BackgroundMode, TextPosition, DisplayMode, TitleFontFamily, TitleFontWeight, FormStyle, DecorationImage, BackgroundCarouselConfig, CustomFont } from '@/types/loginCustomization'
 
 /**
@@ -390,40 +391,35 @@ export const useConfigStore = defineStore('config', () => {
   }
 
   /**
-   * 从 localStorage 加载缓存的配置
+   * 从 localStorage 加载缓存的配置 (K1: 走 safeLocalStorage)
    */
   const loadFromCache = () => {
-    try {
-      const cached = localStorage.getItem('system_config')
-      if (cached) {
-        const config = JSON.parse(cached)
-        systemName.value = config.systemName || systemName.value
-        systemVersion.value = config.systemVersion || systemVersion.value
-        systemLogo.value = config.systemLogo || systemLogo.value
-        systemCopyright.value = config.systemCopyright || systemCopyright.value
-        loaded.value = true
-      }
-    } catch {
-      // 缓存读取失败，使用默认值
+    const config = safeLocalStorage.getJSON<{
+      systemName?: string
+      systemVersion?: string
+      systemLogo?: string
+      systemCopyright?: string
+    }>('system_config')
+    if (config) {
+      systemName.value = config.systemName || systemName.value
+      systemVersion.value = config.systemVersion || systemVersion.value
+      systemLogo.value = config.systemLogo || systemLogo.value
+      systemCopyright.value = config.systemCopyright || systemCopyright.value
+      loaded.value = true
     }
   }
 
   /**
-   * 保存配置到 localStorage
+   * 保存配置到 localStorage (K1: 走 safeLocalStorage)
    */
   const saveToCache = () => {
-    try {
-      const config = {
-        systemName: systemName.value,
-        systemVersion: systemVersion.value,
-        systemLogo: systemLogo.value,
-        systemCopyright: systemCopyright.value,
-        timestamp: Date.now()
-      }
-      localStorage.setItem('system_config', JSON.stringify(config))
-    } catch {
-      // 缓存保存失败，忽略
-    }
+    safeLocalStorage.setJSON('system_config', {
+      systemName: systemName.value,
+      systemVersion: systemVersion.value,
+      systemLogo: systemLogo.value,
+      systemCopyright: systemCopyright.value,
+      timestamp: Date.now(),
+    })
   }
 
   // 监听配置变化，自动保存到缓存

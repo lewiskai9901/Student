@@ -12,6 +12,7 @@
  * </pre>
  */
 import { ref, computed, onMounted, watch } from 'vue'
+import { safeLocalStorage } from '@/utils/safeStorage'
 
 type Theme = 'light' | 'dark' | 'system'
 
@@ -24,7 +25,8 @@ const systemPrefersDark = ref(prefersDarkInitial())
 
 function loadInitialTheme(): Theme {
   if (typeof window === 'undefined') return 'light'
-  const saved = localStorage.getItem(STORAGE_KEY)
+  // K1: 走 safeLocalStorage 处理 Safari 隐私模式
+  const saved = safeLocalStorage.getItem(STORAGE_KEY)
   if (saved === 'dark' || saved === 'light' || saved === 'system') return saved
   return 'system'
 }
@@ -57,7 +59,8 @@ function applyTheme() {
 
 function setTheme(t: Theme) {
   theme.value = t
-  localStorage.setItem(STORAGE_KEY, t)
+  // K1: 失败不影响内存切换
+  safeLocalStorage.setItem(STORAGE_KEY, t)
   applyTheme()
 }
 

@@ -17,18 +17,16 @@
 import { createI18n } from 'vue-i18n'
 import zhCN from './zh-CN'
 import enUS from './en-US'
+import { safeLocalStorage } from '@/utils/safeStorage'
 
 const STORAGE_KEY = 'app:locale'
 
 export type Locale = 'zh-CN' | 'en-US'
 
 function readInitial(): Locale {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved === 'zh-CN' || saved === 'en-US') return saved
-  } catch {
-    /* localStorage 不可用 (SSR / 隐私模式) — 静默回退 */
-  }
+  // K1: 走 safeLocalStorage (之前手动 try/catch, 统一收敛)
+  const saved = safeLocalStorage.getItem(STORAGE_KEY)
+  if (saved === 'zh-CN' || saved === 'en-US') return saved
   return 'zh-CN'
 }
 
@@ -48,11 +46,8 @@ const i18n = createI18n({
  */
 export function setLocale(l: Locale): void {
   i18n.global.locale.value = l
-  try {
-    localStorage.setItem(STORAGE_KEY, l)
-  } catch {
-    /* 静默忽略 — 不影响内存中的 locale 切换 */
-  }
+  // K1: 失败不影响内存切换
+  safeLocalStorage.setItem(STORAGE_KEY, l)
 }
 
 /**
