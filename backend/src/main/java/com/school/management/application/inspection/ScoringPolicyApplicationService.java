@@ -22,7 +22,7 @@ import java.util.Optional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ScoringPolicyApplicationService2 {
+public class ScoringPolicyApplicationService {
 
     private final ScoringPolicyRepository policyRepository;
     private final PolicyGradeBandRepository gradeBandRepository;

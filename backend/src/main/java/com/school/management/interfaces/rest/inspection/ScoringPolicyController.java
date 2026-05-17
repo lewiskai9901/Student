@@ -1,6 +1,6 @@
 package com.school.management.interfaces.rest.inspection;
 
-import com.school.management.application.inspection.ScoringPolicyApplicationService2;
+import com.school.management.application.inspection.ScoringPolicyApplicationService;
 import com.school.management.common.result.Result;
 import com.school.management.domain.inspection.model.scoring.PolicyCalcRule;
 import com.school.management.domain.inspection.model.scoring.PolicyGradeBand;
@@ -37,9 +37,9 @@ import java.util.List;
 @RestController
 @RequestMapping("/inspection/scoring-policies")
 @RequiredArgsConstructor
-public class ScoringPolicyController2 {
+public class ScoringPolicyController {
 
-    private final ScoringPolicyApplicationService2 policyService;
+    private final ScoringPolicyApplicationService policyService;
 
     // ========== ScoringPolicy ==========
 
