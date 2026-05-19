@@ -1,25 +1,21 @@
 package com.school.management.interfaces.rest.event;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.school.management.application.event.TriggerService;
+import com.school.management.application.event.EventConfigApplicationService;
 import com.school.management.common.result.Result;
-import com.school.management.common.util.PluginEnabledGuard;
 import com.school.management.infrastructure.casbin.CasbinAccess;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import static com.school.management.common.util.SnakeToCamelUtil.toCamelCase;
-import static com.school.management.common.util.SnakeToCamelUtil.toCamelCaseList;
-
 /**
- * 事件触发器管理 API
+ * 事件触发器管理 API.
+ *
+ * <p>L3 (2026-05-19): 9 处直 jdbc 已收拢到 {@link EventConfigApplicationService}.
+ * Controller 只负责 HTTP 绑定 + 权限注解, 业务逻辑全部下沉.
  */
 @RestController
 @RequestMapping("/event/triggers")
@@ -27,10 +23,7 @@ import static com.school.management.common.util.SnakeToCamelUtil.toCamelCaseList
 @RequiredArgsConstructor
 public class EventTriggerController {
 
-    private final JdbcTemplate jdbcTemplate;
-    private final TriggerService triggerService;
-    private final PluginEnabledGuard pluginEnabledGuard;
-    private final ObjectMapper objectMapper;
+    private final EventConfigApplicationService eventConfigService;
 
     @GetMapping
     @Operation(summary = "获取触发器列表")
@@ -38,60 +31,25 @@ public class EventTriggerController {
     public Result<List<Map<String, Object>>> list(
             @RequestParam(required = false) String pointCode,
             @RequestParam(required = false) String eventType) {
-        StringBuilder sql = new StringBuilder(
-            "SELECT t.*, tp.point_name AS trigger_point_name, tp.module_code, tp.module_name " +
-            "FROM event_triggers t " +
-            "LEFT JOIN trigger_points tp ON t.trigger_point_code = tp.point_code AND tp.deleted = 0 " +
-            "WHERE t.deleted = 0 AND t.plugin_enabled = 1");
-        List<Object> params = new ArrayList<>();
-
-        if (pointCode != null && !pointCode.isBlank()) {
-            sql.append(" AND t.trigger_point_code = ?");
-            params.add(pointCode);
-        }
-        if (eventType != null && !eventType.isBlank()) {
-            sql.append(" AND t.event_type_code = ?");
-            params.add(eventType);
-        }
-        sql.append(" ORDER BY t.sort_order, t.id");
-
-        return Result.success(toCamelCaseList(jdbcTemplate.queryForList(sql.toString(), params.toArray())));
+        return Result.success(eventConfigService.listTriggers(pointCode, eventType));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "获取触发器详情")
     @CasbinAccess(resource = "event-trigger", action = "view")
     public Result<Map<String, Object>> getById(@PathVariable Long id) {
-        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
-            "SELECT t.*, tp.point_name AS trigger_point_name, tp.module_code, tp.module_name " +
-            "FROM event_triggers t " +
-            "LEFT JOIN trigger_points tp ON t.trigger_point_code = tp.point_code AND tp.deleted = 0 " +
-            "WHERE t.id = ? AND t.deleted = 0", id);
-        if (rows.isEmpty()) {
+        Map<String, Object> row = eventConfigService.getTriggerById(id);
+        if (row == null) {
             return Result.error("触发器不存在");
         }
-        return Result.success(toCamelCase(rows.get(0)));
+        return Result.success(row);
     }
 
     @PostMapping
     @Operation(summary = "创建触发器")
     @CasbinAccess(resource = "event-trigger", action = "add")
     public Result<Void> create(@RequestBody Map<String, Object> body) {
-        String conditionJson = toJsonString(body.get("conditionJson"));
-        String subjectsJson = toJsonString(body.get("subjectsJson"));
-
-        jdbcTemplate.update(
-            "INSERT INTO event_triggers (name, trigger_point_code, condition_json, " +
-            "event_type_mode, event_type_code, event_type_source, " +
-            "subjects_json, description, is_enabled, sort_order, tenant_id) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)",
-            body.get("name"), body.get("triggerPointCode"), conditionJson,
-            body.getOrDefault("eventTypeMode", "FIXED"),
-            body.get("eventTypeCode"), body.get("eventTypeSource"),
-            subjectsJson,
-            body.get("description"),
-            body.getOrDefault("isEnabled", 1),
-            body.getOrDefault("sortOrder", 0));
+        eventConfigService.createTrigger(body);
         return Result.success();
     }
 
@@ -99,22 +57,7 @@ public class EventTriggerController {
     @Operation(summary = "更新触发器")
     @CasbinAccess(resource = "event-trigger", action = "edit")
     public Result<Void> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-        pluginEnabledGuard.check("event_triggers", id);
-        String conditionJson = toJsonString(body.get("conditionJson"));
-        String subjectsJson = toJsonString(body.get("subjectsJson"));
-
-        jdbcTemplate.update(
-            "UPDATE event_triggers SET name = ?, trigger_point_code = ?, condition_json = ?, " +
-            "event_type_mode = ?, event_type_code = ?, event_type_source = ?, " +
-            "subjects_json = ?, description = ?, sort_order = ? " +
-            "WHERE id = ? AND deleted = 0",
-            body.get("name"), body.get("triggerPointCode"), conditionJson,
-            body.getOrDefault("eventTypeMode", "FIXED"),
-            body.get("eventTypeCode"), body.get("eventTypeSource"),
-            subjectsJson,
-            body.get("description"),
-            body.getOrDefault("sortOrder", 0),
-            id);
+        eventConfigService.updateTrigger(id, body);
         return Result.success();
     }
 
@@ -122,8 +65,7 @@ public class EventTriggerController {
     @Operation(summary = "删除触发器")
     @CasbinAccess(resource = "event-trigger", action = "delete")
     public Result<Void> delete(@PathVariable Long id) {
-        pluginEnabledGuard.check("event_triggers", id);
-        jdbcTemplate.update("UPDATE event_triggers SET deleted = 1 WHERE id = ?", id);
+        eventConfigService.deleteTrigger(id);
         return Result.success();
     }
 
@@ -131,8 +73,7 @@ public class EventTriggerController {
     @Operation(summary = "启用触发器")
     @CasbinAccess(resource = "event-trigger", action = "edit")
     public Result<Void> enable(@PathVariable Long id) {
-        pluginEnabledGuard.check("event_triggers", id);
-        jdbcTemplate.update("UPDATE event_triggers SET is_enabled = 1 WHERE id = ? AND deleted = 0", id);
+        eventConfigService.enableTrigger(id);
         return Result.success();
     }
 
@@ -140,8 +81,7 @@ public class EventTriggerController {
     @Operation(summary = "禁用触发器")
     @CasbinAccess(resource = "event-trigger", action = "edit")
     public Result<Void> disable(@PathVariable Long id) {
-        pluginEnabledGuard.check("event_triggers", id);
-        jdbcTemplate.update("UPDATE event_triggers SET is_enabled = 0 WHERE id = ? AND deleted = 0", id);
+        eventConfigService.disableTrigger(id);
         return Result.success();
     }
 
@@ -155,16 +95,6 @@ public class EventTriggerController {
         if (pointCode == null || context == null) {
             return Result.error("pointCode和context不能为空");
         }
-        return Result.success(toCamelCaseList(triggerService.testFire(pointCode, context)));
-    }
-
-    private String toJsonString(Object value) {
-        if (value == null) return null;
-        if (value instanceof String) return (String) value;
-        try {
-            return objectMapper.writeValueAsString(value);
-        } catch (Exception e) {
-            return value.toString();
-        }
+        return Result.success(eventConfigService.testTrigger(pointCode, context));
     }
 }
