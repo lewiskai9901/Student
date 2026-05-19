@@ -3,7 +3,7 @@ import type { LongId } from '@/types/common'
 import { ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import * as appealApi from '@/api/inspection/appeal'
-import { http } from '@/utils/request'
+import { suggestScore } from '@/api/inspection/aiScoring'
 
 const props = defineProps<{
   modelValue: boolean
@@ -52,13 +52,13 @@ async function askAi() {
   }
   aiSuggesting.value = true
   try {
-    const r = await http.post<any>('/inspection/ai/suggest-score', {
+    const r = await suggestScore({
       description: form.value.observation,
       itemTitle: props.itemName || '检查项',
       itemMaxScore: 5,
       scoringMode: 'SCORE',
     })
-    aiSuggestion.value = (r as any) || null
+    aiSuggestion.value = r || null
     // 若用户 reason 为空, 用 AI reasoning 预填
     if (!form.value.reason && aiSuggestion.value?.reasoning) {
       form.value.reason = aiSuggestion.value.reasoning

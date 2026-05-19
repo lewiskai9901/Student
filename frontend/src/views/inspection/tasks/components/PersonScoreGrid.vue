@@ -9,13 +9,7 @@
 import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { http } from '@/utils/request'
-
-interface TargetPerson {
-  id: LongId
-  name: string
-  orgUnitId?: LongId
-}
+import { getProjectTargetPersons, type TargetPerson } from '@/api/inspection/project'
 
 interface PersonScore {
   userId: LongId
@@ -62,12 +56,7 @@ async function loadPersons() {
   if (!props.targetType || !props.targetId) return
   loading.value = true
   try {
-    persons.value = await http.get<TargetPerson[]>('/inspection/projects/targets/persons', {
-      params: {
-        targetType: props.targetType,
-        targetId: props.targetId,
-      },
-    })
+    persons.value = await getProjectTargetPersons(props.targetType, props.targetId)
     // Initialize scoreMap for new persons not yet in the map
     for (const p of persons.value) {
       if (!(p.id in scoreMap.value)) {

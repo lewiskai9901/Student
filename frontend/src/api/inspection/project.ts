@@ -296,3 +296,21 @@ export const inspViolationApi = {
   update: updateViolationRecord,
   delete: deleteViolationRecord,
 }
+
+// ==================== Target Persons (L4, 2026-05-19) ====================
+
+export interface TargetPerson {
+  id: LongId
+  name: string
+  orgUnitId?: LongId
+}
+
+/** 取检查项目目标 (place/org) 下的人员列表 — PersonScoreGrid 用. */
+export function getProjectTargetPersons(
+  targetType: string,
+  targetId: LongId,
+): Promise<TargetPerson[]> {
+  return http.get<TargetPerson[]>('/inspection/projects/targets/persons', {
+    params: { targetType, targetId },
+  })
+}

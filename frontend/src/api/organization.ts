@@ -34,10 +34,10 @@ const CLASS_URL = '/user_student/classes'
 // ==================== 组织单元 API ====================
 
 /**
- * 获取组织单元列表
+ * 获取组织单元列表 (可选 keyword 搜索).
  */
-export function getOrgUnits(): Promise<OrgUnit[]> {
-  return http.get<OrgUnit[]>(ORG_UNIT_URL)
+export function getOrgUnits(keyword?: string): Promise<OrgUnit[]> {
+  return http.get<OrgUnit[]>(ORG_UNIT_URL, keyword ? { params: { keyword } } : undefined)
 }
 
 /**

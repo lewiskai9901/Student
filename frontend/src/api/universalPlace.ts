@@ -42,6 +42,14 @@ export interface PlaceStatistics {
 /**
  * 通用空间管理 API
  */
+
+/**
+ * 按 keyword 搜索场所 (L4, 2026-05-19) — EventStreamRecorder 用.
+ */
+export function searchPlaces(keyword: string): Promise<unknown[]> {
+  return request.get<unknown[]>(BASE_URL, { params: { keyword } })
+}
+
 /**
  * 将树结构扁平化为列表（递归遍历 children）
  */

@@ -156,6 +156,34 @@ export function isToday(date: string | Date): boolean {
 }
 
 /**
+ * 短月日 — 'MM/DD' (L4, 2026-05-19).
+ * 应对 inspection config view 等紧凑标签需求, 不带年份.
+ */
+export function formatMMDD(date: string | Date | null | undefined): string {
+  if (!date) return '-'
+  const d = new Date(date)
+  if (isNaN(d.getTime())) return '-'
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${m}/${day}`
+}
+
+/**
+ * 中文 locale 日期 (L4, 2026-05-19).
+ * 等价于 dormitory view 里多次用的 `toLocaleDateString('zh-CN', { year, month: '2-digit', day: '2-digit' })`.
+ */
+export function formatDateZh(date: string | Date | null | undefined): string {
+  if (!date) return '-'
+  const d = new Date(date)
+  if (isNaN(d.getTime())) return '-'
+  return d.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+}
+
+/**
  * 计算两个日期之间的天数差
  * @param date1 日期1
  * @param date2 日期2

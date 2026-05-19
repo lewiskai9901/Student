@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   formatDate, formatDateTime, formatTime,
   formatRelativeTime, getDateRange, isToday, daysBetween,
+  formatMMDD, formatDateZh,
 } from '@/utils/date'
 
 describe('date utils', () => {
@@ -133,6 +134,49 @@ describe('date utils', () => {
 
     it('同一天返回 0', () => {
       expect(daysBetween('2026-05-01', '2026-05-01')).toBe(0)
+    })
+  })
+
+  // L4 (2026-05-19): 新加 helpers
+  describe('formatMMDD', () => {
+    it('null/undefined/空 返回 -', () => {
+      expect(formatMMDD(null)).toBe('-')
+      expect(formatMMDD(undefined)).toBe('-')
+      expect(formatMMDD('')).toBe('-')
+    })
+
+    it('非法日期返回 -', () => {
+      expect(formatMMDD('not-a-date')).toBe('-')
+    })
+
+    it('合法日期 → MM/DD 短格式', () => {
+      expect(formatMMDD('2026-05-19')).toBe('05/19')
+      expect(formatMMDD('2026-01-01')).toBe('01/01')
+      expect(formatMMDD('2026-12-31')).toBe('12/31')
+    })
+
+    it('个位月日补零', () => {
+      expect(formatMMDD('2026-03-05')).toBe('03/05')
+    })
+  })
+
+  describe('formatDateZh', () => {
+    it('null/undefined/空 返回 -', () => {
+      expect(formatDateZh(null)).toBe('-')
+      expect(formatDateZh(undefined)).toBe('-')
+      expect(formatDateZh('')).toBe('-')
+    })
+
+    it('非法日期返回 -', () => {
+      expect(formatDateZh('not-a-date')).toBe('-')
+    })
+
+    it('合法日期 → zh-CN locale 格式', () => {
+      // 中文 locale 输出形如 "2026/05/19" 或 "2026-05-19" 依平台, 但一定含 2026/05/19 三段
+      const out = formatDateZh('2026-05-19')
+      expect(out).toMatch(/2026/)
+      expect(out).toMatch(/05/)
+      expect(out).toMatch(/19/)
     })
   })
 })

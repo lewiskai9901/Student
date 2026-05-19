@@ -134,6 +134,20 @@ export function getRecurrenceForSubject(
   })
 }
 
+// ==================== Template-item Override Rule (L4, 2026-05-19) ====================
+
+/**
+ * 整改覆盖规则 — 模板项级 (neverCorrect / forceCorrect / threshold / deadline override).
+ * 后端返回 JSON 字符串或 object, 调用方负责 parse.
+ */
+export function getItemOverride(itemId: LongId): Promise<string | null> {
+  return http.get<string | null>(`/inspection/corrective/template-items/${itemId}/override`)
+}
+
+export function saveItemOverride(itemId: LongId, payload: Record<string, unknown>): Promise<void> {
+  return http.put<void>(`/inspection/corrective/template-items/${itemId}/override`, payload)
+}
+
 export const inspCorrectiveCaseApi = {
   getCases,
   getCase,

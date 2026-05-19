@@ -11,7 +11,8 @@ import { ElMessage, ElInputNumber } from 'element-plus'
 import { Search } from 'lucide-vue-next'
 import { useInspExecutionStore } from '@/stores/inspection/inspExecutionStore'
 import { getSimpleUserList } from '@/api/user'
-import { http } from '@/utils/request'
+import { getOrgUnits } from '@/api/organization'
+import { searchPlaces } from '@/api/universalPlace'
 import type { InspSubmission, SubmissionDetail, UpdateDetailResponseRequest } from '@/types/insp/project'
 import type { ScoringMode } from '@/types/insp/enums'
 
@@ -70,8 +71,8 @@ async function doSearch(keyword: string) {
     let results: SearchResult[] = []
     switch (props.targetType) {
       case 'ORG': {
-        const list = await http.get<any[]>('/org-units', { params: { keyword } })
-        results = (Array.isArray(list) ? list : []).map(o => ({
+        const list = await getOrgUnits(keyword)
+        results = (Array.isArray(list) ? list : []).map((o: any) => ({
           id: o.id,
           name: o.unitName || o.name || '',
           subtitle: o.unitType || o.typeName || '',
@@ -88,8 +89,8 @@ async function doSearch(keyword: string) {
         break
       }
       case 'PLACE': {
-        const list = await http.get<any[]>('/v9/places', { params: { keyword } })
-        results = (Array.isArray(list) ? list : []).map(p => ({
+        const list = await searchPlaces(keyword)
+        results = (Array.isArray(list) ? list : []).map((p: any) => ({
           id: p.id,
           name: p.placeName || p.name || '',
           subtitle: p.typeLabel || p.placeType || '',

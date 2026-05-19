@@ -102,7 +102,7 @@
 import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { http } from '@/utils/request'
+import { getItemOverride, saveItemOverride } from '@/api/inspection/correctiveCase'
 
 interface Props {
   itemId: LongId | null
@@ -137,9 +137,7 @@ watch(() => props.itemId, async itemId => {
   resetRule()
   if (!itemId) return
   try {
-    const json = await http.get<string | null>(
-      `/inspection/corrective/template-items/${itemId}/override`
-    )
+    const json = await getItemOverride(itemId)
     if (!json) return
     const obj = typeof json === 'string' ? JSON.parse(json) : json
     rule.value.neverCorrect = !!obj.neverCorrect
@@ -204,7 +202,7 @@ async function save() {
   saving.value = true
   try {
     const payload = buildPayload()
-    await http.put(`/inspection/corrective/template-items/${props.itemId}/override`, payload)
+    await saveItemOverride(props.itemId, payload)
     ElMessage.success(Object.keys(payload).length === 0 ? '已清除覆盖规则' : '已保存覆盖规则')
   } catch (e: unknown) {
     console.error('保存 ItemRule 失败', e)
@@ -219,7 +217,7 @@ async function clear() {
   if (!props.itemId) return
   saving.value = true
   try {
-    await http.put(`/inspection/corrective/template-items/${props.itemId}/override`, {})
+    await saveItemOverride(props.itemId, {})
     ElMessage.success('已清除覆盖规则')
   } catch {
     ElMessage.error('清除失败')
