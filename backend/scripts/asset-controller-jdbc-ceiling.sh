@@ -21,8 +21,8 @@ if [[ ! -f "$BASELINE_FILE" ]]; then
 fi
 CEILING=$(cat "$BASELINE_FILE")
 
-COUNT=$(grep -rcE "jdbc\.(query|update|execute|batchUpdate|queryFor)" \
-  src/main/java/com/school/management/interfaces/rest/asset/ 2>/dev/null \
+COUNT=$( { grep -rcE "jdbc\.(query|update|execute|batchUpdate|queryFor)" \
+  src/main/java/com/school/management/interfaces/rest/asset/ 2>/dev/null || true; } \
   | awk -F: '{s+=$2} END{print s+0}')
 
 echo "[asset-controller-jdbc-ceiling] jdbc calls in interfaces/rest/asset: $COUNT / ceiling: $CEILING"

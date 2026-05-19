@@ -1,12 +1,11 @@
 package com.school.management.interfaces.rest.asset;
 
-import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import com.school.management.application.asset.AssetExcelApplicationService;
 import com.school.management.common.result.Result;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,7 +29,7 @@ import com.school.management.infrastructure.casbin.CasbinAccess;
 @RequiredArgsConstructor
 public class AssetExcelController {
 
-    private final JdbcTemplate jdbc;
+    private final AssetExcelApplicationService excelService;
 
     private static final String[] TEMPLATE_HEADERS = {
         "资产名称(*)", "分类编码(*)", "品牌", "型号", "单位(*)", "数量",
@@ -127,44 +126,30 @@ public class AssetExcelController {
                     // Find category
                     Long categoryId = null;
                     if (categoryCode != null && !categoryCode.isEmpty()) {
-                        try {
-                            Map<String, Object> cat = jdbc.queryForMap(
-                                "SELECT id FROM asset_category WHERE category_code = ? AND deleted = 0",
-                                categoryCode);
-                            categoryId = ((Number) cat.get("id")).longValue();
-                        } catch (Exception e) {
+                        categoryId = excelService.findCategoryIdByCode(categoryCode);
+                        if (categoryId == null) {
                             addError(errors, rowNum + 1, assetName, "分类编码不存在: " + categoryCode);
                             continue;
                         }
                     }
 
-                    // Generate asset code
                     String prefix = categoryCode != null ? categoryCode : "AST";
-                    Long count = jdbc.queryForObject(
-                        "SELECT COUNT(*) FROM asset WHERE asset_code LIKE ? AND deleted = 0",
-                        Long.class, prefix + "-%");
-                    String assetCode = prefix + "-" + String.format("%04d", (count != null ? count + 1 : 1));
+                    String assetCode = excelService.generateNextAssetCode(prefix);
 
-                    long id = IdWorker.getId();
-                    jdbc.update(
-                        "INSERT INTO asset (id, asset_code, asset_name, category_id, brand, model, " +
-                        "unit, quantity, original_value, purchase_date, warranty_date, supplier, " +
-                        "status, location_type, location_name, responsible_user_name, remark, deleted) " +
-                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, 0)",
-                        id, assetCode, assetName, categoryId,
-                        getCellString(row, 2),  // brand
-                        getCellString(row, 3),  // model
+                    excelService.insertAsset(
+                        assetCode, assetName, categoryId,
+                        getCellString(row, 2),   // brand
+                        getCellString(row, 3),   // model
                         unit,
-                        getCellInt(row, 5, 1),  // quantity
-                        getCellDecimal(row, 6), // originalValue
-                        getCellDate(row, 7),    // purchaseDate
-                        getCellDate(row, 8),    // warrantyDate
-                        getCellString(row, 9),  // supplier
-                        getCellString(row, 10), // locationType
-                        getCellString(row, 11), // locationName
-                        getCellString(row, 12), // responsibleUserName
-                        getCellString(row, 13)  // remark
-                    );
+                        getCellInt(row, 5, 1),   // quantity
+                        getCellDecimal(row, 6),  // originalValue
+                        getCellDate(row, 7),     // purchaseDate
+                        getCellDate(row, 8),     // warrantyDate
+                        getCellString(row, 9),   // supplier
+                        getCellString(row, 10),  // locationType
+                        getCellString(row, 11),  // locationName
+                        getCellString(row, 12),  // responsibleUserName
+                        getCellString(row, 13)); // remark
                     successCount++;
 
                 } catch (Exception e) {
@@ -199,34 +184,7 @@ public class AssetExcelController {
         String fileName = URLEncoder.encode("资产列表.xlsx", StandardCharsets.UTF_8);
         response.setHeader("Content-Disposition", "attachment;filename=" + fileName);
 
-        // Build query
-        StringBuilder where = new StringBuilder(" WHERE a.deleted = 0");
-        List<Object> params = new ArrayList<>();
-
-        if (categoryId != null) {
-            where.append(" AND a.category_id = ?");
-            params.add(categoryId);
-        }
-        if (status != null) {
-            where.append(" AND a.status = ?");
-            params.add(status);
-        }
-        if (keyword != null && !keyword.trim().isEmpty()) {
-            where.append(" AND (a.asset_code LIKE ? OR a.asset_name LIKE ?)");
-            String like = "%" + keyword.trim() + "%";
-            params.add(like);
-            params.add(like);
-        }
-
-        List<Map<String, Object>> assets = jdbc.queryForList(
-            "SELECT a.asset_code, a.asset_name, c.category_name, a.brand, a.model, " +
-            "a.unit, a.quantity, a.original_value, a.net_value, a.purchase_date, " +
-            "a.warranty_date, a.supplier, a.status, a.location_name, " +
-            "a.responsible_user_name, a.remark " +
-            "FROM asset a LEFT JOIN asset_category c ON a.category_id = c.id" + where +
-            " ORDER BY a.asset_code",
-            params.toArray()
-        );
+        List<Map<String, Object>> assets = excelService.queryAssetsForExport(categoryId, status, keyword);
 
         String[] headers = {
             "资产编码", "资产名称", "分类", "品牌", "型号", "单位", "数量",

@@ -1,21 +1,19 @@
 package com.school.management.interfaces.rest.asset;
 
-import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import com.school.management.application.asset.AssetCategoryApplicationService;
 import com.school.management.common.result.Result;
+import com.school.management.infrastructure.casbin.CasbinAccess;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
-import java.util.stream.Collectors;
-import com.school.management.infrastructure.casbin.CasbinAccess;
 
 /**
- * Asset Category REST Controller
+ * Asset Category REST Controller.
  *
- * Uses JdbcTemplate to operate on: asset_category
+ * <p>M2 (2026-05-20): 9 处直 jdbc 已下沉到 AssetCategoryApplicationService.
+ * Controller 仅保留 HTTP 绑定 + tree-building / enum desc 表现层 helpers.
  */
 @Slf4j
 @RestController
@@ -23,38 +21,20 @@ import com.school.management.infrastructure.casbin.CasbinAccess;
 @RequiredArgsConstructor
 public class AssetCategoryController {
 
-    private final JdbcTemplate jdbc;
-
-    private static final String CAT_COLUMNS =
-        "id, parent_id AS parentId, category_code AS categoryCode, category_name AS categoryName, " +
-        "category_type AS categoryType, default_management_mode AS defaultManagementMode, " +
-        "depreciation_years AS depreciationYears, unit, sort_order AS sortOrder, remark, " +
-        "created_at AS createdAt, updated_at AS updatedAt";
+    private final AssetCategoryApplicationService categoryService;
 
     // ==================== Category Tree ====================
 
     @GetMapping("/tree")
     @CasbinAccess(resource = "asset:manage", action = "view")
     public Result<List<Map<String, Object>>> getCategoryTree() {
-        List<Map<String, Object>> all = jdbc.queryForList(
-            "SELECT " + CAT_COLUMNS + " FROM asset_category WHERE deleted = 0 ORDER BY sort_order, id"
-        );
-
-        // Add descriptions and asset counts
+        List<Map<String, Object>> all = categoryService.listAll();
         for (Map<String, Object> cat : all) {
             cat.put("categoryTypeDesc", getCategoryTypeDesc(cat.get("categoryType")));
             cat.put("defaultManagementModeDesc", getManagementModeDesc(cat.get("defaultManagementMode")));
-
-            // Count assets in this category
-            Long assetCount = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM asset WHERE category_id = ? AND deleted = 0",
-                Long.class, cat.get("id"));
-            cat.put("assetCount", assetCount);
+            cat.put("assetCount", categoryService.countAssetsInCategory(((Number) cat.get("id")).longValue()));
         }
-
-        // Build tree
-        List<Map<String, Object>> tree = buildTree(all);
-        return Result.success(tree);
+        return Result.success(buildTree(all));
     }
 
     // ==================== All Categories (flat) ====================
@@ -62,9 +42,7 @@ public class AssetCategoryController {
     @GetMapping
     @CasbinAccess(resource = "asset:manage", action = "view")
     public Result<List<Map<String, Object>>> getAllCategories() {
-        List<Map<String, Object>> categories = jdbc.queryForList(
-            "SELECT " + CAT_COLUMNS + " FROM asset_category WHERE deleted = 0 ORDER BY sort_order, id"
-        );
+        List<Map<String, Object>> categories = categoryService.listAll();
         for (Map<String, Object> cat : categories) {
             cat.put("categoryTypeDesc", getCategoryTypeDesc(cat.get("categoryType")));
             cat.put("defaultManagementModeDesc", getManagementModeDesc(cat.get("defaultManagementMode")));
@@ -77,9 +55,8 @@ public class AssetCategoryController {
     @GetMapping("/{id}")
     @CasbinAccess(resource = "asset:manage", action = "view")
     public Result<Map<String, Object>> getCategory(@PathVariable Long id) {
-        Map<String, Object> cat = jdbc.queryForMap(
-            "SELECT " + CAT_COLUMNS + " FROM asset_category WHERE id = ? AND deleted = 0", id
-        );
+        Map<String, Object> cat = categoryService.findById(id);
+        if (cat == null) return Result.error("分类不存在");
         cat.put("categoryTypeDesc", getCategoryTypeDesc(cat.get("categoryType")));
         cat.put("defaultManagementModeDesc", getManagementModeDesc(cat.get("defaultManagementMode")));
         return Result.success(cat);
@@ -89,53 +66,16 @@ public class AssetCategoryController {
 
     @PostMapping
     @CasbinAccess(resource = "asset:manage", action = "edit")
-    @Transactional
     public Result<Long> createCategory(@RequestBody Map<String, Object> data) {
-        long id = IdWorker.getId();
-
-        jdbc.update(
-            "INSERT INTO asset_category (id, parent_id, category_code, category_name, category_type, " +
-            "default_management_mode, depreciation_years, unit, sort_order, remark, deleted) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)",
-            id,
-            toLong(data.get("parentId")),
-            data.get("categoryCode"),
-            data.get("categoryName"),
-            data.get("categoryType"),
-            data.get("defaultManagementMode"),
-            data.get("depreciationYears"),
-            data.get("unit"),
-            data.getOrDefault("sortOrder", 0),
-            data.get("remark")
-        );
-
-        return Result.success(id);
+        return Result.success(categoryService.create(data));
     }
 
     // ==================== Update Category ====================
 
     @PutMapping("/{id}")
     @CasbinAccess(resource = "asset:manage", action = "edit")
-    @Transactional
     public Result<Void> updateCategory(@PathVariable Long id, @RequestBody Map<String, Object> data) {
-        jdbc.update(
-            "UPDATE asset_category SET " +
-            "parent_id = ?, category_code = ?, category_name = ?, category_type = ?, " +
-            "default_management_mode = ?, depreciation_years = ?, unit = ?, sort_order = ?, " +
-            "remark = ?, updated_at = NOW() " +
-            "WHERE id = ? AND deleted = 0",
-            toLong(data.get("parentId")),
-            data.get("categoryCode"),
-            data.get("categoryName"),
-            data.get("categoryType"),
-            data.get("defaultManagementMode"),
-            data.get("depreciationYears"),
-            data.get("unit"),
-            data.getOrDefault("sortOrder", 0),
-            data.get("remark"),
-            id
-        );
-
+        categoryService.update(id, data);
         return Result.success();
     }
 
@@ -143,33 +83,23 @@ public class AssetCategoryController {
 
     @DeleteMapping("/{id}")
     @CasbinAccess(resource = "asset:manage", action = "edit")
-    @Transactional
     public Result<Void> deleteCategory(@PathVariable Long id) {
-        // Check for child categories
-        Long childCount = jdbc.queryForObject(
-            "SELECT COUNT(*) FROM asset_category WHERE parent_id = ? AND deleted = 0", Long.class, id);
-        if (childCount != null && childCount > 0) {
+        if (categoryService.countChildren(id) > 0) {
             return Result.error("该分类下有子分类，不能删除");
         }
-
-        // Check for assets using this category
-        Long assetCount = jdbc.queryForObject(
-            "SELECT COUNT(*) FROM asset WHERE category_id = ? AND deleted = 0", Long.class, id);
-        if (assetCount != null && assetCount > 0) {
+        if (categoryService.countAssetsInCategory(id) > 0) {
             return Result.error("该分类下有资产，不能删除");
         }
-
-        jdbc.update("UPDATE asset_category SET deleted = 1, updated_at = NOW() WHERE id = ?", id);
+        categoryService.softDelete(id);
         return Result.success();
     }
 
-    // ==================== Helpers ====================
+    // ==================== Presentation Helpers ====================
 
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> buildTree(List<Map<String, Object>> all) {
         Map<Object, List<Map<String, Object>>> childrenMap = new HashMap<>();
         List<Map<String, Object>> roots = new ArrayList<>();
-
         for (Map<String, Object> item : all) {
             Object parentId = item.get("parentId");
             if (parentId == null) {
@@ -178,15 +108,12 @@ public class AssetCategoryController {
                 childrenMap.computeIfAbsent(parentId, k -> new ArrayList<>()).add(item);
             }
         }
-
         for (Map<String, Object> root : roots) {
             buildChildren(root, childrenMap);
         }
-
         return roots;
     }
 
-    @SuppressWarnings("unchecked")
     private void buildChildren(Map<String, Object> node, Map<Object, List<Map<String, Object>>> childrenMap) {
         Object id = node.get("id");
         List<Map<String, Object>> children = childrenMap.get(id);
@@ -196,12 +123,6 @@ public class AssetCategoryController {
                 buildChildren(child, childrenMap);
             }
         }
-    }
-
-    private Long toLong(Object val) {
-        if (val == null) return null;
-        if (val instanceof Number) return ((Number) val).longValue();
-        try { return Long.parseLong(val.toString()); } catch (Exception e) { return null; }
     }
 
     private String getCategoryTypeDesc(Object type) {
