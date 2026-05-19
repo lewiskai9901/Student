@@ -1,22 +1,23 @@
 package com.school.management.infrastructure.extension.plugins.education.interfaces.rest.teaching;
 
 import com.school.management.infrastructure.extension.plugins.education.application.teaching.TeachingWorkflowService;
+import com.school.management.infrastructure.extension.plugins.education.application.teaching.WorkflowApplicationService;
 import com.school.management.common.result.Result;
 import com.school.management.infrastructure.casbin.CasbinAccess;
 import com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.teaching.CohortSemesterMappingMapper;
 import com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.teaching.CohortSemesterMappingPO;
 import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * 教务工作流 Controller
+ * 教务工作流 Controller.
  *
- * 串联: 培养方案 → 开课 → 教学任务 → 考试 → 成绩 的全链路操作
+ * <p>串联: 培养方案 → 开课 → 教学任务 → 考试 → 成绩 的全链路操作.
+ *
+ * <p>M3.2.1 (2026-05-20): 8 处直 jdbc 已下沉到 {@link WorkflowApplicationService}.
  */
 @RestController
 @RequestMapping("/teaching/workflow")
@@ -24,54 +25,15 @@ import java.util.Map;
 public class WorkflowController {
 
     private final TeachingWorkflowService workflowService;
+    private final WorkflowApplicationService workflowAppService;
     private final CohortSemesterMappingMapper mappingMapper;
-    private final JdbcTemplate jdbc;
 
     // ==================== 流水线统计 ====================
 
     @GetMapping("/stats")
     @CasbinAccess(resource = "teaching:workflow", action = "view")
     public Result<Map<String, Object>> getStats(@RequestParam Long semesterId) {
-        Long offeringTotal = jdbc.queryForObject(
-            "SELECT COUNT(1) FROM semester_course_offerings WHERE semester_id = ? AND deleted = 0", Long.class, semesterId);
-        Long offeringConfirmed = jdbc.queryForObject(
-            "SELECT COUNT(1) FROM semester_course_offerings WHERE semester_id = ? AND deleted = 0 AND status = 1", Long.class, semesterId);
-        Long assignTotal = jdbc.queryForObject(
-            "SELECT COUNT(1) FROM class_course_assignments WHERE semester_id = ?", Long.class, semesterId);
-        Long assignConfirmed = jdbc.queryForObject(
-            "SELECT COUNT(1) FROM class_course_assignments WHERE semester_id = ? AND status = 1", Long.class, semesterId);
-        Long taskTotal = jdbc.queryForObject(
-            "SELECT COUNT(1) FROM teaching_tasks WHERE semester_id = ? AND deleted = 0", Long.class, semesterId);
-        Long teacherAssigned = jdbc.queryForObject(
-            "SELECT COUNT(DISTINCT tt.id) FROM teaching_tasks tt JOIN teaching_task_teachers ttt ON ttt.task_id = tt.id WHERE tt.semester_id = ? AND tt.deleted = 0", Long.class, semesterId);
-        Long scheduled = jdbc.queryForObject(
-            "SELECT COUNT(1) FROM teaching_tasks WHERE semester_id = ? AND deleted = 0 AND scheduling_status = 2", Long.class, semesterId);
-
-        String currentStep;
-        if (offeringTotal == 0) currentStep = "offering_create";
-        else if (offeringConfirmed < offeringTotal) currentStep = "offering_confirm";
-        else if (assignTotal == 0) currentStep = "class_assign";
-        else if (taskTotal == 0) currentStep = "generate_tasks";
-        else if (teacherAssigned < taskTotal) currentStep = "teacher_assign";
-        else if (scheduled < taskTotal) currentStep = "scheduling";
-        else currentStep = "done";
-
-        // 从 academic_weeks 的 week_type 直接读取教学周数
-        int teachingWeeks = 16;
-        try {
-            Integer tw = jdbc.queryForObject(
-                "SELECT MAX(week_number) FROM academic_weeks WHERE semester_id = ? AND week_type = 1",
-                Integer.class, semesterId);
-            if (tw != null && tw > 0) teachingWeeks = tw;
-        } catch (Exception ignored) {}
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("offerings", Map.of("total", offeringTotal, "confirmed", offeringConfirmed));
-        result.put("assignments", Map.of("total", assignTotal, "confirmed", assignConfirmed));
-        result.put("tasks", Map.of("total", taskTotal, "teacherAssigned", teacherAssigned, "scheduled", scheduled));
-        result.put("currentStep", currentStep);
-        result.put("teachingWeeks", teachingWeeks);
-        return Result.success(result);
+        return Result.success(workflowAppService.getStats(semesterId));
     }
 
     // ==================== 年级-学期映射 ====================

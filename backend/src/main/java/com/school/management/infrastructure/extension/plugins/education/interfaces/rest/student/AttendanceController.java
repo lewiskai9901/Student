@@ -2,11 +2,10 @@ package com.school.management.infrastructure.extension.plugins.education.interfa
 
 import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
+import com.school.management.infrastructure.casbin.CasbinAccess;
+import com.school.management.infrastructure.extension.plugins.education.application.student.AttendanceApplicationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.EmptyResultDataAccessException;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletResponse;
@@ -14,19 +13,11 @@ import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.IOException;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.*;
-import com.school.management.infrastructure.casbin.CasbinAccess;
-import com.school.management.application.event.TriggerService;
-import static com.school.management.infrastructure.extension.plugins.education.constants.EducationTriggerPoints.ATTENDANCE_RECORDED;
 
 /**
- * 考勤管理 REST Controller
- *
- * 使用 JdbcTemplate 直接操作 DB 表:
- * - attendance_records  考勤记录
- * - leave_requests      请假申请
+ * 考勤管理 REST Controller.
+ * <p>M3.2.2 (2026-05-20): 21 处直 jdbc 已下沉到 AttendanceApplicationService.
  */
 @Slf4j
 @RestController
@@ -34,16 +25,10 @@ import static com.school.management.infrastructure.extension.plugins.education.c
 @RequiredArgsConstructor
 public class AttendanceController {
 
-    private final JdbcTemplate jdbc;
-
-    @org.springframework.beans.factory.annotation.Autowired(required = false)
-    private TriggerService triggerService;
+    private final AttendanceApplicationService attendanceService;
 
     // ==================== 考勤记录 CRUD ====================
 
-    /**
-     * 创建考勤记录（单个或批量）
-     */
     @PostMapping("/records")
     @CasbinAccess(resource = "student:attendance", action = "edit")
     public Result<Map<String, Object>> createRecord(@RequestBody Map<String, Object> body) {
@@ -60,19 +45,11 @@ public class AttendanceController {
         String checkMethod = body.get("checkMethod") != null ? (String) body.get("checkMethod") : "MANUAL";
         String remark = (String) body.get("remark");
 
-        jdbc.update(
-            "INSERT INTO attendance_records (semester_id, course_id, org_unit_id, student_id, attendance_date, " +
-            "period, attendance_type, status, check_in_time, check_method, remark, recorded_by) " +
-            "VALUES (?,?,?,?,?,?,?,?,NOW(),?,?,?)",
-            semesterId, courseId, orgUnitId, studentId, dateStr,
-            period, attendanceType, status, checkMethod, remark, recordedBy
-        );
+        attendanceService.createRecord(semesterId, courseId, orgUnitId, studentId,
+            dateStr, period, attendanceType, status, checkMethod, remark, recordedBy);
         return Result.success(Map.of("created", 1));
     }
 
-    /**
-     * 查询考勤记录（支持筛选）
-     */
     @GetMapping("/records")
     @CasbinAccess(resource = "student:attendance", action = "view")
     public Result<List<Map<String, Object>>> listRecords(
@@ -87,47 +64,11 @@ public class AttendanceController {
             @RequestParam(required = false) Integer attendanceType,
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "50") Integer size) {
-
-        StringBuilder sql = new StringBuilder(
-            "SELECT ar.id, ar.semester_id AS semesterId, ar.course_id AS courseId, " +
-            "ar.org_unit_id AS orgUnitId, ar.student_id AS studentId, " +
-            "ar.attendance_date AS attendanceDate, ar.period, " +
-            "ar.attendance_type AS attendanceType, ar.status, " +
-            "ar.check_in_time AS checkInTime, ar.check_method AS checkMethod, " +
-            "ar.remark, ar.recorded_by AS recordedBy, " +
-            "s.name AS studentName, s.student_no AS studentNo, " +
-            "c.name AS courseName " +
-            "FROM attendance_records ar " +
-            "LEFT JOIN user_student s ON ar.student_id = s.id " +
-            "LEFT JOIN courses c ON ar.course_id = c.id " +
-            "WHERE 1=1"
-        );
-        List<Object> params = new ArrayList<>();
-
-        if (semesterId != null) { sql.append(" AND ar.semester_id = ?"); params.add(semesterId); }
-        if (orgUnitId != null) { sql.append(" AND ar.org_unit_id = ?"); params.add(orgUnitId); }
-        if (studentId != null) { sql.append(" AND ar.student_id = ?"); params.add(studentId); }
-        if (courseId != null) { sql.append(" AND ar.course_id = ?"); params.add(courseId); }
-        if (date != null) { sql.append(" AND ar.attendance_date = ?"); params.add(date); }
-        if (startDate != null) { sql.append(" AND ar.attendance_date >= ?"); params.add(startDate); }
-        if (endDate != null) { sql.append(" AND ar.attendance_date <= ?"); params.add(endDate); }
-        if (status != null) { sql.append(" AND ar.status = ?"); params.add(status); }
-        if (attendanceType != null) { sql.append(" AND ar.attendance_type = ?"); params.add(attendanceType); }
-
-        sql.append(" ORDER BY ar.attendance_date DESC, ar.period ASC, s.student_no ASC");
-
-        int offset = (page - 1) * size;
-        sql.append(" LIMIT ? OFFSET ?");
-        params.add(size);
-        params.add(offset);
-
-        List<Map<String, Object>> rows = jdbc.queryForList(sql.toString(), params.toArray());
-        return Result.success(rows);
+        return Result.success(attendanceService.listRecords(
+            semesterId, orgUnitId, studentId, courseId, date, startDate, endDate,
+            status, attendanceType, page, size));
     }
 
-    /**
-     * 班级考勤视图：某天某班所有学生的考勤
-     */
     @GetMapping("/records/by-class")
     @CasbinAccess(resource = "student:attendance", action = "view")
     public Result<List<Map<String, Object>>> getByClass(
@@ -135,93 +76,29 @@ public class AttendanceController {
             @RequestParam String date,
             @RequestParam(required = false) Long courseId,
             @RequestParam(required = false) Integer period) {
-
-        // 1. 获取班级所有学生 (user_student 表无 name / status 列; 姓名在 users, 状态列名 student_status)
-        List<Map<String, Object>> user_student = jdbc.queryForList(
-            "SELECT s.id AS studentId, s.student_no AS studentNo, u.real_name AS studentName " +
-            "FROM user_student s LEFT JOIN users u ON s.user_id = u.id " +
-            "WHERE s.org_unit_id = ? AND s.student_status = 1 AND s.deleted = 0 ORDER BY s.student_no",
-            orgUnitId
-        );
-
-        // 2. 获取已有考勤记录
-        StringBuilder recordSql = new StringBuilder(
-            "SELECT student_id AS studentId, status, remark, id AS recordId " +
-            "FROM attendance_records WHERE org_unit_id = ? AND attendance_date = ?"
-        );
-        List<Object> params = new ArrayList<>();
-        params.add(orgUnitId);
-        params.add(date);
-        if (courseId != null) { recordSql.append(" AND course_id = ?"); params.add(courseId); }
-        if (period != null) { recordSql.append(" AND period = ?"); params.add(period); }
-
-        List<Map<String, Object>> records = jdbc.queryForList(recordSql.toString(), params.toArray());
-        Map<Long, Map<String, Object>> recordMap = new HashMap<>();
-        for (Map<String, Object> r : records) {
-            Long sid = ((Number) r.get("studentId")).longValue();
-            recordMap.put(sid, r);
-        }
-
-        // 3. 合并结果
-        List<Map<String, Object>> result = new ArrayList<>();
-        for (Map<String, Object> stu : user_student) {
-            Map<String, Object> row = new HashMap<>(stu);
-            Long sid = ((Number) stu.get("studentId")).longValue();
-            Map<String, Object> rec = recordMap.get(sid);
-            if (rec != null) {
-                row.put("status", rec.get("status"));
-                row.put("remark", rec.get("remark"));
-                row.put("recordId", rec.get("recordId"));
-            } else {
-                row.put("status", null);
-                row.put("remark", null);
-                row.put("recordId", null);
-            }
-            result.add(row);
-        }
-        return Result.success(result);
+        return Result.success(attendanceService.getByClass(orgUnitId, date, courseId, period));
     }
 
-    /**
-     * 修改考勤状态
-     */
     @PutMapping("/records/{id}")
     @CasbinAccess(resource = "student:attendance", action = "edit")
     public Result<Void> updateRecord(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         Integer status = toInt(body.get("status"));
         String remark = (String) body.get("remark");
-
-        if (status != null && remark != null) {
-            jdbc.update("UPDATE attendance_records SET status = ?, remark = ?, updated_at = NOW() WHERE id = ?",
-                status, remark, id);
-        } else if (status != null) {
-            jdbc.update("UPDATE attendance_records SET status = ?, updated_at = NOW() WHERE id = ?",
-                status, id);
-        } else if (remark != null) {
-            jdbc.update("UPDATE attendance_records SET remark = ?, updated_at = NOW() WHERE id = ?",
-                remark, id);
-        }
+        attendanceService.updateRecord(id, status, remark);
         return Result.success();
     }
 
-    /**
-     * 删除考勤记录
-     */
     @DeleteMapping("/records/{id}")
     @CasbinAccess(resource = "student:attendance", action = "edit")
     public Result<Void> deleteRecord(@PathVariable Long id) {
-        jdbc.update("DELETE FROM attendance_records WHERE id = ?", id);
+        attendanceService.deleteRecord(id);
         return Result.success();
     }
 
     // ==================== 批量考勤 ====================
 
-    /**
-     * 批量考勤（一个班级一次课的所有学生）
-     */
     @PostMapping("/batch")
     @CasbinAccess(resource = "student:attendance", action = "edit")
-    @Transactional
     @SuppressWarnings("unchecked")
     public Result<Map<String, Object>> batchRecord(@RequestBody Map<String, Object> body) {
         Long semesterId = toLong(body.get("semesterId"));
@@ -231,100 +108,15 @@ public class AttendanceController {
         Integer period = toInt(body.get("period"));
         Integer attendanceType = toInt(body.get("attendanceType"));
         if (attendanceType == null) attendanceType = 1;
-        List<Map<String, Object>> user_student = (List<Map<String, Object>>) body.get("user_student");
+        List<Map<String, Object>> students = (List<Map<String, Object>>) body.get("user_student");
 
-        Long recordedBy = SecurityUtils.getCurrentUserId();
-        int count = 0;
-
-        for (Map<String, Object> s : user_student) {
-            Long studentId = toLong(s.get("studentId"));
-            int status = toInt(s.get("status"));
-            String remark = (String) s.get("remark");
-
-            // Check if record already exists for this student/date/period/course
-            Integer existing = countSafe(
-                "SELECT COUNT(*) FROM attendance_records WHERE student_id=? AND attendance_date=? AND period" +
-                (period != null ? "=?" : " IS NULL") + " AND course_id" + (courseId != null ? "=?" : " IS NULL"),
-                buildExistParams(studentId, dateStr, period, courseId)
-            );
-
-            if (existing > 0) {
-                // Update existing
-                StringBuilder updateSql = new StringBuilder(
-                    "UPDATE attendance_records SET status=?, remark=?, recorded_by=?, updated_at=NOW() " +
-                    "WHERE student_id=? AND attendance_date=? AND period"
-                );
-                List<Object> updateParams = new ArrayList<>();
-                updateParams.add(status);
-                updateParams.add(remark);
-                updateParams.add(recordedBy);
-                updateParams.add(studentId);
-                updateParams.add(dateStr);
-                if (period != null) {
-                    updateSql.append("=?");
-                    updateParams.add(period);
-                } else {
-                    updateSql.append(" IS NULL");
-                }
-                updateSql.append(" AND course_id");
-                if (courseId != null) {
-                    updateSql.append("=?");
-                    updateParams.add(courseId);
-                } else {
-                    updateSql.append(" IS NULL");
-                }
-                jdbc.update(updateSql.toString(), updateParams.toArray());
-            } else {
-                // Insert new
-                jdbc.update(
-                    "INSERT INTO attendance_records (semester_id, course_id, org_unit_id, student_id, " +
-                    "attendance_date, period, attendance_type, status, check_method, remark, recorded_by) " +
-                    "VALUES (?,?,?,?,?,?,?,?,'MANUAL',?,?)",
-                    semesterId, courseId, orgUnitId, studentId, dateStr, period,
-                    attendanceType, status, remark, recordedBy
-                );
-            }
-            // Fire trigger for abnormal attendance (not normal=1)
-            if (triggerService != null && status != 1) {
-                try {
-                    String statusName = status == 2 ? "迟到" : status == 3 ? "早退" : status == 5 ? "旷课" : "异常";
-                    String eventHint = status == 2 ? "LATE" : status == 3 ? "EARLY_LEAVE" : status == 5 ? "ABSENCE" : null;
-                    if (eventHint != null) {
-                        // Lookup student name and class name
-                        String studentName = "";
-                        String className = "";
-                        try {
-                            Map<String, Object> stuInfo = jdbc.queryForMap(
-                                "SELECT s.name, sc.name AS class_name FROM user_student s " +
-                                "LEFT JOIN school_classes sc ON s.org_unit_id = sc.id WHERE s.id = ?", studentId);
-                            studentName = (String) stuInfo.getOrDefault("name", "");
-                            className = (String) stuInfo.getOrDefault("class_name", "");
-                        } catch (Exception ignored) {}
-                        Map<String, Object> ctx = new HashMap<>();
-                        ctx.put("studentId", studentId);
-                        ctx.put("studentName", studentName != null ? studentName : "");
-                        ctx.put("orgUnitId", orgUnitId != null ? orgUnitId : 0);
-                        ctx.put("className", className != null ? className : "");
-                        ctx.put("status", status);
-                        ctx.put("statusName", statusName);
-                        ctx.put("eventTypeHint", eventHint);
-                        ctx.put("date", dateStr != null ? dateStr : "");
-                        ctx.put("_refType", "attendance_record");
-                        triggerService.fire(ATTENDANCE_RECORDED, ctx);
-                    }
-                } catch (Exception ignored) {}
-            }
-
-            count++;
-        }
+        int count = attendanceService.batchRecord(semesterId, orgUnitId, courseId, dateStr,
+            period, attendanceType, students);
         return Result.success(Map.of("recorded", count));
     }
 
     // ==================== 考勤统计 ====================
 
-    /**
-     * 考勤统计（出勤率、迟到率等）
-     */
     @GetMapping("/statistics")
     @CasbinAccess(resource = "student:attendance", action = "view")
     public Result<Map<String, Object>> getStatistics(
@@ -332,47 +124,9 @@ public class AttendanceController {
             @RequestParam(required = false) Long orgUnitId,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate) {
-
-        StringBuilder sql = new StringBuilder(
-            "SELECT status, COUNT(*) as cnt FROM attendance_records WHERE semester_id = ?");
-        List<Object> params = new ArrayList<>();
-        params.add(semesterId);
-        if (orgUnitId != null) { sql.append(" AND org_unit_id = ?"); params.add(orgUnitId); }
-        if (startDate != null) { sql.append(" AND attendance_date >= ?"); params.add(startDate); }
-        if (endDate != null) { sql.append(" AND attendance_date <= ?"); params.add(endDate); }
-        sql.append(" GROUP BY status");
-
-        List<Map<String, Object>> rows = jdbc.queryForList(sql.toString(), params.toArray());
-
-        int total = 0, present = 0, late = 0, earlyLeave = 0, leave = 0, absent = 0;
-        for (Map<String, Object> row : rows) {
-            int st = ((Number) row.get("status")).intValue();
-            int cnt = ((Number) row.get("cnt")).intValue();
-            total += cnt;
-            switch (st) {
-                case 1: present = cnt; break;
-                case 2: late = cnt; break;
-                case 3: earlyLeave = cnt; break;
-                case 4: leave = cnt; break;
-                case 5: absent = cnt; break;
-            }
-        }
-
-        Map<String, Object> stats = new LinkedHashMap<>();
-        stats.put("total", total);
-        stats.put("present", present);
-        stats.put("late", late);
-        stats.put("earlyLeave", earlyLeave);
-        stats.put("leave", leave);
-        stats.put("absent", absent);
-        stats.put("attendanceRate", total > 0 ? Math.round((present + late) * 1000.0 / total) / 10.0 : 0);
-        stats.put("absentRate", total > 0 ? Math.round(absent * 1000.0 / total) / 10.0 : 0);
-        return Result.success(stats);
+        return Result.success(attendanceService.getStatistics(semesterId, orgUnitId, startDate, endDate));
     }
 
-    /**
-     * 个人考勤统计
-     */
     @GetMapping("/statistics/student/{studentId}")
     @CasbinAccess(resource = "student:attendance", action = "view")
     public Result<Map<String, Object>> getStudentStatistics(
@@ -380,64 +134,11 @@ public class AttendanceController {
             @RequestParam(required = false) Long semesterId,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate) {
-
-        StringBuilder sql = new StringBuilder(
-            "SELECT status, COUNT(*) as cnt FROM attendance_records WHERE student_id = ?");
-        List<Object> params = new ArrayList<>();
-        params.add(studentId);
-        if (semesterId != null) { sql.append(" AND semester_id = ?"); params.add(semesterId); }
-        if (startDate != null) { sql.append(" AND attendance_date >= ?"); params.add(startDate); }
-        if (endDate != null) { sql.append(" AND attendance_date <= ?"); params.add(endDate); }
-        sql.append(" GROUP BY status");
-
-        List<Map<String, Object>> rows = jdbc.queryForList(sql.toString(), params.toArray());
-
-        int total = 0, present = 0, late = 0, earlyLeave = 0, leave = 0, absent = 0;
-        for (Map<String, Object> row : rows) {
-            int st = ((Number) row.get("status")).intValue();
-            int cnt = ((Number) row.get("cnt")).intValue();
-            total += cnt;
-            switch (st) {
-                case 1: present = cnt; break;
-                case 2: late = cnt; break;
-                case 3: earlyLeave = cnt; break;
-                case 4: leave = cnt; break;
-                case 5: absent = cnt; break;
-            }
-        }
-
-        Map<String, Object> stats = new LinkedHashMap<>();
-        stats.put("studentId", studentId);
-        stats.put("total", total);
-        stats.put("present", present);
-        stats.put("late", late);
-        stats.put("earlyLeave", earlyLeave);
-        stats.put("leave", leave);
-        stats.put("absent", absent);
-        stats.put("attendanceRate", total > 0 ? Math.round((present + late) * 1000.0 / total) / 10.0 : 0);
-        stats.put("absentRate", total > 0 ? Math.round(absent * 1000.0 / total) / 10.0 : 0);
-
-        // 最近10条记录
-        StringBuilder recentSql = new StringBuilder(
-            "SELECT ar.id, ar.attendance_date AS attendanceDate, ar.period, ar.status, " +
-            "ar.remark, c.name AS courseName " +
-            "FROM attendance_records ar LEFT JOIN courses c ON ar.course_id = c.id " +
-            "WHERE ar.student_id = ?"
-        );
-        List<Object> recentParams = new ArrayList<>();
-        recentParams.add(studentId);
-        if (semesterId != null) { recentSql.append(" AND ar.semester_id = ?"); recentParams.add(semesterId); }
-        recentSql.append(" ORDER BY ar.attendance_date DESC, ar.period DESC LIMIT 10");
-
-        stats.put("recentRecords", jdbc.queryForList(recentSql.toString(), recentParams.toArray()));
-        return Result.success(stats);
+        return Result.success(attendanceService.getStudentStatistics(studentId, semesterId, startDate, endDate));
     }
 
     // ==================== 请假管理 ====================
 
-    /**
-     * 提交请假申请
-     */
     @PostMapping("/leave-requests")
     @CasbinAccess(resource = "student:attendance", action = "edit")
     public Result<Map<String, Object>> createLeaveRequest(@RequestBody Map<String, Object> body) {
@@ -450,18 +151,11 @@ public class AttendanceController {
         String reason = (String) body.get("reason");
         String attachmentUrls = body.get("attachmentUrls") != null ? body.get("attachmentUrls").toString() : null;
 
-        jdbc.update(
-            "INSERT INTO leave_requests (student_id, leave_type, start_date, end_date, " +
-            "start_period, end_period, reason, attachment_urls, approval_status) " +
-            "VALUES (?,?,?,?,?,?,?,?,0)",
-            studentId, leaveType, startDate, endDate, startPeriod, endPeriod, reason, attachmentUrls
-        );
+        attendanceService.createLeaveRequest(studentId, leaveType, startDate, endDate,
+            startPeriod, endPeriod, reason, attachmentUrls);
         return Result.success(Map.of("created", 1));
     }
 
-    /**
-     * 查询请假列表
-     */
     @GetMapping("/leave-requests")
     @CasbinAccess(resource = "student:attendance", action = "view")
     public Result<List<Map<String, Object>>> listLeaveRequests(
@@ -470,86 +164,34 @@ public class AttendanceController {
             @RequestParam(required = false) Integer approvalStatus,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate) {
-
-        StringBuilder sql = new StringBuilder(
-            "SELECT lr.id, lr.student_id AS studentId, lr.leave_type AS leaveType, " +
-            "lr.start_date AS startDate, lr.end_date AS endDate, " +
-            "lr.start_period AS startPeriod, lr.end_period AS endPeriod, " +
-            "lr.reason, lr.attachment_urls AS attachmentUrls, " +
-            "lr.approval_status AS approvalStatus, lr.approver_id AS approverId, " +
-            "lr.approval_time AS approvalTime, lr.approval_comment AS approvalComment, " +
-            "lr.created_at AS createdAt, " +
-            "s.name AS studentName, s.student_no AS studentNo " +
-            "FROM leave_requests lr " +
-            "LEFT JOIN user_student s ON lr.student_id = s.id " +
-            "WHERE 1=1"
-        );
-        List<Object> params = new ArrayList<>();
-
-        if (studentId != null) { sql.append(" AND lr.student_id = ?"); params.add(studentId); }
-        if (orgUnitId != null) { sql.append(" AND s.org_unit_id = ?"); params.add(orgUnitId); }
-        if (approvalStatus != null) { sql.append(" AND lr.approval_status = ?"); params.add(approvalStatus); }
-        if (startDate != null) { sql.append(" AND lr.start_date >= ?"); params.add(startDate); }
-        if (endDate != null) { sql.append(" AND lr.end_date <= ?"); params.add(endDate); }
-
-        sql.append(" ORDER BY lr.created_at DESC");
-
-        List<Map<String, Object>> rows = jdbc.queryForList(sql.toString(), params.toArray());
-        return Result.success(rows);
+        return Result.success(attendanceService.listLeaveRequests(
+            studentId, orgUnitId, approvalStatus, startDate, endDate));
     }
 
-    /**
-     * 审批通过
-     */
     @PostMapping("/leave-requests/{id}/approve")
     @CasbinAccess(resource = "student:attendance", action = "edit")
     public Result<Void> approveLeave(@PathVariable Long id,
                                       @RequestBody(required = false) Map<String, Object> body) {
         Long approverId = SecurityUtils.getCurrentUserId();
         String comment = body != null ? (String) body.get("comment") : null;
-        jdbc.update(
-            "UPDATE leave_requests SET approval_status = 1, approver_id = ?, " +
-            "approval_time = NOW(), approval_comment = ? WHERE id = ?",
-            approverId, comment, id
-        );
+        attendanceService.approveLeave(id, approverId, comment);
         return Result.success();
     }
 
-    /**
-     * 审批拒绝
-     */
     @PostMapping("/leave-requests/{id}/reject")
     @CasbinAccess(resource = "student:attendance", action = "edit")
     public Result<Void> rejectLeave(@PathVariable Long id,
                                      @RequestBody(required = false) Map<String, Object> body) {
         Long approverId = SecurityUtils.getCurrentUserId();
         String comment = body != null ? (String) body.get("comment") : null;
-        jdbc.update(
-            "UPDATE leave_requests SET approval_status = 2, approver_id = ?, " +
-            "approval_time = NOW(), approval_comment = ? WHERE id = ?",
-            approverId, comment, id
-        );
+        attendanceService.rejectLeave(id, approverId, comment);
         return Result.success();
     }
 
-    /**
-     * 待审批列表
-     */
     @GetMapping("/leave-requests/pending")
     @CasbinAccess(resource = "student:attendance", action = "view")
     public Result<List<Map<String, Object>>> pendingLeaves() {
-        List<Map<String, Object>> rows = jdbc.queryForList(
-            "SELECT lr.id, lr.student_id AS studentId, lr.leave_type AS leaveType, " +
-            "lr.start_date AS startDate, lr.end_date AS endDate, " +
-            "lr.start_period AS startPeriod, lr.end_period AS endPeriod, " +
-            "lr.reason, lr.created_at AS createdAt, " +
-            "s.name AS studentName, s.student_no AS studentNo, s.org_unit_id AS classId " +
-            "FROM leave_requests lr " +
-            "LEFT JOIN user_student s ON lr.student_id = s.id " +
-            "WHERE lr.approval_status = 0 " +
-            "ORDER BY lr.created_at ASC"
-        );
-        return Result.success(rows);
+        return Result.success(attendanceService.pendingLeaves());
     }
 
     // ==================== 导出 ====================
@@ -563,30 +205,14 @@ public class AttendanceController {
             @RequestParam(required = false) String endDate,
             HttpServletResponse response) throws IOException {
 
-        StringBuilder sql = new StringBuilder(
-            "SELECT ar.attendance_date, ar.period, ar.status, ar.remark, " +
-            "s.student_no, s.name AS student_name, " +
-            "c.name AS course_name, sc.name AS class_name " +
-            "FROM attendance_records ar " +
-            "LEFT JOIN user_student s ON s.id = ar.student_id " +
-            "LEFT JOIN courses c ON c.id = ar.course_id " +
-            "LEFT JOIN school_classes sc ON sc.id = ar.org_unit_id " +
-            "WHERE ar.semester_id = ?");
-        List<Object> params = new ArrayList<>();
-        params.add(semesterId);
-        if (orgUnitId != null) { sql.append(" AND ar.org_unit_id = ?"); params.add(orgUnitId); }
-        if (startDate != null) { sql.append(" AND ar.attendance_date >= ?"); params.add(startDate); }
-        if (endDate != null) { sql.append(" AND ar.attendance_date <= ?"); params.add(endDate); }
-        sql.append(" ORDER BY ar.attendance_date DESC, sc.name, s.student_no");
-
-        List<Map<String, Object>> records = jdbc.queryForList(sql.toString(), params.toArray());
+        List<Map<String, Object>> records = attendanceService.queryExportRecords(
+            semesterId, orgUnitId, startDate, endDate);
 
         String[] statusNames = {"", "出勤", "迟到", "早退", "请假", "旷课"};
 
         try (Workbook wb = new XSSFWorkbook()) {
             Sheet sheet = wb.createSheet("考勤记录");
 
-            // Header style
             CellStyle headerStyle = wb.createCellStyle();
             Font hf = wb.createFont();
             hf.setBold(true);
@@ -640,11 +266,11 @@ public class AttendanceController {
         }
     }
 
+    // ==================== Presentation Helpers ====================
+
     private String str(Object val) {
         return val != null ? val.toString() : "";
     }
-
-    // ==================== Helper Methods ====================
 
     private Long toLong(Object val) {
         if (val == null) return null;
@@ -656,23 +282,5 @@ public class AttendanceController {
         if (val == null) return null;
         if (val instanceof Number) return ((Number) val).intValue();
         return Integer.valueOf(val.toString());
-    }
-
-    private Integer countSafe(String sql, Object... args) {
-        try {
-            Integer count = jdbc.queryForObject(sql, Integer.class, args);
-            return count != null ? count : 0;
-        } catch (EmptyResultDataAccessException e) {
-            return 0;
-        }
-    }
-
-    private Object[] buildExistParams(Long studentId, String dateStr, Integer period, Long courseId) {
-        List<Object> params = new ArrayList<>();
-        params.add(studentId);
-        params.add(dateStr);
-        if (period != null) params.add(period);
-        if (courseId != null) params.add(courseId);
-        return params.toArray();
     }
 }
