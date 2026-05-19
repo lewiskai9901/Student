@@ -1,5 +1,6 @@
 package com.school.management.interfaces.rest.system;
 
+import com.school.management.common.annotation.PublicEndpoint;
 import com.school.management.common.result.Result;
 import com.school.management.infrastructure.access.UserContextHolder;
 import com.school.management.infrastructure.tenant.TenantContextHolder;
@@ -58,6 +59,7 @@ public class ClientErrorController {
     ) {}
 
     @PostMapping("/log")
+    @PublicEndpoint(reason = "前端 JS 错误上报, 用户未必已登录")
     public Result<Map<String, Object>> log(@RequestBody ClientError err, HttpServletRequest req) {
         // 全局限流 — compareAndSet 保证 reset 段在多线程下只跑一次
         long now = System.currentTimeMillis();

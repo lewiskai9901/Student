@@ -12,6 +12,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import com.school.management.infrastructure.casbin.CasbinAccess;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -127,6 +128,7 @@ public class UserRoleController {
     }
 
     @GetMapping("/me/permissions")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get current user's permissions")
     public Result<Set<String>> getMyPermissions() {
         Long userId = SecurityUtils.requireCurrentUserId();
@@ -135,6 +137,7 @@ public class UserRoleController {
     }
 
     @GetMapping("/me/roles")
+    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Get current user's roles")
     public Result<List<RoleResponse>> getMyRoles() {
         Long userId = SecurityUtils.requireCurrentUserId();

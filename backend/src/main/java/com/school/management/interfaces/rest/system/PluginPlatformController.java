@@ -2,6 +2,7 @@ package com.school.management.interfaces.rest.system;
 
 import com.school.management.application.event.TriggerPipelineHealthCheck;
 import com.school.management.application.plugin.PluginLifecycleService;
+import com.school.management.common.annotation.PublicEndpoint;
 import com.school.management.common.result.Result;
 import com.school.management.infrastructure.casbin.CasbinAccess;
 import com.school.management.infrastructure.extension.Policy;
@@ -45,6 +46,7 @@ public class PluginPlatformController {
      * }
      */
     @GetMapping("/overview")
+    @CasbinAccess(resource = "plugin-platform", action = "view")
     public Result<Map<String, Object>> overview() {
         // 加载 plugin_packages
         List<Map<String, Object>> packages = jdbc.queryForList(
@@ -742,6 +744,7 @@ public class PluginPlatformController {
      * M1 TriggerPipelineHealthCheck 结果 — healthy + 空/缺的表清单.
      */
     @GetMapping("/messaging-health")
+    @PublicEndpoint(reason = "健康检查 actuator-like, 监控用")
     public Result<Map<String, Object>> messagingHealth() {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("healthy", triggerPipelineHealthCheck.isHealthy());

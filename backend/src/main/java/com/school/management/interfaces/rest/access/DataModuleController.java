@@ -21,6 +21,7 @@ public class DataModuleController {
     private final DataPermissionApplicationService dataPermissionApplicationService;
 
     @GetMapping
+    @CasbinAccess(resource = "access:data-permission", action = "view")
     public Result<List<DataModulePO>> listModules(
             @RequestParam(required = false, defaultValue = "false") Boolean includeDisabled) {
         Long tenantId = TenantContextHolder.getTenantId();
@@ -28,6 +29,7 @@ public class DataModuleController {
     }
 
     @GetMapping("/grouped")
+    @CasbinAccess(resource = "access:data-permission", action = "view")
     public Result<Map<String, List<DataModulePO>>> listModulesGrouped(
             @RequestParam(required = false, defaultValue = "false") Boolean includeDisabled) {
         Long tenantId = TenantContextHolder.getTenantId();
@@ -44,6 +46,7 @@ public class DataModuleController {
      *   3. 功能权限反查 — 非 CORE 模块需要角色有对应 permission 前缀才进 relevant
      */
     @GetMapping("/for-role")
+    @CasbinAccess(resource = "access:data-permission", action = "view")
     public Result<Map<String, Object>> listModulesForRole(
             @RequestParam(required = false) Long roleId,
             @RequestParam(required = false, defaultValue = "false") Boolean includeDisabled) {

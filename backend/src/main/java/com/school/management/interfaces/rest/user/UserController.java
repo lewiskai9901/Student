@@ -260,6 +260,7 @@ public class UserController {
 
     @Operation(summary = "获取简单用户列表")
     @GetMapping("/simple")
+    @CasbinAccess(resource = "user", action = "view")
     public Result<List<SimpleUserResponse>> getSimpleUserList(
             @Parameter(description = "搜索关键词") @RequestParam(required = false) String keyword) {
         List<User> users = userApplicationService.getSimpleUserList(keyword);
@@ -271,6 +272,7 @@ public class UserController {
 
     @Operation(summary = "按组织单元获取用户列表")
     @GetMapping("/by-org-unit/{orgUnitId}")
+    @CasbinAccess(resource = "user", action = "view")
     public Result<List<UserDomainResponse>> getUsersByOrgUnit(
             @Parameter(description = "组织单元ID") @PathVariable Long orgUnitId,
             @Parameter(description = "是否包含子组织单元用户") @RequestParam(defaultValue = "false") Boolean includeChildren,
@@ -296,6 +298,7 @@ public class UserController {
 
     @Operation(summary = "获取带组织单元信息的用户列表")
     @GetMapping("/with-org-units")
+    @CasbinAccess(resource = "user", action = "view")
     public Result<List<UserDomainResponse>> getUsersWithOrgUnits(
             @Parameter(description = "搜索关键词") @RequestParam(required = false) String keyword) {
         List<User> users = (keyword != null && !keyword.isEmpty())
@@ -309,6 +312,7 @@ public class UserController {
 
     @Operation(summary = "获取带部门信息的用户列表（with-org-units别名）")
     @GetMapping("/with-departments")
+    @CasbinAccess(resource = "user", action = "view")
     public Result<List<UserDomainResponse>> getUsersWithDepartments(
             @Parameter(description = "搜索关键词") @RequestParam(required = false) String keyword) {
         return getUsersWithOrgUnits(keyword);

@@ -28,6 +28,7 @@ public class AccessRelationController {
      * 查询关系 (支持无筛选分页 / 按 resource / 按 subject / 按 relation)
      */
     @GetMapping
+    @CasbinAccess(resource = "access:relation", action = "view")
     public Result<Map<String, Object>> query(
             @RequestParam(required = false) String resourceType,
             @RequestParam(required = false) Long resourceId,
@@ -57,6 +58,7 @@ public class AccessRelationController {
      * 检查关系是否存在
      */
     @GetMapping("/check")
+    @CasbinAccess(resource = "access:relation", action = "view")
     public Result<Map<String, Boolean>> check(
             @RequestParam String resourceType,
             @RequestParam Long resourceId,

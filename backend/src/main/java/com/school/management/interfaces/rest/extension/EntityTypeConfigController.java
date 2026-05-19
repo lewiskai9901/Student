@@ -36,6 +36,7 @@ public class EntityTypeConfigController {
         "overridden_fields AS overriddenFields";
 
     @GetMapping
+    @CasbinAccess(resource = "entity-type-config", action = "view")
     public Result<List<Map<String, Object>>> list(
             @RequestParam String entityType,
             @RequestParam(required = false) String category,
@@ -55,6 +56,7 @@ public class EntityTypeConfigController {
     }
 
     @GetMapping("/detail")
+    @CasbinAccess(resource = "entity-type-config", action = "view")
     public Result<Map<String, Object>> detail(
             @RequestParam String entityType,
             @RequestParam String typeCode) {
@@ -65,6 +67,7 @@ public class EntityTypeConfigController {
     }
 
     @GetMapping("/categories")
+    @CasbinAccess(resource = "entity-type-config", action = "view")
     public Result<List<Map<String, Object>>> categories(@RequestParam String entityType) {
         List<Map<String, Object>> list;
         switch (entityType) {
@@ -100,6 +103,7 @@ public class EntityTypeConfigController {
     }
 
     @GetMapping("/allowed-children")
+    @CasbinAccess(resource = "entity-type-config", action = "view")
     public Result<List<Map<String, Object>>> allowedChildren(
             @RequestParam String entityType,
             @RequestParam String parentTypeCode) {

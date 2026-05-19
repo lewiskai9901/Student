@@ -1,5 +1,6 @@
 package com.school.management.interfaces.rest.access;
 
+import com.school.management.common.annotation.PublicEndpoint;
 import com.school.management.common.result.Result;
 import com.school.management.infrastructure.activity.annotation.AuditEvent;
 import com.school.management.infrastructure.persistence.user.UserDomainMapper;
@@ -47,6 +48,7 @@ public class AuthController {
     private final com.school.management.infrastructure.extension.TenantPluginService tenantPluginService;
 
     @PostMapping("/login")
+    @PublicEndpoint(reason = "登录无需 auth")
     @Operation(summary = "用户登录")
     @AuditEvent(module = "access", action = "LOGIN", resourceType = "AUTH", label = "用户登录")
     public Result<LoginResponse> login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
@@ -89,6 +91,7 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
+    @PublicEndpoint(reason = "刷新 token 用 refresh token 验证, 不需要 access token")
     @Operation(summary = "刷新令牌")
     @AuditEvent(module = "access", action = "UPDATE", resourceType = "AUTH", label = "刷新令牌")
     public Result<LoginResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {

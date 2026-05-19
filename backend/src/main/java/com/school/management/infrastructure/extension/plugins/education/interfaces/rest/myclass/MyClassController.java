@@ -6,6 +6,7 @@ import com.school.management.infrastructure.extension.plugins.education.applicat
 import com.school.management.infrastructure.extension.plugins.education.application.myclass.query.MyClassOverviewDTO;
 import com.school.management.infrastructure.extension.plugins.education.application.myclass.query.MyClassStudentDTO;
 import com.school.management.common.result.Result;
+import com.school.management.infrastructure.casbin.CasbinAccess;
 import com.school.management.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,6 +30,7 @@ public class MyClassController {
 
     @GetMapping("/classes")
     @Operation(summary = "获取我管理的班级列表")
+    @CasbinAccess(resource = "student:myclass", action = "view")
     public Result<List<MyClassDTO>> getMyClasses(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         List<MyClassDTO> classes = myClassService.getMyClasses(userDetails.getUserId());
@@ -37,6 +39,7 @@ public class MyClassController {
 
     @GetMapping("/classes/{orgUnitId}/overview")
     @Operation(summary = "获取班级概览数据")
+    @CasbinAccess(resource = "student:myclass", action = "view")
     public Result<MyClassOverviewDTO> getClassOverview(
             @PathVariable Long orgUnitId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -46,6 +49,7 @@ public class MyClassController {
 
     @GetMapping("/classes/{orgUnitId}/user_student")
     @Operation(summary = "获取班级学生列表")
+    @CasbinAccess(resource = "student:myclass", action = "view")
     public Result<List<MyClassStudentDTO>> getClassStudents(
             @PathVariable Long orgUnitId,
             @RequestParam(required = false) String keyword,
@@ -58,6 +62,7 @@ public class MyClassController {
 
     @GetMapping("/classes/{orgUnitId}/dormitory-distribution")
     @Operation(summary = "获取班级宿舍分布")
+    @CasbinAccess(resource = "student:myclass", action = "view")
     public Result<List<DormitoryDistributionDTO>> getDormitoryDistribution(
             @PathVariable Long orgUnitId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {

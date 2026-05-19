@@ -1,5 +1,6 @@
 package com.school.management.interfaces.rest.system;
 
+import com.school.management.common.annotation.PublicEndpoint;
 import com.school.management.common.audit.Audited;
 import com.school.management.common.result.Result;
 import com.school.management.infrastructure.casbin.CasbinAccess;
@@ -47,6 +48,7 @@ public class SystemConfigController {
      * 仅允许 system 和 ui 分组，且 system 分组过滤为安全键
      */
     @GetMapping("/public/{group}")
+    @PublicEndpoint(reason = "登录页/未登录用户读公开配置 (logo 等)")
     @Operation(summary = "获取公开配置", description = "根据分组获取公开的系统配置，无需登录。仅允许system和ui分组。")
     public Result<List<SystemConfigPO>> getPublicConfigs(@PathVariable String group) {
         log.debug("获取公开配置, group={}", group);
