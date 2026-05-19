@@ -10,10 +10,11 @@ import com.school.management.infrastructure.external.NotificationService;
 import com.school.management.infrastructure.activity.ActivityEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 
 /**
@@ -40,7 +41,7 @@ public class AccessEventHandler {
      * 处理角色创建事件
      */
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handle(RoleCreatedEvent event) {
         log.info("Handling RoleCreatedEvent: roleId={}, roleCode={}",
                  event.getRoleId(), event.getRoleCode());
@@ -58,7 +59,7 @@ public class AccessEventHandler {
      * 处理角色权限变更事件
      */
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handle(RolePermissionsChangedEvent event) {
         log.info("Handling RolePermissionsChangedEvent: roleId={}, addedCount={}, removedCount={}",
                  event.getRoleId(),
@@ -75,7 +76,7 @@ public class AccessEventHandler {
      * 处理用户角色分配事件
      */
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handle(UserRoleAssignedEvent event) {
         log.info("Handling UserRoleAssignedEvent: userId={}, roleId={}, scopeType={}, scopeId={}",
                  event.getUserId(), event.getRoleId(), event.getScopeType(), event.getScopeId());

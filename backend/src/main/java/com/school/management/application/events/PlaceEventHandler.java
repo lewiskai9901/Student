@@ -9,10 +9,11 @@ import com.school.management.domain.place.event.PlaceStatusChangedEvent;
 import com.school.management.infrastructure.access.UserContextHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
@@ -43,7 +44,7 @@ public class PlaceEventHandler {
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
 
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     @Async
     public void handle(PlaceStatusChangedEvent event) {
         writePlaceAudit("PlaceStatusChanged", "STATUS_CHANGE",
@@ -53,7 +54,7 @@ public class PlaceEventHandler {
             event.getReason());
     }
 
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     @Async
     public void handle(PlaceCapacityUpdatedEvent event) {
         writePlaceAudit("PlaceCapacityUpdated", "CAPACITY_CHANGE",
@@ -62,7 +63,7 @@ public class PlaceEventHandler {
             null);
     }
 
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     @Async
     public void handle(PlaceOrgAssignedEvent event) {
         writePlaceAudit("PlaceOrgAssigned", "ORG_ASSIGNMENT",
@@ -71,7 +72,7 @@ public class PlaceEventHandler {
             null);
     }
 
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     @Async
     public void handle(PlaceResponsibleAssignedEvent event) {
         writePlaceAudit("PlaceResponsibleAssigned", "RESPONSIBLE_ASSIGNMENT",

@@ -6,9 +6,10 @@ import com.school.management.infrastructure.external.NotificationService;
 import com.school.management.infrastructure.activity.ActivityEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 @Slf4j
 @Component
@@ -20,7 +21,7 @@ public class ScheduleEventHandler {
     private final ActivityEventPublisher activityEventPublisher;
 
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handle(PolicyCreatedEvent event) {
         log.info("Handling PolicyCreatedEvent: policyId={}, policyCode={}",
                 event.getPolicyId(), event.getPolicyCode());
@@ -30,7 +31,7 @@ public class ScheduleEventHandler {
     }
 
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handle(PolicyStatusChangedEvent event) {
         log.info("Handling PolicyStatusChangedEvent: policyId={}, enabled={}",
                 event.getPolicyId(), event.isEnabled());
@@ -40,7 +41,7 @@ public class ScheduleEventHandler {
     }
 
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handle(ExecutionCompletedEvent event) {
         log.info("Handling ExecutionCompletedEvent: executionId={}, policyId={}, date={}",
                 event.getExecutionId(), event.getPolicyId(), event.getExecutionDate());
@@ -59,7 +60,7 @@ public class ScheduleEventHandler {
     }
 
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handle(ExecutionFailedEvent event) {
         log.info("Handling ExecutionFailedEvent: executionId={}, reason={}",
                 event.getExecutionId(), event.getFailureReason());

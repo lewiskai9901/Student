@@ -7,9 +7,10 @@ import com.school.management.infrastructure.external.NotificationService;
 import com.school.management.infrastructure.activity.ActivityEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
  * 学生领域事件处理器
@@ -35,7 +36,7 @@ public class StudentEventHandler {
      * 处理学生入学事件
      */
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handle(StudentEnrolledEvent event) {
         log.info("Handling StudentEnrolledEvent: studentNo={}, studentName={}, classId={}",
                  event.getStudentNo(), event.getStudentName(), event.getOrgUnitId());
@@ -59,7 +60,7 @@ public class StudentEventHandler {
      * 处理学籍状态变更事件
      */
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handle(StudentStatusChangedEvent event) {
         log.info("Handling StudentStatusChangedEvent: studentNo={}, {} -> {}",
                  event.getStudentNo(), event.getOldStatus(), event.getNewStatus());
@@ -74,7 +75,7 @@ public class StudentEventHandler {
      * 处理学生信息更新事件
      */
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handle(StudentUpdatedEvent event) {
         log.info("Handling StudentUpdatedEvent: studentNo={}, studentName={}",
                  event.getStudentNo(), event.getStudentName());
@@ -94,7 +95,7 @@ public class StudentEventHandler {
      * 处理班级创建事件
      */
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handle(ClassCreatedEvent event) {
         log.info("Handling ClassCreatedEvent: classCode={}, className={}",
                  event.getClassCode(), event.getClassName());
@@ -118,7 +119,7 @@ public class StudentEventHandler {
      * 处理班级状态变更事件
      */
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handle(ClassStatusChangedEvent event) {
         log.info("Handling ClassStatusChangedEvent: classId={}, {} -> {}",
                  event.getOrgUnitId(), event.getOldStatus(), event.getNewStatus());
@@ -140,7 +141,7 @@ public class StudentEventHandler {
      * 处理教师任职事件
      */
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handle(TeacherAssignedEvent event) {
         log.info("Handling TeacherAssignedEvent: classId={}, teacherId={}, role={}",
                  event.getOrgUnitId(), event.getTeacherId(), event.getRole());

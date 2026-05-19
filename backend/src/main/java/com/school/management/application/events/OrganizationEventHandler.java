@@ -8,10 +8,11 @@ import com.school.management.infrastructure.external.NotificationService;
 import com.school.management.infrastructure.activity.ActivityEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -39,7 +40,7 @@ public class OrganizationEventHandler {
      * 处理组织单元创建事件
      */
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handle(OrgUnitCreatedEvent event) {
         log.info("Handling OrgUnitCreatedEvent: unitCode={}, unitName={}",
                  event.getUnitCode(), event.getUnitName());
@@ -66,7 +67,7 @@ public class OrganizationEventHandler {
      * 处理组织单元更新事件
      */
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handle(OrgUnitUpdatedEvent event) {
         log.info("Handling OrgUnitUpdatedEvent: unitId={}", event.getOrgUnitId());
 
@@ -82,7 +83,7 @@ public class OrganizationEventHandler {
      * 处理组织删除事件 (P8-2 新加).
      */
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handle(OrgUnitDeletedEvent event) {
         log.info("Handling OrgUnitDeletedEvent: unitId={} ({})",
             event.getOrgUnitId(), event.getUnitName());
@@ -104,7 +105,7 @@ public class OrganizationEventHandler {
      * 处理组织合并事件 (P8-2 新加).
      */
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handle(OrgUnitMergedEvent event) {
         log.info("Handling OrgUnitMergedEvent: source={} → target={}",
             event.getSourceOrgUnitId(), event.getTargetOrgUnitId());
@@ -122,7 +123,7 @@ public class OrganizationEventHandler {
      * 处理组织拆分事件 (P8-2 新加).
      */
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handle(OrgUnitSplitEvent event) {
         log.info("Handling OrgUnitSplitEvent: source={} → {} new units",
             event.getSourceOrgUnitId(), event.getNewOrgUnitIds().size());
