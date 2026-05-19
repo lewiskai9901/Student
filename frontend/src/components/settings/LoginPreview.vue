@@ -274,6 +274,7 @@ import { Eye, Move } from 'lucide-vue-next'
 import type { LoginCustomizationConfig, SnapGuide, DecorationImage } from '@/types/loginCustomization'
 import { getFontFamily, getFontWeight, SNAP_GUIDES, SNAP_THRESHOLD } from '@/types/loginCustomization'
 import { useConfigStore } from '@/stores/config'
+import { formatLoginTitle, formatLoginSubtitle } from '@/utils/loginTextFormat'
 
 const configStore = useConfigStore()
 
@@ -346,19 +347,13 @@ const textPositionStyle = computed(() => ({
   transform: 'translate(-50%, -50%)'
 }))
 
-// 格式化标语 - 支持用 **关键词** 语法高亮
-const formattedSubtitle = computed(() => {
-  const text = props.config.subtitle || ''
-  // 将 **关键词** 转换为蓝色高亮的 span
-  return text.replace(/\*\*(.+?)\*\*/g, '<span style="color: #60a5fa; font-weight: 600;">$1</span>')
-})
+// L1 (2026-05-19): 走 formatLoginTitle/Subtitle, 内部先 HTML escape 再做受控替换,
+// 防 admin 配置文本 XSS.
+const formattedSubtitle = computed(() =>
+  formatLoginSubtitle(props.config.subtitle, 'style="color: #60a5fa; font-weight: 600;"'),
+)
 
-// 格式化标题 - 支持 \n 换行
-const formattedTitle = computed(() => {
-  const text = props.config.title || ''
-  // 将 \n 转换为 <br> 标签
-  return text.replace(/\\n/g, '<br>')
-})
+const formattedTitle = computed(() => formatLoginTitle(props.config.title))
 
 // 标题样式
 const titleStyle = computed(() => {

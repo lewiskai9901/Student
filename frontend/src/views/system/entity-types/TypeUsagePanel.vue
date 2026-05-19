@@ -161,6 +161,7 @@ import {
   Eye, Sparkles, AlertTriangle, Loader2, ArrowDownRight, Info, PenLine,
 } from 'lucide-vue-next'
 import type { EntityTypeConfig } from '@/api/entityType'
+import service from '@/utils/request'
 
 interface Props {
   type: EntityTypeConfig | null
@@ -217,19 +218,20 @@ watch(() => props.type?.typeCode, async () => {
   if (!t) { usageCount.value = 0; return }
   usageLoading.value = true
   try {
-    // Query instance count based on entity type
-    const r = await fetch(`/api/entity-type-configs/${t.id}/usage-count`, {
-      headers: { Authorization: 'Bearer ' + (localStorage.getItem('access_token')
-        || sessionStorage.getItem('access_token') || '') },
-    })
-    if (r.ok) {
-      const j = await r.json()
-      usageCount.value = Number(j.data ?? j.count ?? 0)
+    // L1 (2026-05-19): 走 service axios — JWT 注入 + Safari 隐私模式兼容 + 401 自动刷新.
+    // 之前直 fetch + 手撸 Bearer 绕过这些机制 + 硬编码 access_token 字符串.
+    // service interceptor 已解开 envelope, data 是 backend 实际 payload.
+    // 兼容 backend 返回 `5` / `{data: 5}` / `{count: 5}` 三种形态.
+    const data = await service.get<unknown, number | { data?: number; count?: number }>(
+      `/entity-type-configs/${t.id}/usage-count`,
+    )
+    if (typeof data === 'number') {
+      usageCount.value = data
     } else {
-      // endpoint may not exist yet — fallback to 0
-      usageCount.value = 0
+      usageCount.value = Number(data?.data ?? data?.count ?? 0)
     }
   } catch {
+    // endpoint may not exist yet — fallback to 0
     usageCount.value = 0
   } finally {
     usageLoading.value = false

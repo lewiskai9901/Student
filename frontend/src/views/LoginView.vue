@@ -457,6 +457,7 @@ import { useConfigStore } from '@/stores/config'
 import type { LoginRequest } from '@/types/auth'
 import type { FeatureIcon, CustomFont, DecorationImage } from '@/types/loginCustomization'
 import { getFontFamily, getFontWeight } from '@/types/loginCustomization'
+import { formatLoginTitle, formatLoginSubtitle } from '@/utils/loginTextFormat'
 import {
   Users,
   BarChart3,
@@ -532,18 +533,13 @@ const formBackgroundStyle = computed(() => {
   }
 })
 
-// 格式化标语 - 支持用 **关键词** 语法高亮
-const formattedSubtitle = computed(() => {
-  const text = loginConfig.value.subtitle || ''
-  return text.replace(/\*\*(.+?)\*\*/g, '<span class="text-blue-400 font-semibold">$1</span>')
-})
+// L1 (2026-05-19): 走 formatLoginTitle/Subtitle, 内部先 HTML escape 再做受控替换,
+// 防 admin 配置文本 XSS (此前 admin 可注入 <script> 影响所有登录用户).
+const formattedSubtitle = computed(() => formatLoginSubtitle(loginConfig.value.subtitle))
 
-// 格式化标题 - 支持 \n 换行
-const formattedTitle = computed(() => {
-  const text = loginConfig.value.title || configStore.systemName || ''
-  // 将 \n 转换为 <br> 标签
-  return text.replace(/\\n/g, '<br>')
-})
+const formattedTitle = computed(() =>
+  formatLoginTitle(loginConfig.value.title || configStore.systemName || ''),
+)
 
 // 获取自定义字体的fontFamily
 const getCustomFontFamily = (fontId: string): string | null => {
