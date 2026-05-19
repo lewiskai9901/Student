@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import * as appealApi from '@/api/inspection/appeal'
 import type { InspAppeal } from '@/types/insp/appeal'
 

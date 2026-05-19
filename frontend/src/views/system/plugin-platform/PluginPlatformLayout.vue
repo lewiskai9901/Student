@@ -108,7 +108,7 @@ import GlobalSearchPalette from './components/GlobalSearchPalette.vue'
 import PluginHealthDialog from './components/PluginHealthDialog.vue'
 import PluginTestSandbox from './components/PluginTestSandbox.vue'
 import type { PluginData, ResourceKey } from './helpers'
-import { inferIndustry, inferIndustryFromRegisteredBy, resolveIndustry, relationIndustry } from './helpers'
+import { inferIndustry, resolveIndustry, relationIndustry } from './helpers'
 
 // ───────── Router state ─────────
 const route = useRoute()

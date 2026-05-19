@@ -14,7 +14,7 @@ import {
 import { getSubmissions, getDetails } from '@/api/inspection/submission'
 import type { InspTask, InspSubmission, SubmissionDetail } from '@/types/insp/project'
 import { useAuthStore } from '@/stores/auth'
-import { TaskStatusConfig, type TaskStatus } from '@/types/insp/enums'
+import { TaskStatusConfig } from '@/types/insp/enums'
 
 const route = useRoute()
 

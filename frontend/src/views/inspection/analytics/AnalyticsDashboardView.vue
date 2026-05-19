@@ -163,7 +163,6 @@
 <script setup lang="ts">
 import type { LongId } from '@/types/common'
 import { ref, reactive, onMounted, onUnmounted, nextTick, watch } from 'vue'
-import { Refresh } from '@element-plus/icons-vue'
 import { use } from 'echarts/core'
 import { LineChart, BarChart, PieChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'

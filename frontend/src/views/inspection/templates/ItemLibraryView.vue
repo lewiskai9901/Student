@@ -2,8 +2,7 @@
 import type { LongId } from '@/types/common'
 import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import {
-  Plus, Search, Pencil, Trash2, RefreshCw, Library, Package, Keyboard,
+import { Keyboard,
 } from 'lucide-vue-next'
 import type { LibraryItem, CreateLibraryItemRequest, UpdateLibraryItemRequest } from '@/types/insp/template'
 import type { ItemType } from '@/types/insp/enums'

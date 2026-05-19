@@ -1,4 +1,3 @@
-import type { LongId } from '@/types/common'
 import { ref, computed } from 'vue'
 import type { FloorPlanElement, FloorPlanElementType, FloorPlanLayout, FloorStyleType } from '@/types/universalPlace'
 

@@ -15,20 +15,18 @@
  *
  * 每个 Inbox 项可单击直达对应实体, 旁边标注下一步动作 (CTA).
  */
-import type { LongId } from '@/types/common'
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ElMessage } from 'element-plus'
-import {
-  AlertTriangle, Clock, CheckCircle2, Inbox,
+import { Clock, CheckCircle2, Inbox,
   Gavel, Wrench, FileWarning, Sparkles, Settings2,
 } from 'lucide-vue-next'
 import { getMyTasks, getTasks } from '@/api/inspection/task'
 import { getPendingAppeals, getMyAppeals } from '@/api/inspection/appeal'
 import { getCases as getCorrectiveCases } from '@/api/inspection/correctiveCase'
 import { getProjects } from '@/api/inspection/project'
-import type { InspTask, InspProject } from '@/types/insp/project'
+import type { InspTask } from '@/types/insp/project'
 import type { InspAppeal } from '@/types/insp/appeal'
 
 const router = useRouter()

@@ -3,7 +3,6 @@
  * 资产借用记录列表
  * UI优化版本 - 使用设计系统组件
  */
-import type { LongId } from '@/types/common'
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh } from '@element-plus/icons-vue'

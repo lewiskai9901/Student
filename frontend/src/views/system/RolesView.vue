@@ -535,7 +535,6 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Settings,
-  ChevronDown,
   FolderOpen,
   Folder,
   CheckSquare,

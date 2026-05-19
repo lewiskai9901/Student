@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { LongId } from '@/types/common'
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'

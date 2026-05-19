@@ -4,7 +4,7 @@
  * 不发真请求 (mock axios), 只验证类型契约 + module shape.
  * 用于 PR 时快速判断 SDK 是否生成损坏.
  */
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 
 describe('Generated SDK shape', () => {
   it('barrel index.ts 可 import, 不抛错', async () => {

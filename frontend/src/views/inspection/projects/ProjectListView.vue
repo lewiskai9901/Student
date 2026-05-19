@@ -31,7 +31,6 @@ import type { ProjectStatsSummary } from '@/api/inspection/project'
 import { ProjectStatusConfig, type ProjectStatus } from '@/types/insp/enums'
 import type { InspProject } from '@/types/insp/project'
 import InspButton from '../shared/InspButton.vue'
-import InspChip from '../shared/InspChip.vue'
 import InspSpinner from '../shared/InspSpinner.vue'
 import InspEmptyState from '../shared/InspEmptyState.vue'
 

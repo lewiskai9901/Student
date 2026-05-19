@@ -139,7 +139,7 @@
 
 <script setup lang="ts">
 import type { LongId } from '@/types/common'
-import { ref, computed, onMounted, watch, shallowRef } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { pluginPlatformApi } from '@/api/pluginPlatform'

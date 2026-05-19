@@ -80,7 +80,6 @@
 </template>
 
 <script setup lang="ts">
-import type { LongId } from '@/types/common'
 import { ref } from 'vue'
 import { History } from 'lucide-vue-next'
 import type { ScoringProfileVersion } from '@/types/insp/scoring'

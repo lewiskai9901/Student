@@ -154,7 +154,6 @@
 </template>
 
 <script setup lang="ts">
-import type { LongId } from '@/types/common'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'

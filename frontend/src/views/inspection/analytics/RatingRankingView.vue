@@ -2,7 +2,7 @@
 import type { LongId } from '@/types/common'
 import { ref, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Trophy, Medal, RefreshCw } from 'lucide-vue-next'
+import { Trophy, Medal } from 'lucide-vue-next'
 import { getProjects, listDimensions, getRankings } from '@/api/inspection/project'
 import type { InspProject, RatingDimension, RatingResult } from '@/types/insp/project'
 
