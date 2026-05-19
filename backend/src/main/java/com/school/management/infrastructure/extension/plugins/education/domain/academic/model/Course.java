@@ -11,8 +11,6 @@ import java.util.Objects;
  */
 public class Course extends AggregateRoot<Long> {
 
-    private Long id;
-
     /** 课程代码 */
     private String courseCode;
 
@@ -150,9 +148,6 @@ public class Course extends AggregateRoot<Long> {
     }
 
     // Getters
-    @Override
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
     public String getCourseCode() { return courseCode; }
     public String getCourseName() { return courseName; }
     public String getCourseNameEn() { return courseNameEn; }

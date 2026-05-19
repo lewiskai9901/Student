@@ -15,8 +15,6 @@ import java.util.Optional;
  */
 public class Major extends AggregateRoot<Long> {
 
-    private Long id;
-
     /**
      * 专业编码
      */
@@ -277,15 +275,6 @@ public class Major extends AggregateRoot<Long> {
     }
 
     // Getters
-    @Override
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
     public String getMajorCode() {
         return majorCode;
     }

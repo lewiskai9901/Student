@@ -17,8 +17,6 @@ import java.util.Objects;
  */
 public class Cohort extends AggregateRoot<Long> {
 
-    private Long id;
-
     /**
      * 年级编码 (如: GRADE_2024)
      */
@@ -262,15 +260,6 @@ public class Cohort extends AggregateRoot<Long> {
     }
 
     // Getters
-    @Override
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
     public String getGradeCode() {
         return gradeCode;
     }

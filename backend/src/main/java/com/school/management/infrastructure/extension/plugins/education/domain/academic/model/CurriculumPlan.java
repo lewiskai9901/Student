@@ -11,8 +11,6 @@ import java.util.Objects;
  */
 public class CurriculumPlan extends AggregateRoot<Long> {
 
-    private Long id;
-
     /** 方案编码 */
     private String planCode;
 
@@ -180,9 +178,6 @@ public class CurriculumPlan extends AggregateRoot<Long> {
     }
 
     // Getters
-    @Override
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
     public String getPlanCode() { return planCode; }
     public String getPlanName() { return planName; }
     public Long getMajorId() { return majorId; }

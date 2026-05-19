@@ -32,8 +32,6 @@ import java.util.stream.Collectors;
  */
 public class SchoolClass extends AggregateRoot<Long> {
 
-    private Long id;
-
     /**
      * 班级编码（唯一标识）
      */
@@ -407,15 +405,6 @@ public class SchoolClass extends AggregateRoot<Long> {
     }
 
     // Getters
-    @Override
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
     public String getClassCode() {
         return classCode;
     }
