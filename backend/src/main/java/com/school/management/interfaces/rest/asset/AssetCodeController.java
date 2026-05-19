@@ -1,9 +1,9 @@
 package com.school.management.interfaces.rest.asset;
 
+import com.school.management.application.asset.AssetCodeApplicationService;
 import com.school.management.common.result.Result;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.nio.charset.StandardCharsets;
@@ -22,7 +22,7 @@ import com.school.management.infrastructure.casbin.CasbinAccess;
 @RequiredArgsConstructor
 public class AssetCodeController {
 
-    private final JdbcTemplate jdbc;
+    private final AssetCodeApplicationService assetCodeService;
 
     // ==================== Generate Asset Code ====================
 
@@ -31,17 +31,7 @@ public class AssetCodeController {
     public Result<String> generateAssetCode(
             @RequestParam String categoryCode,
             @RequestParam(defaultValue = "0") int currentMaxSeq) {
-
-        // Find the next sequence number
-        int nextSeq = currentMaxSeq;
-        Long count = jdbc.queryForObject(
-            "SELECT COUNT(*) FROM asset WHERE asset_code LIKE ? AND deleted = 0",
-            Long.class, categoryCode + "-%");
-        if (count != null) {
-            nextSeq = Math.max(nextSeq, count.intValue());
-        }
-        nextSeq++;
-
+        int nextSeq = Math.max(currentMaxSeq, assetCodeService.countExistingAssetCodes(categoryCode)) + 1;
         String code = categoryCode + "-" + String.format("%04d", nextSeq);
         return Result.success(code);
     }
@@ -54,15 +44,7 @@ public class AssetCodeController {
             @RequestParam String categoryCode,
             @RequestParam int count,
             @RequestParam(defaultValue = "0") int currentMaxSeq) {
-
-        int startSeq = currentMaxSeq;
-        Long existing = jdbc.queryForObject(
-            "SELECT COUNT(*) FROM asset WHERE asset_code LIKE ? AND deleted = 0",
-            Long.class, categoryCode + "-%");
-        if (existing != null) {
-            startSeq = Math.max(startSeq, existing.intValue());
-        }
-
+        int startSeq = Math.max(currentMaxSeq, assetCodeService.countExistingAssetCodes(categoryCode));
         List<String> codes = new ArrayList<>();
         for (int i = 1; i <= count; i++) {
             codes.add(categoryCode + "-" + String.format("%04d", startSeq + i));
