@@ -11,6 +11,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import com.school.management.infrastructure.access.OrgScopeHelper;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -21,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -37,13 +40,18 @@ class AcademicWarningApplicationServiceTest {
 
     @Mock JdbcTemplate jdbc;
 
+    @Mock OrgScopeHelper orgScopeHelper;
+
     ObjectMapper objectMapper = new ObjectMapper();
 
     AcademicWarningApplicationService service;
 
     @BeforeEach
     void setUp() {
-        service = new AcademicWarningApplicationService(jdbc, objectMapper);
+        // 数据权限关闭 / super admin 等价: orgScopeClause 返回 "" (无收窄), isOrgAllowed 放行.
+        lenient().when(orgScopeHelper.orgScopeClause(anyString())).thenReturn("");
+        lenient().when(orgScopeHelper.isOrgAllowed(any())).thenReturn(true);
+        service = new AcademicWarningApplicationService(jdbc, objectMapper, orgScopeHelper);
     }
 
     private Map<String, Object> ruleRow(Object id, String type, int level, String paramsJson) {
@@ -608,7 +616,7 @@ class AcademicWarningApplicationServiceTest {
             assertThat(result).containsKeys("byLevel", "byType", "byStatus");
             ArgumentCaptor<String> sqlCap = ArgumentCaptor.forClass(String.class);
             verify(jdbc).queryForObject(sqlCap.capture(), eq(Long.class));
-            assertThat(sqlCap.getValue()).doesNotContain("WHERE semester_id");
+            assertThat(sqlCap.getValue()).doesNotContain("semester_id");
         }
 
         @Test
@@ -622,7 +630,7 @@ class AcademicWarningApplicationServiceTest {
             assertThat(result.get("totalWarnings")).isEqualTo(7L);
             ArgumentCaptor<String> sqlCap = ArgumentCaptor.forClass(String.class);
             verify(jdbc).queryForObject(sqlCap.capture(), eq(Long.class));
-            assertThat(sqlCap.getValue()).contains("WHERE semester_id = 9");
+            assertThat(sqlCap.getValue()).contains("semester_id = 9");
         }
     }
 }

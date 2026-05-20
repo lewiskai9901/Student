@@ -3,6 +3,7 @@ package com.school.management.infrastructure.extension.plugins.education.applica
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.common.util.SecurityUtils;
+import com.school.management.infrastructure.access.OrgScopeHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -26,6 +27,7 @@ public class AcademicWarningApplicationService {
 
     private final JdbcTemplate jdbc;
     private final ObjectMapper objectMapper;
+    private final OrgScopeHelper orgScopeHelper;
 
     // ==================== Rules ====================
 
@@ -148,6 +150,7 @@ public class AcademicWarningApplicationService {
                         "LEFT JOIN school_classes sc ON sc.id = s.org_unit_id " +
                         "LEFT JOIN courses c ON c.id = sg.course_id " +
                         "WHERE sg.semester_id = ? AND sg.passed = 0 AND s.status = 1 " +
+                        orgScopeHelper.orgScopeClause("s.org_unit_id") + " " +
                         "GROUP BY s.id, s.student_no, s.name, s.org_unit_id, sc.name " +
                         "HAVING fail_count >= ?",
                         semesterId, minFailCount);
@@ -172,6 +175,7 @@ public class AcademicWarningApplicationService {
                         "JOIN user_student s ON s.id = ar.student_id " +
                         "LEFT JOIN school_classes sc ON sc.id = s.org_unit_id " +
                         "WHERE ar.semester_id = ? AND s.status = 1 " +
+                        orgScopeHelper.orgScopeClause("s.org_unit_id") + " " +
                         "GROUP BY s.id, s.student_no, s.name, s.org_unit_id, sc.name " +
                         "HAVING rate < ?",
                         semesterId, minRate);
@@ -195,6 +199,7 @@ public class AcademicWarningApplicationService {
                         "LEFT JOIN school_classes sc ON sc.id = s.org_unit_id " +
                         "LEFT JOIN student_grades sg ON sg.student_id = s.id AND sg.semester_id = ? AND sg.passed = 1 " +
                         "WHERE s.status = 1 " +
+                        orgScopeHelper.orgScopeClause("s.org_unit_id") + " " +
                         "GROUP BY s.id, s.student_no, s.name, s.org_unit_id, sc.name " +
                         "HAVING earned_credits < ?",
                         semesterId, actualBelow);
@@ -248,6 +253,7 @@ public class AcademicWarningApplicationService {
                         "LEFT JOIN school_classes sc ON sc.id = s.org_unit_id " +
                         "LEFT JOIN courses c ON c.id = sg.course_id " +
                         "WHERE sg.semester_id = ? AND sg.passed = 0 AND s.status = 1 " +
+                        orgScopeHelper.orgScopeClause("s.org_unit_id") + " " +
                         "GROUP BY s.id, s.student_no, s.name, s.org_unit_id, sc.name " +
                         "HAVING failCount >= ?",
                         semesterId, minFailCount);
@@ -269,6 +275,7 @@ public class AcademicWarningApplicationService {
                         "JOIN user_student s ON s.id = ar.student_id " +
                         "LEFT JOIN school_classes sc ON sc.id = s.org_unit_id " +
                         "WHERE ar.semester_id = ? AND s.status = 1 " +
+                        orgScopeHelper.orgScopeClause("s.org_unit_id") + " " +
                         "GROUP BY s.id, s.student_no, s.name, s.org_unit_id, sc.name " +
                         "HAVING rate < ?",
                         semesterId, minRate);
@@ -291,6 +298,7 @@ public class AcademicWarningApplicationService {
                         "LEFT JOIN school_classes sc ON sc.id = s.org_unit_id " +
                         "LEFT JOIN student_grades sg ON sg.student_id = s.id AND sg.semester_id = ? AND sg.passed = 1 " +
                         "WHERE s.status = 1 " +
+                        orgScopeHelper.orgScopeClause("s.org_unit_id") + " " +
                         "GROUP BY s.id, s.student_no, s.name, s.org_unit_id, sc.name " +
                         "HAVING earnedCredits < ?",
                         semesterId, actualBelow);
@@ -326,6 +334,9 @@ public class AcademicWarningApplicationService {
         }
         if (semesterId != null) { where.append(" AND semester_id = ?"); params.add(semesterId); }
 
+        // 数据权限收窄: academic_warnings 有 org_unit_id 列, JdbcTemplate 旁路 @DataPermission 拦截器
+        where.append(orgScopeHelper.orgScopeClause("org_unit_id"));
+
         String countSql = "SELECT COUNT(*) FROM academic_warnings" + where;
         Long total = jdbc.queryForObject(countSql, Long.class, params.toArray());
 
@@ -357,7 +368,7 @@ public class AcademicWarningApplicationService {
             "warning_type AS warningType, warning_level AS warningLevel, description, detail, " +
             "status, handler_id AS handlerId, handle_note AS handleNote, handled_at AS handledAt, " +
             "semester_id AS semesterId, created_at AS createdAt " +
-            "FROM academic_warnings WHERE id = ?", id
+            "FROM academic_warnings WHERE id = ?" + orgScopeHelper.orgScopeClause("org_unit_id"), id
         );
         parseJsonField(warning, "detail");
         return warning;
@@ -367,7 +378,8 @@ public class AcademicWarningApplicationService {
     public void confirmWarning(Long id) {
         Long userId = SecurityUtils.getCurrentUserId();
         jdbc.update(
-            "UPDATE academic_warnings SET status = 1, handler_id = ?, handled_at = ? WHERE id = ? AND status = 0",
+            "UPDATE academic_warnings SET status = 1, handler_id = ?, handled_at = ? WHERE id = ? AND status = 0"
+                + orgScopeHelper.orgScopeClause("org_unit_id"),
             userId, LocalDateTime.now(), id
         );
     }
@@ -376,7 +388,8 @@ public class AcademicWarningApplicationService {
     public void interveneWarning(Long id, String note) {
         Long userId = SecurityUtils.getCurrentUserId();
         jdbc.update(
-            "UPDATE academic_warnings SET status = 2, handler_id = ?, handle_note = ?, handled_at = ? WHERE id = ? AND status IN (0,1)",
+            "UPDATE academic_warnings SET status = 2, handler_id = ?, handle_note = ?, handled_at = ? WHERE id = ? AND status IN (0,1)"
+                + orgScopeHelper.orgScopeClause("org_unit_id"),
             userId, note, LocalDateTime.now(), id
         );
     }
@@ -385,13 +398,19 @@ public class AcademicWarningApplicationService {
     public void dismissWarning(Long id, String note) {
         Long userId = SecurityUtils.getCurrentUserId();
         jdbc.update(
-            "UPDATE academic_warnings SET status = 3, handler_id = ?, handle_note = ?, handled_at = ? WHERE id = ?",
+            "UPDATE academic_warnings SET status = 3, handler_id = ?, handle_note = ?, handled_at = ? WHERE id = ?"
+                + orgScopeHelper.orgScopeClause("org_unit_id"),
             userId, note, LocalDateTime.now(), id
         );
     }
 
     public Map<String, Object> statistics(Long semesterId) {
-        String semesterWhere = semesterId != null ? " WHERE semester_id = " + semesterId : "";
+        // 数据权限收窄: academic_warnings 有 org_unit_id 列, JdbcTemplate 旁路 @DataPermission 拦截器.
+        // 用 WHERE 1=1 锚定, 让 semester 过滤与 org scope 子句都能以 " AND ..." 形式拼接.
+        String scopeClause = orgScopeHelper.orgScopeClause("org_unit_id");
+        String semesterWhere = " WHERE 1=1"
+            + (semesterId != null ? " AND semester_id = " + semesterId : "")
+            + scopeClause;
 
         List<Map<String, Object>> byLevel = jdbc.queryForList(
             "SELECT warning_level AS level, COUNT(*) AS count FROM academic_warnings" + semesterWhere +
@@ -425,7 +444,9 @@ public class AcademicWarningApplicationService {
             "SELECT id, warning_type AS warningType, warning_level AS warningLevel, " +
             "description, status, handle_note AS handleNote, handled_at AS handledAt, " +
             "rule_name AS ruleName, semester_id AS semesterId, created_at AS createdAt " +
-            "FROM academic_warnings WHERE student_id = ? ORDER BY created_at DESC",
+            "FROM academic_warnings WHERE student_id = ?"
+                + orgScopeHelper.orgScopeClause("org_unit_id")
+                + " ORDER BY created_at DESC",
             studentId
         );
     }

@@ -1,5 +1,7 @@
 package com.school.management.infrastructure.extension.plugins.education.application.student;
 
+import com.school.management.infrastructure.access.OrgScopeHelper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -16,6 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -29,8 +32,19 @@ class AttendanceApplicationServiceTest {
     @Mock
     private JdbcTemplate jdbc;
 
+    @Mock
+    private OrgScopeHelper orgScopeHelper;
+
     @InjectMocks
     private AttendanceApplicationService service;
+
+    @BeforeEach
+    void setUpOrgScope() {
+        // 数据权限默认放行 — clause = "" (no-op), 单个 org 校验 = true
+        lenient().when(orgScopeHelper.orgScopeClause(anyString())).thenReturn("");
+        lenient().when(orgScopeHelper.isOrgAllowed(any())).thenReturn(true);
+        lenient().when(orgScopeHelper.isUnbounded()).thenReturn(true);
+    }
 
     @Nested
     @DisplayName("考勤记录 CRUD")

@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.school.management.application.event.TriggerService;
 import com.school.management.common.util.SecurityUtils;
+import com.school.management.infrastructure.access.OrgScopeHelper;
 import com.school.management.infrastructure.extension.plugins.education.domain.teaching.event.ExamBatchPublishedEvent;
 import static com.school.management.infrastructure.extension.plugins.education.constants.EducationTriggerPoints.EXAM_PUBLISHED;
 import com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.teaching.exam.ExamArrangementMapper;
@@ -32,6 +33,7 @@ public class ExamApplicationService {
     private final ExamArrangementMapper arrangementMapper;
     private final JdbcTemplate jdbc; // for exam_rooms and exam_invigilators join tables
     private final ApplicationEventPublisher events;
+    private final OrgScopeHelper orgScopeHelper; // S3: org-scope收窄 raw JdbcTemplate 旁路查询
 
     @Autowired(required = false)
     private TriggerService triggerService;
@@ -250,6 +252,9 @@ public class ExamApplicationService {
 
     @Transactional
     public void assignRooms(Long arrangementId, List<Map<String, Object>> rooms) {
+        // S3: exam_rooms 无 org_unit_id, 按其所属 arrangement 的 org 归属做写前校验
+        assertArrangementInScope(arrangementId);
+
         jdbc.update("DELETE FROM exam_rooms WHERE arrangement_id = ?", arrangementId);
 
         if (rooms != null) {
@@ -272,6 +277,9 @@ public class ExamApplicationService {
 
     @Transactional
     public void assignInvigilators(Long roomId, List<Number> teacherIds, Long mainTeacherId) {
+        // S3: exam_invigilators 无 org_unit_id, 经 room → arrangement 解析 org 归属做写前校验
+        assertRoomInScope(roomId);
+
         jdbc.update("DELETE FROM exam_invigilators WHERE room_id = ?", roomId);
 
         if (teacherIds != null) {
@@ -286,6 +294,46 @@ public class ExamApplicationService {
                     invId, roomId, teacherId, role
                 );
             }
+        }
+    }
+
+    /**
+     * S3: 校验某考试安排是否在当前用户的组织范围内. 不在则拒绝写操作.
+     * exam_arrangements 有 org_unit_id 列, 直接解析后交 OrgScopeHelper 判定.
+     */
+    private void assertArrangementInScope(Long arrangementId) {
+        if (arrangementId == null) return;
+        Long orgUnitId;
+        try {
+            orgUnitId = jdbc.queryForObject(
+                "SELECT org_unit_id FROM exam_arrangements WHERE id = ?", Long.class, arrangementId);
+        } catch (org.springframework.dao.EmptyResultDataAccessException e) {
+            return; // 安排不存在 — 交由后续逻辑处理, 不在此抛权限错
+        }
+        if (!orgScopeHelper.isOrgAllowed(orgUnitId)) {
+            throw new com.school.management.exception.TeachingDomainException(
+                "无权操作该考试安排（组织范围外）: " + arrangementId);
+        }
+    }
+
+    /**
+     * S3: 校验某考场是否在当前用户的组织范围内.
+     * exam_rooms 无 org_unit_id, 经 arrangement_id 关联到 exam_arrangements 解析归属.
+     */
+    private void assertRoomInScope(Long roomId) {
+        if (roomId == null) return;
+        Long orgUnitId;
+        try {
+            orgUnitId = jdbc.queryForObject(
+                "SELECT a.org_unit_id FROM exam_rooms r " +
+                "JOIN exam_arrangements a ON a.id = r.arrangement_id WHERE r.id = ?",
+                Long.class, roomId);
+        } catch (org.springframework.dao.EmptyResultDataAccessException e) {
+            return; // 考场不存在 — 不在此抛权限错
+        }
+        if (!orgScopeHelper.isOrgAllowed(orgUnitId)) {
+            throw new com.school.management.exception.TeachingDomainException(
+                "无权操作该考场（组织范围外）: " + roomId);
         }
     }
 
@@ -309,7 +357,9 @@ public class ExamApplicationService {
             "JOIN exam_arrangements a2 ON a2.id = r2.arrangement_id AND a2.batch_id = ? " +
             "WHERE a1.batch_id = ? AND a1.id < a2.id " +
             "  AND a1.exam_date = a2.exam_date " +
-            "  AND a1.start_time < a2.end_time AND a2.start_time < a1.end_time";
+            "  AND a1.start_time < a2.end_time AND a2.start_time < a1.end_time" +
+            orgScopeHelper.orgScopeClause("a1.org_unit_id") +
+            orgScopeHelper.orgScopeClause("a2.org_unit_id");
         List<Map<String, Object>> roomConflicts = jdbc.queryForList(roomConflictSql, batchId, batchId);
         for (Map<String, Object> c : roomConflicts) {
             Map<String, Object> conflict = new LinkedHashMap<>();
@@ -335,7 +385,9 @@ public class ExamApplicationService {
             "JOIN exam_arrangements a2 ON a2.id = r2.arrangement_id AND a2.batch_id = ? " +
             "WHERE a1.id < a2.id " +
             "  AND a1.exam_date = a2.exam_date " +
-            "  AND a1.start_time < a2.end_time AND a2.start_time < a1.end_time";
+            "  AND a1.start_time < a2.end_time AND a2.start_time < a1.end_time" +
+            orgScopeHelper.orgScopeClause("a1.org_unit_id") +
+            orgScopeHelper.orgScopeClause("a2.org_unit_id");
         List<Map<String, Object>> teacherConflicts = jdbc.queryForList(teacherConflictSql, batchId, batchId);
         for (Map<String, Object> c : teacherConflicts) {
             Map<String, Object> conflict = new LinkedHashMap<>();

@@ -36,6 +36,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -59,6 +60,8 @@ class GradeApplicationServiceTest {
     private ApplicationEventPublisher events;
     @Mock
     private TriggerService triggerService;
+    @Mock
+    private com.school.management.infrastructure.access.OrgScopeHelper orgScopeHelper;
 
     @InjectMocks
     private GradeApplicationService service;
@@ -66,6 +69,9 @@ class GradeApplicationServiceTest {
     @BeforeEach
     void injectTriggerService() {
         ReflectionTestUtils.setField(service, "triggerService", triggerService);
+        // 数据权限 helper: 默认放行 (空 clause / org 允许), 保持既有测试 SQL 断言不变
+        lenient().when(orgScopeHelper.orgScopeClause(anyString())).thenReturn("");
+        lenient().when(orgScopeHelper.isOrgAllowed(any())).thenReturn(true);
     }
 
     private GradeBatchPO batchWithStatus(int status) {

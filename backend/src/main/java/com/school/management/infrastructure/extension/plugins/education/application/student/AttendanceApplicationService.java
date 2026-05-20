@@ -2,6 +2,7 @@ package com.school.management.infrastructure.extension.plugins.education.applica
 
 import com.school.management.application.event.TriggerService;
 import com.school.management.common.util.SecurityUtils;
+import com.school.management.infrastructure.access.OrgScopeHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +33,7 @@ import static com.school.management.infrastructure.extension.plugins.education.c
 public class AttendanceApplicationService {
 
     private final JdbcTemplate jdbc;
+    private final OrgScopeHelper orgScopeHelper;
 
     @Autowired(required = false)
     private TriggerService triggerService;
@@ -42,6 +44,9 @@ public class AttendanceApplicationService {
     public int createRecord(Long semesterId, Long courseId, Long orgUnitId, Long studentId,
                             String dateStr, Integer period, Integer attendanceType, Integer status,
                             String checkMethod, String remark, Long recordedBy) {
+        if (!orgScopeHelper.isOrgAllowed(orgUnitId)) {
+            throw new SecurityException("无权在该组织范围内创建考勤记录: orgUnitId=" + orgUnitId);
+        }
         return jdbc.update(
             "INSERT INTO attendance_records (semester_id, course_id, org_unit_id, student_id, attendance_date, " +
             "period, attendance_type, status, check_in_time, check_method, remark, recorded_by) " +
@@ -80,6 +85,8 @@ public class AttendanceApplicationService {
         if (status != null) { sql.append(" AND ar.status = ?"); params.add(status); }
         if (attendanceType != null) { sql.append(" AND ar.attendance_type = ?"); params.add(attendanceType); }
 
+        sql.append(orgScopeHelper.orgScopeClause("ar.org_unit_id"));
+
         sql.append(" ORDER BY ar.attendance_date DESC, ar.period ASC, s.student_no ASC");
 
         int offset = (page - 1) * size;
@@ -95,14 +102,17 @@ public class AttendanceApplicationService {
         List<Map<String, Object>> students = jdbc.queryForList(
             "SELECT s.id AS studentId, s.student_no AS studentNo, u.real_name AS studentName " +
             "FROM user_student s LEFT JOIN users u ON s.user_id = u.id " +
-            "WHERE s.org_unit_id = ? AND s.student_status = 1 AND s.deleted = 0 ORDER BY s.student_no",
+            "WHERE s.org_unit_id = ? AND s.student_status = 1 AND s.deleted = 0" +
+            orgScopeHelper.orgScopeClause("s.org_unit_id") +
+            " ORDER BY s.student_no",
             orgUnitId
         );
 
         // 2. 获取已有考勤记录
         StringBuilder recordSql = new StringBuilder(
             "SELECT student_id AS studentId, status, remark, id AS recordId " +
-            "FROM attendance_records WHERE org_unit_id = ? AND attendance_date = ?"
+            "FROM attendance_records WHERE org_unit_id = ? AND attendance_date = ?" +
+            orgScopeHelper.orgScopeClause("org_unit_id")
         );
         List<Object> params = new ArrayList<>();
         params.add(orgUnitId);
@@ -139,21 +149,22 @@ public class AttendanceApplicationService {
 
     @Transactional
     public void updateRecord(Long id, Integer status, String remark) {
+        String scope = orgScopeHelper.orgScopeClause("org_unit_id");
         if (status != null && remark != null) {
-            jdbc.update("UPDATE attendance_records SET status = ?, remark = ?, updated_at = NOW() WHERE id = ?",
+            jdbc.update("UPDATE attendance_records SET status = ?, remark = ?, updated_at = NOW() WHERE id = ?" + scope,
                 status, remark, id);
         } else if (status != null) {
-            jdbc.update("UPDATE attendance_records SET status = ?, updated_at = NOW() WHERE id = ?",
+            jdbc.update("UPDATE attendance_records SET status = ?, updated_at = NOW() WHERE id = ?" + scope,
                 status, id);
         } else if (remark != null) {
-            jdbc.update("UPDATE attendance_records SET remark = ?, updated_at = NOW() WHERE id = ?",
+            jdbc.update("UPDATE attendance_records SET remark = ?, updated_at = NOW() WHERE id = ?" + scope,
                 remark, id);
         }
     }
 
     @Transactional
     public void deleteRecord(Long id) {
-        jdbc.update("DELETE FROM attendance_records WHERE id = ?", id);
+        jdbc.update("DELETE FROM attendance_records WHERE id = ?" + orgScopeHelper.orgScopeClause("org_unit_id"), id);
     }
 
     // ==================== 批量考勤 ====================
@@ -161,6 +172,9 @@ public class AttendanceApplicationService {
     @Transactional
     public int batchRecord(Long semesterId, Long orgUnitId, Long courseId, String dateStr,
                            Integer period, Integer attendanceType, List<Map<String, Object>> students) {
+        if (!orgScopeHelper.isOrgAllowed(orgUnitId)) {
+            throw new SecurityException("无权在该组织范围内批量录入考勤: orgUnitId=" + orgUnitId);
+        }
         Long recordedBy = SecurityUtils.getCurrentUserId();
         int count = 0;
 
@@ -256,6 +270,7 @@ public class AttendanceApplicationService {
         if (orgUnitId != null) { sql.append(" AND org_unit_id = ?"); params.add(orgUnitId); }
         if (startDate != null) { sql.append(" AND attendance_date >= ?"); params.add(startDate); }
         if (endDate != null) { sql.append(" AND attendance_date <= ?"); params.add(endDate); }
+        sql.append(orgScopeHelper.orgScopeClause("org_unit_id"));
         sql.append(" GROUP BY status");
 
         List<Map<String, Object>> rows = jdbc.queryForList(sql.toString(), params.toArray());
@@ -271,6 +286,7 @@ public class AttendanceApplicationService {
         if (semesterId != null) { sql.append(" AND semester_id = ?"); params.add(semesterId); }
         if (startDate != null) { sql.append(" AND attendance_date >= ?"); params.add(startDate); }
         if (endDate != null) { sql.append(" AND attendance_date <= ?"); params.add(endDate); }
+        sql.append(orgScopeHelper.orgScopeClause("org_unit_id"));
         sql.append(" GROUP BY status");
 
         List<Map<String, Object>> rows = jdbc.queryForList(sql.toString(), params.toArray());
@@ -286,6 +302,7 @@ public class AttendanceApplicationService {
         List<Object> recentParams = new ArrayList<>();
         recentParams.add(studentId);
         if (semesterId != null) { recentSql.append(" AND ar.semester_id = ?"); recentParams.add(semesterId); }
+        recentSql.append(orgScopeHelper.orgScopeClause("ar.org_unit_id"));
         recentSql.append(" ORDER BY ar.attendance_date DESC, ar.period DESC LIMIT 10");
 
         stats.put("recentRecords", jdbc.queryForList(recentSql.toString(), recentParams.toArray()));
@@ -356,6 +373,8 @@ public class AttendanceApplicationService {
         if (startDate != null) { sql.append(" AND lr.start_date >= ?"); params.add(startDate); }
         if (endDate != null) { sql.append(" AND lr.end_date <= ?"); params.add(endDate); }
 
+        sql.append(orgScopeHelper.orgScopeClause("s.org_unit_id"));
+
         sql.append(" ORDER BY lr.created_at DESC");
 
         return jdbc.queryForList(sql.toString(), params.toArray());
@@ -363,6 +382,7 @@ public class AttendanceApplicationService {
 
     @Transactional
     public void approveLeave(Long id, Long approverId, String comment) {
+        verifyLeaveOrgAllowed(id);
         jdbc.update(
             "UPDATE leave_requests SET approval_status = 1, approver_id = ?, " +
             "approval_time = NOW(), approval_comment = ? WHERE id = ?",
@@ -372,11 +392,34 @@ public class AttendanceApplicationService {
 
     @Transactional
     public void rejectLeave(Long id, Long approverId, String comment) {
+        verifyLeaveOrgAllowed(id);
         jdbc.update(
             "UPDATE leave_requests SET approval_status = 2, approver_id = ?, " +
             "approval_time = NOW(), approval_comment = ? WHERE id = ?",
             approverId, comment, id
         );
+    }
+
+    /**
+     * leave_requests 表无 org_unit_id 列 — 写操作无法直接拼 scope 子句.
+     * 通过 student_id 关联 user_student 解析归属 org, 再用 OrgScopeHelper 预校验.
+     */
+    private void verifyLeaveOrgAllowed(Long leaveRequestId) {
+        if (orgScopeHelper.isUnbounded()) {
+            return;
+        }
+        Long orgUnitId;
+        try {
+            orgUnitId = jdbc.queryForObject(
+                "SELECT s.org_unit_id FROM leave_requests lr " +
+                "LEFT JOIN user_student s ON lr.student_id = s.id WHERE lr.id = ?",
+                Long.class, leaveRequestId);
+        } catch (EmptyResultDataAccessException e) {
+            throw new SecurityException("请假申请不存在: id=" + leaveRequestId);
+        }
+        if (!orgScopeHelper.isOrgAllowed(orgUnitId)) {
+            throw new SecurityException("无权审批该组织范围内的请假申请: leaveRequestId=" + leaveRequestId);
+        }
     }
 
     public List<Map<String, Object>> pendingLeaves() {
@@ -388,8 +431,9 @@ public class AttendanceApplicationService {
             "s.name AS studentName, s.student_no AS studentNo, s.org_unit_id AS classId " +
             "FROM leave_requests lr " +
             "LEFT JOIN user_student s ON lr.student_id = s.id " +
-            "WHERE lr.approval_status = 0 " +
-            "ORDER BY lr.created_at ASC"
+            "WHERE lr.approval_status = 0" +
+            orgScopeHelper.orgScopeClause("s.org_unit_id") +
+            " ORDER BY lr.created_at ASC"
         );
     }
 
@@ -411,6 +455,7 @@ public class AttendanceApplicationService {
         if (orgUnitId != null) { sql.append(" AND ar.org_unit_id = ?"); params.add(orgUnitId); }
         if (startDate != null) { sql.append(" AND ar.attendance_date >= ?"); params.add(startDate); }
         if (endDate != null) { sql.append(" AND ar.attendance_date <= ?"); params.add(endDate); }
+        sql.append(orgScopeHelper.orgScopeClause("ar.org_unit_id"));
         sql.append(" ORDER BY ar.attendance_date DESC, sc.name, s.student_no");
 
         return jdbc.queryForList(sql.toString(), params.toArray());

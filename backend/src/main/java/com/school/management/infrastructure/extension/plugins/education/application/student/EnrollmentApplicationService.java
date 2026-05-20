@@ -2,6 +2,7 @@ package com.school.management.infrastructure.extension.plugins.education.applica
 
 import com.school.management.application.event.TriggerService;
 import com.school.management.common.util.SecurityUtils;
+import com.school.management.infrastructure.access.OrgScopeHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,7 @@ import static com.school.management.infrastructure.extension.plugins.education.c
 public class EnrollmentApplicationService {
 
     private final JdbcTemplate jdbc;
+    private final OrgScopeHelper orgScopeHelper;
 
     @Autowired(required = false)
     private TriggerService triggerService;
@@ -52,6 +54,8 @@ public class EnrollmentApplicationService {
         if (year != null) { sql.append(" AND ep.academic_year = ?"); params.add(year); }
         if (majorId != null) { sql.append(" AND ep.major_id = ?"); params.add(majorId); }
         if (status != null) { sql.append(" AND ep.status = ?"); params.add(status); }
+        String scope = orgScopeHelper.orgScopeClause("ep.org_unit_id");
+        sql.append(scope);
 
         String countSql = "SELECT COUNT(*) FROM enrollment_plans ep WHERE ep.deleted = 0";
         StringBuilder countWhere = new StringBuilder();
@@ -59,6 +63,7 @@ public class EnrollmentApplicationService {
         if (year != null) { countWhere.append(" AND ep.academic_year = ?"); countParams.add(year); }
         if (majorId != null) { countWhere.append(" AND ep.major_id = ?"); countParams.add(majorId); }
         if (status != null) { countWhere.append(" AND ep.status = ?"); countParams.add(status); }
+        countWhere.append(scope);
         Integer total = jdbc.queryForObject(countSql + countWhere, Integer.class, countParams.toArray());
 
         sql.append(" ORDER BY ep.academic_year DESC, ep.created_at DESC");
@@ -107,7 +112,7 @@ public class EnrollmentApplicationService {
         jdbc.update(
             "UPDATE enrollment_plans SET academic_year=?, major_id=?, major_direction_id=?, " +
             "org_unit_id=?, planned_count=?, enrollment_target=?, remark=?, updated_at=NOW() " +
-            "WHERE id=? AND deleted=0",
+            "WHERE id=? AND deleted=0" + orgScopeHelper.orgScopeClause("org_unit_id"),
             academicYear, majorId, majorDirectionId, orgUnitId,
             plannedCount, enrollmentTarget, remark, id
         );
@@ -115,13 +120,15 @@ public class EnrollmentApplicationService {
 
     @Transactional
     public void deletePlan(Long id) {
-        jdbc.update("UPDATE enrollment_plans SET deleted=1, updated_at=NOW() WHERE id=?", id);
+        jdbc.update("UPDATE enrollment_plans SET deleted=1, updated_at=NOW() WHERE id=?"
+            + orgScopeHelper.orgScopeClause("org_unit_id"), id);
     }
 
     @Transactional
     public void publishPlan(Long id) {
         jdbc.update(
-            "UPDATE enrollment_plans SET status=1, updated_at=NOW() WHERE id=? AND status=0 AND deleted=0",
+            "UPDATE enrollment_plans SET status=1, updated_at=NOW() WHERE id=? AND status=0 AND deleted=0"
+            + orgScopeHelper.orgScopeClause("org_unit_id"),
             id
         );
     }
@@ -136,6 +143,7 @@ public class EnrollmentApplicationService {
         );
         List<Object> params = new ArrayList<>();
         if (year != null) { sql.append(" AND academic_year=?"); params.add(year); }
+        sql.append(orgScopeHelper.orgScopeClause("org_unit_id"));
 
         Map<String, Object> totals = jdbc.queryForMap(sql.toString(), params.toArray());
 
@@ -150,6 +158,7 @@ public class EnrollmentApplicationService {
         );
         List<Object> majorParams = new ArrayList<>();
         if (year != null) { majorSql.append(" AND ep.academic_year=?"); majorParams.add(year); }
+        majorSql.append(orgScopeHelper.orgScopeClause("ep.org_unit_id"));
         majorSql.append(" GROUP BY ep.major_id, m.name ORDER BY m.name");
 
         List<Map<String, Object>> byMajor = jdbc.queryForList(majorSql.toString(), majorParams.toArray());
@@ -336,6 +345,10 @@ public class EnrollmentApplicationService {
         Map<String, Object> out = new LinkedHashMap<>();
         if (orgUnitId == null) {
             out.put("error", "请选择分配班级");
+            return out;
+        }
+        if (!orgScopeHelper.isOrgAllowed(orgUnitId)) {
+            out.put("error", "无权限将学生分配到该组织");
             return out;
         }
 

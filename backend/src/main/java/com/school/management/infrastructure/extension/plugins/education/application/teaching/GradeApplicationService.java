@@ -36,6 +36,7 @@ public class GradeApplicationService {
     private final StudentGradeMapper gradeMapper;
     private final JdbcTemplate jdbc; // for complex queries with dynamic filters
     private final org.springframework.context.ApplicationEventPublisher events;
+    private final com.school.management.infrastructure.access.OrgScopeHelper orgScopeHelper;
 
     @Autowired(required = false)
     private TriggerService triggerService;
@@ -277,7 +278,13 @@ public class GradeApplicationService {
         po.setTaskId(toLong(data.get("taskId")));
         po.setCourseId(toLong(data.get("courseId")));
         po.setStudentId(toLong(data.get("studentId")));
-        po.setOrgUnitId(toLong(data.get("orgUnitId")));
+        Long orgUnitId = toLong(data.get("orgUnitId"));
+        // 数据权限: 拒绝向当前用户组织范围外写入成绩
+        if (!orgScopeHelper.isOrgAllowed(orgUnitId)) {
+            throw new com.school.management.exception.TeachingDomainException(
+                    "无权在该组织范围内录入成绩: orgUnitId=" + orgUnitId);
+        }
+        po.setOrgUnitId(orgUnitId);
         po.setTotalScore(toBigDecimal(data.get("totalScore")));
         po.setGradePoint(toBigDecimal(data.get("gradePoint")));
         po.setPassed(toIntOrNull(data.get("passed")));
@@ -295,6 +302,12 @@ public class GradeApplicationService {
         StudentGradePO po = gradeMapper.selectById(gradeId);
         if (po == null) throw new com.school.management.exception.TeachingDomainException(
                 "成绩记录不存在: " + gradeId);
+
+        // 数据权限: 拒绝修改不在当前用户组织范围内的成绩记录
+        if (!orgScopeHelper.isOrgAllowed(po.getOrgUnitId())) {
+            throw new com.school.management.exception.TeachingDomainException(
+                    "无权修改该成绩记录: " + gradeId);
+        }
 
         po.setTotalScore(toBigDecimal(data.get("totalScore")));
         po.setGradePoint(toBigDecimal(data.get("gradePoint")));
@@ -327,7 +340,13 @@ public class GradeApplicationService {
             po.setCourseId(courseId != null ? courseId : defaultCourseId);
             po.setStudentId(toLong(grade.get("studentId")));
             Long orgUnitId = toLong(grade.get("orgUnitId"));
-            po.setOrgUnitId(orgUnitId != null ? orgUnitId : defaultOrgUnitId);
+            Long effectiveOrgUnitId = orgUnitId != null ? orgUnitId : defaultOrgUnitId;
+            // 数据权限: 拒绝向当前用户组织范围外批量写入成绩
+            if (!orgScopeHelper.isOrgAllowed(effectiveOrgUnitId)) {
+                throw new com.school.management.exception.TeachingDomainException(
+                        "无权在该组织范围内录入成绩: orgUnitId=" + effectiveOrgUnitId);
+            }
+            po.setOrgUnitId(effectiveOrgUnitId);
             BigDecimal score = toBigDecimal(grade.get("totalScore"));
             po.setTotalScore(score);
             po.setGradeLevel(score != null ? calcGradeLevel(score) : null);
@@ -370,6 +389,7 @@ public class GradeApplicationService {
                 sql.append(" AND g.course_id = ?");
                 params.add(courseId);
             }
+            sql.append(orgScopeHelper.orgScopeClause("g.org_unit_id"));
             sql.append(" ORDER BY g.created_at DESC");
 
             return jdbc.queryForList(sql.toString(), params.toArray());
@@ -395,6 +415,7 @@ public class GradeApplicationService {
                 sql.append(" AND course_id = ?");
                 params.add(courseId);
             }
+            sql.append(orgScopeHelper.orgScopeClause("org_unit_id"));
             sql.append(" ORDER BY created_at DESC");
             return jdbc.queryForList(sql.toString(), params.toArray());
         }
@@ -436,6 +457,7 @@ public class GradeApplicationService {
             where.append(" AND course_id = ?");
             params.add(courseId);
         }
+        where.append(orgScopeHelper.orgScopeClause("org_unit_id"));
 
         String statsSql = "SELECT " +
             "COUNT(*) AS totalCount, " +
@@ -499,6 +521,7 @@ public class GradeApplicationService {
             sql.append(joinStudents ? " AND g.semester_id = ?" : " AND semester_id = ?");
             params.add(semesterId);
         }
+        sql.append(orgScopeHelper.orgScopeClause(joinStudents ? "g.org_unit_id" : "org_unit_id"));
 
         sql.append(joinStudents ? " GROUP BY g.student_id, s.name, s.student_no" : " GROUP BY student_id");
         sql.append(" ORDER BY totalScore DESC");
@@ -530,6 +553,7 @@ public class GradeApplicationService {
         params.add(semesterId);
         if (orgUnitId != null) { sql.append(" AND sg.org_unit_id = ?"); params.add(orgUnitId); }
         if (courseId != null) { sql.append(" AND sg.course_id = ?"); params.add(courseId); }
+        sql.append(orgScopeHelper.orgScopeClause("sg.org_unit_id"));
         sql.append(" ORDER BY sc.name, s.student_no");
 
         List<Map<String, Object>> grades = jdbc.queryForList(sql.toString(), params.toArray());
@@ -686,6 +710,12 @@ public class GradeApplicationService {
     public Map<String, Object> importGrades(Long batchId, InputStream inputStream) throws IOException {
         GradeBatchPO batch = batchMapper.selectById(batchId);
         if (batch == null) throw com.school.management.exception.TeachingDomainException.gradeBatchNotFound(batchId);
+
+        // 数据权限: 拒绝向当前用户组织范围外的批次导入成绩
+        if (!orgScopeHelper.isOrgAllowed(batch.getOrgUnitId())) {
+            throw new com.school.management.exception.TeachingDomainException(
+                    "无权向该批次导入成绩: batchId=" + batchId);
+        }
 
         int successCount = 0;
         int errorCount = 0;
@@ -955,7 +985,8 @@ public class GradeApplicationService {
         String sql = "SELECT sg.student_id, gb.grade_type, sg.total_score, sg.org_unit_id " +
                 "FROM student_grades sg JOIN grade_batches gb ON sg.batch_id = gb.id " +
                 "WHERE gb.semester_id = ? AND sg.course_id = ? AND sg.deleted = 0 " +
-                "AND gb.grade_type IN (1,2,3)";
+                "AND gb.grade_type IN (1,2,3)" +
+                orgScopeHelper.orgScopeClause("sg.org_unit_id");
         List<Map<String, Object>> scores = jdbc.queryForList(sql, semesterId, courseId);
 
         // Group by student
