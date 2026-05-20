@@ -21,7 +21,7 @@ public class AccessRelationHistoryController {
 
     /** 查某 subject (人) 的所有关系变更. */
     @GetMapping("/by-subject")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('system:audit:view')")
     public Result<List<Map<String, Object>>> bySubject(
             @RequestParam String subjectType,
             @RequestParam Long subjectId,
@@ -31,7 +31,7 @@ public class AccessRelationHistoryController {
 
     /** 查某 resource (东西) 的所有关系变更. */
     @GetMapping("/by-resource")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('system:audit:view')")
     public Result<List<Map<String, Object>>> byResource(
             @RequestParam String resourceType,
             @RequestParam Long resourceId,

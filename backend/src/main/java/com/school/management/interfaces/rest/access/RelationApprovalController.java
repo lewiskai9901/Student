@@ -3,6 +3,7 @@ package com.school.management.interfaces.rest.access;
 import com.school.management.application.access.AccessRelationService;
 import com.school.management.application.access.RelationApprovalService;
 import com.school.management.common.result.Result;
+import com.school.management.common.util.SecurityUtils;
 import com.school.management.domain.access.model.entity.PendingRelationApproval;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -49,14 +50,16 @@ public class RelationApprovalController {
         return Result.success(null);
     }
 
+    /** 撤销自己发起的待审批申请 — requesterId 取当前登录用户, 不信任请求体 (防冒充). */
     @PostMapping("/{id}/cancel")
     @PreAuthorize("isAuthenticated()")
-    public Result<Void> cancel(@PathVariable Long id, @RequestBody CancelRequest req) {
-        approvalService.cancel(id, req.getRequesterId());
+    public Result<Void> cancel(@PathVariable Long id) {
+        Long requesterId = SecurityUtils.getCurrentUserId();
+        if (requesterId == null) return Result.error("未登录");
+        approvalService.cancel(id, requesterId);
         return Result.success(null);
     }
 
     @lombok.Data public static class ApproveRequest { private Long approverId; }
     @lombok.Data public static class RejectRequest { private Long approverId; private String reason; }
-    @lombok.Data public static class CancelRequest { private Long requesterId; }
 }

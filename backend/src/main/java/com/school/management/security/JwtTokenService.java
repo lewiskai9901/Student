@@ -137,10 +137,17 @@ public class JwtTokenService {
                 return false;
             }
 
-            Jwts.parser()
+            Claims claims = Jwts.parser()
                     .verifyWith(getSigningKey())
                     .build()
-                    .parseClaimsJws(token);
+                    .parseClaimsJws(token)
+                    .getPayload();
+
+            // 拒绝非 access_token — 防 refresh token (30 天) 被当作 access token 直接打 API
+            if (!"access_token".equals(claims.get("tokenType", String.class))) {
+                log.warn("JWT令牌类型非法: 期望 access_token, 实际 {}", claims.get("tokenType", String.class));
+                return false;
+            }
 
             // 检查是否在黑名单中
             return !isTokenBlacklisted(token);
