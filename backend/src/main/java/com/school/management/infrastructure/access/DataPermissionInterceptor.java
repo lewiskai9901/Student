@@ -252,7 +252,7 @@ public class DataPermissionInterceptor implements Interceptor {
             // Build condition for this role
             ParameterizedCondition roleCond = buildSingleRoleCondition(
                     dataScope, annotation, moduleConfig, userContext, tenantId,
-                    effectiveOrgId, effectiveOrgPath, globalParamIdx);
+                    effectiveOrgId, effectiveOrgPath, globalParamIdx, sr.getRoleId());
 
             if (roleCond != null && !roleCond.sql.isEmpty()) {
                 roleSqls.add(roleCond.sql);
@@ -327,7 +327,7 @@ public class DataPermissionInterceptor implements Interceptor {
     private ParameterizedCondition buildSingleRoleCondition(
             DataScope scope, DataPermission annotation, DataModulePO moduleConfig,
             UserContext userContext, Long tenantId,
-            Long orgId, String orgPath, int paramOffset) {
+            Long orgId, String orgPath, int paramOffset, Long roleId) {
 
         String alias = annotation.tableAlias().isEmpty() ? "" : sanitizeIdentifier(annotation.tableAlias()) + ".";
         ParameterizedCondition cond = new ParameterizedCondition();
@@ -378,9 +378,11 @@ public class DataPermissionInterceptor implements Interceptor {
                 break;
 
             case CUSTOM:
-                // CUSTOM scope: fall back to legacy merged scope approach for this role
+                // CUSTOM scope: fall back to legacy merged scope approach for this role.
+                // 必须用真实 roleId — 历史 bug 曾误传 paramOffset (参数序号) 导致
+                // CUSTOM 范围解析到错误角色 / 空范围 (安全审计 B3, 2026-05-20).
                 MergedDataScope mergedScope = dataPermissionPolicyService.getMergedScope(
-                        tenantId, Collections.singletonList(Long.valueOf(paramOffset)), annotation.module());
+                        tenantId, Collections.singletonList(roleId), annotation.module());
                 if (mergedScope != null) {
                     return buildCustomCondition(mergedScope, alias, orgField, tenantId, paramOffset);
                 }
@@ -607,7 +609,17 @@ public class DataPermissionInterceptor implements Interceptor {
         return sql.substring(0, tailPos) + " WHERE " + filterCondition + sql.substring(tailPos);
     }
 
+    /** mapperId → 解析后的 @DataPermission 注解缓存 (安全审计 B2: 避免重复反射 + 失败只 log 一次). */
+    private final java.util.Map<String, java.util.Optional<DataPermission>> annotationCache =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
     private DataPermission getDataPermissionAnnotation(String mapperId) {
+        return annotationCache
+                .computeIfAbsent(mapperId, this::resolveDataPermissionAnnotation)
+                .orElse(null);
+    }
+
+    private java.util.Optional<DataPermission> resolveDataPermissionAnnotation(String mapperId) {
         try {
             int lastDot = mapperId.lastIndexOf('.');
             String className = mapperId.substring(0, lastDot);
@@ -620,15 +632,20 @@ public class DataPermissionInterceptor implements Interceptor {
                 if (method.getName().equals(methodName)) {
                     DataPermission methodAnnotation = method.getAnnotation(DataPermission.class);
                     if (methodAnnotation != null) {
-                        return methodAnnotation;
+                        return java.util.Optional.of(methodAnnotation);
                     }
                 }
             }
 
-            return classAnnotation;
+            return java.util.Optional.ofNullable(classAnnotation);
         } catch (Exception e) {
-            log.debug("Failed to get DataPermission annotation for {}: {}", mapperId, e.getMessage());
-            return null;
+            // 安全审计 B2 (2026-05-20): 注解解析失败不再静默 debug — 升到 ERROR.
+            // 失败意味着无法判定该 mapper 是否需数据权限过滤; mapper class 已由
+            // MyBatis 加载, 正常不会失败. 真失败需人工排查 (classloader/插件热加载).
+            // (彻底 fail-closed 需启动期预解析全部注解, 留后续.)
+            log.error("[DataPermission] 注解解析失败, mapper={} — 无法判定该查询是否需数据权限过滤: {}",
+                    mapperId, e.getMessage(), e);
+            return java.util.Optional.empty();
         }
     }
 
