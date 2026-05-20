@@ -60,7 +60,6 @@ public class UniversalPlace extends AggregateRoot<Long> {
     /**
      * 层级深度（0表示根节点）
      */
-    @Builder.Default
     private Integer level = 0;
 
     // ==================== 容量 ====================
@@ -73,7 +72,6 @@ public class UniversalPlace extends AggregateRoot<Long> {
     /**
      * 当前占用数
      */
-    @Builder.Default
     private Integer currentOccupancy = 0;
 
     // ==================== 归属 ====================
@@ -100,7 +98,6 @@ public class UniversalPlace extends AggregateRoot<Long> {
     /**
      * 状态
      */
-    @Builder.Default
     private PlaceStatus status = PlaceStatus.NORMAL;
 
     // ==================== 扩展属性 ====================
@@ -108,7 +105,6 @@ public class UniversalPlace extends AggregateRoot<Long> {
     /**
      * 扩展属性值
      */
-    @Builder.Default
     private Map<String, Object> attributes = new HashMap<>();
 
     // ==================== 构造 ====================
