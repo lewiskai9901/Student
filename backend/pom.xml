@@ -432,17 +432,20 @@
                         <rule>
                             <element>BUNDLE</element>
                             <limits>
-                                <!-- 行覆盖率要求 15% (逐步提升) -->
+                                <!--
+                                  N4 (2026-05-20): 阈值锁定到真实覆盖的安全 floor.
+                                  实测 LINE 22.97% / BRANCH 20.12% (N4.1 补 392 单测后),
+                                  阈值留 ~3pp 余量防正常 PR 误破闸. 逐步提升.
+                                -->
                                 <limit>
                                     <counter>LINE</counter>
                                     <value>COVEREDRATIO</value>
-                                    <minimum>0.15</minimum>
+                                    <minimum>0.20</minimum>
                                 </limit>
-                                <!-- 分支覆盖率要求 10% -->
                                 <limit>
                                     <counter>BRANCH</counter>
                                     <value>COVEREDRATIO</value>
-                                    <minimum>0.10</minimum>
+                                    <minimum>0.17</minimum>
                                 </limit>
                             </limits>
                         </rule>
