@@ -2,6 +2,7 @@ package com.school.management.interfaces.rest.system;
 
 import com.school.management.application.event.TriggerPipelineHealthCheck;
 import com.school.management.application.plugin.PluginLifecycleService;
+import com.school.management.application.system.PluginPlatformApplicationService;
 import com.school.management.common.annotation.PublicEndpoint;
 import com.school.management.common.result.Result;
 import com.school.management.infrastructure.casbin.CasbinAccess;
@@ -14,7 +15,6 @@ import com.school.management.infrastructure.extension.TargetModeResolver;
 import com.school.management.infrastructure.extension.event.PermissionsRefreshedEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -29,7 +29,7 @@ import java.util.*;
 public class PluginPlatformController {
 
     private final PluginPackageRegistrar packageRegistrar;
-    private final JdbcTemplate jdbc;
+    private final PluginPlatformApplicationService pluginPlatformService;
     private final ApplicationEventPublisher eventPublisher;
     private final com.school.management.infrastructure.extension.TenantPluginService tenantPluginService;
     private final PolicyRegistry policyRegistry;
@@ -49,22 +49,14 @@ public class PluginPlatformController {
     @CasbinAccess(resource = "plugin-platform", action = "view")
     public Result<Map<String, Object>> overview() {
         // 加载 plugin_packages
-        List<Map<String, Object>> packages = jdbc.queryForList(
-            "SELECT industry_code, industry_name, version, depends_on, manifest_class, " +
-            "enabled, uninstall_policy, installed_at, last_started_at " +
-            "FROM plugin_packages ORDER BY (industry_code='CORE') DESC, industry_code");
+        List<Map<String, Object>> packages = pluginPlatformService.listPluginPackages();
 
         // 各表按 industry 分组统计
-        Map<String, Long> typeByIndustry = groupCount(
-            "SELECT COALESCE(industry,'UNKNOWN') k, COUNT(*) c FROM entity_type_configs WHERE deleted=0 GROUP BY industry");
-        Map<String, Long> relationByIndustry = groupCount(
-            "SELECT COALESCE(industry,'UNKNOWN') k, COUNT(*) c FROM relation_types WHERE is_enabled=1 GROUP BY industry");
-        Map<String, Long> eventByIndustry = groupCount(
-            "SELECT COALESCE(industry,'UNKNOWN') k, COUNT(*) c FROM entity_event_types WHERE deleted=0 AND is_enabled=1 GROUP BY industry");
-        Map<String, Long> roleByIndustry = groupCount(
-            "SELECT COALESCE(industry,'UNKNOWN') k, COUNT(*) c FROM roles WHERE deleted=0 GROUP BY industry");
-        Map<String, Long> permByIndustry = groupCount(
-            "SELECT COALESCE(industry,'UNKNOWN') k, COUNT(*) c FROM permissions WHERE deleted=0 GROUP BY industry");
+        Map<String, Long> typeByIndustry = pluginPlatformService.countTypesByIndustry();
+        Map<String, Long> relationByIndustry = pluginPlatformService.countRelationsByIndustry();
+        Map<String, Long> eventByIndustry = pluginPlatformService.countEventsByIndustry();
+        Map<String, Long> roleByIndustry = pluginPlatformService.countRolesByIndustry();
+        Map<String, Long> permByIndustry = pluginPlatformService.countPermissionsByIndustry();
 
         // 组装 industries
         List<Map<String, Object>> industries = new ArrayList<>();
@@ -99,28 +91,11 @@ public class PluginPlatformController {
         summary.put("permissions", sumOf(permByIndustry));
         summary.put("industries", (long) industries.size());
         // A+ 第二轮新扩展点计数
-        Long dataScopeDims = 0L;
-        try {
-            dataScopeDims = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM data_scope_dims WHERE is_enabled=1", Long.class);
-        } catch (Exception ignored) {
-            // 表可能未就绪 (老环境) — 兜底 0
-        }
-        summary.put("dataScopes", dataScopeDims != null ? dataScopeDims : 0L);
+        summary.put("dataScopes", pluginPlatformService.countEnabledDataScopeDims());
         summary.put("policies", (long) policyRegistry.getPolicies().size());
         // M5: 触发点 / 订阅规则 / TargetMode SPI 计数
-        Long tpCount = null;
-        try {
-            tpCount = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM trigger_points WHERE deleted=0", Long.class);
-        } catch (Exception ignored) { /* 表未就绪兜底 */ }
-        Long ruleCount = null;
-        try {
-            ruleCount = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM msg_subscription_rules WHERE is_enabled=1 AND deleted=0", Long.class);
-        } catch (Exception ignored) { /* 表未就绪兜底 */ }
-        summary.put("triggerPoints", tpCount != null ? tpCount : 0L);
-        summary.put("subscriptionRules", ruleCount != null ? ruleCount : 0L);
+        summary.put("triggerPoints", pluginPlatformService.countTriggerPoints());
+        summary.put("subscriptionRules", pluginPlatformService.countSubscriptionRules());
         summary.put("targetModes", (long) targetModeResolvers.size());
 
         Map<String, Object> result = new LinkedHashMap<>();
@@ -230,14 +205,6 @@ public class PluginPlatformController {
         return "UNKNOWN";
     }
 
-    private Map<String, Long> groupCount(String sql) {
-        Map<String, Long> m = new HashMap<>();
-        for (Map<String, Object> row : jdbc.queryForList(sql)) {
-            m.put((String) row.get("k"), ((Number) row.get("c")).longValue());
-        }
-        return m;
-    }
-
     private Long sumOf(Map<String, Long> m) {
         return m.values().stream().mapToLong(Long::longValue).sum();
     }
@@ -292,29 +259,19 @@ public class PluginPlatformController {
     public Result<Map<String, Object>> health(@PathVariable String code) {
         Map<String, Object> pkg;
         try {
-            pkg = jdbc.queryForMap(
-                "SELECT industry_code, industry_name, version, enabled, installed_at, " +
-                "       last_started_at, manifest_class, depends_on " +
-                "FROM plugin_packages WHERE industry_code=?", code);
+            pkg = pluginPlatformService.getPluginPackage(code);
         } catch (Exception e) {
             return Result.error("插件不存在: " + code);
         }
 
         // ─── 贡献计数 ───
-        Long types = safeCount(
-            "SELECT COUNT(*) FROM entity_type_configs WHERE industry=? AND deleted=0", code);
-        Long relations = safeCount(
-            "SELECT COUNT(*) FROM relation_types WHERE industry=? AND is_enabled=1", code);
-        Long events = safeCount(
-            "SELECT COUNT(*) FROM entity_event_types WHERE industry=? AND deleted=0", code);
-        Long roles = safeCount(
-            "SELECT COUNT(*) FROM roles WHERE industry=? AND deleted=0", code);
-        Long permissions = safeCount(
-            "SELECT COUNT(*) FROM permissions WHERE industry=? AND deleted=0", code);
-        Long triggerPoints = safeCount(
-            "SELECT COUNT(*) FROM event_triggers WHERE industry=? AND deleted=0 AND is_enabled=1", code);
-        Long dataScopes = safeCount(
-            "SELECT COUNT(*) FROM data_scope_dims WHERE industry=? AND is_enabled=1", code);
+        Long types = pluginPlatformService.countTypesOfPlugin(code);
+        Long relations = pluginPlatformService.countRelationsOfPlugin(code);
+        Long events = pluginPlatformService.countEventsOfPlugin(code);
+        Long roles = pluginPlatformService.countRolesOfPlugin(code);
+        Long permissions = pluginPlatformService.countPermissionsOfPlugin(code);
+        Long triggerPoints = pluginPlatformService.countTriggerPointsOfPlugin(code);
+        Long dataScopes = pluginPlatformService.countDataScopesOfPlugin(code);
 
         // 菜单 / 策略: 按 manifestClass 所在包反推 (非 DB 数据, 从 registrar 取)
         long menus = countMenusOfPlugin(code);
@@ -335,21 +292,11 @@ public class PluginPlatformController {
 
         // ─── 贡献样本 (前 3 条) ───
         Map<String, List<String>> samples = new LinkedHashMap<>();
-        samples.put("types", queryStringList(
-            "SELECT CONCAT(type_code, ' ', COALESCE(type_name, '')) " +
-            "FROM entity_type_configs WHERE industry=? AND deleted=0 LIMIT 3", code));
-        samples.put("relations", queryStringList(
-            "SELECT CONCAT(relation_code, ' ', COALESCE(relation_name, '')) " +
-            "FROM relation_types WHERE industry=? AND is_enabled=1 LIMIT 3", code));
-        samples.put("events", queryStringList(
-            "SELECT CONCAT(type_code, ' ', COALESCE(type_name, '')) " +
-            "FROM entity_event_types WHERE industry=? AND deleted=0 LIMIT 3", code));
-        samples.put("permissions", queryStringList(
-            "SELECT CONCAT(permission_code, ' ', COALESCE(permission_name, '')) " +
-            "FROM permissions WHERE industry=? AND deleted=0 LIMIT 3", code));
-        samples.put("roles", queryStringList(
-            "SELECT CONCAT(role_code, ' ', COALESCE(role_name, '')) " +
-            "FROM roles WHERE industry=? AND deleted=0 LIMIT 3", code));
+        samples.put("types", pluginPlatformService.sampleTypesOfPlugin(code));
+        samples.put("relations", pluginPlatformService.sampleRelationsOfPlugin(code));
+        samples.put("events", pluginPlatformService.sampleEventsOfPlugin(code));
+        samples.put("permissions", pluginPlatformService.samplePermissionsOfPlugin(code));
+        samples.put("roles", pluginPlatformService.sampleRolesOfPlugin(code));
 
         // ─── 依赖链 ───
         List<Map<String, Object>> dependencies = new ArrayList<>();
@@ -364,9 +311,7 @@ public class PluginPlatformController {
                     Map<String, Object> dep = new LinkedHashMap<>();
                     dep.put("code", depCode);
                     try {
-                        Map<String, Object> depPkg = jdbc.queryForMap(
-                            "SELECT version, enabled FROM plugin_packages WHERE industry_code=?",
-                            depCode);
+                        Map<String, Object> depPkg = pluginPlatformService.getDependencyPackage(depCode);
                         int depEnabled = ((Number) depPkg.getOrDefault("enabled", 0)).intValue();
                         dep.put("version", depPkg.get("version"));
                         dep.put("enabled", depEnabled == 1);
@@ -423,23 +368,6 @@ public class PluginPlatformController {
         return Result.success(health);
     }
 
-    private Long safeCount(String sql, Object... args) {
-        try {
-            Long c = jdbc.queryForObject(sql, Long.class, args);
-            return c != null ? c : 0L;
-        } catch (Exception e) {
-            return 0L;
-        }
-    }
-
-    private List<String> queryStringList(String sql, Object... args) {
-        try {
-            return jdbc.queryForList(sql, String.class, args);
-        } catch (Exception e) {
-            return List.of();
-        }
-    }
-
     /** 根据 MenuContributionPlugin bean 的类路径推断所属插件, 累加其顶级菜单数. */
     private long countMenusOfPlugin(String code) {
         try {
@@ -483,37 +411,16 @@ public class PluginPlatformController {
      */
     @PostMapping("/{code}/uninstall")
     @CasbinAccess(resource = "admin", action = "access")
-    @org.springframework.transaction.annotation.Transactional
     public Result<Map<String, Object>> uninstall(@PathVariable String code) {
         if ("CORE".equalsIgnoreCase(code)) {
             return Result.error("CORE 包不可卸载");
         }
         // 检查插件包存在
-        Integer exists = jdbc.queryForObject(
-            "SELECT COUNT(*) FROM plugin_packages WHERE industry_code=?",
-            Integer.class, code);
-        if (exists == null || exists == 0) {
+        if (!pluginPlatformService.pluginPackageExists(code)) {
             return Result.error("插件不存在: " + code);
         }
 
-        Map<String, Integer> cascadeCounts = new LinkedHashMap<>();
-        // 贡献表列表 (表 -> 软删 SQL)
-        java.util.List<String[]> tables = java.util.List.of(
-            new String[]{"permissions",          "UPDATE permissions SET deleted=1, status=0 WHERE industry=? AND deleted=0"},
-            new String[]{"roles",                "UPDATE roles SET deleted=1, status=0 WHERE industry=? AND deleted=0"},
-            new String[]{"entity_type_configs",  "UPDATE entity_type_configs SET deleted=1, is_enabled=0 WHERE industry=? AND deleted=0"},
-            new String[]{"entity_event_types",   "UPDATE entity_event_types SET deleted=1, is_enabled=0 WHERE industry=? AND deleted=0"},
-            new String[]{"trigger_points",       "UPDATE trigger_points SET deleted=1, is_enabled=0 WHERE industry=? AND deleted=0"},
-            new String[]{"event_triggers",       "UPDATE event_triggers SET deleted=1, is_enabled=0 WHERE industry=? AND deleted=0"},
-            new String[]{"relation_types",       "UPDATE relation_types SET is_enabled=0 WHERE industry=? AND is_enabled=1"},
-            new String[]{"data_scope_dims",      "UPDATE data_scope_dims SET is_enabled=0 WHERE industry=? AND is_enabled=1"}
-        );
-        for (String[] t : tables) {
-            int n = jdbc.update(t[1], code);
-            cascadeCounts.put(t[0], n);
-        }
-        // 插件包本身
-        jdbc.update("UPDATE plugin_packages SET enabled=0 WHERE industry_code=?", code);
+        Map<String, Integer> cascadeCounts = pluginPlatformService.uninstallPlugin(code);
 
         eventPublisher.publishEvent(new PermissionsRefreshedEvent(this, "UNINSTALL:" + code));
 
@@ -604,9 +511,7 @@ public class PluginPlatformController {
     @GetMapping("/dependency-graph")
     @CasbinAccess(resource = "admin", action = "access")
     public Result<Map<String, Object>> dependencyGraph() {
-        List<Map<String, Object>> pkgs = jdbc.queryForList(
-            "SELECT industry_code, industry_name, version, enabled, depends_on " +
-            "  FROM plugin_packages ORDER BY (industry_code='CORE') DESC, industry_code");
+        List<Map<String, Object>> pkgs = pluginPlatformService.listPackagesForDependencyGraph();
 
         List<Map<String, Object>> nodes = new ArrayList<>();
         List<Map<String, Object>> edges = new ArrayList<>();
@@ -690,14 +595,7 @@ public class PluginPlatformController {
     @GetMapping("/trigger-points")
     @CasbinAccess(resource = "admin", action = "access")
     public Result<List<Map<String, Object>>> triggerPoints() {
-        return Result.success(jdbc.queryForList(
-            "SELECT tp.module_code, tp.module_name, tp.point_code, tp.point_name, " +
-            "       tp.description, tp.context_schema, tp.is_enabled, tp.sort_order, " +
-            "       (SELECT COUNT(*) FROM event_triggers et " +
-            "          WHERE et.trigger_point_code = tp.point_code " +
-            "            AND et.deleted = 0 AND et.is_enabled = 1) AS trigger_count " +
-            "FROM trigger_points tp WHERE tp.deleted = 0 " +
-            "ORDER BY tp.module_code, tp.sort_order, tp.point_code"));
+        return Result.success(pluginPlatformService.listTriggerPoints());
     }
 
     /**
@@ -708,12 +606,7 @@ public class PluginPlatformController {
     @GetMapping("/subscription-rules")
     @CasbinAccess(resource = "admin", action = "access")
     public Result<List<Map<String, Object>>> subscriptionRules() {
-        return Result.success(jdbc.queryForList(
-            "SELECT id, rule_name, event_category, event_type, target_mode, target_config, " +
-            "       channel, is_enabled, tenant_id, created_at " +
-            "FROM msg_subscription_rules " +
-            "WHERE deleted = 0 " +
-            "ORDER BY event_category, event_type, id"));
+        return Result.success(pluginPlatformService.listSubscriptionRules());
     }
 
     /**

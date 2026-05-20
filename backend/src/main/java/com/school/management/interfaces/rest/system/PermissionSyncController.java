@@ -1,10 +1,10 @@
 package com.school.management.interfaces.rest.system;
 
+import com.school.management.application.system.PermissionSyncApplicationService;
 import com.school.management.common.result.Result;
 import com.school.management.domain.access.service.PolicyEnforcementService;
 import com.school.management.infrastructure.casbin.CasbinAccess;
 import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PermissionSyncController {
 
-    private final JdbcTemplate jdbcTemplate;
+    private final PermissionSyncApplicationService permissionSyncApplicationService;
     private final RequestMappingHandlerMapping requestMappingHandlerMapping;
     private final PolicyEnforcementService policyEnforcementService;
 
@@ -44,8 +44,7 @@ public class PermissionSyncController {
         }
 
         // 2. Get all permission_code values from DB
-        List<String> dbCodes = jdbcTemplate.queryForList(
-                "SELECT permission_code FROM permissions WHERE deleted = 0", String.class);
+        List<String> dbCodes = permissionSyncApplicationService.loadPermissionCodes();
         Set<String> dbCodeSet = new TreeSet<>(dbCodes);
 
         // 3. Find resource:action pairs in code but not matching any DB permission_code

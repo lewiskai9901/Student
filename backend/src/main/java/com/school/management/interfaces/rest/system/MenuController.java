@@ -1,11 +1,11 @@
 package com.school.management.interfaces.rest.system;
 
+import com.school.management.application.system.MenuQueryApplicationService;
 import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
 import com.school.management.infrastructure.extension.MenuContributionPlugin;
 import com.school.management.infrastructure.extension.MenuRegistrar;
 import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,13 +27,13 @@ import java.util.stream.Collectors;
 public class MenuController {
 
     private final MenuRegistrar menuRegistrar;
-    private final JdbcTemplate jdbc;
+    private final MenuQueryApplicationService menuQueryApplicationService;
 
     /** 当前用户可见菜单 — 按权限 + feature 过滤 */
     @GetMapping("/my")
     public Result<List<Map<String, Object>>> myMenus() {
         Long userId = SecurityUtils.getCurrentUserId();
-        Set<String> userPermissions = loadUserPermissions(userId);
+        Set<String> userPermissions = menuQueryApplicationService.loadUserPermissions(userId);
         List<Map<String, Object>> tree = menuRegistrar.getAllMenus().stream()
             .map(m -> filterAndSerialize(m, userPermissions))
             .filter(Objects::nonNull)
@@ -52,20 +52,6 @@ public class MenuController {
     }
 
     // ─── 内部 ───
-
-    private Set<String> loadUserPermissions(Long userId) {
-        if (userId == null) return Set.of();
-        try {
-            return new HashSet<>(jdbc.queryForList(
-                "SELECT DISTINCT p.permission_code FROM permissions p " +
-                "JOIN role_permissions rp ON rp.permission_id = p.id " +
-                "JOIN user_roles ur ON ur.role_id = rp.role_id " +
-                "WHERE ur.user_id = ? AND p.deleted = 0 AND p.status = 1",
-                String.class, userId));
-        } catch (Exception e) {
-            return Set.of();
-        }
-    }
 
     /**
      * 过滤 + 序列化:

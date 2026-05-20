@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  * <p>背景: 此前 jdbc 反 DDD 守护是「按模块」的 — ArchUnitAssetControllerGuardTest /
  * ArchUnitEducationRestGuardTest / ArchUnitEventControllerGuardTest 各自只盯自己的包.
  * 结果 interfaces/rest/system/** 等从未被守, jdbc 在那里重新长回来 (审计发现 19 个
- * controller 共 ~123 处 jdbc 调用).
+ * controller 共 ~123 处 jdbc 调用). N2.2 已清零 6 个 system/ controller, baseline 19→13.
  *
  * <p>本测试是全局 ratchet: BASELINE 记录现存违规 controller, 任何 PR 不得
  * 新增违规 (新增 = test 红), 也不得让 baseline 失效 (修好一个就必须从 baseline
@@ -37,12 +37,6 @@ class ArchUnitNoJdbcInRestControllerTest {
      */
     private static final Set<String> JDBC_CONTROLLER_BASELINE = Set.of(
         "com.school.management.interfaces.rest.extension.EntityTypeConfigController",
-        "com.school.management.interfaces.rest.system.PluginPlatformController",
-        "com.school.management.interfaces.rest.system.PluginSandboxController",
-        "com.school.management.interfaces.rest.system.ClientErrorController",
-        "com.school.management.interfaces.rest.system.AuditTrailController",
-        "com.school.management.interfaces.rest.system.PermissionSyncController",
-        "com.school.management.interfaces.rest.system.MenuController",
         "com.school.management.interfaces.rest.message.MessageDeliveryAdminController",
         "com.school.management.interfaces.rest.organization.TeacherProfileController",
         "com.school.management.interfaces.rest.organization.OrgUnitController",

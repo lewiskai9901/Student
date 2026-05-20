@@ -2,6 +2,7 @@ package com.school.management.interfaces.rest.system;
 
 import com.school.management.application.access.AccessRelationService;
 import com.school.management.application.event.TriggerService;
+import com.school.management.application.system.PluginSandboxApplicationService;
 import com.school.management.common.result.Result;
 import com.school.management.infrastructure.access.PluginDataScopeRouter;
 import com.school.management.infrastructure.casbin.CasbinAccess;
@@ -10,7 +11,6 @@ import com.school.management.infrastructure.extension.PolicyRegistry;
 import com.school.management.infrastructure.extension.TargetModeResolver;
 import com.school.management.infrastructure.extension.Violation;
 import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -45,7 +45,7 @@ public class PluginSandboxController {
     private final AccessRelationService accessRelationService;
     private final PluginDataScopeRouter pluginDataScopeRouter;
     private final List<TargetModeResolver> targetModeResolvers;
-    private final JdbcTemplate jdbc;
+    private final PluginSandboxApplicationService sandboxService;
 
     /**
      * POST /sandbox/policy/check
@@ -89,8 +89,8 @@ public class PluginSandboxController {
         String code = (String) body.get("code");
         Map<String, Object> context = (Map<String, Object>) body.getOrDefault("context", Map.of());
 
-        long beforeEvents = countSafely("SELECT COUNT(*) FROM entity_events");
-        long beforeNotifications = countSafely("SELECT COUNT(*) FROM msg_notifications");
+        long beforeEvents = sandboxService.countSafely("SELECT COUNT(*) FROM entity_events");
+        long beforeNotifications = sandboxService.countSafely("SELECT COUNT(*) FROM msg_notifications");
 
         Map<String, Object> out = new LinkedHashMap<>();
         try {
@@ -101,22 +101,13 @@ public class PluginSandboxController {
             return Result.success(out);
         }
 
-        long afterEvents = countSafely("SELECT COUNT(*) FROM entity_events");
-        long afterNotifications = countSafely("SELECT COUNT(*) FROM msg_notifications");
+        long afterEvents = sandboxService.countSafely("SELECT COUNT(*) FROM entity_events");
+        long afterNotifications = sandboxService.countSafely("SELECT COUNT(*) FROM msg_notifications");
 
         out.put("triggered", true);
         out.put("eventsCreated", afterEvents - beforeEvents);
         out.put("notificationsCreated", afterNotifications - beforeNotifications);
         return Result.success(out);
-    }
-
-    private long countSafely(String sql) {
-        try {
-            Long n = jdbc.queryForObject(sql, Long.class);
-            return n != null ? n : 0L;
-        } catch (Exception e) {
-            return 0L;
-        }
     }
 
     /**
@@ -220,29 +211,12 @@ public class PluginSandboxController {
     @PostMapping("/seed-demo")
     @CasbinAccess(resource = "admin", action = "access")
     public Result<Map<String, Object>> seedDemo() {
-        Long placeId = queryIdSafely(
-            "SELECT id FROM places WHERE place_name LIKE '[SANDBOX]%' AND deleted = 0 LIMIT 1");
-        if (placeId == null) {
-            jdbc.update(
-                "INSERT INTO places (place_code, place_name, type_code, capacity, current_occupancy, " +
-                "status, tenant_id, created_at) " +
-                "VALUES ('SANDBOX_D1', '[SANDBOX] 沙箱测试宿舍', 'DORMITORY', 4, 0, 1, 1, NOW())");
-            placeId = queryIdSafely(
-                "SELECT id FROM places WHERE place_code = 'SANDBOX_D1' AND deleted = 0 LIMIT 1");
-        }
+        Long placeId = sandboxService.ensureSandboxDemoPlace();
 
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("placeId", placeId != null ? placeId : 0);
         out.put("hint", "样本数据已就绪. 可在沙箱中用此 placeId 触发 AFTER_CHECKIN 等测试.");
         return Result.success(out);
-    }
-
-    private Long queryIdSafely(String sql) {
-        try {
-            return jdbc.queryForObject(sql, Long.class);
-        } catch (Exception e) {
-            return null;
-        }
     }
 
     /**
@@ -251,8 +225,7 @@ public class PluginSandboxController {
     @DeleteMapping("/reset")
     @CasbinAccess(resource = "admin", action = "access")
     public Result<Map<String, Object>> reset() {
-        int deletedPlaces = jdbc.update(
-            "DELETE FROM places WHERE place_name LIKE '[SANDBOX]%'");
+        int deletedPlaces = sandboxService.resetSandboxData();
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("deletedPlaces", deletedPlaces);
         return Result.success(out);

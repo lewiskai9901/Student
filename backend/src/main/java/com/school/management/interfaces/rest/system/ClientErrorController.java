@@ -1,12 +1,12 @@
 package com.school.management.interfaces.rest.system;
 
+import com.school.management.application.system.ClientErrorApplicationService;
 import com.school.management.common.annotation.PublicEndpoint;
 import com.school.management.common.result.Result;
 import com.school.management.infrastructure.access.UserContextHolder;
 import com.school.management.infrastructure.tenant.TenantContextHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @RequiredArgsConstructor
 public class ClientErrorController {
 
-    private final JdbcTemplate jdbcTemplate;
+    private final ClientErrorApplicationService clientErrorService;
 
     private static final int GLOBAL_RATE_LIMIT_PER_MINUTE = 100;
     private static final long FINGERPRINT_DEDUPE_WINDOW_MS = 60_000L;
@@ -84,12 +84,7 @@ public class ClientErrorController {
         Long lastSeenAt = recentFingerprints.get(fingerprint);
         if (lastSeenAt != null && now - lastSeenAt < FINGERPRINT_DEDUPE_WINDOW_MS) {
             // 累加 occurrence_count
-            try {
-                jdbcTemplate.update(
-                        "UPDATE client_error_logs SET occurrence_count = occurrence_count + 1, last_occurred_at = NOW() " +
-                        "WHERE fingerprint = ? AND last_occurred_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)",
-                        fingerprint);
-            } catch (Exception e) { log.warn("merge error log failed: {}", e.getMessage()); }
+            clientErrorService.mergeOccurrence(fingerprint);
             return Result.success(Map.of("merged", true, "fingerprint", fingerprint));
         }
         recentFingerprints.put(fingerprint, now);
@@ -102,25 +97,19 @@ public class ClientErrorController {
         Long userId = UserContextHolder.getUserId();
         Long tenantId = TenantContextHolder.getTenantId();
 
-        try {
-            jdbcTemplate.update(
-                    "INSERT INTO client_error_logs(tenant_id, user_id, level, source, message, stack, url, route_path, user_agent, fingerprint) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    tenantId == null ? 0L : tenantId,
-                    userId,
-                    err.level() == null ? "ERROR" : err.level(),
-                    err.source() == null ? "JS" : err.source(),
-                    message,
-                    stack,
-                    url,
-                    err.routePath(),
-                    truncate(err.userAgent(), MAX_URL_LEN),
-                    fingerprint);
-            log.warn("[ClientError] level={} src={} userId={} url={} msg={}",
-                    err.level(), err.source(), userId, url, message);
-        } catch (Exception e) {
-            log.error("Failed to write client error log: {}", e.getMessage());
-        }
+        clientErrorService.insertErrorLog(
+                tenantId == null ? 0L : tenantId,
+                userId,
+                err.level() == null ? "ERROR" : err.level(),
+                err.source() == null ? "JS" : err.source(),
+                message,
+                stack,
+                url,
+                err.routePath(),
+                truncate(err.userAgent(), MAX_URL_LEN),
+                fingerprint);
+        log.warn("[ClientError] level={} src={} userId={} url={} msg={}",
+                err.level(), err.source(), userId, url, message);
         return Result.success(Map.of("logged", true, "fingerprint", fingerprint));
     }
 
@@ -130,19 +119,7 @@ public class ClientErrorController {
     public Result<List<Map<String, Object>>> recent(
             @RequestParam(defaultValue = "50") int limit,
             @RequestParam(required = false) String level) {
-        StringBuilder sql = new StringBuilder(
-                "SELECT id, level, source, message, url, route_path, user_id, fingerprint, " +
-                "occurrence_count, first_occurred_at, last_occurred_at, resolved " +
-                "FROM client_error_logs WHERE 1=1 ");
-        Object[] args;
-        if (level != null && !level.isBlank()) {
-            sql.append("AND level = ? ");
-            args = new Object[]{level, Math.min(limit, 500)};
-        } else {
-            args = new Object[]{Math.min(limit, 500)};
-        }
-        sql.append("ORDER BY last_occurred_at DESC LIMIT ?");
-        return Result.success(jdbcTemplate.queryForList(sql.toString(), args));
+        return Result.success(clientErrorService.findRecent(limit, level));
     }
 
     /** 标记已解决 */
@@ -150,9 +127,7 @@ public class ClientErrorController {
     @PreAuthorize("hasAuthority('system:admin') or hasAuthority('*')")
     public Result<Void> resolve(@PathVariable Long id) {
         Long userId = UserContextHolder.getUserId();
-        jdbcTemplate.update(
-                "UPDATE client_error_logs SET resolved = 1, resolved_by = ?, resolved_at = NOW() WHERE id = ?",
-                userId, id);
+        clientErrorService.markResolved(id, userId);
         return Result.success();
     }
 
