@@ -117,6 +117,7 @@ public class EducationPermissionProvider implements PermissionProvider {
             of("student:cohort:view", "查看学生届", ""),
             of("student:warning:edit", "编辑学业预警", ""),
             of("student:warning:view", "查看学业预警", ""),
+            of("student:myclass:view", "查看我的班级", ""),
 
             // ─── dormitory 宿舍管理 ───
             of("dormitory:building:view", "楼栋查看", ""),

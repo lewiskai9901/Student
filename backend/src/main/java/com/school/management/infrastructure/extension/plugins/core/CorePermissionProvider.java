@@ -260,6 +260,16 @@ public class CorePermissionProvider implements PermissionProvider {
             of("data_module:delete", "删除数据模块", ""),
             of("data_module:update", "更新数据模块", ""),
 
+            // ─── access 访问控制 (M3.1 @CasbinAccess 补齐) ───
+            of("access:data-permission:view", "查看数据权限模块/范围", ""),
+            of("access:relation:view", "查看访问关系", ""),
+
+            // ─── entity-type-config 实体类型配置 (M3.1 @CasbinAccess 补齐) ───
+            of("entity-type-config:view", "查看实体类型配置", ""),
+
+            // ─── plugin-platform 插件平台 (M3.1 @CasbinAccess 补齐) ───
+            of("plugin-platform:view", "查看插件平台信息", ""),
+
             // ─── entity-event 事件系统 ───
             of("entity-event:view", "查看实体事件", ""),
             of("entity-event-type:add", "新增事件类型", ""),
