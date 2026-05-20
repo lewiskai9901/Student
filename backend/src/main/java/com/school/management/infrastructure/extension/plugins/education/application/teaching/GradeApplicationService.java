@@ -496,12 +496,13 @@ public class GradeApplicationService {
             jdbc.queryForObject("SELECT 1 FROM user_student LIMIT 1", Integer.class);
             sql.append(
                 "SELECT g.student_id AS studentId, " +
-                "s.name AS studentName, s.student_no AS studentNo, " +
+                "u.real_name AS studentName, s.student_no AS studentNo, " +
                 "SUM(g.total_score) AS totalScore, " +
                 "AVG(g.total_score) AS avgScore, " +
                 "COUNT(*) AS courseCount " +
                 "FROM student_grades g " +
                 "LEFT JOIN user_student s ON g.student_id = s.id " +
+                "LEFT JOIN users u ON u.id = s.user_id " +
                 "WHERE g.org_unit_id = ? AND g.deleted = 0"
             );
         } catch (Exception e) {
@@ -523,7 +524,7 @@ public class GradeApplicationService {
         }
         sql.append(orgScopeHelper.orgScopeClause(joinStudents ? "g.org_unit_id" : "org_unit_id"));
 
-        sql.append(joinStudents ? " GROUP BY g.student_id, s.name, s.student_no" : " GROUP BY student_id");
+        sql.append(joinStudents ? " GROUP BY g.student_id, u.real_name, s.student_no" : " GROUP BY student_id");
         sql.append(" ORDER BY totalScore DESC");
 
         List<Map<String, Object>> ranking = jdbc.queryForList(sql.toString(), params.toArray());
@@ -542,19 +543,20 @@ public class GradeApplicationService {
                              HttpServletResponse response) throws IOException {
         StringBuilder sql = new StringBuilder(
             "SELECT sg.total_score, sg.grade_point, sg.passed, " +
-            "s.student_no, s.name AS student_name, " +
-            "c.course_name, sc.name AS class_name " +
+            "s.student_no, u.real_name AS student_name, " +
+            "c.course_name, sc.unit_name AS class_name " +
             "FROM student_grades sg " +
             "LEFT JOIN user_student s ON s.id = sg.student_id " +
+            "LEFT JOIN users u ON u.id = s.user_id " +
             "LEFT JOIN courses c ON c.id = sg.course_id " +
-            "LEFT JOIN school_classes sc ON sc.id = sg.org_unit_id " +
+            "LEFT JOIN org_units sc ON sc.id = sg.org_unit_id " +
             "WHERE sg.semester_id = ? AND sg.deleted = 0");
         List<Object> params = new ArrayList<>();
         params.add(semesterId);
         if (orgUnitId != null) { sql.append(" AND sg.org_unit_id = ?"); params.add(orgUnitId); }
         if (courseId != null) { sql.append(" AND sg.course_id = ?"); params.add(courseId); }
         sql.append(orgScopeHelper.orgScopeClause("sg.org_unit_id"));
-        sql.append(" ORDER BY sc.name, s.student_no");
+        sql.append(" ORDER BY sc.unit_name, s.student_no");
 
         List<Map<String, Object>> grades = jdbc.queryForList(sql.toString(), params.toArray());
 
