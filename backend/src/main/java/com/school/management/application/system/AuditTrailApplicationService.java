@@ -11,7 +11,9 @@ import java.util.*;
  * Application service for audit trail queries.
  * Owns all data access to the {@code audit_trail} table.
  */
-@Service
+// 显式 bean 名 — 与 application.inspection.AuditTrailApplicationService 同简单名,
+// 默认名 'auditTrailApplicationService' 会冲突致启动失败 (与 systemAuditTrailController 同款命名).
+@Service("systemAuditTrailApplicationService")
 @RequiredArgsConstructor
 public class AuditTrailApplicationService {
 
