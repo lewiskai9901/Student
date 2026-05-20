@@ -52,6 +52,28 @@ public class AccessRelationApplicationService {
     }
 
     /**
+     * 解析用户归属的 org_unit ID 列表 — 仅取 MEMBER_OF / OWNER_OF / MANAGES 关系.
+     *
+     * <p>供数据范围过滤用 (如"我收到的检查"按所在组织过滤). 放在
+     * application.access 内, 让 inspection 等模块不直访 AccessRelationRepository
+     * (NoBypassAuthServiceTest 守护).
+     */
+    public List<Long> resolveOrgUnitIds(Long userId) {
+        if (userId == null) return List.of();
+        List<AccessRelation> rels = accessRelationRepository.findBySubjectAndResourceType(
+                "USER", userId, "ORG_UNIT");
+        List<Long> ids = new java.util.ArrayList<>(rels.size());
+        for (AccessRelation r : rels) {
+            if ("MEMBER_OF".equalsIgnoreCase(r.getRelation())
+                || "OWNER_OF".equalsIgnoreCase(r.getRelation())
+                || "MANAGES".equalsIgnoreCase(r.getRelation())) {
+                ids.add(r.getResourceId());
+            }
+        }
+        return ids;
+    }
+
+    /**
      * 填充关系的资源名称到 metadata（场所名称、组织名称等）
      */
     private void enrichRelations(List<AccessRelation> relations) {

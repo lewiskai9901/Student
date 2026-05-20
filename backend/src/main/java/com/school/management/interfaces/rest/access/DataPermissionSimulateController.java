@@ -1,10 +1,10 @@
 package com.school.management.interfaces.rest.access;
 
+import com.school.management.application.access.DataPermissionSimulateApplicationService;
 import com.school.management.common.result.Result;
 import com.school.management.infrastructure.casbin.CasbinAccess;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class DataPermissionSimulateController {
 
-    private final JdbcTemplate jdbc;
+    private final DataPermissionSimulateApplicationService simulateService;
 
     @PostMapping
     @CasbinAccess(resource = "admin", action = "access")
@@ -39,14 +39,7 @@ public class DataPermissionSimulateController {
         }
 
         // 查模拟用户的 primaryOrgUnitId (DEPT / DEPT_AND_BELOW 需要)
-        Long userOrgId = null;
-        try {
-            userOrgId = jdbc.queryForObject(
-                "SELECT primary_org_unit_id FROM users WHERE id = ? AND deleted = 0",
-                Long.class, req.getUserId());
-        } catch (Exception e) {
-            log.warn("user {} primary_org_unit_id not found: {}", req.getUserId(), e.getMessage());
-        }
+        Long userOrgId = simulateService.findUserPrimaryOrgUnitId(req.getUserId());
 
         List<Map<String, Object>> results = new ArrayList<>();
         List<ModulePermSnapshot> mps = req.getModulePermissions();
@@ -86,14 +79,11 @@ public class DataPermissionSimulateController {
                 return result;
             }
 
-            Long count = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM " + meta.table + " WHERE " + whereClause, Long.class);
+            Long count = simulateService.countByWhere(meta.table, whereClause);
             result.put("accessibleCount", count != null ? count : 0);
 
-            String nameSelect = meta.nameCol != null ? ", " + meta.nameCol + " AS name" : "";
-            String sampleSql = "SELECT id" + nameSelect +
-                    " FROM " + meta.table + " WHERE " + whereClause + " LIMIT 3";
-            List<Map<String, Object>> samples = jdbc.queryForList(sampleSql);
+            List<Map<String, Object>> samples =
+                    simulateService.sampleRows(meta.table, meta.nameCol, whereClause);
             // id 转 string, 防 JS 精度丢失
             List<Map<String, Object>> normalized = new ArrayList<>();
             for (Map<String, Object> s : samples) {

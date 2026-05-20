@@ -1,9 +1,9 @@
 package com.school.management.interfaces.rest.message;
 
+import com.school.management.application.message.MessageDeliveryAdminApplicationService;
 import com.school.management.common.result.Result;
 import com.school.management.infrastructure.casbin.CasbinAccess;
 import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,7 +22,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class MessageDeliveryAdminController {
 
-    private final JdbcTemplate jdbc;
+    private final MessageDeliveryAdminApplicationService service;
 
     /** 列失败消息 */
     @GetMapping("/failed")
@@ -30,39 +30,21 @@ public class MessageDeliveryAdminController {
     public Result<List<Map<String, Object>>> listFailed(
             @RequestParam(defaultValue = "100") int limit,
             @RequestParam(required = false) String channel) {
-        StringBuilder sql = new StringBuilder(
-                "SELECT id, receiver_type, receiver_id, title, source_event_type, "
-                + "send_status, retry_count, last_error, created_at, sent_at "
-                + "FROM msg_notifications "
-                + "WHERE deleted = 0 AND send_status IN ('FAILED','PENDING') ");
-        if (channel != null && !channel.isBlank()) {
-            sql.append("AND msg_type = ? ");
-        }
-        sql.append("ORDER BY created_at DESC LIMIT ?");
-        return Result.success(channel != null && !channel.isBlank()
-                ? jdbc.queryForList(sql.toString(), channel, limit)
-                : jdbc.queryForList(sql.toString(), limit));
+        return Result.success(service.listFailed(limit, channel));
     }
 
     /** 死信列表 (retry_count >= 3 且 FAILED) */
     @GetMapping("/dead-letter")
     @CasbinAccess(resource = "system:message", action = "manage")
     public Result<List<Map<String, Object>>> listDeadLetter(@RequestParam(defaultValue = "100") int limit) {
-        return Result.success(jdbc.queryForList(
-                "SELECT id, receiver_type, receiver_id, title, source_event_type, "
-                + "retry_count, last_error, created_at "
-                + "FROM msg_notifications "
-                + "WHERE deleted = 0 AND send_status = 'FAILED' AND retry_count >= 3 "
-                + "ORDER BY created_at DESC LIMIT ?", limit));
+        return Result.success(service.listDeadLetter(limit));
     }
 
     /** 单条重发 */
     @PostMapping("/{id}/retry")
     @CasbinAccess(resource = "system:message", action = "manage")
     public Result<Void> retry(@PathVariable Long id) {
-        jdbc.update(
-                "UPDATE msg_notifications SET send_status = 'PENDING', last_error = NULL "
-                + "WHERE id = ? AND send_status = 'FAILED'", id);
+        service.retryNotification(id);
         return Result.success();
     }
 
@@ -70,18 +52,7 @@ public class MessageDeliveryAdminController {
     @PostMapping("/retry-batch")
     @CasbinAccess(resource = "system:message", action = "manage")
     public Result<Map<String, Integer>> retryBatch(@RequestBody RetryBatchRequest req) {
-        if (req.ids() == null || req.ids().isEmpty()) {
-            return Result.success(Map.of("affected", 0));
-        }
-        StringBuilder sql = new StringBuilder(
-                "UPDATE msg_notifications SET send_status = 'PENDING', last_error = NULL "
-                + "WHERE send_status = 'FAILED' AND id IN (");
-        for (int i = 0; i < req.ids().size(); i++) {
-            if (i > 0) sql.append(",");
-            sql.append("?");
-        }
-        sql.append(")");
-        int updated = jdbc.update(sql.toString(), req.ids().toArray());
+        int updated = service.retryBatch(req.ids());
         return Result.success(Map.of("affected", updated));
     }
 
@@ -89,8 +60,7 @@ public class MessageDeliveryAdminController {
     @PostMapping("/{id}/dead")
     @CasbinAccess(resource = "system:message", action = "manage")
     public Result<Void> markDead(@PathVariable Long id) {
-        jdbc.update(
-                "UPDATE msg_notifications SET retry_count = 99 WHERE id = ?", id);
+        service.markDead(id);
         return Result.success();
     }
 
@@ -98,7 +68,7 @@ public class MessageDeliveryAdminController {
     @DeleteMapping("/dead-letter/{id}")
     @CasbinAccess(resource = "system:message", action = "manage")
     public Result<Void> clearDeadLetter(@PathVariable Long id) {
-        jdbc.update("UPDATE msg_notifications SET deleted = 1 WHERE id = ?", id);
+        service.clearDeadLetter(id);
         return Result.success();
     }
 

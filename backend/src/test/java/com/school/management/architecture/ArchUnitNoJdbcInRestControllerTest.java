@@ -31,25 +31,11 @@ import static org.junit.jupiter.api.Assertions.fail;
 class ArchUnitNoJdbcInRestControllerTest {
 
     /**
-     * 存量违规 baseline — interfaces/rest/** 下仍直接依赖 JdbcTemplate 的 controller.
-     * <p>只能减少, 不能增加. 修好一个 controller (jdbc 下沉到 ApplicationService) 后
-     * 从此列表删除对应条目.
+     * 存量违规 baseline — 已全部清零 (N2.2 + N2.3, 2026-05-20). 必须保持为空:
+     * interfaces/rest/** 下任何 controller 依赖 JdbcTemplate 一律失败, 不允许加豁免.
+     * jdbc CRUD 必须走 application/ 的 *ApplicationService.
      */
-    private static final Set<String> JDBC_CONTROLLER_BASELINE = Set.of(
-        "com.school.management.interfaces.rest.extension.EntityTypeConfigController",
-        "com.school.management.interfaces.rest.message.MessageDeliveryAdminController",
-        "com.school.management.interfaces.rest.organization.TeacherProfileController",
-        "com.school.management.interfaces.rest.organization.OrgUnitController",
-        "com.school.management.interfaces.rest.inspection.CorrectiveSuggestionController",
-        "com.school.management.interfaces.rest.inspection.MyReceivedInspectionsController",
-        "com.school.management.interfaces.rest.inspection.InspectionExportController",
-        "com.school.management.interfaces.rest.inspection.InspectionAuditLogController",
-        "com.school.management.interfaces.rest.access.DataPermissionSimulateController",
-        "com.school.management.interfaces.rest.access.AccessRelationHistoryController",
-        "com.school.management.interfaces.rest.access.RelationTypeController",
-        "com.school.management.interfaces.rest.access.UserRoleController",
-        "com.school.management.interfaces.rest.access.AuthController"
-    );
+    private static final Set<String> JDBC_CONTROLLER_BASELINE = Set.of();
 
     private static JavaClasses classes;
 

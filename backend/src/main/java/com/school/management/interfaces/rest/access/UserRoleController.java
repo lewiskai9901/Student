@@ -1,6 +1,7 @@
 package com.school.management.interfaces.rest.access;
 
 import com.school.management.application.access.AccessApplicationService;
+import com.school.management.application.access.UserRoleJdbcApplicationService;
 import com.school.management.common.result.Result;
 import com.school.management.domain.access.model.Role;
 import com.school.management.domain.access.model.ScopeType;
@@ -11,7 +12,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import com.school.management.infrastructure.casbin.CasbinAccess;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 public class UserRoleController {
 
     private final AccessApplicationService accessService;
-    private final JdbcTemplate jdbcTemplate;
+    private final UserRoleJdbcApplicationService userRoleJdbcService;
 
     @GetMapping("/{userId}/roles")
     @Operation(summary = "Get user's role assignments with scope info")
@@ -187,13 +187,7 @@ public class UserRoleController {
         // Enrich scope name for ORG_UNIT scope
         if (ScopeType.ORG_UNIT.equals(userRole.getScopeType())
                 && userRole.getScopeId() != null && userRole.getScopeId() > 0) {
-            try {
-                String scopeName = jdbcTemplate.queryForObject(
-                        "SELECT unit_name FROM org_units WHERE id = ? AND deleted = 0",
-                        String.class, userRole.getScopeId());
-                response.setScopeName(scopeName);
-            } catch (Exception ignored) {
-            }
+            response.setScopeName(userRoleJdbcService.findOrgUnitName(userRole.getScopeId()));
         } else if (ScopeType.ALL.equals(userRole.getScopeType())) {
             response.setScopeName("全局");
         }

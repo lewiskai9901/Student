@@ -1,9 +1,9 @@
 package com.school.management.interfaces.rest.access;
 
+import com.school.management.application.access.RelationTypeJdbcApplicationService;
 import com.school.management.common.result.Result;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,20 +23,7 @@ import java.util.*;
 @PreAuthorize("isAuthenticated()")  // Phase 6.7: 关系字典只读公共数据, 要求登录即可
 public class RelationTypeController {
 
-    private final JdbcTemplate jdbcTemplate;
-
-    private static final String SELECT_COLS =
-        "SELECT relation_code, from_type, to_type, relation_name, is_transitive, " +
-        "       category, tier, registered_by, description, capacity_bound, max_per_resource, max_by_subtype, " +
-        "       implied_relations, industry, plugin_class, origin, is_enabled, plugin_enabled ";
-
-    /** 公共查询 (前端业务用): 过滤被禁插件 */
-    private static final String SELECT_ALL =
-        SELECT_COLS + "FROM relation_types WHERE is_enabled = 1 AND plugin_enabled = 1";
-
-    /** 管理员视角: 允许包含被禁插件贡献的关系 (灰显) */
-    private static final String SELECT_ALL_FOR_ADMIN =
-        SELECT_COLS + "FROM relation_types WHERE is_enabled = 1";
+    private final RelationTypeJdbcApplicationService relationTypeService;
 
     private static final com.fasterxml.jackson.databind.ObjectMapper MAPPER = new com.fasterxml.jackson.databind.ObjectMapper();
 
@@ -46,32 +33,16 @@ public class RelationTypeController {
             @RequestParam(required = false) String fromType,
             @RequestParam(required = false) String toType,
             @RequestParam(required = false, defaultValue = "false") Boolean includeDisabled) {
-        StringBuilder sql = new StringBuilder(
-            Boolean.TRUE.equals(includeDisabled) ? SELECT_ALL_FOR_ADMIN : SELECT_ALL);
-        List<Object> params = new ArrayList<>();
-        if (tier != null && !tier.isBlank()) {
-            sql.append(" AND tier = ?");
-            params.add(tier);
-        }
-        if (fromType != null && !fromType.isBlank()) {
-            sql.append(" AND from_type = ?");
-            params.add(fromType);
-        }
-        if (toType != null && !toType.isBlank()) {
-            sql.append(" AND to_type = ?");
-            params.add(toType);
-        }
-        sql.append(" ORDER BY tier, category, relation_code");
-        List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql.toString(), params.toArray());
+        List<Map<String, Object>> rows = relationTypeService.list(
+            tier, fromType, toType, Boolean.TRUE.equals(includeDisabled));
         return Result.success(rows.stream().map(this::toCamelCase).toList());
     }
 
     @GetMapping("/tiers")
     public Result<Map<String, List<Map<String, Object>>>> listByTier(
             @RequestParam(required = false, defaultValue = "false") Boolean includeDisabled) {
-        String baseSql = Boolean.TRUE.equals(includeDisabled) ? SELECT_ALL_FOR_ADMIN : SELECT_ALL;
-        List<Map<String, Object>> all = jdbcTemplate.queryForList(
-            baseSql + " ORDER BY tier, category, relation_code");
+        List<Map<String, Object>> all = relationTypeService.listAllOrdered(
+            Boolean.TRUE.equals(includeDisabled));
         Map<String, List<Map<String, Object>>> grouped = new LinkedHashMap<>();
         for (Map<String, Object> row : all) {
             String tier = (String) row.get("tier");

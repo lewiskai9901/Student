@@ -1,8 +1,8 @@
 package com.school.management.interfaces.rest.access;
 
+import com.school.management.application.access.AccessRelationHistoryApplicationService;
 import com.school.management.common.result.Result;
 import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,7 +17,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AccessRelationHistoryController {
 
-    private final JdbcTemplate jdbcTemplate;
+    private final AccessRelationHistoryApplicationService historyService;
 
     /** 查某 subject (人) 的所有关系变更. */
     @GetMapping("/by-subject")
@@ -26,15 +26,7 @@ public class AccessRelationHistoryController {
             @RequestParam String subjectType,
             @RequestParam Long subjectId,
             @RequestParam(defaultValue = "100") int limit) {
-        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
-            "SELECT id, original_id, resource_type, resource_id, relation, " +
-            "  subject_type, subject_id, access_level, valid_from, valid_to, " +
-            "  archived_at, archived_reason, archived_by, operator_ip, operation " +
-            "FROM access_relations_history " +
-            "WHERE subject_type=? AND subject_id=? " +
-            "ORDER BY archived_at DESC LIMIT ?",
-            subjectType, subjectId, limit);
-        return Result.success(rows);
+        return Result.success(historyService.findBySubject(subjectType, subjectId, limit));
     }
 
     /** 查某 resource (东西) 的所有关系变更. */
@@ -44,15 +36,7 @@ public class AccessRelationHistoryController {
             @RequestParam String resourceType,
             @RequestParam Long resourceId,
             @RequestParam(defaultValue = "100") int limit) {
-        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
-            "SELECT id, original_id, resource_type, resource_id, relation, " +
-            "  subject_type, subject_id, access_level, valid_from, valid_to, " +
-            "  archived_at, archived_reason, archived_by, operator_ip, operation " +
-            "FROM access_relations_history " +
-            "WHERE resource_type=? AND resource_id=? " +
-            "ORDER BY archived_at DESC LIMIT ?",
-            resourceType, resourceId, limit);
-        return Result.success(rows);
+        return Result.success(historyService.findByResource(resourceType, resourceId, limit));
     }
 
     /** 最近 N 天变更 (审计页用). */
@@ -61,13 +45,6 @@ public class AccessRelationHistoryController {
     public Result<List<Map<String, Object>>> recent(
             @RequestParam(defaultValue = "7") int days,
             @RequestParam(defaultValue = "200") int limit) {
-        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
-            "SELECT id, resource_type, resource_id, relation, " +
-            "  subject_type, subject_id, archived_at, archived_reason, archived_by, operation " +
-            "FROM access_relations_history " +
-            "WHERE archived_at >= NOW() - INTERVAL ? DAY " +
-            "ORDER BY archived_at DESC LIMIT ?",
-            days, limit);
-        return Result.success(rows);
+        return Result.success(historyService.findRecent(days, limit));
     }
 }

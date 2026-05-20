@@ -1,5 +1,6 @@
 package com.school.management.interfaces.rest.access;
 
+import com.school.management.application.access.AuthJdbcApplicationService;
 import com.school.management.common.annotation.PublicEndpoint;
 import com.school.management.common.result.Result;
 import com.school.management.infrastructure.activity.annotation.AuditEvent;
@@ -19,7 +20,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,9 +28,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @RestController
@@ -44,7 +41,7 @@ public class AuthController {
     private final CustomUserDetailsService userDetailsService;
     private final UserDomainMapper userDomainMapper;
     private final RedisTemplate<String, Object> redisTemplate;
-    private final JdbcTemplate jdbcTemplate;
+    private final AuthJdbcApplicationService authJdbcService;
     private final com.school.management.infrastructure.extension.TenantPluginService tenantPluginService;
 
     @PostMapping("/login")
@@ -195,31 +192,12 @@ public class AuthController {
                 .gender(user != null ? user.getGender() : null)
                 .status(userDetails.getStatus())
                 .roles(userDetails.getRoles())
-                .roleDetails(loadRoleDetails(userDetails.getUserId()))
+                .roleDetails(authJdbcService.loadRoleDetails(userDetails.getUserId()))
                 .permissions(userDetails.getPermissions())
                 .orgUnitId(userDetails.getOrgUnitId())
                 .tenantId(userDetails.getTenantId())
                 .userTypeCode(user != null ? user.getUserTypeCode() : null)
                 .build();
-    }
-
-    /**
-     * #7 用户端角色禁用提示: 查询用户所有 user_roles 绑定 (含 plugin_enabled=0 的被禁角色),
-     * 不过滤, 让前端可渲染"插件禁用中"徽章. 使用 JdbcTemplate 避免引入新 Mapper.
-     */
-    private List<Map<String, Object>> loadRoleDetails(Long userId) {
-        if (userId == null) return Collections.emptyList();
-        try {
-            return jdbcTemplate.queryForList(
-                    "SELECT r.role_code AS code, r.role_name AS name, r.industry AS industry, " +
-                    "       r.plugin_enabled AS pluginEnabled, r.status AS status " +
-                    "FROM user_roles ur JOIN roles r ON r.id = ur.role_id " +
-                    "WHERE ur.user_id = ? AND ur.is_active = 1 AND r.deleted = 0",
-                    userId);
-        } catch (Exception e) {
-            log.warn("加载 roleDetails 失败 userId={}: {}", userId, e.getMessage());
-            return Collections.emptyList();
-        }
     }
 
     private String getTokenFromRequest(HttpServletRequest request) {
