@@ -13,7 +13,6 @@ import java.time.LocalDateTime;
  */
 public class InspectionPlan extends AggregateRoot<Long> {
 
-    private Long id;
     private Long tenantId;
     private Long projectId;
     private String planName;
@@ -113,11 +112,6 @@ public class InspectionPlan extends AggregateRoot<Long> {
     }
 
     // Getters
-    @Override
-    public Long getId() { return id; }
-    @Override
-    public void setId(Long id) { this.id = id; }
-
     public Long getTenantId() { return tenantId; }
     public Long getProjectId() { return projectId; }
     public String getPlanName() { return planName; }

@@ -10,7 +10,6 @@ import java.time.LocalDateTime;
  */
 public class HolidayCalendar extends AggregateRoot<Long> {
 
-    private Long id;
     private Long tenantId;
     private String calendarName;
     private Integer year;
@@ -56,12 +55,6 @@ public class HolidayCalendar extends AggregateRoot<Long> {
     }
 
     // Getters
-    @Override
-    public Long getId() { return id; }
-
-    @Override
-    public void setId(Long id) { this.id = id; }
-
     public Long getTenantId() { return tenantId; }
     public String getCalendarName() { return calendarName; }
     public Integer getYear() { return year; }

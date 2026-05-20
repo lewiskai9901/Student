@@ -13,7 +13,6 @@ import java.time.LocalDateTime;
  */
 public class InspSubmission extends AggregateRoot<Long> {
 
-    private Long id;
     private Long tenantId;
     private Long taskId;
     private Long sectionId;              // 所属一级分区（有targetType的）
@@ -220,12 +219,6 @@ public class InspSubmission extends AggregateRoot<Long> {
     }
 
     // Getters
-    @Override
-    public Long getId() { return id; }
-
-    @Override
-    public void setId(Long id) { this.id = id; }
-
     public Long getTenantId() { return tenantId; }
     public Long getTaskId() { return taskId; }
     public Long getSectionId() { return sectionId; }

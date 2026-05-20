@@ -11,7 +11,6 @@ import java.time.LocalDateTime;
  */
 public class ViolationRecord extends AggregateRoot<Long> {
 
-    private Long id;
     private Long tenantId;
     private Long submissionId;
     private Long submissionDetailId;
@@ -86,10 +85,6 @@ public class ViolationRecord extends AggregateRoot<Long> {
         this.classInfo = classInfo;
         this.updatedAt = LocalDateTime.now();
     }
-
-    @Override
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
 
     public Long getTenantId() { return tenantId; }
     public Long getSubmissionId() { return submissionId; }

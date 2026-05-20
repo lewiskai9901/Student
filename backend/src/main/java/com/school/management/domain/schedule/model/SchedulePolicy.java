@@ -16,7 +16,6 @@ import java.util.List;
  */
 public class SchedulePolicy extends AggregateRoot<Long> {
 
-    private Long id;
     private String policyCode;
     private String policyName;
     private PolicyType policyType;
@@ -150,16 +149,6 @@ public class SchedulePolicy extends AggregateRoot<Long> {
     }
 
     // Getters
-    @Override
-    public Long getId() {
-        return id;
-    }
-
-    @Override
-    public void setId(Long id) {
-        this.id = id;
-    }
-
     public String getPolicyCode() {
         return policyCode;
     }

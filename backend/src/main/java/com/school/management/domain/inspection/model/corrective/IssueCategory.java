@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
  */
 public class IssueCategory extends AggregateRoot<Long> {
 
-    private Long id;
     private Long tenantId;
     private Long parentId;
     private String categoryCode;
@@ -64,12 +63,6 @@ public class IssueCategory extends AggregateRoot<Long> {
         this.updatedBy = updatedBy;
         this.updatedAt = LocalDateTime.now();
     }
-
-    @Override
-    public Long getId() { return id; }
-
-    @Override
-    public void setId(Long id) { this.id = id; }
 
     public Long getTenantId() { return tenantId; }
     public Long getParentId() { return parentId; }

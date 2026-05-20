@@ -2,7 +2,6 @@ package com.school.management.domain.place.model.aggregate;
 
 import com.school.management.domain.shared.AggregateRoot;
 import com.school.management.domain.place.model.valueobject.PlaceStatus;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -14,15 +13,15 @@ import java.util.Map;
 /**
  * 通用空间聚合根
  * 支持任意类型的空间实例，类型由PlaceType配置决定
+ *
+ * <p>N1 (2026-05-20): 删除 shadow {@code id} 字段 — id 由 {@link AggregateRoot}
+ * 提供. {@code @Builder} 移到含 {@code id} 参数的构造器上, 经 {@code setId()}
+ * 写入继承字段, 保持 {@code UniversalPlace.builder().id(..)} API 不变.
  */
 @Data
-@Builder
 @NoArgsConstructor
-@AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class UniversalPlace extends AggregateRoot<Long> {
-
-    private Long id;
 
     // ==================== 基础信息 ====================
 
@@ -111,6 +110,35 @@ public class UniversalPlace extends AggregateRoot<Long> {
      */
     @Builder.Default
     private Map<String, Object> attributes = new HashMap<>();
+
+    // ==================== 构造 ====================
+
+    /**
+     * 全参构造器 — {@code @Builder} 挂在此处, 使 builder 含 {@code id}
+     * (走 {@link AggregateRoot#setId}, 非 shadow 字段).
+     */
+    @Builder
+    public UniversalPlace(Long id, String placeCode, String placeName, String typeCode,
+                          String description, Long parentId, String path, Integer level,
+                          Integer capacity, Integer currentOccupancy, Long orgUnitId,
+                          Long responsibleUserId, String gender, PlaceStatus status,
+                          Map<String, Object> attributes) {
+        setId(id);
+        this.placeCode = placeCode;
+        this.placeName = placeName;
+        this.typeCode = typeCode;
+        this.description = description;
+        this.parentId = parentId;
+        this.path = path;
+        this.level = level != null ? level : 0;
+        this.capacity = capacity;
+        this.currentOccupancy = currentOccupancy != null ? currentOccupancy : 0;
+        this.orgUnitId = orgUnitId;
+        this.responsibleUserId = responsibleUserId;
+        this.gender = gender;
+        this.status = status != null ? status : PlaceStatus.NORMAL;
+        this.attributes = attributes != null ? attributes : new HashMap<>();
+    }
 
     // ==================== 业务方法 ====================
 

@@ -23,7 +23,6 @@ import java.util.List;
  */
 public class CorrectiveCase extends AggregateRoot<Long> {
 
-    private Long id;
     private Long tenantId;
     private String caseCode;
     private Long submissionId;
@@ -397,12 +396,6 @@ public class CorrectiveCase extends AggregateRoot<Long> {
     }
 
     // Getters
-    @Override
-    public Long getId() { return id; }
-
-    @Override
-    public void setId(Long id) { this.id = id; }
-
     public Long getTenantId() { return tenantId; }
     public String getCaseCode() { return caseCode; }
     public Long getSubmissionId() { return submissionId; }

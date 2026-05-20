@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
  */
 public class TemplateCatalog extends AggregateRoot<Long> {
 
-    private Long id;
     private Long tenantId;
     private Long parentId;
     private String catalogCode;
@@ -67,16 +66,6 @@ public class TemplateCatalog extends AggregateRoot<Long> {
     }
 
     // Getters
-    @Override
-    public Long getId() {
-        return id;
-    }
-
-    @Override
-    public void setId(Long id) {
-        this.id = id;
-    }
-
     public Long getTenantId() {
         return tenantId;
     }

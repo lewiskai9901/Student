@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
  */
 public class ScoringPolicy extends AggregateRoot<Long> {
 
-    private Long id;
     private Long tenantId;
     private String policyCode;
     private String policyName;
@@ -81,11 +80,6 @@ public class ScoringPolicy extends AggregateRoot<Long> {
     }
 
     // Getters
-    @Override
-    public Long getId() { return id; }
-    @Override
-    public void setId(Long id) { this.id = id; }
-
     public Long getTenantId() { return tenantId; }
     public String getPolicyCode() { return policyCode; }
     public String getPolicyName() { return policyName; }

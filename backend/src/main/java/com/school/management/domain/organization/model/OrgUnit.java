@@ -20,7 +20,6 @@ import java.util.Objects;
  */
 public class OrgUnit extends AggregateRoot<Long> {
 
-    private Long id;
     private String unitCode;
     private String unitName;
     private String unitType;           // typeCode from org_unit_types table
@@ -292,15 +291,6 @@ public class OrgUnit extends AggregateRoot<Long> {
     }
 
     // Getters
-    @Override
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
     public String getUnitCode() { return unitCode; }
     public String getUnitName() { return unitName; }
     public String getUnitType() { return unitType; }

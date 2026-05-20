@@ -12,7 +12,6 @@ import java.time.LocalDateTime;
  */
 public class CorrectiveSubtask extends AggregateRoot<Long> {
 
-    private Long id;
     private Long tenantId;
     private Long caseId;
     private String subtaskName;
@@ -112,12 +111,6 @@ public class CorrectiveSubtask extends AggregateRoot<Long> {
     }
 
     // Getters
-    @Override
-    public Long getId() { return id; }
-
-    @Override
-    public void setId(Long id) { this.id = id; }
-
     public Long getTenantId() { return tenantId; }
     public Long getCaseId() { return caseId; }
     public String getSubtaskName() { return subtaskName; }

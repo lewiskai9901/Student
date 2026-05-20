@@ -17,7 +17,6 @@ import java.util.List;
  */
 public class TemplateSection extends AggregateRoot<Long> {
 
-    private Long id;
     private Long tenantId;
     private Long templateId;           // null = 根分区（自己就是根）
     private Long parentSectionId;      // null = 顶层
@@ -217,12 +216,6 @@ public class TemplateSection extends AggregateRoot<Long> {
     }
 
     // ========== Getters ==========
-
-    @Override
-    public Long getId() { return id; }
-
-    @Override
-    public void setId(Long id) { this.id = id; }
 
     public Long getTenantId() { return tenantId; }
     public Long getTemplateId() { return templateId; }

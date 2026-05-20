@@ -12,7 +12,6 @@ import java.util.*;
  */
 public class Role extends AggregateRoot<Long> {
 
-    private Long id;
     private String roleCode;
     private String roleName;
     private String description;
@@ -181,15 +180,6 @@ public class Role extends AggregateRoot<Long> {
         if (roleName == null || roleName.isBlank()) {
             throw new IllegalArgumentException("Role name cannot be empty");
         }
-    }
-
-    @Override
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
     }
 
     public Set<Long> getPermissionIds() {

@@ -18,7 +18,6 @@ import java.time.LocalDateTime;
  */
 public class InspAppeal extends AggregateRoot<Long> {
 
-    private Long id;
     private Long tenantId;
     private Long orgUnitId;
     private String appealCode;
@@ -152,11 +151,6 @@ public class InspAppeal extends AggregateRoot<Long> {
         this.status = AppealStatus.WITHDRAWN;
         this.updatedAt = LocalDateTime.now();
     }
-
-    @Override
-    public Long getId() { return id; }
-    @Override
-    public void setId(Long id) { this.id = id; }
 
     public Long getTenantId() { return tenantId; }
     public Long getOrgUnitId() { return orgUnitId; }

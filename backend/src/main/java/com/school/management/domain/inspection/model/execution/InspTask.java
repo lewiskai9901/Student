@@ -16,7 +16,6 @@ import java.time.LocalTime;
  */
 public class InspTask extends AggregateRoot<Long> {
 
-    private Long id;
     private Long tenantId;
     private String taskCode;
     private Long projectId;
@@ -478,12 +477,6 @@ public class InspTask extends AggregateRoot<Long> {
     }
 
     // Getters
-    @Override
-    public Long getId() { return id; }
-
-    @Override
-    public void setId(Long id) { this.id = id; }
-
     public Long getTenantId() { return tenantId; }
     public String getTaskCode() { return taskCode; }
     public Long getProjectId() { return projectId; }

@@ -21,7 +21,6 @@ import java.time.LocalDateTime;
  */
 public class InspProject extends AggregateRoot<Long> {
 
-    private Long id;
     private Long tenantId;
     private String projectCode;
     private String projectName;
@@ -281,12 +280,6 @@ public class InspProject extends AggregateRoot<Long> {
     }
 
     // Getters
-    @Override
-    public Long getId() { return id; }
-
-    @Override
-    public void setId(Long id) { this.id = id; }
-
     public Long getTenantId() { return tenantId; }
     public String getProjectCode() { return projectCode; }
     public String getProjectName() { return projectName; }

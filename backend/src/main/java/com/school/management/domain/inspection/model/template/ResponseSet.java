@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
  */
 public class ResponseSet extends AggregateRoot<Long> {
 
-    private Long id;
     private Long tenantId;
     private String setCode;
     private String setName;
@@ -57,16 +56,6 @@ public class ResponseSet extends AggregateRoot<Long> {
     }
 
     // Getters
-    @Override
-    public Long getId() {
-        return id;
-    }
-
-    @Override
-    public void setId(Long id) {
-        this.id = id;
-    }
-
     public Long getTenantId() {
         return tenantId;
     }
