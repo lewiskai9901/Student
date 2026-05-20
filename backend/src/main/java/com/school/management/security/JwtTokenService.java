@@ -42,8 +42,12 @@ public class JwtTokenService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final Environment environment;
 
-    // 默认密钥标识（用于检测是否使用了默认值）
-    private static final String DEFAULT_SECRET_PREFIX = "student-management-system-jwt-secret";
+    // 已知不安全的密钥前缀 — 默认值 / 提交进源码的开发密钥 (application-dev.yml).
+    // 安全审计 M1: 旧版只比对一个不匹配实际 dev 密钥的前缀, 检测形同虚设.
+    private static final List<String> INSECURE_SECRET_PREFIXES = List.of(
+            "student-management-system-jwt-secret",
+            "dev-secret-key"
+    );
 
     public JwtTokenService(RedisTemplate<String, Object> redisTemplate, Environment environment) {
         this.redisTemplate = redisTemplate;
@@ -59,8 +63,9 @@ public class JwtTokenService {
         boolean isProduction = Arrays.asList(environment.getActiveProfiles()).contains("prod")
                 || Arrays.asList(environment.getActiveProfiles()).contains("production");
 
-        // 检查是否使用了默认密钥
-        boolean isUsingDefaultSecret = jwtSecret != null && jwtSecret.startsWith(DEFAULT_SECRET_PREFIX);
+        // 检查是否使用了默认 / 已提交源码的开发密钥
+        boolean isUsingDefaultSecret = jwtSecret != null
+                && INSECURE_SECRET_PREFIXES.stream().anyMatch(jwtSecret::startsWith);
 
         if (isProduction && isUsingDefaultSecret) {
             log.error("【安全错误】生产环境检测到使用默认JWT密钥！请通过环境变量JWT_SECRET设置安全密钥");
@@ -247,6 +252,11 @@ public class JwtTokenService {
             if (encryptedStoredToken == null) {
                 return false;
             }
+            // 黑名单校验 — 登出后被拉黑的 refresh token 不能再换新 access token (安全审计 P3)
+            if (isTokenBlacklisted(refreshToken)) {
+                return false;
+            }
+
             // 解密存储的Token后比较
             String storedToken = com.school.management.common.util.TokenEncryptionUtil.decrypt(encryptedStoredToken);
             return refreshToken.equals(storedToken);

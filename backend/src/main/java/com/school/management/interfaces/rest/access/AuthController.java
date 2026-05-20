@@ -43,6 +43,11 @@ public class AuthController {
     private final RedisTemplate<String, Object> redisTemplate;
     private final AuthJdbcApplicationService authJdbcService;
     private final com.school.management.infrastructure.extension.TenantPluginService tenantPluginService;
+    private final com.school.management.security.LoginAttemptService loginAttemptService;
+
+    /** 是否信任反向代理头 (X-Forwarded-For/X-Real-IP) — 默认 false, 部署在 nginx 后由 ops 置 true. */
+    @org.springframework.beans.factory.annotation.Value("${security.trust-proxy-headers:false}")
+    private boolean trustProxyHeaders;
 
     @PostMapping("/login")
     @PublicEndpoint(reason = "登录无需 auth")
@@ -51,10 +56,19 @@ public class AuthController {
     public Result<LoginResponse> login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         log.info("用户登录请求: {}", request.getUsername());
 
+        // 防暴力破解: 连续失败达阈值即锁定
+        if (loginAttemptService.isLocked(request.getUsername())) {
+            log.warn("登录被拒 — 账户锁定中: username={}", request.getUsername());
+            return Result.error("账户已锁定，请 " + loginAttemptService.lockMinutes() + " 分钟后再试");
+        }
+
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
             );
+
+            // 凭据校验通过 — 清零失败计数
+            loginAttemptService.reset(request.getUsername());
 
             CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
 
@@ -82,6 +96,8 @@ public class AuthController {
             return Result.success(response);
 
         } catch (Exception e) {
+            // 凭据错误 — 记一次失败计数
+            loginAttemptService.recordFailure(request.getUsername());
             log.warn("登录失败: username={}, error={}", request.getUsername(), e.getMessage());
             return Result.error("用户名或密码错误");
         }
@@ -94,20 +110,23 @@ public class AuthController {
     public Result<LoginResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
         String refreshToken = request.getRefreshToken();
 
+        // 统一错误文案 — 不区分"令牌无效"/"已过期"/"用户不存在", 防用户枚举.
+        final String genericError = "刷新令牌无效或已过期";
+
         Long userId;
         try {
             userId = jwtTokenService.getUserIdFromToken(refreshToken);
         } catch (Exception e) {
-            return Result.error("刷新令牌无效");
+            return Result.error(genericError);
         }
 
         if (!jwtTokenService.validateRefreshToken(refreshToken, userId)) {
-            return Result.error("刷新令牌无效或已过期");
+            return Result.error(genericError);
         }
 
         CustomUserDetails userDetails = userDetailsService.loadUserByUserId(userId);
         if (!userDetails.isEnabled()) {
-            return Result.error("用户不存在或已被禁用");
+            return Result.error(genericError);
         }
 
         String newAccessToken = jwtTokenService.generateToken(
@@ -132,12 +151,13 @@ public class AuthController {
             jwtTokenService.blacklistToken(request.getRefreshToken());
         }
 
-        if (request != null && Boolean.TRUE.equals(request.getLogoutAll())) {
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            if (auth != null && auth.getPrincipal() instanceof CustomUserDetails ud) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof CustomUserDetails ud) {
+            // 始终吊销服务端 refresh token — 防登出后 refresh token 仍能换新 access token.
+            jwtTokenService.revokeAllTokensForUser(ud.getUserId());
+            if (request != null && Boolean.TRUE.equals(request.getLogoutAll())) {
                 try {
                     redisTemplate.delete("user:session:" + ud.getUserId());
-                    redisTemplate.delete("refresh_token:" + ud.getUserId());
                 } catch (Exception e) {
                     log.warn("清除用户会话失败: {}", e.getMessage());
                 }
@@ -209,13 +229,17 @@ public class AuthController {
     }
 
     private String getClientIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isEmpty() && !"unknown".equalsIgnoreCase(xff)) {
-            return xff.split(",")[0];
-        }
-        String xri = request.getHeader("X-Real-IP");
-        if (xri != null && !xri.isEmpty() && !"unknown".equalsIgnoreCase(xri)) {
-            return xri;
+        // 仅在显式信任反向代理时才采信 X-Forwarded-For / X-Real-IP —
+        // 否则客户端可随意伪造这些头污染 lastLoginIp.
+        if (trustProxyHeaders) {
+            String xff = request.getHeader("X-Forwarded-For");
+            if (xff != null && !xff.isEmpty() && !"unknown".equalsIgnoreCase(xff)) {
+                return xff.split(",")[0].trim();
+            }
+            String xri = request.getHeader("X-Real-IP");
+            if (xri != null && !xri.isEmpty() && !"unknown".equalsIgnoreCase(xri)) {
+                return xri;
+            }
         }
         return request.getRemoteAddr();
     }
