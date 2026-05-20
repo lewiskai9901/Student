@@ -399,6 +399,16 @@
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.11</version>
                 <configuration>
+                    <!--
+                      destFile/dataFile 指向纯 ASCII 的临时目录 — 绕开项目中文路径
+                      (D:\学生管理系统) 的坑: prepare-agent 把 destfile 路径塞进 fork
+                      test JVM 的命令行, 中文经命令行编码错乱成 D:\ѧÉú¹ÜÀíϵͳ\..., agent
+                      把 exec 写到乱码目录, 而 report/check 在主 JVM 用正确路径找不到 →
+                      静默 "missing execution data file" skip → 覆盖率闸长期空跑.
+                      用 java.io.tmpdir (纯 ASCII) 后命令行无非 ASCII 字符, 不再错乱.
+                    -->
+                    <destFile>${java.io.tmpdir}/jacoco-sms.exec</destFile>
+                    <dataFile>${java.io.tmpdir}/jacoco-sms.exec</dataFile>
                     <!-- 排除不需要测试覆盖的类 -->
                     <excludes>
                         <exclude>**/config/**</exclude>
