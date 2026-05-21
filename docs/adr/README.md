@@ -10,6 +10,12 @@
 | [001](001-phase2-unified-spi.md) | Phase 2: 收敛 8 SPI 为 PluginPackage + Contribution sealed | Accepted | 2026-04-19 |
 | [002](002-phase35-ddd-restructure.md) | Phase 3.5: 把教育领域从 domain/ 迁到 plugins/education/ | Accepted | 2026-04-19 |
 | [003](003-phase4a-dynamic-routes.md) | Phase 4A: 前端动态路由注册替代 Module Federation | Accepted | 2026-04-19 |
+| [004](004-v108-task-types-decoupling.md) | V108 检查任务多类型解耦 | Accepted | 2026-05-04 |
+| [005](005-frontend-view-plugin-isolation.md) | 前端视图按插件物理隔离 | Accepted | 2026-05-05 |
+| [006](006-lightweight-i18n-without-vue-i18n.md) | 轻量 i18n composable (不引入 vue-i18n) | Accepted | 2026-05-05 |
+| [007](007-dark-mode-via-css-variables.md) | Dark mode via CSS 变量 + data-theme 切换 | Accepted | 2026-05-05 |
+| [008](008-module-federation-deferred.md) | Module Federation 暂不启动 — 商业触发条件 | Deferred | 2026-05-05 |
+| [009](009-multi-tenant-deferred.md) | 多租户暂缓 — 脚手架保持休眠,不拆除 | Deferred | 2026-05-21 |
 
 ## 下一个要写 ADR 的时机
 

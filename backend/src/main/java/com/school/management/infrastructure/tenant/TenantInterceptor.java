@@ -15,17 +15,30 @@ import java.util.Properties;
 import java.util.Set;
 
 /**
- * MyBatis interceptor that automatically injects tenant_id filtering.
- * For SELECT/UPDATE/DELETE: appends WHERE tenant_id = ? condition.
- * For INSERT: handled by entity defaults (tenant_id column default = 1).
+ * MyBatis interceptor 占位 — 自动注入 tenant_id 过滤(未实装).
  *
- * NOTE: Uses string injection for tenant_id which is safe because
- * tenantId is always a Long from TenantContextHolder (server-side only).
+ * <p>━━━━━ 决策记录 (2026-05-21) ━━━━━
+ * <p><b>本项目按单租户运行,多租户功能整体暂缓 (deferred,非废弃)。</b>
+ * 经评估,彻底拆除多租户脚手架 (314 个 DB tenant_id 列 + ~210 个文件 +
+ * 数据权限拦截器重写) 是数天、极高风险且功能收益为零的改动 —— 故决定
+ * <b>保持现有多租户脚手架休眠</b>:
+ * <ul>
+ *   <li>全系统按 {@code tenant=1} 运行 ({@code TenantContextHolder} 默认值)</li>
+ *   <li>各表 {@code tenant_id} 列保留,值恒为 1,无害</li>
+ *   <li>本拦截器 {@code @Component} 故意注释掉 —— 不注册,不生效</li>
+ * </ul>
+ * <p>将来若要真正启用多租户:实装本类的 SQL 注入逻辑 (或改用 MyBatis-Plus
+ * {@code TenantLineInnerInterceptor}) 并恢复 {@code @Component};JdbcTemplate
+ * 直查路径与 {@code @Async} 上下文传递需另行补齐。详见 docs/design 下的 ADR。
+ * <p>━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ *
+ * <p>原始设计:For SELECT/UPDATE/DELETE 追加 {@code WHERE tenant_id = ?};
+ * INSERT 由实体默认值处理 (tenant_id 列默认 = 1).
  */
 @Slf4j
-// @Component — Disabled: this interceptor is a stub (no actual SQL injection yet).
-// It crashes on proxied StatementHandler chains (no 'delegate' getter).
-// Re-enable when actual tenant SQL injection is implemented.
+// @Component — 故意禁用: 见上方决策记录. 多租户暂缓, 本拦截器保持休眠.
+// 该 stub 无实际 SQL 注入逻辑, 且在代理 StatementHandler 链上会因缺 'delegate'
+// getter 而崩溃 — 实装多租户前不得恢复 @Component.
 @Intercepts({
     @Signature(type = StatementHandler.class, method = "prepare", args = {Connection.class, Integer.class})
 })
