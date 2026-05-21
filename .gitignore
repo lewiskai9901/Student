@@ -89,6 +89,8 @@ backend/temp_disabled/
 .xhs-chrome-data/
 # .github/ 整目录被误排, 取消 — 仓库需保留 .github/workflows/*.yml CI 配置.
 # 历史误把它当临时目录排掉, 现取消; 真有不入库的本地状态用更具体路径.
+# GitHub App Modernization 工具的本地评估产物, 非项目内容:
+.github/appmod/
 
 # 自动生成 (unplugin-auto-import / unplugin-vue-components)
 frontend/auto-imports.d.ts
