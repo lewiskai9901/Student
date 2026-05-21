@@ -142,10 +142,13 @@ public class AssetBorrowApplicationService {
         return result;
     }
 
-    public List<Map<String, Object>> listMyActiveBorrows() {
+    /** 当前用户自己的活跃借用 — 必须按 borrowerId 过滤, 不可返回全部 (数据泄露). */
+    public List<Map<String, Object>> listMyActiveBorrows(Long borrowerId) {
         return jdbcTemplate.queryForList(
-            "SELECT " + BORROW_COLUMNS + " FROM asset_borrow WHERE deleted = 0 AND status IN (1, 3) " +
-            "ORDER BY created_at DESC");
+            "SELECT " + BORROW_COLUMNS + " FROM asset_borrow " +
+            "WHERE deleted = 0 AND status IN (1, 3) AND borrower_id = ? " +
+            "ORDER BY created_at DESC",
+            borrowerId);
     }
 
     public List<Map<String, Object>> listAssetHistory(Long assetId) {

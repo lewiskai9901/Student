@@ -72,8 +72,9 @@ public class AssetBorrowController {
     @GetMapping("/my")
     @CasbinAccess(resource = "asset:borrow", action = "view")
     public Result<List<Map<String, Object>>> getMyBorrows() {
-        // TODO: 真实场景从 SecurityContext 取 userId 过滤. 目前返回所有活跃借用.
-        List<Map<String, Object>> borrows = borrowService.listMyActiveBorrows();
+        Long userId = com.school.management.common.util.SecurityUtils.getCurrentUserId();
+        if (userId == null) return Result.error("未登录");
+        List<Map<String, Object>> borrows = borrowService.listMyActiveBorrows(userId);
         for (Map<String, Object> r : borrows) enrichBorrow(r);
         return Result.success(borrows);
     }
