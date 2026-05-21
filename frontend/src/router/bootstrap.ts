@@ -16,10 +16,9 @@ import { usePluginsStore } from '@/stores/plugins'
  */
 
 const PLUGIN_LOADERS: Record<string, () => Promise<{ default: RouteRecordRaw[] }>> = {
-  EDU:    () => import('./plugins/edu'),
-  HEALTH: () => import('./plugins/health')
-  // 未来行业:
-  // CARE: () => import('./plugins/care'),
+  EDU: () => import('./plugins/edu'),
+  // healthcare 插件 2026-05-09 已卸载 (见 V20260509_7 migration); 行业插件示例可参考 EDU.
+  // 未来行业: CARE: () => import('./plugins/care'),
 }
 
 interface Industry {
