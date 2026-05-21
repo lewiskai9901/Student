@@ -48,7 +48,7 @@
 import type { LongId } from '@/types/common'
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { scheduleApi, instanceApi } from '@/api/teaching'
+import { scheduleApi, instanceApi, conflictApi } from '@/api/teaching'
 import { scheduleConfigApi } from '@/api/teaching'
 
 const props = defineProps<{ semesterId: LongId | string | undefined }>()
@@ -78,8 +78,15 @@ async function loadStats() {
     const data = (res as any).data || res
     entryCount.value = data.plans?.entryCount || 0
     planCount.value = data.plans?.count || 0
-    conflictCount.value = 0 // TODO: check conflicts API
   } catch { /* */ }
+  // 真实冲突检测 — 发布前跑一遍, 不再硬编码 0
+  try {
+    const cres = await conflictApi.detect(props.semesterId)
+    const conflicts = (cres as any).data ?? cres ?? []
+    conflictCount.value = Array.isArray(conflicts) ? conflicts.length : 0
+  } catch {
+    conflictCount.value = 0
+  }
 }
 
 async function publish() {
