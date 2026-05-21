@@ -436,16 +436,17 @@
                                   阈值锁定到真实覆盖的安全 floor, 留 ~3pp 余量防正常 PR 误破闸.
                                   N4 (2026-05-20): LINE 20% / BRANCH 17% (实测 22.97/20.12).
                                   N5 (2026-05-21): LINE 27% / BRANCH 20% (实测 30.49/23.46).
+                                  N6 (2026-05-21): LINE 30% / BRANCH 23% (实测 33.81/26.45).
                                 -->
                                 <limit>
                                     <counter>LINE</counter>
                                     <value>COVEREDRATIO</value>
-                                    <minimum>0.27</minimum>
+                                    <minimum>0.30</minimum>
                                 </limit>
                                 <limit>
                                     <counter>BRANCH</counter>
                                     <value>COVEREDRATIO</value>
-                                    <minimum>0.20</minimum>
+                                    <minimum>0.23</minimum>
                                 </limit>
                             </limits>
                         </rule>
