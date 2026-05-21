@@ -42,6 +42,10 @@ GeneratePassword.java
 Thumbs.db
 desktop.ini
 
+# 浏览器 profile (headless 渲染/自动化产生的本地状态, 勿入库)
+chrome-profile/
+**/chrome-profile/
+
 # 环境配置
 .env
 .env.local
