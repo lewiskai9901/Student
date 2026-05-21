@@ -59,6 +59,9 @@ class MyClassApplicationServiceTest {
     @Mock
     private UniversalPlaceOccupantRepository placeOccupantRepository;
 
+    @Mock
+    private ClassInspectionStatsQueryService inspectionStatsQuery;
+
     @InjectMocks
     private MyClassApplicationService service;
 
@@ -156,6 +159,8 @@ class MyClassApplicationServiceTest {
             when(studentRepository.countByClassId(1L)).thenReturn(40L);
             when(studentRepository.countByClassIdAndGender(1L, Gender.MALE)).thenReturn(25L);
             when(studentRepository.countByClassIdAndGender(1L, Gender.FEMALE)).thenReturn(15L);
+            when(inspectionStatsQuery.query(1L)).thenReturn(
+                ClassInspectionStatsQueryService.ClassInspectionStats.empty());
 
             MyClassOverviewDTO dto = service.getClassOverview(1L, 99L);
 

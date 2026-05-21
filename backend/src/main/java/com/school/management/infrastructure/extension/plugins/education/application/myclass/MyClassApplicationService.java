@@ -34,6 +34,7 @@ public class MyClassApplicationService {
     private final StudentRepository studentRepository;
     private final UniversalPlaceRepository universalPlaceRepository;
     private final UniversalPlaceOccupantRepository placeOccupantRepository;
+    private final ClassInspectionStatsQueryService inspectionStatsQuery;
 
     /**
      * 获取当前用户管理的班级列表
@@ -63,19 +64,23 @@ public class MyClassApplicationService {
         long maleCount = studentRepository.countByClassIdAndGender(orgUnitId, Gender.MALE);
         long femaleCount = studentRepository.countByClassIdAndGender(orgUnitId, Gender.FEMALE);
 
+        // 检查得分/排名/趋势/申诉 — 取自检查模块 (班级即 org_unit)
+        ClassInspectionStatsQueryService.ClassInspectionStats stats =
+            inspectionStatsQuery.query(orgUnitId);
+
         return MyClassOverviewDTO.builder()
             .orgUnitId(orgUnitId)
             .className(schoolClass.getClassName())
             .studentCount((int) studentCount)
             .maleCount((int) maleCount)
             .femaleCount((int) femaleCount)
-            .classRank(0) // TODO: 从检查记录服务获取
-            .totalClasses(0)
-            .averageScore(0.0)
-            .scoreTrend(0.0)
-            .pendingAppeals(0)
-            .scoreTrendList(new ArrayList<>())
-            .recentRecords(new ArrayList<>())
+            .classRank(stats.classRank())
+            .totalClasses(stats.totalClasses())
+            .averageScore(stats.averageScore())
+            .scoreTrend(stats.scoreTrend())
+            .pendingAppeals(stats.pendingAppeals())
+            .scoreTrendList(stats.scoreTrendList())
+            .recentRecords(stats.recentRecords())
             .build();
     }
 
