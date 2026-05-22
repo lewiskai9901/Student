@@ -291,7 +291,8 @@ public class InspProjectController {
 
     @lombok.Data
     public static class UpdateProjectRequest {
-        @NotBlank
+        // 部分更新 DTO — 字段均可选, 仅非 null 字段被应用 (见 InspProject.updateInfo).
+        // 不可加 @NotBlank/@NotNull: 向导分步保存合法地只发部分字段.
         private String projectName;
         private Long rootSectionId;
         private Long scoringProfileId;

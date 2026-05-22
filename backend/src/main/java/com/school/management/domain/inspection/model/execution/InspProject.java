@@ -247,17 +247,21 @@ public class InspProject extends AggregateRoot<Long> {
         if (this.status != ProjectStatus.DRAFT) {
             throw new IllegalStateException("只有草稿状态的项目才能修改");
         }
-        validateAutoPublishReviewConflict(autoPublish, reviewRequired);
-        this.projectName = projectName;
-        this.rootSectionId = rootSectionId;
-        this.scoringProfileId = scoringProfileId;
-        this.scopeType = scopeType;
-        this.scopeConfig = scopeConfig;
-        this.startDate = startDate;
-        this.endDate = endDate;
-        this.assignmentMode = assignmentMode;
-        this.reviewRequired = reviewRequired;
-        this.autoPublish = autoPublish;
+        // 部分更新语义: 仅覆盖非 null 字段 (与 updateOperationalConfig 一致).
+        // 向导分步保存只发部分载荷 — 全量替换会把未传字段清空, 造成静默数据损坏.
+        Boolean effectiveAutoPublish = autoPublish != null ? autoPublish : this.autoPublish;
+        Boolean effectiveReviewRequired = reviewRequired != null ? reviewRequired : this.reviewRequired;
+        validateAutoPublishReviewConflict(effectiveAutoPublish, effectiveReviewRequired);
+        if (projectName != null) this.projectName = projectName;
+        if (rootSectionId != null) this.rootSectionId = rootSectionId;
+        if (scoringProfileId != null) this.scoringProfileId = scoringProfileId;
+        if (scopeType != null) this.scopeType = scopeType;
+        if (scopeConfig != null) this.scopeConfig = scopeConfig;
+        if (startDate != null) this.startDate = startDate;
+        if (endDate != null) this.endDate = endDate;
+        if (assignmentMode != null) this.assignmentMode = assignmentMode;
+        this.reviewRequired = effectiveReviewRequired;
+        this.autoPublish = effectiveAutoPublish;
         this.updatedBy = updatedBy;
         this.updatedAt = LocalDateTime.now();
     }
