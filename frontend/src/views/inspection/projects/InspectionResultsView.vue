@@ -6,6 +6,7 @@ import { ElMessage } from 'element-plus'
 import { BarChart3, ChevronRight, Trophy } from 'lucide-vue-next'
 import { inspProjectApi } from '@/api/inspection/project'
 import { getSubmissions } from '@/api/inspection/submission'
+import { getTasks } from '@/api/inspection/task'
 import type { InspProject, InspSubmission } from '@/types/insp/project'
 
 const router = useRouter()
@@ -32,7 +33,12 @@ async function loadData() {
     const loaded: ProjectResult[] = []
     for (const project of projects.value) {
       try {
-        const submissions = await getSubmissions({ taskId: project.id }).catch(() => [])
+        // 提交记录按 task 维度查询 — 先取项目下所有任务, 再并发拉各任务的提交.
+        // (旧实现误把 project.id 当 taskId 传, 永远匹配不到 → 成绩区恒空)
+        const tasks = await getTasks({ projectId: project.id }).catch(() => [])
+        const submissions = (await Promise.all(
+          tasks.map(t => getSubmissions({ taskId: t.id }).catch(() => []))
+        )).flat()
         const completed = submissions.filter(
           (s: InspSubmission) => s.status === 'COMPLETED' && s.finalScore != null
         )

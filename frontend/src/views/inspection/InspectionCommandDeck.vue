@@ -200,7 +200,7 @@ function goReassign() {
   router.push('/inspection/admin/reassign-departed')
 }
 function goAboutMe() {
-  router.push('/inspection/about-me')
+  router.push('/inspection/my-record')
 }
 
 onMounted(() => loadAll())
@@ -227,7 +227,7 @@ onMounted(() => loadAll())
         <button v-if="canManageProject" class="quick-btn" @click="goProjects">
           <span class="quick-btn__label">项目管理</span>
         </button>
-        <button v-if="canManageProject" class="quick-btn" @click="router.push('/inspection/templates')">
+        <button v-if="canManageProject" class="quick-btn" @click="router.push('/inspection/config')">
           <span class="quick-btn__label">模板与题库</span>
         </button>
         <button class="quick-btn" @click="router.push('/inspection/analytics')">
@@ -274,7 +274,7 @@ onMounted(() => loadAll())
           <CheckCircle2 :size="14" class="bin-empty__icon" />
           <span>无待执行任务</span>
         </div>
-        <button v-if="myTasks.length > 5" class="bin-more" @click="router.push('/inspection/my-tasks')">
+        <button v-if="myTasks.length > 5" class="bin-more" @click="router.push('/inspection/tasks')">
           查看全部 {{ myTasks.length }} 条 >
         </button>
       </section>
