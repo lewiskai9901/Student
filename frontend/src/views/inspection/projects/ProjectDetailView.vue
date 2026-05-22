@@ -662,6 +662,8 @@ async function saveConfig() {
     } else {
       await updateOperationalConfig(projectId, { projectName: cf.value.projectName, assignmentMode: cf.value.assignmentMode, reviewRequired: cf.value.reviewRequired, autoPublish: cf.value.autoPublish })
     }
+    // 检查模式 / 整改策略走独立端点 — 失败要让用户看见, 不能静默吞还报"已保存"
+    const failed: string[] = []
     // V108: 单独 PUT 检查模式 (不依赖现有 update DTO)
     try {
       await http.put('/inspection/tasks/projects/' + projectId + '/inspection-mode', {
@@ -672,6 +674,7 @@ async function saveConfig() {
       })
     } catch (e: any) {
       console.warn('保存检查模式失败:', e?.message)
+      failed.push('检查模式')
     }
     // V110: 保存整改判定策略
     try {
@@ -686,8 +689,15 @@ async function saveConfig() {
       })
     } catch (e: any) {
       console.warn('保存整改策略失败:', e?.message)
+      failed.push('整改判定策略')
     }
-    ElMessage.success('已保存'); configDirty.value = false; loadProject()
+    if (failed.length > 0) {
+      // 部分失败 — 保留 configDirty 供重试, 不谎报"已保存"
+      ElMessage.error(`基本配置已保存,但 ${failed.join('、')} 保存失败,请重试`)
+    } else {
+      ElMessage.success('已保存'); configDirty.value = false
+    }
+    loadProject()
   } catch (e: any) { ElMessage.error(e.message || '保存失败') } finally { saving.value = false }
 }
 
