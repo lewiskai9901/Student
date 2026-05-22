@@ -1350,7 +1350,7 @@ onMounted(async () => {
                   show-checkbox
                   check-strictly
                   node-key="id"
-                  :default-checked-keys="cf.scopeIds.map(Number)"
+                  :default-checked-keys="cf.scopeIds"
                   :filter-node-method="filterScopeNode"
                   default-expand-all
                   @check="handleScopeCheckChange"
