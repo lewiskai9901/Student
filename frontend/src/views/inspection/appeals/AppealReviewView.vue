@@ -12,6 +12,23 @@ const selectedId = ref<LongId | null>(null)
 
 const selected = computed(() => appeals.value.find(a => a.id === selectedId.value) ?? null)
 
+// ── 客户端分页 ──
+const PAGE_SIZE = 20
+const currentPage = ref(1)
+
+const pagedAppeals = computed(() => {
+  const start = (currentPage.value - 1) * PAGE_SIZE
+  return appeals.value.slice(start, start + PAGE_SIZE)
+})
+
+// 选中项不在当前页时, 翻到其所在页 (键盘 j/k 切换 / moveToNext 后保持可见)
+watch(selectedId, (id) => {
+  if (id == null) return
+  const idx = appeals.value.findIndex(a => a.id === id)
+  if (idx < 0) return
+  currentPage.value = Math.floor(idx / PAGE_SIZE) + 1
+})
+
 // Forms
 const approveForm = ref({ comment: '', finalAdjustment: undefined as number | undefined })
 const rejectComment = ref('')
@@ -177,12 +194,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKeyDown))
         </div>
         <ol class="queue-list">
           <li
-            v-for="(a, i) in appeals" :key="a.id"
+            v-for="(a, i) in pagedAppeals" :key="a.id"
             class="queue-item"
             :class="{ 'is-selected': selectedId === a.id }"
             @click="selectedId = a.id"
           >
-            <span class="queue-item__idx insp-num">{{ String(i + 1).padStart(2, '0') }}</span>
+            <span class="queue-item__idx insp-num">{{ String((currentPage - 1) * PAGE_SIZE + i + 1).padStart(2, '0') }}</span>
             <div class="queue-item__body">
               <div class="queue-item__code">{{ a.appealCode }}</div>
               <div class="queue-item__reason">{{ a.reason }}</div>
@@ -200,6 +217,16 @@ onUnmounted(() => window.removeEventListener('keydown', onKeyDown))
             <div class="insp-stamp">无待审</div>
           </li>
         </ol>
+        <div v-if="appeals.length > PAGE_SIZE" class="queue-pager">
+          <el-pagination
+            v-model:current-page="currentPage"
+            :page-size="PAGE_SIZE"
+            :total="appeals.length"
+            layout="prev, pager, next"
+            small
+            background
+          />
+        </div>
       </aside>
 
       <!-- Right: detail + verdict ─────────── -->
@@ -500,6 +527,18 @@ onUnmounted(() => window.removeEventListener('keydown', onKeyDown))
 .queue-empty {
   padding: var(--insp-sp-8) var(--insp-sp-5);
   text-align: center;
+}
+
+.queue-pager {
+  display: flex;
+  justify-content: center;
+  padding: var(--insp-sp-3) var(--insp-sp-4);
+  border-top: 1px solid var(--insp-border-subtle);
+  flex-shrink: 0;
+}
+
+.queue-pager :deep(.el-pagination.is-background .el-pager li.is-active) {
+  background-color: var(--insp-accent);
 }
 
 /* ─ Detail pane ─────── */

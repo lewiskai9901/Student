@@ -6,9 +6,10 @@
  * Delegates to appropriate Element Plus components based on item type.
  */
 import type { LongId } from '@/types/common'
-import { computed, ref } from 'vue'
+import { computed, ref, nextTick, onBeforeUnmount } from 'vue'
 import { Camera, MapPin, ScanLine, PenTool } from 'lucide-vue-next'
 import { ElMessage } from 'element-plus'
+import SignaturePad from 'signature_pad'
 import type { ItemType } from '@/types/insp/enums'
 import { uploadImage } from '@/api/upload'
 import { uploadFile } from '@/api/file'
@@ -90,6 +91,80 @@ async function handleUpload(uploadFileObj: any) {
     uploading.value = false
   }
 }
+
+// ---------- 手写签名 (SIGNATURE) ----------
+const signatureDialogVisible = ref(false)
+const signatureCanvas = ref<HTMLCanvasElement | null>(null)
+const signatureSaving = ref(false)
+let signaturePad: SignaturePad | null = null
+
+function resizeSignatureCanvas() {
+  const canvas = signatureCanvas.value
+  if (!canvas) return
+  const ratio = Math.max(window.devicePixelRatio || 1, 1)
+  const rect = canvas.getBoundingClientRect()
+  canvas.width = rect.width * ratio
+  canvas.height = rect.height * ratio
+  const ctx = canvas.getContext('2d')
+  if (ctx) ctx.scale(ratio, ratio)
+  signaturePad?.clear()
+}
+
+async function openSignatureDialog() {
+  signatureDialogVisible.value = true
+  await nextTick()
+  if (!signatureCanvas.value) return
+  signaturePad = new SignaturePad(signatureCanvas.value, {
+    penColor: '#1f2937',
+    backgroundColor: 'rgba(255,255,255,1)',
+  })
+  resizeSignatureCanvas()
+  window.addEventListener('resize', resizeSignatureCanvas)
+}
+
+function closeSignatureDialog() {
+  window.removeEventListener('resize', resizeSignatureCanvas)
+  signaturePad?.off()
+  signaturePad = null
+  signatureDialogVisible.value = false
+}
+
+function clearSignature() {
+  signaturePad?.clear()
+}
+
+async function saveSignature() {
+  if (!signaturePad || !signatureCanvas.value) return
+  if (signaturePad.isEmpty()) {
+    ElMessage.warning('请先签名')
+    return
+  }
+  signatureSaving.value = true
+  try {
+    const blob: Blob = await new Promise((resolve, reject) => {
+      signatureCanvas.value!.toBlob((b) => {
+        if (b) resolve(b)
+        else reject(new Error('导出签名图片失败'))
+      }, 'image/png')
+    })
+    const file = new File([blob], `signature-${Date.now()}.png`, { type: 'image/png' })
+    const url = (await uploadImage(file)).url
+    update(url)
+    ElMessage.success('签名已保存')
+    closeSignatureDialog()
+  } catch (e: any) {
+    const msg = e?.response?.data?.message || e?.message || '未知错误'
+    ElMessage.error('保存失败: ' + msg)
+  } finally {
+    signatureSaving.value = false
+  }
+}
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', resizeSignatureCanvas)
+  signaturePad?.off()
+  signaturePad = null
+})
 
 // ---------- GPS 定位 ----------
 const { loading: gpsLoading, error: gpsError, getCurrentPosition } = useGeolocation()
@@ -306,16 +381,42 @@ async function handleGetGps() {
       <span v-else-if="readonly" class="text-sm text-gray-400">未上传</span>
     </div>
 
-    <!-- SIGNATURE — 需签名板第三方库, 桌面端暂不支持 -->
-    <div
-      v-else-if="itemType === 'SIGNATURE'"
-      class="rounded-md border border-gray-200 bg-gray-50 px-3 py-4 text-center"
-    >
-      <PenTool class="w-6 h-6 text-gray-300 mx-auto mb-1" />
-      <p v-if="modelValue" class="text-xs text-gray-500">已签名</p>
-      <p v-else class="text-xs text-gray-400">
-        手写签名暂不支持（需移动端 / 签名板），可在移动端补充
-      </p>
+    <!-- SIGNATURE — 手写签名 (signature_pad) -->
+    <div v-else-if="itemType === 'SIGNATURE'" class="flex items-center gap-2">
+      <a
+        v-if="modelValue"
+        :href="modelValue"
+        target="_blank"
+        rel="noopener"
+        class="h-20 rounded-md border border-gray-200 overflow-hidden bg-white block"
+      >
+        <img :src="modelValue" class="h-full object-contain" alt="signature" />
+      </a>
+      <el-button v-if="!readonly" size="small" @click="openSignatureDialog">
+        <PenTool class="w-3.5 h-3.5 mr-1" />{{ modelValue ? '重新签名' : '签名' }}
+      </el-button>
+      <span v-if="!modelValue && readonly" class="text-sm text-gray-400">未签名</span>
+
+      <el-dialog
+        v-model="signatureDialogVisible"
+        title="手写签名"
+        width="560px"
+        append-to-body
+        :close-on-click-modal="false"
+        @closed="closeSignatureDialog"
+      >
+        <div class="signature-canvas-wrap">
+          <canvas ref="signatureCanvas" class="signature-canvas"></canvas>
+          <p class="signature-hint">在上方框内手写签名</p>
+        </div>
+        <template #footer>
+          <el-button @click="clearSignature">清除</el-button>
+          <el-button @click="closeSignatureDialog">取消</el-button>
+          <el-button type="primary" :loading="signatureSaving" @click="saveSignature">
+            保存签名
+          </el-button>
+        </template>
+      </el-dialog>
     </div>
 
     <!-- FILE_UPLOAD -->
@@ -379,3 +480,28 @@ async function handleGetGps() {
     </div>
   </div>
 </template>
+
+<style scoped>
+.signature-canvas-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.signature-canvas {
+  width: 100%;
+  height: 200px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.signature-hint {
+  margin: 0;
+  font-size: 12px;
+  color: #94a3b8;
+  text-align: center;
+}
+</style>

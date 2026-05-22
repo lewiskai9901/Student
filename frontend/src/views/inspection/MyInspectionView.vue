@@ -4,7 +4,7 @@
  * 卷宗式分组列表 · 状态筛选 · 内联快速操作 · 键盘快捷键
  */
 import type { LongId } from '@/types/common'
-import { ref, computed, onMounted, onUnmounted, reactive } from 'vue'
+import { ref, computed, onMounted, onUnmounted, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
@@ -162,7 +162,7 @@ const grouped = computed((): DateBucket[] => {
   const tomorrow = new Date(todayD); tomorrow.setDate(tomorrow.getDate() + 1)
   const weekEnd = new Date(todayD); weekEnd.setDate(weekEnd.getDate() + 7)
 
-  for (const t of filteredAfterSearch.value) {
+  for (const t of pagedTasks.value) {
     if (isOverdue(t)) { buckets.overdue.push(t); continue }
     if (!t.taskDate) { buckets.later.push(t); continue }
     const d = new Date(t.taskDate)
@@ -227,6 +227,18 @@ const filteredAfterSearch = computed(() => {
     projectName(t).toLowerCase().includes(q)
   )
 })
+
+// ── 客户端分页 (筛选/搜索后的扁平列表上分页, 再交给 grouped 按日期分组) ──
+const PAGE_SIZE = 20
+const currentPage = ref(1)
+
+const pagedTasks = computed(() => {
+  const start = (currentPage.value - 1) * PAGE_SIZE
+  return filteredAfterSearch.value.slice(start, start + PAGE_SIZE)
+})
+
+// 筛选 / 搜索变化时重置到第 1 页
+watch([filter, searchKeyword], () => { currentPage.value = 1 })
 
 // ── Helpers ──
 function isOverdue(t: InspTask): boolean {
@@ -571,6 +583,16 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
              filter === 'inprogress' ? '没有进行中的任务' : '当前无检查任务' }}
         </p>
       </div>
+
+      <div v-if="filteredAfterSearch.length > PAGE_SIZE" class="roster-pager">
+        <el-pagination
+          v-model:current-page="currentPage"
+          :page-size="PAGE_SIZE"
+          :total="filteredAfterSearch.length"
+          layout="prev, pager, next, total"
+          background
+        />
+      </div>
     </section>
 
     <!-- 任务悬浮预览卡 (S+) -->
@@ -856,6 +878,16 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 .row-actions {
   display: flex; gap: var(--insp-sp-2);
   justify-content: flex-end;
+}
+
+/* ─ Pager ─────── */
+.roster-pager {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--insp-sp-2);
+}
+.roster-pager :deep(.el-pagination.is-background .el-pager li.is-active) {
+  background-color: var(--insp-accent);
 }
 
 /* ─ Empty ─────── */

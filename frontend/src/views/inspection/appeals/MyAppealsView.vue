@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import * as appealApi from '@/api/inspection/appeal'
 import type { InspAppeal } from '@/types/insp/appeal'
@@ -13,6 +13,18 @@ const filtered = computed(() => {
   if (filter.value === 'all') return appeals.value
   return appeals.value.filter(a => a.status === filter.value)
 })
+
+// ── 客户端分页 ──
+const PAGE_SIZE = 20
+const currentPage = ref(1)
+
+const paged = computed(() => {
+  const start = (currentPage.value - 1) * PAGE_SIZE
+  return filtered.value.slice(start, start + PAGE_SIZE)
+})
+
+// 筛选变化时重置到第 1 页
+watch(filter, () => { currentPage.value = 1 })
 
 const counts = computed(() => ({
   all: appeals.value.length,
@@ -118,7 +130,7 @@ onMounted(() => loadData())
 
     <!-- ── Document list ─────────────────────────────────── -->
     <section v-loading="loading" class="docket">
-      <article v-for="a in filtered" :key="a.id" class="docket-row">
+      <article v-for="a in paged" :key="a.id" class="docket-row">
         <div class="row-num insp-num">{{ String(a.id).padStart(3, '0') }}</div>
 
         <div class="row-meta">
@@ -163,6 +175,16 @@ onMounted(() => loadData())
         <p class="empty-hint">
           {{ filter === 'all' ? '尚未提交过申诉' : '此分类下没有申诉记录' }}
         </p>
+      </div>
+
+      <div v-if="filtered.length > PAGE_SIZE" class="docket-pager">
+        <el-pagination
+          v-model:current-page="currentPage"
+          :page-size="PAGE_SIZE"
+          :total="filtered.length"
+          layout="prev, pager, next, total"
+          background
+        />
       </div>
     </section>
   </div>
@@ -393,6 +415,17 @@ onMounted(() => loadData())
 .row-action__placeholder {
   color: var(--insp-ink-quaternary);
   font-family: var(--insp-font-mono);
+}
+
+/* ─ Pager ─────────────── */
+.docket-pager {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--insp-sp-5) 0 0;
+}
+
+.docket-pager :deep(.el-pagination.is-background .el-pager li.is-active) {
+  background-color: var(--insp-accent);
 }
 
 /* ─ Empty ─────────────── */
