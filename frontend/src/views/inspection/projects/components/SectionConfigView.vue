@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Plus, Trash2, Pencil, Calendar, Users, Clock, X, Zap, Play,
@@ -12,6 +13,8 @@ import {
   updateIndicator, deleteIndicator,
 } from '@/api/inspection/indicator'
 import { getGradeSchemes } from '@/api/inspection/gradeScheme'
+import { getProfiles } from '@/api/inspection/scoring'
+import type { ScoringProfile } from '@/types/insp/scoring'
 
 import { entityTypeApi } from '@/api/entityType'
 import type { InspectionPlan, CreatePlanRequest } from '@/types/insp/template'
@@ -58,11 +61,34 @@ function planStats(planId: LongId | string) {
 //  State
 // ══════════════════════════════════════════════
 
+const router = useRouter()
+
 const loading = ref(false)
 const plans = ref<InspectionPlan[]>([])
 const indicators = ref<Indicator[]>([])
 const gradeSchemes = ref<GradeScheme[]>([])
+const scoringProfiles = ref<ScoringProfile[]>([])
+const projectDefaultScoringProfileId = ref<LongId | null>(null)
 const targetCount = ref(0) // 检查目标数量
+
+// 评分方案下拉选项 — 优先用分区名做标签
+const scoringProfileOptions = computed(() =>
+  scoringProfiles.value.map(p => {
+    const secName = props.sections.find(s => s.id === p.sectionId)?.sectionName
+    return {
+      id: p.id,
+      label: secName ? `${secName} (方案 #${p.id})` : `方案 #${p.id} · 分区 #${p.sectionId}`,
+    }
+  }),
+)
+
+// 调度组可用检查员数 — inspectorIds 为空表示项目全员 (此时不校验上限)
+const scheduleAvailableRaters = computed(() => scheduleForm.value.inspectorIds.length)
+// 实时校验: 选了具体检查员时, 每目标评分人数不得超过可用检查员数
+const ratersExceedsAvailable = computed(() =>
+  scheduleAvailableRaters.value > 0 &&
+  scheduleForm.value.ratersPerTarget > scheduleAvailableRaters.value,
+)
 
 // ── Schedule Dialog ──
 const scheduleDialogVisible = ref(false)
@@ -87,6 +113,8 @@ const scheduleForm = ref({
   timeSlots: [] as Array<{ start: string; end: string }>,
   skipHolidays: false,
   inspectorIds: [] as LongId[],
+  scoringProfileId: null as LongId | null,
+  ratersPerTarget: 1,
 })
 
 // ── Evaluation Dialog ──
@@ -373,15 +401,18 @@ function selectedSchemeGrades(schemeId: LongId | null): GradeScheme['grades'] {
 async function loadAll() {
   loading.value = true
   try {
-    const [p, ind, gs, proj] = await Promise.all([
+    const [p, ind, gs, proj, sp] = await Promise.all([
       inspPlanApi.list(props.projectId),
       getIndicators(props.projectId),
       getGradeSchemes(),
       getProject(props.projectId),
+      getProfiles(),
     ])
     plans.value = p
     indicators.value = ind
     gradeSchemes.value = gs
+    scoringProfiles.value = sp
+    projectDefaultScoringProfileId.value = proj.defaultScoringProfileId ?? null
     // 从项目 scopeConfig 获取目标数量
     if (proj.scopeConfig) {
       try { targetCount.value = JSON.parse(proj.scopeConfig).length } catch { targetCount.value = 0 }
@@ -406,6 +437,8 @@ function openAddSchedule() {
     planName: '', sectionIds: [], freqMode: 'DAILY', frequency: 1,
     weekDays: [], monthDays: [], timeSlots: [],
     skipHolidays: false, inspectorIds: [],
+    scoringProfileId: projectDefaultScoringProfileId.value,
+    ratersPerTarget: 1,
   }
   scheduleDialogVisible.value = true
 }
@@ -430,7 +463,12 @@ function openEditSchedule(plan: InspectionPlan) {
   if (plan.scheduleMode === 'ON_DEMAND') freqMode = 'ON_DEMAND'
   else if (plan.cycleType === 'WEEKLY') freqMode = 'WEEKLY'
   else if (plan.cycleType === 'MONTHLY') freqMode = 'MONTHLY'
-  scheduleForm.value = { planName: plan.planName, sectionIds, freqMode, frequency: plan.frequency || 1, weekDays, monthDays, timeSlots, skipHolidays: plan.skipHolidays, inspectorIds }
+  scheduleForm.value = {
+    planName: plan.planName, sectionIds, freqMode, frequency: plan.frequency || 1,
+    weekDays, monthDays, timeSlots, skipHolidays: plan.skipHolidays, inspectorIds,
+    scoringProfileId: plan.scoringProfileId ?? null,
+    ratersPerTarget: plan.ratersPerTarget ?? 1,
+  }
   scheduleDialogVisible.value = true
 }
 
@@ -442,6 +480,10 @@ async function handleSaveSchedule() {
   }
   if (scheduleForm.value.freqMode === 'MONTHLY' && scheduleForm.value.monthDays.length === 0) {
     ElMessage.warning('按月检查需至少选择一个日期'); return
+  }
+  // 每目标评分人数不得超过调度组可用检查员数 (指定了检查员时)
+  if (ratersExceedsAvailable.value) {
+    ElMessage.warning('每目标评分人数不能超过已指定的检查员数量'); return
   }
   scheduleSaving.value = true
   try {
@@ -457,6 +499,8 @@ async function handleSaveSchedule() {
       timeSlots: scheduleForm.value.timeSlots.length ? JSON.stringify(scheduleForm.value.timeSlots) : undefined,
       skipHolidays: scheduleForm.value.skipHolidays,
       inspectorIds: scheduleForm.value.inspectorIds.length ? JSON.stringify(scheduleForm.value.inspectorIds) : undefined,
+      scoringProfileId: scheduleForm.value.scoringProfileId,
+      ratersPerTarget: scheduleForm.value.ratersPerTarget,
     }
     if (editingPlan.value) {
       await inspPlanApi.update(editingPlan.value.id, data)
@@ -469,6 +513,13 @@ async function handleSaveSchedule() {
     await loadAll()
   } catch (e: any) { ElMessage.error(e.message || '保存失败') }
   finally { scheduleSaving.value = false }
+}
+
+// 跳转到评分方案编辑器 (选中方案则进编辑, 否则进方案列表)
+function goEditScoringProfile() {
+  const id = scheduleForm.value.scoringProfileId
+  if (id) router.push(`/inspection/scoring/${id}`)
+  else router.push('/inspection/scoring-profiles')
 }
 
 async function handleDeleteSchedule(plan: InspectionPlan) {
@@ -1145,12 +1196,38 @@ defineExpose({ reload: loadAll })
             </button>
           </div>
         </div>
+
+        <!-- Scoring Profile -->
+        <div class="fd-block">
+          <label class="fd-lbl">
+            评分方案
+            <button class="fd-link" type="button" @click="goEditScoringProfile">
+              <ExternalLink class="w-3 h-3" /> 去编辑方案
+            </button>
+          </label>
+          <el-select v-model="scheduleForm.scoringProfileId"
+            placeholder="未设置 (将用项目默认)" clearable filterable size="small" style="width: 100%">
+            <el-option v-for="p in scoringProfileOptions" :key="p.id" :label="p.label" :value="p.id" />
+          </el-select>
+        </div>
+
+        <!-- Raters per target -->
+        <div class="fd-block">
+          <label class="fd-lbl">每目标评分人数</label>
+          <el-input-number v-model="scheduleForm.ratersPerTarget" :min="1" size="small" />
+          <div v-if="ratersExceedsAvailable" class="fd-err">
+            不能超过已指定的检查员数量 ({{ scheduleAvailableRaters }} 人)
+          </div>
+          <div v-else class="fd-sub" style="margin-top: 4px">
+            1=单人检查；&gt;1=每个目标由多名检查员分别评分后合并。
+          </div>
+        </div>
       </div>
 
       <template #footer>
         <div class="fd-footer">
           <button class="fd-btn ghost" @click="scheduleDialogVisible = false">取消</button>
-          <button class="fd-btn primary" :disabled="scheduleSaving" @click="handleSaveSchedule">
+          <button class="fd-btn primary" :disabled="scheduleSaving || ratersExceedsAvailable" @click="handleSaveSchedule">
             {{ scheduleSaving ? '保存中...' : (editingPlan ? '更新' : '创建') }}
           </button>
         </div>

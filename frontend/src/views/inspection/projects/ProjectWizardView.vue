@@ -272,6 +272,7 @@ async function handleCreate() {
         rootSectionId: form.rootSectionId,
         sectionIds: '[]',
         scheduleMode: 'ON_DEMAND',
+        ratersPerTarget: 1,
       })
     }
 

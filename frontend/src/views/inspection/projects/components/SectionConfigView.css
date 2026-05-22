@@ -184,8 +184,10 @@
 .fd-link {
   display: inline-flex; align-items: center; gap: 3px; margin-left: auto;
   font-size: 11px; font-weight: 500; color: #8b5cf6; text-decoration: none;
+  border: none; background: none; padding: 0; cursor: pointer;
 }
 .fd-link:hover { text-decoration: underline; }
+.fd-err { font-size: 11px; font-weight: 500; color: #ef4444; margin-top: 4px; }
 
 .fd-input {
   width: 100%; padding: 9px 12px; border: 1.5px solid #e5e7eb; border-radius: 8px;

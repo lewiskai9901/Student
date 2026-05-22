@@ -20,7 +20,8 @@ import { http } from '@/utils/request'
 import { getTasks, assignTask } from '@/api/inspection/task'
 import { getSubmissions } from '@/api/inspection/submission'
 import { getSections } from '@/api/inspection/template'
-import { getProfileBySection, getGradeBands } from '@/api/inspection/scoring'
+import { getProfileBySection, getGradeBands, getProfiles } from '@/api/inspection/scoring'
+import type { ScoringProfile } from '@/types/insp/scoring'
 import { getSimpleUserList, getUser } from '@/api/user'
 import { getOrgUnitTree } from '@/api/organization'
 import type { OrgUnitTreeNode } from '@/api/organization'
@@ -56,6 +57,17 @@ const sectionNameMap = ref<Map<LongId, { name: string; targetType?: string }>>(n
 const sectionTree = ref<SectionTreeNode[]>([])
 const sectionList = computed(() => [...sectionNameMap.value.entries()].map(([id, info]) => ({ id, sectionName: info.name, targetType: info.targetType })))
 const rootGradeBands = ref<Array<{ name: string; min: number; max: number }>>([])
+// 评分方案列表 — 供"默认评分方案"下拉使用
+const scoringProfiles = ref<ScoringProfile[]>([])
+const scoringProfileOptions = computed(() =>
+  scoringProfiles.value.map(p => {
+    const secName = sectionNameMap.value.get(p.sectionId)?.name
+    return {
+      id: p.id,
+      label: secName ? `${secName} (方案 #${p.id})` : `方案 #${p.id} · 分区 #${p.sectionId}`,
+    }
+  }),
+)
 const creatorName = ref('')
 const rootSectionName = ref('')
 const scopeOrgNames = ref<string[]>([])
@@ -117,7 +129,7 @@ const configDirty = ref(false)
 const saving = ref(false)
 
 // 配置表单
-const cf = ref({ scopeType: 'ORG', scopeIds: [] as string[], startDate: '', endDate: '', assignmentMode: 'FREE', reviewRequired: true, autoPublish: false, projectName: '', evaluationMode: 'SINGLE', multiRaterMode: 'AVERAGE', trendEnabled: false, decayEnabled: false, calibrationEnabled: false,
+const cf = ref({ scopeType: 'ORG', scopeIds: [] as string[], startDate: '', endDate: '', assignmentMode: 'FREE', reviewRequired: true, autoPublish: false, projectName: '', defaultScoringProfileId: null as LongId | null,
   // V108: 检查模式
   inspectionMode: 'PLANNED' as 'PLANNED'|'HYBRID'|'SPOT_CHECK'|'SELF_AUDIT'|'EMERGENCY',
   // V110: 整改判定策略
@@ -545,6 +557,7 @@ async function loadProject() {
   try {
     project.value = await store.loadProject(projectId)
     inspectors.value = await store.loadInspectors(projectId)
+    try { scoringProfiles.value = await getProfiles() } catch (e) { console.warn('加载评分方案列表失败', e) }
     if (isDraft.value) activeTab.value = 'settings'
     syncForm()
     if (project.value.createdBy) { try { const u = await getUser(project.value.createdBy); creatorName.value = u.realName || u.username } catch (e: any) { console.warn('加载创建者信息失败', e) } }
@@ -603,7 +616,7 @@ function syncForm() {
   if (!project.value) return; const p = project.value
   let rawIds: (number | string)[] = []; try { rawIds = p.scopeConfig ? JSON.parse(p.scopeConfig) : [] } catch (e: any) { console.warn('解析 scopeConfig 失败', e) }
   const ids: string[] = rawIds.map(String)
-  cf.value = { ...cf.value, scopeType: (p.scopeType as string) || 'ORG', scopeIds: ids, startDate: p.startDate || '', endDate: p.endDate || '', assignmentMode: (p.assignmentMode as string) || 'FREE', reviewRequired: p.reviewRequired ?? true, autoPublish: p.autoPublish ?? false, projectName: p.projectName, evaluationMode: String((p as any).evaluationMode || 'SINGLE'), multiRaterMode: String((p as any).multiRaterMode || 'AVERAGE'), trendEnabled: (p as any).trendEnabled ?? false, decayEnabled: (p as any).decayEnabled ?? false, calibrationEnabled: (p as any).calibrationEnabled ?? false,
+  cf.value = { ...cf.value, scopeType: (p.scopeType as string) || 'ORG', scopeIds: ids, startDate: p.startDate || '', endDate: p.endDate || '', assignmentMode: (p.assignmentMode as string) || 'FREE', reviewRequired: p.reviewRequired ?? true, autoPublish: p.autoPublish ?? false, projectName: p.projectName, defaultScoringProfileId: p.defaultScoringProfileId ?? null,
     // V108
     inspectionMode: ((p as any).inspectionMode || 'PLANNED') as any,
     allowAdHoc: !!((p as any).allowAdHoc),
@@ -658,7 +671,7 @@ async function saveConfig() {
   if (!project.value) return; saving.value = true
   try {
     if (isDraft.value) {
-      await inspProjectApi.update(projectId, { projectName: cf.value.projectName, rootSectionId: project.value.rootSectionId, scopeType: cf.value.scopeType as ScopeType, scopeConfig: cf.value.scopeIds.length > 0 ? JSON.stringify(cf.value.scopeIds) : undefined, startDate: cf.value.startDate || undefined, endDate: cf.value.endDate || undefined, assignmentMode: cf.value.assignmentMode as AssignmentMode, reviewRequired: cf.value.reviewRequired, autoPublish: cf.value.autoPublish })
+      await inspProjectApi.update(projectId, { projectName: cf.value.projectName, rootSectionId: project.value.rootSectionId, defaultScoringProfileId: cf.value.defaultScoringProfileId, scopeType: cf.value.scopeType as ScopeType, scopeConfig: cf.value.scopeIds.length > 0 ? JSON.stringify(cf.value.scopeIds) : undefined, startDate: cf.value.startDate || undefined, endDate: cf.value.endDate || undefined, assignmentMode: cf.value.assignmentMode as AssignmentMode, reviewRequired: cf.value.reviewRequired, autoPublish: cf.value.autoPublish })
     } else {
       await updateOperationalConfig(projectId, { projectName: cf.value.projectName, assignmentMode: cf.value.assignmentMode, reviewRequired: cf.value.reviewRequired, autoPublish: cf.value.autoPublish })
     }
@@ -1320,6 +1333,26 @@ onMounted(async () => {
             <label class="cfg-label">检查模板</label>
             <div class="cfg-readonly-text">{{ rootSectionName }}</div>
           </div>
+          <div class="cfg-field cfg-field--mt">
+            <label class="cfg-label">默认评分方案</label>
+            <el-select
+              v-model="cf.defaultScoringProfileId"
+              placeholder="未设置"
+              clearable
+              filterable
+              size="small"
+              class="w-full"
+              :disabled="isArchived || !isDraft"
+            >
+              <el-option
+                v-for="p in scoringProfileOptions"
+                :key="p.id"
+                :label="p.label"
+                :value="p.id"
+              />
+            </el-select>
+            <div class="cfg-hint">用于临时抽查/自查任务，以及新建调度组时的默认值。计划任务以调度组自身的评分方案为准。</div>
+          </div>
         </div>
 
         <!-- 检查范围 -->
@@ -1568,49 +1601,6 @@ onMounted(async () => {
               </div>
             </div>
           </details>
-        </div>
-
-        <!-- 高级评分设置 -->
-        <div class="cfg-card">
-          <div class="cfg-card-title">高级评分设置</div>
-          <div class="cfg-desc">配置本次检查的评分方式。</div>
-          <div class="cfg-row2">
-            <div class="cfg-field">
-              <label class="cfg-label">评分模式</label>
-              <select v-model="cf.evaluationMode" class="cfg-select" :disabled="isArchived">
-                <option value="SINGLE">单人评分</option>
-                <option value="MULTI">多人评分</option>
-              </select>
-              <div class="cfg-hint">{{ cf.evaluationMode === 'SINGLE' ? '每个目标由一名检查员独立检查' : '每个目标由多名检查员分别检查，结果合并' }}</div>
-            </div>
-            <div v-if="cf.evaluationMode === 'MULTI'" class="cfg-field">
-              <label class="cfg-label">多人合并方式</label>
-              <select v-model="cf.multiRaterMode" class="cfg-select" :disabled="isArchived">
-                <option value="AVERAGE">取平均</option>
-                <option value="MEDIAN">取中位数</option>
-                <option value="MAX">取最高</option>
-                <option value="MIN">取最低</option>
-                <option value="CONSENSUS">共识模式</option>
-              </select>
-            </div>
-          </div>
-          <div class="cfg-toggle-group">
-            <label class="cfg-toggle-item">
-              <el-switch v-model="cf.trendEnabled" :disabled="isArchived" size="small" />
-              <span class="cfg-toggle-name">趋势因子</span>
-              <span class="cfg-hint">根据历史趋势自动加减分</span>
-            </label>
-            <label class="cfg-toggle-item">
-              <el-switch v-model="cf.decayEnabled" :disabled="isArchived" size="small" />
-              <span class="cfg-toggle-name">分数衰减</span>
-              <span class="cfg-hint">分数随时间递减</span>
-            </label>
-            <label class="cfg-toggle-item">
-              <el-switch v-model="cf.calibrationEnabled" :disabled="isArchived" size="small" />
-              <span class="cfg-toggle-name">尺度校准</span>
-              <span class="cfg-hint">校正不同检查员的评分尺度差异</span>
-            </label>
-          </div>
         </div>
 
         <!-- 操作区 -->
