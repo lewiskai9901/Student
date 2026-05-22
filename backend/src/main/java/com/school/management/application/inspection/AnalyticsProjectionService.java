@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -61,7 +62,7 @@ public class AnalyticsProjectionService {
      */
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onTaskPublished(TaskPublishedEvent event) {
         log.info("Analytics projection triggered by TaskPublishedEvent: taskId={}, projectId={}",
                 event.getTaskId(), event.getProjectId());
@@ -72,7 +73,7 @@ public class AnalyticsProjectionService {
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onSubmissionCompleted(SubmissionCompletedEvent event) {
         log.info("Analytics projection: SubmissionCompletedEvent submissionId={}", event.getSubmissionId());
         // Find the submission and task
@@ -98,7 +99,7 @@ public class AnalyticsProjectionService {
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onCorrectiveCaseCreated(CorrectiveCaseCreatedEvent event) {
         log.info("Analytics projection: CorrectiveCaseCreatedEvent caseId={}", event.getCaseId());
         updateCorrectiveSummaryForProject(event);
@@ -106,7 +107,7 @@ public class AnalyticsProjectionService {
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onCaseClosed(CaseClosedEvent event) {
         log.info("Analytics projection: CaseClosedEvent caseId={}", event.getCaseId());
         updateCorrectiveSummaryForCase(event.getCaseId());
@@ -114,7 +115,7 @@ public class AnalyticsProjectionService {
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onEffectivenessFailed(EffectivenessFailedEvent event) {
         log.info("Analytics projection: EffectivenessFailedEvent caseId={}", event.getCaseId());
         updateCorrectiveSummaryForCase(event.getCaseId());
@@ -122,7 +123,7 @@ public class AnalyticsProjectionService {
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onTaskCancelled(TaskCancelledEvent event) {
         log.info("Analytics projection: TaskCancelledEvent taskId={}", event.getTaskId());
         InspTask task = taskRepository.findById(event.getTaskId()).orElse(null);
