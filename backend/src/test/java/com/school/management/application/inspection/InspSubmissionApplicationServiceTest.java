@@ -259,7 +259,8 @@ class InspSubmissionApplicationServiceTest {
             when(taskRepository.findById(7L)).thenReturn(Optional.of(task));
             when(projectRepository.findById(9L)).thenReturn(Optional.of(project));
             when(detailRepository.findBySubmissionId(1L)).thenReturn(List.of());
-            when(scoreAggregationService.computeScoreFields(eq(project), anyList(), eq(100L),
+            // 评分配置下沉: computeScoreFields 首参改为解析后的 Long profileId
+            when(scoreAggregationService.computeScoreFields(any(), anyList(), eq(100L),
                     eq("ORG_UNIT"), eq(33L))).thenReturn(fields());
             when(submissionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
             when(submissionRepository.findByTaskId(7L)).thenReturn(List.of(s));

@@ -58,7 +58,6 @@ class InspProjectStateMachineTest {
             assertThat(p.getAutoPublish()).isFalse();
             assertThat(p.getScopeType()).isEqualTo(ScopeType.ORG);
             assertThat(p.getAssignmentMode()).isEqualTo(AssignmentMode.ASSIGNED);
-            assertThat(p.getEvaluationMode()).isEqualTo("SINGLE");
             assertThat(p.getDomainEvents()).isEmpty();
         }
     }

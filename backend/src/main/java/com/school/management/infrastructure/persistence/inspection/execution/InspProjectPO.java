@@ -20,7 +20,7 @@ public class InspProjectPO {
     private Long orgUnitId;           // 数据权限过滤列 (项目覆盖范围的 org root)
     private Long templateId;          // maps to rootSectionId in domain
     private Long templateVersionId;
-    private Long scoringProfileId;
+    private Long defaultScoringProfileId;   // 评分配置下沉 (2026-05-23): 非计划任务兜底评分方案
     private String scopeType;
     private String scopeConfig;
     private LocalDate startDate;
@@ -28,17 +28,6 @@ public class InspProjectPO {
     private String assignmentMode;
     private Boolean reviewRequired;
     private Boolean autoPublish;
-    private String evaluationMode;
-    private String multiRaterMode;
-    private String raterWeightBy;
-    private java.math.BigDecimal consensusThreshold;
-    private Boolean trendEnabled;
-    private Integer trendLookbackDays;
-    private Boolean decayEnabled;
-    private String decayMode;
-    private Boolean calibrationEnabled;
-    private String calibrationMethod;
-    private String splitStrategy;
     private String scoringConfigSnapshot;
     private Integer maxRejectCount;          // E: 项目级业务策略 (NULL=系统默认)
     private Integer maxEscalationLevel;

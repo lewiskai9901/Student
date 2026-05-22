@@ -17,6 +17,11 @@ import java.time.LocalDateTime;
  * V66 多模板支持：rootSectionId 改为可空，保留作向后兼容。
  * 新项目通过 InspectionPlan.rootSectionId 关联模板（每个计划绑定一个模板）。
  *
+ * 评分配置下沉 (2026-05-23): 评分"怎么算"的唯一权威是 ScoringProfile;
+ * 调度组 (InspectionPlan) 通过 scoringProfileId 引用规则并自带 ratersPerTarget;
+ * 项目仅保留 defaultScoringProfileId 作为非计划任务 (临时抽查/自查/触发) 的兜底。
+ * 已删除项目级 evaluationMode / multiRaterMode / trend / decay / calibration / splitStrategy 等评分字段。
+ *
  * 状态机: DRAFT → PUBLISHED → PAUSED → COMPLETED → ARCHIVED
  */
 public class InspProject extends AggregateRoot<Long> {
@@ -36,7 +41,11 @@ public class InspProject extends AggregateRoot<Long> {
      */
     private Long rootSectionId;          // 关联的根分区ID（替代 templateId），可空
     private Long templateVersionId;      // 锁定的版本快照
-    private Long scoringProfileId;
+    /**
+     * 默认评分方案: 用于非调度组任务 (临时抽查/自查/触发任务, task.planId 为空) 的兜底,
+     * 以及新建调度组时的预填值。调度组任务的评分以 InspectionPlan.scoringProfileId 为准。
+     */
+    private Long defaultScoringProfileId;
     private ScopeType scopeType;
     private String scopeConfig;          // JSON: 范围配置
     private LocalDate startDate;
@@ -44,18 +53,6 @@ public class InspProject extends AggregateRoot<Long> {
     private AssignmentMode assignmentMode;
     private Boolean reviewRequired;
     private Boolean autoPublish;
-    // 评分策略（项目级）
-    private String evaluationMode;       // SINGLE, MULTI
-    private String multiRaterMode;       // AVERAGE, WEIGHTED_AVERAGE, MEDIAN, MAX, MIN, CONSENSUS
-    private String raterWeightBy;        // EQUAL, BY_ROLE, BY_EXPERIENCE
-    private java.math.BigDecimal consensusThreshold;
-    private Boolean trendEnabled;
-    private Integer trendLookbackDays;
-    private Boolean decayEnabled;
-    private String decayMode;            // LINEAR, EXPONENTIAL
-    private Boolean calibrationEnabled;
-    private String calibrationMethod;    // Z_SCORE, MIN_MAX, PERCENTILE_RANK
-    private String splitStrategy;        // NONE, BY_TARGET, BY_SECTION, MANUAL
     private String scoringConfigSnapshot; // JSON 快照，发布时锁定
     // review #E + #F: 项目级业务策略 (NULL=系统默认)
     private Integer maxRejectCount;       // 任务自动驳回上限, NULL=3
@@ -78,23 +75,12 @@ public class InspProject extends AggregateRoot<Long> {
         this.orgUnitId = builder.orgUnitId;
         this.rootSectionId = builder.rootSectionId;
         this.templateVersionId = builder.templateVersionId;
-        this.scoringProfileId = builder.scoringProfileId;
+        this.defaultScoringProfileId = builder.defaultScoringProfileId;
         this.scopeType = builder.scopeType != null ? builder.scopeType : ScopeType.ORG;
         this.scopeConfig = builder.scopeConfig;
         this.startDate = builder.startDate;
         this.endDate = builder.endDate;
         this.assignmentMode = builder.assignmentMode != null ? builder.assignmentMode : AssignmentMode.ASSIGNED;
-        this.evaluationMode = builder.evaluationMode != null ? builder.evaluationMode : "SINGLE";
-        this.multiRaterMode = builder.multiRaterMode != null ? builder.multiRaterMode : "AVERAGE";
-        this.raterWeightBy = builder.raterWeightBy;
-        this.consensusThreshold = builder.consensusThreshold;
-        this.trendEnabled = builder.trendEnabled != null ? builder.trendEnabled : false;
-        this.trendLookbackDays = builder.trendLookbackDays;
-        this.decayEnabled = builder.decayEnabled != null ? builder.decayEnabled : false;
-        this.decayMode = builder.decayMode;
-        this.calibrationEnabled = builder.calibrationEnabled != null ? builder.calibrationEnabled : false;
-        this.calibrationMethod = builder.calibrationMethod;
-        this.splitStrategy = builder.splitStrategy != null ? builder.splitStrategy : "NONE";
         this.scoringConfigSnapshot = builder.scoringConfigSnapshot;
         this.maxRejectCount = builder.maxRejectCount;
         this.maxEscalationLevel = builder.maxEscalationLevel;
@@ -239,7 +225,7 @@ public class InspProject extends AggregateRoot<Long> {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public void updateInfo(String projectName, Long rootSectionId, Long scoringProfileId,
+    public void updateInfo(String projectName, Long rootSectionId, Long defaultScoringProfileId,
                            ScopeType scopeType, String scopeConfig,
                            LocalDate startDate, LocalDate endDate,
                            AssignmentMode assignmentMode, Boolean reviewRequired,
@@ -254,7 +240,7 @@ public class InspProject extends AggregateRoot<Long> {
         validateAutoPublishReviewConflict(effectiveAutoPublish, effectiveReviewRequired);
         if (projectName != null) this.projectName = projectName;
         if (rootSectionId != null) this.rootSectionId = rootSectionId;
-        if (scoringProfileId != null) this.scoringProfileId = scoringProfileId;
+        if (defaultScoringProfileId != null) this.defaultScoringProfileId = defaultScoringProfileId;
         if (scopeType != null) this.scopeType = scopeType;
         if (scopeConfig != null) this.scopeConfig = scopeConfig;
         if (startDate != null) this.startDate = startDate;
@@ -299,7 +285,7 @@ public class InspProject extends AggregateRoot<Long> {
     public Long getOrgUnitId() { return orgUnitId; }
     public Long getRootSectionId() { return rootSectionId; }
     public Long getTemplateVersionId() { return templateVersionId; }
-    public Long getScoringProfileId() { return scoringProfileId; }
+    public Long getDefaultScoringProfileId() { return defaultScoringProfileId; }
     public ScopeType getScopeType() { return scopeType; }
     public String getScopeConfig() { return scopeConfig; }
     public LocalDate getStartDate() { return startDate; }
@@ -307,17 +293,6 @@ public class InspProject extends AggregateRoot<Long> {
     public AssignmentMode getAssignmentMode() { return assignmentMode; }
     public Boolean getReviewRequired() { return reviewRequired; }
     public Boolean getAutoPublish() { return autoPublish; }
-    public String getEvaluationMode() { return evaluationMode; }
-    public String getMultiRaterMode() { return multiRaterMode; }
-    public String getRaterWeightBy() { return raterWeightBy; }
-    public java.math.BigDecimal getConsensusThreshold() { return consensusThreshold; }
-    public Boolean getTrendEnabled() { return trendEnabled; }
-    public Integer getTrendLookbackDays() { return trendLookbackDays; }
-    public Boolean getDecayEnabled() { return decayEnabled; }
-    public String getDecayMode() { return decayMode; }
-    public Boolean getCalibrationEnabled() { return calibrationEnabled; }
-    public String getCalibrationMethod() { return calibrationMethod; }
-    public String getSplitStrategy() { return splitStrategy; }
     public String getScoringConfigSnapshot() { return scoringConfigSnapshot; }
     public Integer getMaxRejectCount() { return maxRejectCount; }
     public Integer getMaxEscalationLevel() { return maxEscalationLevel; }
@@ -342,7 +317,7 @@ public class InspProject extends AggregateRoot<Long> {
         private Long orgUnitId;
         private Long rootSectionId;
         private Long templateVersionId;
-        private Long scoringProfileId;
+        private Long defaultScoringProfileId;
         private ScopeType scopeType;
         private String scopeConfig;
         private LocalDate startDate;
@@ -350,17 +325,6 @@ public class InspProject extends AggregateRoot<Long> {
         private AssignmentMode assignmentMode;
         private Boolean reviewRequired;
         private Boolean autoPublish;
-        private String evaluationMode;
-        private String multiRaterMode;
-        private String raterWeightBy;
-        private java.math.BigDecimal consensusThreshold;
-        private Boolean trendEnabled;
-        private Integer trendLookbackDays;
-        private Boolean decayEnabled;
-        private String decayMode;
-        private Boolean calibrationEnabled;
-        private String calibrationMethod;
-        private String splitStrategy;
         private String scoringConfigSnapshot;
         private Integer maxRejectCount;
         private Integer maxEscalationLevel;
@@ -378,7 +342,7 @@ public class InspProject extends AggregateRoot<Long> {
         public Builder orgUnitId(Long orgUnitId) { this.orgUnitId = orgUnitId; return this; }
         public Builder rootSectionId(Long rootSectionId) { this.rootSectionId = rootSectionId; return this; }
         public Builder templateVersionId(Long templateVersionId) { this.templateVersionId = templateVersionId; return this; }
-        public Builder scoringProfileId(Long scoringProfileId) { this.scoringProfileId = scoringProfileId; return this; }
+        public Builder defaultScoringProfileId(Long defaultScoringProfileId) { this.defaultScoringProfileId = defaultScoringProfileId; return this; }
         public Builder scopeType(ScopeType scopeType) { this.scopeType = scopeType; return this; }
         public Builder scopeConfig(String scopeConfig) { this.scopeConfig = scopeConfig; return this; }
         public Builder startDate(LocalDate startDate) { this.startDate = startDate; return this; }
@@ -386,17 +350,6 @@ public class InspProject extends AggregateRoot<Long> {
         public Builder assignmentMode(AssignmentMode assignmentMode) { this.assignmentMode = assignmentMode; return this; }
         public Builder reviewRequired(Boolean reviewRequired) { this.reviewRequired = reviewRequired; return this; }
         public Builder autoPublish(Boolean autoPublish) { this.autoPublish = autoPublish; return this; }
-        public Builder evaluationMode(String evaluationMode) { this.evaluationMode = evaluationMode; return this; }
-        public Builder multiRaterMode(String multiRaterMode) { this.multiRaterMode = multiRaterMode; return this; }
-        public Builder raterWeightBy(String raterWeightBy) { this.raterWeightBy = raterWeightBy; return this; }
-        public Builder consensusThreshold(java.math.BigDecimal consensusThreshold) { this.consensusThreshold = consensusThreshold; return this; }
-        public Builder trendEnabled(Boolean trendEnabled) { this.trendEnabled = trendEnabled; return this; }
-        public Builder trendLookbackDays(Integer trendLookbackDays) { this.trendLookbackDays = trendLookbackDays; return this; }
-        public Builder decayEnabled(Boolean decayEnabled) { this.decayEnabled = decayEnabled; return this; }
-        public Builder decayMode(String decayMode) { this.decayMode = decayMode; return this; }
-        public Builder calibrationEnabled(Boolean calibrationEnabled) { this.calibrationEnabled = calibrationEnabled; return this; }
-        public Builder calibrationMethod(String calibrationMethod) { this.calibrationMethod = calibrationMethod; return this; }
-        public Builder splitStrategy(String splitStrategy) { this.splitStrategy = splitStrategy; return this; }
         public Builder scoringConfigSnapshot(String scoringConfigSnapshot) { this.scoringConfigSnapshot = scoringConfigSnapshot; return this; }
         public Builder maxRejectCount(Integer v) { this.maxRejectCount = v; return this; }
         public Builder maxEscalationLevel(Integer v) { this.maxEscalationLevel = v; return this; }

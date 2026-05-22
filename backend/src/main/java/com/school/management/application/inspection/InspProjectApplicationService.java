@@ -128,14 +128,14 @@ public class InspProjectApplicationService {
 
     @Transactional
     public InspProject updateProject(Long id, String projectName, Long rootSectionId,
-                                     Long scoringProfileId, ScopeType scopeType,
+                                     Long defaultScoringProfileId, ScopeType scopeType,
                                      String scopeConfig,
                                      LocalDate startDate, LocalDate endDate,
                                      AssignmentMode assignmentMode, Boolean reviewRequired,
                                      Boolean autoPublish, Long updatedBy) {
         InspProject project = projectRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("项目不存在: " + id));
-        project.updateInfo(projectName, rootSectionId, scoringProfileId,
+        project.updateInfo(projectName, rootSectionId, defaultScoringProfileId,
                 scopeType, scopeConfig, startDate, endDate,
                 assignmentMode, reviewRequired, autoPublish, updatedBy);
         return projectRepository.save(project);

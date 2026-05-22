@@ -36,6 +36,7 @@ public class InspectionPlanController {
                 request.sectionIds(), request.inspectorIds(),
                 request.scheduleMode(), request.cycleType(), request.frequency(),
                 request.scheduleDays(), request.timeSlots(), request.skipHolidays(),
+                request.scoringProfileId(), request.ratersPerTarget(),
                 userId));
     }
 
@@ -60,7 +61,8 @@ public class InspectionPlanController {
                 request.planName(), request.rootSectionId(), request.sectionIds(),
                 request.inspectorIds(),
                 request.scheduleMode(), request.cycleType(), request.frequency(),
-                request.scheduleDays(), request.timeSlots(), request.skipHolidays()));
+                request.scheduleDays(), request.timeSlots(), request.skipHolidays(),
+                request.scoringProfileId(), request.ratersPerTarget()));
     }
 
     @DeleteMapping("/{id}")
@@ -102,7 +104,9 @@ public class InspectionPlanController {
             String scheduleDays,
             String timeSlots,
             Boolean skipHolidays,
-            String inspectorIds    // JSON: 指定检查员ID列表，空=项目全员
+            String inspectorIds,    // JSON: 指定检查员ID列表，空=项目全员
+            Long scoringProfileId,  // 评分配置下沉: 调度组评分方案 (空=回退项目默认)
+            Integer ratersPerTarget // 评分配置下沉: 每目标检查员份数 (空=1)
     ) {}
 
     public record UpdatePlanRequest(
@@ -115,6 +119,8 @@ public class InspectionPlanController {
             String scheduleDays,
             String timeSlots,
             Boolean skipHolidays,
-            String inspectorIds
+            String inspectorIds,
+            Long scoringProfileId,
+            Integer ratersPerTarget
     ) {}
 }

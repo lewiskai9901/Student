@@ -69,6 +69,8 @@ public class InspectionPlanRepositoryImpl implements InspectionPlanRepository {
         po.setTimeSlots(d.getTimeSlots());
         po.setSkipHolidays(d.getSkipHolidays());
         po.setInspectorIds(d.getInspectorIds());
+        po.setScoringProfileId(d.getScoringProfileId());
+        po.setRatersPerTarget(d.getRatersPerTarget());
         po.setIsEnabled(d.getIsEnabled());
         po.setSortOrder(d.getSortOrder());
         po.setCreatedBy(d.getCreatedBy());
@@ -92,6 +94,8 @@ public class InspectionPlanRepositoryImpl implements InspectionPlanRepository {
                 .timeSlots(po.getTimeSlots())
                 .skipHolidays(po.getSkipHolidays())
                 .inspectorIds(po.getInspectorIds())
+                .scoringProfileId(po.getScoringProfileId())
+                .ratersPerTarget(po.getRatersPerTarget())
                 .isEnabled(po.getIsEnabled())
                 .sortOrder(po.getSortOrder())
                 .createdBy(po.getCreatedBy())

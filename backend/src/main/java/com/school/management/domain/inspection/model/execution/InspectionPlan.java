@@ -25,6 +25,16 @@ public class InspectionPlan extends AggregateRoot<Long> {
     private String timeSlots;          // JSON: ["07:00-08:00"]
     private Boolean skipHolidays;
     private String inspectorIds;       // JSON: 指定检查员ID列表，空=项目全员可领取
+    /**
+     * 评分配置下沉 (2026-05-23): 该调度组使用的评分方案ID (可空).
+     * 调度组生成的任务以此为评分配置权威; 为空则回退项目 defaultScoringProfileId。
+     */
+    private Long scoringProfileId;
+    /**
+     * 每个检查目标的检查员份数 (1=单人评分, >1=多人评分). 默认 1.
+     * 多人评分的合并算法由所引用 ScoringProfile.multiRaterMode 决定。
+     */
+    private Integer ratersPerTarget;
     private Boolean isEnabled;
     private Integer sortOrder;
     private Long createdBy;
@@ -48,6 +58,8 @@ public class InspectionPlan extends AggregateRoot<Long> {
         this.timeSlots = builder.timeSlots;
         this.skipHolidays = builder.skipHolidays != null ? builder.skipHolidays : false;
         this.inspectorIds = builder.inspectorIds;
+        this.scoringProfileId = builder.scoringProfileId;
+        this.ratersPerTarget = builder.ratersPerTarget != null ? builder.ratersPerTarget : 1;
         this.isEnabled = builder.isEnabled != null ? builder.isEnabled : true;
         this.sortOrder = builder.sortOrder != null ? builder.sortOrder : 0;
         this.createdBy = builder.createdBy;
@@ -97,6 +109,21 @@ public class InspectionPlan extends AggregateRoot<Long> {
         this.updatedAt = LocalDateTime.now();
     }
 
+    /**
+     * 评分配置下沉 (2026-05-23): 更新调度组的评分配置.
+     *
+     * @param scoringProfileId 评分方案ID (可空, null 表示回退项目默认评分方案)
+     * @param ratersPerTarget  每目标检查员份数, 必须 >= 1
+     */
+    public void updateScoringConfig(Long scoringProfileId, int ratersPerTarget) {
+        if (ratersPerTarget < 1) {
+            throw new IllegalArgumentException("ratersPerTarget 必须 >= 1, 当前值: " + ratersPerTarget);
+        }
+        this.scoringProfileId = scoringProfileId;
+        this.ratersPerTarget = ratersPerTarget;
+        this.updatedAt = LocalDateTime.now();
+    }
+
     public void enable() {
         this.isEnabled = true;
         this.updatedAt = LocalDateTime.now();
@@ -124,6 +151,8 @@ public class InspectionPlan extends AggregateRoot<Long> {
     public String getTimeSlots() { return timeSlots; }
     public Boolean getSkipHolidays() { return skipHolidays; }
     public String getInspectorIds() { return inspectorIds; }
+    public Long getScoringProfileId() { return scoringProfileId; }
+    public Integer getRatersPerTarget() { return ratersPerTarget == null ? 1 : ratersPerTarget; }
     public Boolean getIsEnabled() { return isEnabled; }
     public Integer getSortOrder() { return sortOrder; }
     public Long getCreatedBy() { return createdBy; }
@@ -146,6 +175,8 @@ public class InspectionPlan extends AggregateRoot<Long> {
         private String timeSlots;
         private Boolean skipHolidays;
         private String inspectorIds;
+        private Long scoringProfileId;
+        private Integer ratersPerTarget;
         private Boolean isEnabled;
         private Integer sortOrder;
         private Long createdBy;
@@ -165,6 +196,8 @@ public class InspectionPlan extends AggregateRoot<Long> {
         public Builder timeSlots(String timeSlots) { this.timeSlots = timeSlots; return this; }
         public Builder skipHolidays(Boolean skipHolidays) { this.skipHolidays = skipHolidays; return this; }
         public Builder inspectorIds(String inspectorIds) { this.inspectorIds = inspectorIds; return this; }
+        public Builder scoringProfileId(Long scoringProfileId) { this.scoringProfileId = scoringProfileId; return this; }
+        public Builder ratersPerTarget(Integer ratersPerTarget) { this.ratersPerTarget = ratersPerTarget; return this; }
         public Builder isEnabled(Boolean isEnabled) { this.isEnabled = isEnabled; return this; }
         public Builder sortOrder(Integer sortOrder) { this.sortOrder = sortOrder; return this; }
         public Builder createdBy(Long createdBy) { this.createdBy = createdBy; return this; }

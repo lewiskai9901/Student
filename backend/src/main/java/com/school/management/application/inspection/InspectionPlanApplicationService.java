@@ -50,6 +50,7 @@ public class InspectionPlanApplicationService {
                                      String sectionIds, String inspectorIds,
                                      String scheduleMode, String cycleType, Integer frequency,
                                      String scheduleDays, String timeSlots, Boolean skipHolidays,
+                                     Long scoringProfileId, Integer ratersPerTarget,
                                      Long createdBy) {
         // 校验项目存在且状态允许
         InspProject project = projectRepository.findById(projectId)
@@ -58,6 +59,11 @@ public class InspectionPlanApplicationService {
 
         // 若未指定模板，从项目的 rootSectionId 继承
         Long resolvedRootSectionId = rootSectionId != null ? rootSectionId : project.getRootSectionId();
+        // 评分配置下沉: 调度组若未指定评分方案, 预填项目默认评分方案
+        Long resolvedScoringProfileId = scoringProfileId != null
+                ? scoringProfileId : project.getDefaultScoringProfileId();
+        int resolvedRaters = ratersPerTarget != null ? ratersPerTarget : 1;
+        validateRatersPerTarget(resolvedRaters, inspectorIds);
 
         InspectionPlan plan = InspectionPlan.builder()
                 .projectId(projectId)
@@ -71,6 +77,8 @@ public class InspectionPlanApplicationService {
                 .scheduleDays(scheduleDays)
                 .timeSlots(timeSlots)
                 .skipHolidays(skipHolidays)
+                .scoringProfileId(resolvedScoringProfileId)
+                .ratersPerTarget(resolvedRaters)
                 .createdBy(createdBy)
                 .build();
 
@@ -87,7 +95,8 @@ public class InspectionPlanApplicationService {
     public InspectionPlan updatePlan(Long planId, String planName, Long rootSectionId,
                                      String sectionIds, String inspectorIds,
                                      String scheduleMode, String cycleType, Integer frequency,
-                                     String scheduleDays, String timeSlots, Boolean skipHolidays) {
+                                     String scheduleDays, String timeSlots, Boolean skipHolidays,
+                                     Long scoringProfileId, Integer ratersPerTarget) {
         InspectionPlan plan = planRepository.findById(planId)
                 .orElseThrow(() -> new IllegalArgumentException("检查计划不存在: " + planId));
 
@@ -99,6 +108,12 @@ public class InspectionPlanApplicationService {
         plan.update(planName, rootSectionId, sectionIds, scheduleMode, cycleType, frequency,
                 scheduleDays, timeSlots, skipHolidays, null, null);
         if (inspectorIds != null) plan.updateInspectorIds(inspectorIds);
+
+        // 评分配置下沉: ratersPerTarget 为空时沿用现有值 (部分更新语义).
+        // 用更新后的 inspectorIds 做检查员数校验.
+        int resolvedRaters = ratersPerTarget != null ? ratersPerTarget : plan.getRatersPerTarget();
+        validateRatersPerTarget(resolvedRaters, plan.getInspectorIds());
+        plan.updateScoringConfig(scoringProfileId, resolvedRaters);
 
         InspectionPlan saved = planRepository.save(plan);
         log.info("更新检查计划: planId={}, planName={}", planId, planName);
@@ -241,6 +256,46 @@ public class InspectionPlanApplicationService {
      * 校验项目状态是否允许修改计划
      * 只有 DRAFT 和 PUBLISHED 状态的项目可以修改计划
      */
+    /**
+     * 评分配置下沉 (2026-05-23): 校验 ratersPerTarget.
+     *
+     * <p>规则:
+     * <ul>
+     *   <li>ratersPerTarget 必须 >= 1 (由 {@link InspectionPlan#updateScoringConfig} 兜底, 这里提前给友好报错)</li>
+     *   <li>多人评分 (ratersPerTarget > 1) 时, 不得超过调度组指定的可用检查员数 —
+     *       inspectorIds 为空表示"项目全员可领取", 此时不在调度组层硬校验人数</li>
+     * </ul>
+     *
+     * <p>说明: 当前任务生成仍是每目标 1 份 submission (InspSubmission 无 raterId 维度,
+     * 单任务只挂一名 inspector). ratersPerTarget > 1 的实际 N 份 submission 生成与
+     * 多人合并由所引用 ScoringProfile.multiRaterMode 处理 — 若下游 N-rater 任务扇出
+     * 与合并逻辑尚未实现, 此处只落库配置 + 校验人数, 不产生 N 份。
+     */
+    private void validateRatersPerTarget(int ratersPerTarget, String inspectorIdsJson) {
+        if (ratersPerTarget < 1) {
+            throw new IllegalArgumentException("ratersPerTarget 必须 >= 1, 当前值: " + ratersPerTarget);
+        }
+        if (ratersPerTarget == 1) return;
+        if (inspectorIdsJson == null || inspectorIdsJson.isBlank()) {
+            // 未指定检查员名单 = 项目全员可领取, 调度组层不硬校验人数
+            return;
+        }
+        int available;
+        try {
+            Long[] ids = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readValue(inspectorIdsJson, Long[].class);
+            available = ids.length;
+        } catch (Exception e) {
+            log.warn("解析调度组检查员列表失败, 跳过 ratersPerTarget 人数校验: {}", e.getMessage());
+            return;
+        }
+        if (ratersPerTarget > available) {
+            throw new com.school.management.exception.BusinessException(
+                    "每目标检查员份数 (" + ratersPerTarget + ") 超过调度组可用检查员数 ("
+                    + available + "), 请增加检查员或调低份数");
+        }
+    }
+
     private void validateProjectForPlanModification(InspProject project) {
         ProjectStatus status = project.getStatus();
         if (status != ProjectStatus.DRAFT && status != ProjectStatus.PUBLISHED) {

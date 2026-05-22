@@ -88,7 +88,7 @@ public class InspProjectController {
         Long userId = SecurityUtils.requireCurrentUserId();
         InspProject project = projectService.updateProject(id,
                 request.getProjectName(), request.getRootSectionId(),
-                request.getScoringProfileId(), request.getScopeType(),
+                request.getDefaultScoringProfileId(), request.getScopeType(),
                 request.getScopeConfig(),
                 request.getStartDate(), request.getEndDate(),
                 request.getAssignmentMode(), request.getReviewRequired(),
@@ -205,8 +205,8 @@ public class InspProjectController {
     public Result<?> getAdvancedScoring(@PathVariable Long id) {
         InspProject project = projectService.getProject(id)
                 .orElseThrow(() -> new IllegalArgumentException("项目不存在: " + id));
-        if (project.getScoringProfileId() == null) return Result.success(null);
-        return Result.success(scoringService.getProfile(project.getScoringProfileId()).orElse(null));
+        if (project.getDefaultScoringProfileId() == null) return Result.success(null);
+        return Result.success(scoringService.getProfile(project.getDefaultScoringProfileId()).orElse(null));
     }
 
     @PatchMapping("/{id}/advanced-scoring")
@@ -216,11 +216,11 @@ public class InspProjectController {
         Long userId = SecurityUtils.requireCurrentUserId();
         InspProject project = projectService.getProject(id)
                 .orElseThrow(() -> new IllegalArgumentException("项目不存在: " + id));
-        if (project.getScoringProfileId() == null) {
-            throw new IllegalArgumentException("项目未关联评分配置");
+        if (project.getDefaultScoringProfileId() == null) {
+            throw new IllegalArgumentException("项目未关联默认评分配置");
         }
         return Result.success(scoringService.updateAdvancedSettings(
-                project.getScoringProfileId(),
+                project.getDefaultScoringProfileId(),
                 request.getTrendFactorEnabled(), request.getTrendLookbackDays(),
                 request.getTrendBonusPerPercent(), request.getTrendPenaltyPerPercent(),
                 request.getTrendMaxAdjustment(),
@@ -295,7 +295,7 @@ public class InspProjectController {
         // 不可加 @NotBlank/@NotNull: 向导分步保存合法地只发部分字段.
         private String projectName;
         private Long rootSectionId;
-        private Long scoringProfileId;
+        private Long defaultScoringProfileId;
         private ScopeType scopeType;
         private String scopeConfig;
         private LocalDate startDate;

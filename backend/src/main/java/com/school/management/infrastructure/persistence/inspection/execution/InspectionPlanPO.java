@@ -24,6 +24,8 @@ public class InspectionPlanPO {
     private String timeSlots;
     private Boolean skipHolidays;
     private String inspectorIds;
+    private Long scoringProfileId;       // 评分配置下沉 (2026-05-23): 调度组评分方案
+    private Integer ratersPerTarget;     // 评分配置下沉 (2026-05-23): 每目标检查员份数, 默认 1
     private Boolean isEnabled;
     private Integer sortOrder;
     private Long createdBy;

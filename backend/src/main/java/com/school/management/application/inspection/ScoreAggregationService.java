@@ -33,6 +33,7 @@ public class ScoreAggregationService {
     private final SubmissionDetailRepository detailRepository;
     private final InspTaskRepository taskRepository;
     private final InspProjectRepository projectRepository;
+    private final InspectionPlanRepository planRepository;
     private final ProjectScoreRepository scoreRepository;
     private final ScoringProfileRepository scoringProfileRepository;
     private final ScoreDimensionRepository dimensionRepository;
@@ -43,6 +44,33 @@ public class ScoreAggregationService {
     private final SubmissionObservationRepository observationRepository;
     private final ScoreCalculationDomainService scoreCalculationService;
     private final ObjectMapper objectMapper;
+
+    // ========== Scoring Config Resolution (评分配置下沉 2026-05-23) ==========
+
+    /**
+     * 评分配置解析的唯一权威方法.
+     *
+     * <p>解析规则:
+     * <ul>
+     *   <li>任务有 inspectionPlanId (来自调度组) → 用该调度组的 scoringProfileId</li>
+     *   <li>调度组未配 scoringProfileId, 或任务无 planId (临时抽查/自查/触发任务)
+     *       → 回退项目 defaultScoringProfileId</li>
+     * </ul>
+     *
+     * @param task 检查任务 (可空: 为空时直接回退项目默认)
+     * @return 解析出的 ScoringProfile ID, 可能为 null (项目也未配默认方案)
+     */
+    public Long resolveScoringProfileId(InspTask task, InspProject project) {
+        if (task != null && task.getInspectionPlanId() != null) {
+            Long planProfileId = planRepository.findById(task.getInspectionPlanId())
+                    .map(InspectionPlan::getScoringProfileId)
+                    .orElse(null);
+            if (planProfileId != null) {
+                return planProfileId;
+            }
+        }
+        return project != null ? project.getDefaultScoringProfileId() : null;
+    }
 
     // ========== Grade Determination ==========
 
@@ -62,9 +90,10 @@ public class ScoreAggregationService {
         }
 
         // 确定等级（旧 GradeBand 路径，评价体系由 IndicatorScoreService 负责）
+        // ProjectScore 是项目级周期汇总, 跨多个调度组任务 — 用项目默认评分方案定级.
         String grade = null;
-        if (score.getScore() != null && project.getScoringProfileId() != null) {
-            grade = determineGrade(project.getScoringProfileId(), score.getScore());
+        if (score.getScore() != null && project.getDefaultScoringProfileId() != null) {
+            grade = determineGrade(project.getDefaultScoringProfileId(), score.getScore());
         }
 
         if (grade != null) {
@@ -113,8 +142,10 @@ public class ScoreAggregationService {
                 .orElseThrow(() -> new IllegalStateException("项目不存在: " + projectId));
 
         // 2. 读取所有明细，重新计算 submission 分数
+        // 评分配置下沉: 按任务来源 (调度组 / 项目默认) 解析评分方案.
+        Long profileId = resolveScoringProfileId(task, project);
         List<SubmissionDetail> details = detailRepository.findBySubmissionId(submissionId);
-        ScoreFields fields = computeScoreFields(project, details, submission.getSectionId(),
+        ScoreFields fields = computeScoreFields(profileId, details, submission.getSectionId(),
                 mapTargetTypeToSubject(submission.getTargetType()), submission.getTargetId());
 
         // 3. 更新 submission 分数（recalculate 不改变状态，可在 COMPLETED 状态下调用）
@@ -140,19 +171,23 @@ public class ScoreAggregationService {
      * @deprecated 改用 5 参数重载传入 subject 信息以启用 EscalationPolicy
      */
     @Deprecated
-    ScoreFields computeScoreFields(InspProject project, List<SubmissionDetail> details, Long sectionId) {
-        return computeScoreFields(project, details, sectionId, null, null);
+    ScoreFields computeScoreFields(Long profileId, List<SubmissionDetail> details, Long sectionId) {
+        return computeScoreFields(profileId, details, sectionId, null, null);
     }
 
     /**
      * 计算 submission 的分数字段（与 completeSubmission 逻辑共享）.
      *
+     * <p>评分配置下沉 (2026-05-23): profileId 由调用方经
+     * {@link #resolveScoringProfileId(InspTask, InspProject)} 解析后传入 —
+     * 不再直接从 project 读取, 评分方案的来源 (调度组 / 项目默认) 已收敛到解析方法.
+     *
+     * @param profileId   解析后的评分方案 ID, 可空 (走无评分配置的简单汇总路径)
      * @param subjectType 主体类型 USER/ORG_UNIT/PLACE/ASSET — 提供时启用重复违规递增 (P0#3)
      * @param subjectId   主体 ID
      */
-    ScoreFields computeScoreFields(InspProject project, List<SubmissionDetail> details, Long sectionId,
+    public ScoreFields computeScoreFields(Long profileId, List<SubmissionDetail> details, Long sectionId,
                                     String subjectType, Long subjectId) {
-        Long profileId = project.getScoringProfileId();
         if (profileId != null) {
             ScoringProfile profile = scoringProfileRepository.findById(profileId)
                     .orElseThrow(() -> new IllegalStateException("评分配置不存在: " + profileId));

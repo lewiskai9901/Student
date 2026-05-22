@@ -82,7 +82,7 @@ public class InspProjectRepositoryImpl implements InspProjectRepository {
         po.setOrgUnitId(d.getOrgUnitId());
         po.setTemplateId(d.getRootSectionId());    // domain rootSectionId → PO templateId
         po.setTemplateVersionId(d.getTemplateVersionId());
-        po.setScoringProfileId(d.getScoringProfileId());
+        po.setDefaultScoringProfileId(d.getDefaultScoringProfileId());
         po.setScopeType(d.getScopeType() != null ? d.getScopeType().name() : null);
         po.setScopeConfig(d.getScopeConfig());
         po.setStartDate(d.getStartDate());
@@ -90,17 +90,6 @@ public class InspProjectRepositoryImpl implements InspProjectRepository {
         po.setAssignmentMode(d.getAssignmentMode() != null ? d.getAssignmentMode().name() : null);
         po.setReviewRequired(d.getReviewRequired());
         po.setAutoPublish(d.getAutoPublish());
-        po.setEvaluationMode(d.getEvaluationMode());
-        po.setMultiRaterMode(d.getMultiRaterMode());
-        po.setRaterWeightBy(d.getRaterWeightBy());
-        po.setConsensusThreshold(d.getConsensusThreshold());
-        po.setTrendEnabled(d.getTrendEnabled());
-        po.setTrendLookbackDays(d.getTrendLookbackDays());
-        po.setDecayEnabled(d.getDecayEnabled());
-        po.setDecayMode(d.getDecayMode());
-        po.setCalibrationEnabled(d.getCalibrationEnabled());
-        po.setCalibrationMethod(d.getCalibrationMethod());
-        po.setSplitStrategy(d.getSplitStrategy());
         po.setScoringConfigSnapshot(d.getScoringConfigSnapshot());
         po.setMaxRejectCount(d.getMaxRejectCount());
         po.setMaxEscalationLevel(d.getMaxEscalationLevel());
@@ -122,7 +111,7 @@ public class InspProjectRepositoryImpl implements InspProjectRepository {
                 .orgUnitId(po.getOrgUnitId())
                 .rootSectionId(po.getTemplateId())    // PO templateId → domain rootSectionId
                 .templateVersionId(po.getTemplateVersionId())
-                .scoringProfileId(po.getScoringProfileId())
+                .defaultScoringProfileId(po.getDefaultScoringProfileId())
                 .scopeType(po.getScopeType() != null ? ScopeType.valueOf(po.getScopeType()) : null)
                 .scopeConfig(po.getScopeConfig())
                 .startDate(po.getStartDate())
@@ -130,17 +119,6 @@ public class InspProjectRepositoryImpl implements InspProjectRepository {
                 .assignmentMode(po.getAssignmentMode() != null ? AssignmentMode.valueOf(po.getAssignmentMode()) : null)
                 .reviewRequired(po.getReviewRequired())
                 .autoPublish(po.getAutoPublish())
-                .evaluationMode(po.getEvaluationMode())
-                .multiRaterMode(po.getMultiRaterMode())
-                .raterWeightBy(po.getRaterWeightBy())
-                .consensusThreshold(po.getConsensusThreshold())
-                .trendEnabled(po.getTrendEnabled())
-                .trendLookbackDays(po.getTrendLookbackDays())
-                .decayEnabled(po.getDecayEnabled())
-                .decayMode(po.getDecayMode())
-                .calibrationEnabled(po.getCalibrationEnabled())
-                .calibrationMethod(po.getCalibrationMethod())
-                .splitStrategy(po.getSplitStrategy())
                 .scoringConfigSnapshot(po.getScoringConfigSnapshot())
                 .maxRejectCount(po.getMaxRejectCount())
                 .maxEscalationLevel(po.getMaxEscalationLevel())
