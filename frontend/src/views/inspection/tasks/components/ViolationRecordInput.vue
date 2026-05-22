@@ -107,6 +107,10 @@ async function handleSaveRecord() {
     ElMessage.warning('请选择人员')
     return
   }
+  if (!form.value.description.trim()) {
+    ElMessage.warning('请填写违纪描述')
+    return
+  }
   saving.value = true
   try {
     await inspViolationApi.create({
@@ -118,7 +122,7 @@ async function handleSaveRecord() {
       userName: form.value.userName,
       severity: form.value.severity,
       occurredAt: form.value.occurredAt || undefined,
-      description: form.value.description || undefined,
+      description: form.value.description,
       score: form.value.score,
     } as any)
     ElMessage.success('已添加')

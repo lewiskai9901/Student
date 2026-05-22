@@ -613,6 +613,10 @@ watch(() => props.item, (item) => {
 }, { immediate: true })
 
 async function handleSave() {
+  if (!form.value.itemName.trim()) {
+    ElMessage.warning('字段名称不能为空')
+    return
+  }
   if (itemCategory.value === 'scored') {
     // === Scored item save ===
 
@@ -764,6 +768,7 @@ async function handleSave() {
 
     emit('save', {
       itemName: form.value.itemName,
+      itemType: form.value.itemType,
       description: form.value.description || undefined,
       responseSetId: form.value.responseSetId,
       helpContent: form.value.helpContent || undefined,
