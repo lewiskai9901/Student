@@ -181,15 +181,10 @@ const kpi = computed(() => {
 async function loadData() {
   loading.value = true
   try {
-    // 优先尝试 my-cases (后端按 SecurityUtils 当前用户过滤)
+    // my-cases 后端按 SecurityUtils 当前用户过滤; 为空即本人无整改单, 直接显示空状态.
+    // 注: 不可 fallback 拉 /corrective-cases 全量 — 会把他人整改单当成"我的"展示 (数据泄露).
     const r = await http.get<CorrectiveCase[]>('/inspection/corrective-cases/my-cases')
-    let list = (r as any) || []
-    // admin 测试场景: my-cases 可能为空, 退化拉前 50 条
-    if (list.length === 0) {
-      const all = await http.get<CorrectiveCase[]>('/inspection/corrective-cases')
-      list = ((all as any) || []).slice(0, 30)
-    }
-    cases.value = list
+    cases.value = (r as any) || []
   } catch (e: any) {
     ElMessage.error('加载失败: ' + (e?.message || '未知'))
     cases.value = []
