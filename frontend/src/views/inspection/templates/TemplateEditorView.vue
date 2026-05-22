@@ -7,7 +7,7 @@ import { ArrowLeft, Eye, Upload, FileText, Layers } from 'lucide-vue-next'
 import { useInspTemplateStore } from '@/stores/inspection/inspTemplateStore'
 import { useTemplateEditor } from '@/composables/inspection/useTemplateEditor'
 import { http } from '@/utils/request'
-import { TemplateStatusConfig, ItemTypeConfig, ScoringModeConfig, type ItemType, type ScoringMode, type TargetType } from '@/types/insp/enums'
+import { TemplateStatusConfig, type ItemType, type ScoringMode, type TargetType } from '@/types/insp/enums'
 import type { TemplateItem, ResponseSet } from '@/types/insp/template'
 import SectionTree from './components/SectionTree.vue'
 import ItemEditor from './components/ItemEditor.vue'
@@ -16,7 +16,7 @@ import TemplatePreview from './components/TemplatePreview.vue'
 import InspErrorState from '../shared/InspErrorState.vue'
 import CalcRuleChain from '../scoring/components/CalcRuleChain.vue'
 import { useInspScoringStore } from '@/stores/inspection/inspScoringStore'
-import type { ScoringProfile, CreateGradeBandRequest, UpdateGradeBandRequest, CreateRuleRequest, UpdateRuleRequest } from '@/types/insp/scoring'
+import type { ScoringProfile, CreateRuleRequest, UpdateRuleRequest } from '@/types/insp/scoring'
 // ScoringPolicy type kept for potential future use
 
 const route = useRoute()
@@ -47,12 +47,6 @@ const isRootSelected = computed(() => selectedSectionId.value != null && selecte
 const selectedSection = computed(() => {
   if (isRootSelected.value) return rootSection.value || null
   return editor.sections.value.find(s => s.id === selectedSectionId.value) || null
-})
-const isFirstLevel = computed(() => selectedSection.value?.parentSectionId === rootSectionId.value)
-const isLeaf = computed(() => selectedSection.value ? !editor.sections.value.some(s => s.parentSectionId === selectedSection.value!.id) : false)
-const currentItems = computed(() => {
-  if (!selectedSectionId.value) return []
-  return editor.itemsBySection.value.get(String(selectedSectionId.value)) || []
 })
 const allItems = computed(() => { const r: TemplateItem[] = []; for (const l of editor.itemsBySection.value.values()) r.push(...l); return r })
 
@@ -115,22 +109,6 @@ function beforeUnloadHandler(e: BeforeUnloadEvent) {
 }
 window.addEventListener('beforeunload', beforeUnloadHandler)
 onUnmounted(() => window.removeEventListener('beforeunload', beforeUnloadHandler))
-
-// ===== Root info =====
-const editingInfo = ref(false)
-const infoForm = ref({ name: '', description: '', tags: '' })
-function openEditInfo() {
-  if (!rootSection.value || isReadonly.value) return
-  infoForm.value = { name: rootSection.value.sectionName, description: rootSection.value.description || '', tags: parseTags(rootSection.value.tags) }
-  editingInfo.value = true
-}
-async function saveInfo() {
-  if (!rootSection.value) return
-  try {
-    await tplStore.editRootSection(rootSection.value.id, { name: infoForm.value.name, description: infoForm.value.description || undefined, tags: infoForm.value.tags || undefined })
-    await tplStore.loadRootSection(rootSection.value.id); editingInfo.value = false; ElMessage.success('已保存')
-  } catch (e: any) { ElMessage.error(e.message || '保存失败') }
-}
 
 // ===== Root props panel (when root is selected in tree) =====
 const rootForm = ref({ name: '', description: '', tags: '', targetType: null as TargetType | null, targetTypeFilter: [] as string[] })
@@ -286,7 +264,6 @@ function selectSection(id: LongId) {
 function selectItem(item: TemplateItem) {
   selectedItem.value = item
   selectedSectionId.value = item.sectionId
-  showScoring.value = false
 }
 function openAddItem(sectionId: LongId) { addItemToSectionId.value = sectionId; showItemTypeSelector.value = true }
 const addingItem = ref(false)
@@ -320,7 +297,6 @@ async function handleDeleteItem(item: TemplateItem) {
 // ===== Inline Scoring =====
 const scoringStore = useInspScoringStore()
 const scoringProfile = ref<ScoringProfile | null>(null)
-const showScoring = ref(true)
 const scoringLoading = ref(false)
 const scoringError = ref<string | null>(null)
 
@@ -365,25 +341,6 @@ async function saveScoringBasic() {
   } catch (e: any) { ElMessage.error('保存评分设置失败: ' + (e?.message || '未知错误')) }
 }
 
-function toggleScoring() {
-  showScoring.value = !showScoring.value
-  if (showScoring.value && selectedSectionId.value != null) {
-    loadScoringForSection(selectedSectionId.value)
-  }
-}
-
-async function handleCreateGradeBand(data: CreateGradeBandRequest) {
-  if (!scoringProfile.value) return
-  await scoringStore.createGradeBand(scoringProfile.value.id, data)
-}
-async function handleUpdateGradeBand(id: LongId, data: UpdateGradeBandRequest) {
-  if (!scoringProfile.value) return
-  await scoringStore.updateGradeBand(scoringProfile.value.id, id, data)
-}
-async function handleDeleteGradeBand(id: LongId) {
-  if (!scoringProfile.value) return
-  await scoringStore.deleteGradeBand(scoringProfile.value.id, id)
-}
 async function handleCreateRule(data: CreateRuleRequest) {
   if (!scoringProfile.value) return
   await scoringStore.createRule(scoringProfile.value.id, data)
@@ -397,117 +354,6 @@ async function handleDeleteRule(id: LongId) {
   await scoringStore.deleteRule(scoringProfile.value.id, id)
 }
 
-// ===== Grade mapping mode + validation =====
-const gradeEnabled = ref(false)
-const gradingMode = ref<'SCORE' | 'RANK' | 'PERCENT'>('SCORE')
-
-function switchGradeMode(mode: 'SCORE' | 'RANK' | 'PERCENT') {
-  if (scoringStore.gradeBands.length > 0) return
-  gradingMode.value = mode
-}
-
-// Direction helpers: maxScore encodes direction (100=SCORE, 1=TOP, -1=BOTTOM)
-function getBandDirection(band: any): 'TOP' | 'BOTTOM' {
-  return Number(band.maxScore) === -1 ? 'BOTTOM' : 'TOP'
-}
-function setBandDirection(band: any, dir: string) {
-  band.maxScore = dir === 'BOTTOM' ? -1 : 1
-  updateGradeBand(band)
-}
-
-const sortedGradeBands = computed(() => {
-  const bands = [...scoringStore.gradeBands]
-  if (gradingMode.value === 'SCORE') {
-    bands.sort((a, b) => b.minScore - a.minScore) // 高分在前
-  } else {
-    bands.sort((a, b) => a.minScore - b.minScore) // 小数在前
-  }
-  return bands
-})
-
-// 冲突检测
-const gradeConflict = computed(() => {
-  const bands = scoringStore.gradeBands
-  if (bands.length < 2) return null
-
-  if (gradingMode.value === 'SCORE') {
-    // 分数模式：检查区间重叠和间隙
-    const values = bands.map(b => b.minScore).sort((a, b) => a - b)
-    for (let i = 0; i < values.length - 1; i++) {
-      if (values[i] === values[i + 1]) return `存在重复的阈值: ${values[i]}`
-    }
-    const sorted = bands.map(b => b.minScore).sort((a, b) => b - a)
-    if (sorted[sorted.length - 1] > 0) return `最低等级的阈值应为 0（当前为 ${sorted[sorted.length - 1]}%）`
-  }
-
-  if (gradingMode.value === 'RANK') {
-    // 排名模式：同方向检查重复值
-    const topBands = bands.filter(b => Number(b.maxScore) !== -1)
-    const bottomBands = bands.filter(b => Number(b.maxScore) === -1)
-    const topVals = topBands.map(b => b.minScore).sort((a, b) => a - b)
-    for (let i = 0; i < topVals.length - 1; i++) {
-      if (topVals[i] === topVals[i + 1]) return `前${topVals[i]}名 存在重复`
-    }
-    const bottomVals = bottomBands.map(b => b.minScore).sort((a, b) => a - b)
-    for (let i = 0; i < bottomVals.length - 1; i++) {
-      if (bottomVals[i] === bottomVals[i + 1]) return `后${bottomVals[i]}名 存在重复`
-    }
-  }
-
-  if (gradingMode.value === 'PERCENT') {
-    // 百分比模式：同方向检查重复，前+后>100则冲突
-    const topBands = bands.filter(b => Number(b.maxScore) !== -1)
-    const bottomBands = bands.filter(b => Number(b.maxScore) === -1)
-    const topVals = topBands.map(b => b.minScore).sort((a, b) => a - b)
-    for (let i = 0; i < topVals.length - 1; i++) {
-      if (topVals[i] === topVals[i + 1]) return `前${topVals[i]}% 存在重复`
-    }
-    const bottomVals = bottomBands.map(b => b.minScore).sort((a, b) => a - b)
-    for (let i = 0; i < bottomVals.length - 1; i++) {
-      if (bottomVals[i] === bottomVals[i + 1]) return `后${bottomVals[i]}% 存在重复`
-    }
-    const maxTop = topVals.length > 0 ? topVals[topVals.length - 1] : 0
-    const maxBottom = bottomVals.length > 0 ? bottomVals[bottomVals.length - 1] : 0
-    if (maxTop + maxBottom > 100) return `前${maxTop}% + 后${maxBottom}% 超过100%，存在重叠`
-  }
-
-  return null
-})
-
-// 开关切换
-async function handleGradeToggle() {
-  if (!gradeEnabled.value && scoringStore.gradeBands.length > 0) {
-    // 关闭时清空
-    if (!scoringProfile.value) return
-    for (const b of [...scoringStore.gradeBands]) {
-      await scoringStore.deleteGradeBand(scoringProfile.value.id, b.id)
-    }
-  }
-}
-
-// 加载时检测是否已有等级
-watch(() => scoringStore.gradeBands.length, (len) => {
-  if (len > 0) gradeEnabled.value = true
-}, { immediate: true })
-
-// ===== Inline grade band editing =====
-async function addGradeBand() {
-  if (!scoringProfile.value) return
-  const maxScore = gradingMode.value === 'SCORE' ? 100 : 1 // 1=TOP direction by default
-  await scoringStore.createGradeBand(scoringProfile.value.id, {
-    gradeCode: '', gradeName: '', minScore: 0, maxScore,
-  })
-}
-async function updateGradeBand(band: any) {
-  if (!scoringProfile.value) return
-  await scoringStore.updateGradeBand(scoringProfile.value.id, band.id, {
-    gradeName: band.gradeName, minScore: band.minScore, maxScore: band.maxScore,
-  })
-}
-async function deleteGradeBand(bandId: LongId) {
-  if (!scoringProfile.value) return
-  await scoringStore.deleteGradeBand(scoringProfile.value.id, bandId)
-}
 async function addCalcRule() {
   if (!scoringProfile.value) return
   await scoringStore.createRule(scoringProfile.value.id, {
@@ -515,41 +361,6 @@ async function addCalcRule() {
     config: '{}', isEnabled: true, priority: scoringStore.rules.length + 1,
   })
 }
-
-// ===== Grade presets =====
-async function applyGradePreset(preset: string) {
-  if (!scoringProfile.value) return
-  // 清除现有
-  for (const b of [...scoringStore.gradeBands]) {
-    await scoringStore.deleteGradeBand(scoringProfile.value!.id, b.id)
-  }
-  const presets: Record<string, Array<{ code: string; name: string; min: number; max: number }>> = {
-    five: [
-      { code: 'A', name: '优秀', min: 90, max: 100 },
-      { code: 'B', name: '良好', min: 80, max: 89.99 },
-      { code: 'C', name: '中等', min: 70, max: 79.99 },
-      { code: 'D', name: '及格', min: 60, max: 69.99 },
-      { code: 'F', name: '不及格', min: 0, max: 59.99 },
-    ],
-    pass: [
-      { code: 'P', name: '通过', min: 60, max: 100 },
-      { code: 'F', name: '不通过', min: 0, max: 59.99 },
-    ],
-    three: [
-      { code: 'A', name: '优秀', min: 85, max: 100 },
-      { code: 'B', name: '合格', min: 60, max: 84.99 },
-      { code: 'C', name: '不合格', min: 0, max: 59.99 },
-    ],
-  }
-  for (const b of (presets[preset] || [])) {
-    await scoringStore.createGradeBand(scoringProfile.value!.id, {
-      gradeCode: b.code, gradeName: b.name, minScore: b.min, maxScore: b.max,
-    })
-  }
-  gradingMode.value = 'SCORE'
-}
-
-
 
 // ===== Unlock for editing (to create new version) =====
 async function handleUnlockForEdit() {
@@ -604,11 +415,6 @@ async function loadData() {
 onMounted(() => {
   if (!rootSectionId.value) router.replace('/inspection/config'); else loadData()
 })
-
-function getItemTypeLabel(item: TemplateItem) {
-  if (item.isScored && item.scoringConfig) { try { const c = JSON.parse(item.scoringConfig); return ScoringModeConfig[c.mode as ScoringMode]?.label || ItemTypeConfig[item.itemType]?.label } catch (e) { console.warn('JSON parse failed', e) } }
-  return ItemTypeConfig[item.itemType]?.label || item.itemType
-}
 </script>
 
 <template>
@@ -1310,49 +1116,6 @@ function getItemTypeLabel(item: TemplateItem) {
 .te-scoring-block-title { font-size: 11px; font-weight: 600; color: #374151; }
 .te-scoring-empty { font-size: 11px; color: #b8c0cc; padding: 4px 0; }
 
-/* Toggle switch */
-.te-toggle { position: relative; display: inline-block; width: 28px; height: 16px; flex-shrink: 0; }
-.te-toggle input { opacity: 0; width: 0; height: 0; }
-.te-toggle-slider {
-  position: absolute; cursor: pointer; inset: 0;
-  background: #d1d5db; border-radius: 16px; transition: 0.2s;
-}
-.te-toggle-slider::before {
-  content: ''; position: absolute; height: 12px; width: 12px;
-  left: 2px; bottom: 2px; background: #fff; border-radius: 50%; transition: 0.2s;
-}
-.te-toggle input:checked + .te-toggle-slider { background: #1a6dff; }
-.te-toggle input:checked + .te-toggle-slider::before { transform: translateX(12px); }
-
-/* Grade mode bar (square button group) */
-.te-grade-mode-bar { display: flex; gap: 0; }
-.te-mode-btn {
-  font-size: 10px; padding: 4px 12px;
-  border: 1px solid #e8ecf0; color: #6b7280;
-  background: #fff; cursor: pointer;
-  transition: all 0.12s; white-space: nowrap;
-  margin-left: -1px;
-}
-.te-mode-btn:first-child { border-radius: 5px 0 0 5px; margin-left: 0; }
-.te-mode-btn:last-child { border-radius: 0 5px 5px 0; }
-.te-mode-btn:hover:not(:disabled) { color: #1a6dff; border-color: #93c5fd; z-index: 1; }
-.te-mode-btn.active {
-  background: #1a6dff; color: #fff; border-color: #1a6dff;
-  z-index: 2; font-weight: 500;
-}
-.te-mode-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.te-mode-lock-hint { font-size: 9px; color: #f59e0b; }
-
-/* Grade presets */
-.te-grade-presets { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.te-preset-chip {
-  font-size: 10px; padding: 3px 10px; border-radius: 4px;
-  border: 1px solid #e8ecf0; color: #5a6474;
-  background: #f8f9fb; cursor: pointer;
-  transition: all 0.12s; white-space: nowrap;
-}
-.te-preset-chip:hover { border-color: #93c5fd; color: #1a6dff; background: #eef4ff; }
-
 /* Add inline button */
 .te-add-btn {
   width: 20px; height: 20px; border-radius: 4px;
@@ -1362,71 +1125,4 @@ function getItemTypeLabel(item: TemplateItem) {
   transition: all 0.12s;
 }
 .te-add-btn:hover { border-color: #1a6dff; color: #1a6dff; background: #eef4ff; }
-
-/* ======= Grade band table (compact rows) ======= */
-.te-grade-table { display: flex; flex-direction: column; gap: 1px; }
-.te-grade-row {
-  display: flex; align-items: center; gap: 4px;
-  padding: 3px 0;
-  border-bottom: 1px solid #f2f3f5;
-}
-.te-grade-row:last-child { border-bottom: none; }
-
-/* Grade inputs */
-.te-gr-code {
-  width: 34px; border: 1px solid #e8ecf0; border-radius: 4px;
-  padding: 3px 4px; font-size: 11px; font-weight: 600;
-  text-align: center; color: #1a6dff; outline: none;
-  background: #f8f9fb;
-}
-.te-gr-code:focus { border-color: #93c5fd; background: #fff; }
-.te-gr-name {
-  flex: 1; border: 1px solid #e8ecf0; border-radius: 4px;
-  padding: 3px 6px; font-size: 11px; color: #111827;
-  outline: none; min-width: 0;
-}
-.te-gr-name:focus { border-color: #93c5fd; }
-.te-gr-sym { font-size: 10px; color: #9ca3af; flex-shrink: 0; padding: 0 1px; }
-.te-gr-val {
-  width: 48px; border: 1px solid #e8ecf0; border-radius: 4px;
-  padding: 3px 4px; font-size: 11px; text-align: center;
-  color: #111827; outline: none;
-}
-.te-gr-val:focus { border-color: #93c5fd; }
-.te-gr-unit { font-size: 10px; color: #9ca3af; flex-shrink: 0; }
-
-/* Direction select (RANK/PERCENT mode per-row) */
-.te-gr-dir {
-  width: 44px; border: 1px solid #e8ecf0; border-radius: 4px;
-  padding: 2px 2px; font-size: 10px; color: #374151;
-  outline: none; background: #f8f9fb; cursor: pointer;
-  -webkit-appearance: none; appearance: none;
-  text-align: center;
-}
-.te-gr-dir:focus { border-color: #93c5fd; }
-
-/* Delete */
-.te-gr-del {
-  background: none; border: none; color: #d1d5db;
-  font-size: 13px; cursor: pointer; padding: 0 2px;
-  opacity: 0; transition: all 0.1s; line-height: 1;
-}
-.te-grade-row:hover .te-gr-del { opacity: 1; }
-.te-gr-del:hover { color: #ef4444; }
-
-/* Grade conflict warning */
-.te-grade-warn {
-  font-size: 10px; color: #ef4444;
-  padding: 4px 8px; background: #fef2f2;
-  border-radius: 4px; border-left: 2px solid #ef4444;
-}
-
-/* Grade add button */
-.te-grade-add-btn {
-  font-size: 10px; color: #1a6dff; background: none;
-  border: 1px dashed #dce1e8; border-radius: 4px;
-  padding: 4px 10px; cursor: pointer; transition: all 0.12s;
-  align-self: flex-start;
-}
-.te-grade-add-btn:hover { border-color: #1a6dff; background: #eef4ff; }
 </style>
