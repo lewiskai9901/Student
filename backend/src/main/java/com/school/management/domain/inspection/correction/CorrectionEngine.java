@@ -157,7 +157,19 @@ public class CorrectionEngine {
             try {
                 verdicts.add(judge(d, policy, rule, rc));
             } catch (Exception ex) {
+                // P2#14: 单条失败不再仅 warn 后丢弃 — 那样 verdicts 列表会比 details 短,
+                // 调用方按下标对齐时错位且无感. 改为塞一个 NONE 占位 verdict, trace 记录失败原因,
+                // 列表长度与 details 一一对应, 调用方可据 trace 识别失败明细.
                 log.warn("judge detail {} failed: {}", d.getId(), ex.getMessage());
+                verdicts.add(CorrectionVerdict.builder()
+                        .detailId(d.getId())
+                        .itemCode(d.getItemCode())
+                        .itemName(d.getItemName())
+                        .severity(Severity.NONE)
+                        .reason("判定失败, 已跳过: " + ex.getMessage())
+                        .addTrace("error", ex.getClass().getSimpleName(),
+                                String.valueOf(ex.getMessage()), "NONE (placeholder)")
+                        .build());
             }
         }
         return verdicts;

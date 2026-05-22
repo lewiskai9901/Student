@@ -4,6 +4,9 @@ import com.school.management.application.inspection.HolidayCalendarApplicationSe
 import com.school.management.common.result.Result;
 import com.school.management.domain.inspection.model.platform.HolidayCalendar;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -19,7 +22,7 @@ public class HolidayCalendarController {
 
     @PostMapping
     @CasbinAccess(resource = "insp:platform", action = "manage")
-    public Result<HolidayCalendar> create(@RequestBody CreateHolidayCalendarRequest request) {
+    public Result<HolidayCalendar> create(@RequestBody @Valid CreateHolidayCalendarRequest request) {
         return Result.success(holidayCalendarService.create(
                 request.getCalendarName(), request.getYear(), request.getHolidays(),
                 request.getWorkdays(), request.getIsDefault()));
@@ -28,7 +31,7 @@ public class HolidayCalendarController {
     @PutMapping("/{id}")
     @CasbinAccess(resource = "insp:platform", action = "manage")
     public Result<HolidayCalendar> update(@PathVariable Long id,
-                                           @RequestBody UpdateHolidayCalendarRequest request) {
+                                           @RequestBody @Valid UpdateHolidayCalendarRequest request) {
         return Result.success(holidayCalendarService.update(
                 id, request.getCalendarName(), request.getYear(), request.getHolidays(),
                 request.getWorkdays(), request.getIsDefault()));
@@ -67,7 +70,9 @@ public class HolidayCalendarController {
 
     @Data
     public static class CreateHolidayCalendarRequest {
+        @NotBlank
         private String calendarName;
+        @NotNull
         private Integer year;
         private String holidays;
         private String workdays;
@@ -76,7 +81,9 @@ public class HolidayCalendarController {
 
     @Data
     public static class UpdateHolidayCalendarRequest {
+        @NotBlank
         private String calendarName;
+        @NotNull
         private Integer year;
         private String holidays;
         private String workdays;

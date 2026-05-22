@@ -235,17 +235,19 @@ class CorrectiveCaseTest {
         }
 
         @Test
-        @DisplayName("escalationLevel 已达 3 时 failEffectiveness 不再 reopen")
-        void shouldNotReopenWhenAtMaxLevel() {
+        @DisplayName("escalationLevel 达上限时 failEffectiveness 重开为 OPEN 待人工接管, level 不再自增")
+        void shouldReopenForManualTakeoverWhenAtMaxLevel() {
             CorrectiveCase c = CorrectiveCase.builder()
                     .id(1L).caseCode("X").issueDescription("X").priority(CasePriority.HIGH)
                     .status(CaseStatus.CLOSED).effectivenessStatus(EffectivenessStatus.PENDING)
                     .escalationLevel(3).build();
             c.failEffectiveness("再次反弹");
-            assertThat(c.getStatus()).isEqualTo(CaseStatus.CLOSED);
+            // P0 死锁修复: 达上限不再卡在不可流转的 CLOSED+FAILED, 而是重开为 OPEN 转人工接管
+            assertThat(c.getStatus()).isEqualTo(CaseStatus.OPEN);
             assertThat(c.getEffectivenessStatus()).isEqualTo(EffectivenessStatus.FAILED);
             assertThat(c.getEscalationLevel()).isEqualTo(3);
-            assertThat(c.getDomainEvents()).hasSize(1).first().isInstanceOf(EffectivenessFailedEvent.class);
+            assertThat(c.getDomainEvents()).hasSize(1).first()
+                    .isInstanceOf(EffectivenessEscalationCappedEvent.class);
         }
 
         @Test

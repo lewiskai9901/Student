@@ -28,6 +28,7 @@ class InspectionUpstreamRouterTest {
 
     private InspProjectMapper projectMapper;
     private InspSubmissionMapper submissionMapper;
+    private InspTaskMapper taskMapper;
     private CorrectiveCaseMapper caseMapper;
 
     private InspectionUpstreamRouter router;
@@ -36,9 +37,10 @@ class InspectionUpstreamRouterTest {
     void setUp() {
         projectMapper = mock(InspProjectMapper.class);
         submissionMapper = mock(InspSubmissionMapper.class);
+        taskMapper = mock(InspTaskMapper.class);
         caseMapper = mock(CorrectiveCaseMapper.class);
 
-        router = new InspectionUpstreamRouter(projectMapper, submissionMapper, caseMapper);
+        router = new InspectionUpstreamRouter(projectMapper, submissionMapper, taskMapper, caseMapper);
     }
 
     @Test

@@ -6,6 +6,9 @@ import com.school.management.common.util.SecurityUtils;
 import com.school.management.domain.inspection.model.scoring.GradeDefinition;
 import com.school.management.domain.inspection.model.scoring.GradeScheme;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,10 +23,16 @@ public class GradeSchemeController {
 
     private final GradeSchemeApplicationService gradeSchemeService;
 
+    /**
+     * 评分方案 scope 占位 — 单租户下固定 0L (无租户隔离).
+     * 将来启用多租户时改为从 TenantContext 解析.
+     */
+    private static final long DEFAULT_SCOPE = 0L;
+
     @GetMapping
     @CasbinAccess(resource = "insp:template", action = "view")
     public Result<List<GradeScheme>> listSchemes() {
-        return Result.success(gradeSchemeService.listSchemes(0L));
+        return Result.success(gradeSchemeService.listSchemes(DEFAULT_SCOPE));
     }
 
     @GetMapping("/{id}")
@@ -34,26 +43,26 @@ public class GradeSchemeController {
 
     @PostMapping
     @CasbinAccess(resource = "insp:template", action = "edit")
-    public Result<GradeScheme> createScheme(@RequestBody CreateGradeSchemeRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+    public Result<GradeScheme> createScheme(@RequestBody @Valid CreateGradeSchemeRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         List<GradeDefinition> grades = toGradeDefinitions(request.getGrades());
         return Result.success(gradeSchemeService.createScheme(
-                0L, request.getDisplayName(), request.getDescription(),
+                DEFAULT_SCOPE, request.getDisplayName(), request.getDescription(),
                 request.getSchemeType(), grades, userId));
     }
 
     @PostMapping("/clone")
     @CasbinAccess(resource = "insp:template", action = "edit")
-    public Result<GradeScheme> cloneFromPreset(@RequestBody CloneGradeSchemeRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+    public Result<GradeScheme> cloneFromPreset(@RequestBody @Valid CloneGradeSchemeRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(gradeSchemeService.cloneFromPreset(
-                request.getSourceSchemeId(), request.getDisplayName(), 0L, userId));
+                request.getSourceSchemeId(), request.getDisplayName(), DEFAULT_SCOPE, userId));
     }
 
     @PutMapping("/{id}")
     @CasbinAccess(resource = "insp:template", action = "edit")
     public Result<GradeScheme> updateScheme(@PathVariable Long id,
-                                             @RequestBody UpdateGradeSchemeRequest request) {
+                                             @RequestBody @Valid UpdateGradeSchemeRequest request) {
         List<GradeDefinition> grades = toGradeDefinitions(request.getGrades());
         return Result.success(gradeSchemeService.updateScheme(
                 id, request.getDisplayName(), request.getDescription(), grades));
@@ -83,20 +92,25 @@ public class GradeSchemeController {
 
     @lombok.Data
     public static class CreateGradeSchemeRequest {
+        @NotBlank
         private String displayName;
         private String description;
+        @NotBlank
         private String schemeType;
         private List<GradeDefRequest> grades;
     }
 
     @lombok.Data
     public static class CloneGradeSchemeRequest {
+        @NotNull
         private Long sourceSchemeId;
+        @NotBlank
         private String displayName;
     }
 
     @lombok.Data
     public static class UpdateGradeSchemeRequest {
+        @NotBlank
         private String displayName;
         private String description;
         private List<GradeDefRequest> grades;

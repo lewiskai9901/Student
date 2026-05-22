@@ -3,8 +3,11 @@ package com.school.management.infrastructure.inspection;
 import com.school.management.infrastructure.persistence.inspection.analytics.AlertPO;
 import com.school.management.infrastructure.persistence.inspection.analytics.AlertRulePO;
 import com.school.management.infrastructure.persistence.inspection.analytics.CorrectiveSummaryPO;
+import com.school.management.infrastructure.persistence.inspection.analytics.DailySummaryPO;
 import com.school.management.infrastructure.persistence.inspection.analytics.InspectorSummaryPO;
 import com.school.management.infrastructure.persistence.inspection.analytics.ItemFrequencySummaryPO;
+import com.school.management.infrastructure.persistence.inspection.analytics.PeriodSummaryPO;
+import com.school.management.infrastructure.persistence.inspection.appeal.InspAppealPO;
 import com.school.management.infrastructure.persistence.inspection.corrective.CorrectiveCaseMapper;
 import com.school.management.infrastructure.persistence.inspection.corrective.CorrectiveCasePO;
 import com.school.management.infrastructure.persistence.inspection.corrective.CorrectiveSubtaskPO;
@@ -45,6 +48,7 @@ public class InspectionUpstreamRouter {
      */
     public InspectionUpstreamRouter(@Lazy InspProjectMapper projectMapper,
                                     @Lazy InspSubmissionMapper submissionMapper,
+                                    @Lazy InspTaskMapper taskMapper,
                                     @Lazy CorrectiveCaseMapper caseMapper) {
         // 源头: 项目无上游, 由 SecurityContext 兜底 (handler 内处理)
         register(InspProjectPO.class, po -> null);
@@ -63,6 +67,12 @@ public class InspectionUpstreamRouter {
             return resolveProjectOrgUnit(projectMapper, r.getProjectId());
         });
 
+        // submission 自身: 反查 task → project.orgUnitId
+        register(InspSubmissionPO.class, po -> {
+            InspSubmissionPO s = (InspSubmissionPO) po;
+            return resolveTaskOrgUnit(taskMapper, projectMapper, s.getTaskId());
+        });
+
         // submission 下游: 反查 submission.orgUnitId
         register(InspEvidencePO.class, po -> {
             InspEvidencePO e = (InspEvidencePO) po;
@@ -75,6 +85,21 @@ public class InspectionUpstreamRouter {
         register(ViolationRecordPO.class, po -> {
             ViolationRecordPO v = (ViolationRecordPO) po;
             return resolveSubmissionOrgUnit(submissionMapper, v.getSubmissionId());
+        });
+        register(SubmissionObservationPO.class, po -> {
+            SubmissionObservationPO o = (SubmissionObservationPO) po;
+            // 优先反查 submission, 退化用 projectId
+            Long viaSubmission = resolveSubmissionOrgUnit(submissionMapper, o.getSubmissionId());
+            return viaSubmission != null ? viaSubmission
+                    : resolveProjectOrgUnit(projectMapper, o.getProjectId());
+        });
+
+        // corrective case: 反查 submission, 退化用 projectId
+        register(CorrectiveCasePO.class, po -> {
+            CorrectiveCasePO c = (CorrectiveCasePO) po;
+            Long viaSubmission = resolveSubmissionOrgUnit(submissionMapper, c.getSubmissionId());
+            return viaSubmission != null ? viaSubmission
+                    : resolveProjectOrgUnit(projectMapper, c.getProjectId());
         });
 
         // corrective case 下游
@@ -107,6 +132,22 @@ public class InspectionUpstreamRouter {
             ItemFrequencySummaryPO s = (ItemFrequencySummaryPO) po;
             return resolveProjectOrgUnit(projectMapper, s.getProjectId());
         });
+        register(DailySummaryPO.class, po -> {
+            DailySummaryPO s = (DailySummaryPO) po;
+            return resolveProjectOrgUnit(projectMapper, s.getProjectId());
+        });
+        register(PeriodSummaryPO.class, po -> {
+            PeriodSummaryPO s = (PeriodSummaryPO) po;
+            return resolveProjectOrgUnit(projectMapper, s.getProjectId());
+        });
+
+        // 申诉: 反查 submission, 退化用 projectId
+        register(InspAppealPO.class, po -> {
+            InspAppealPO a = (InspAppealPO) po;
+            Long viaSubmission = resolveSubmissionOrgUnit(submissionMapper, a.getSubmissionId());
+            return viaSubmission != null ? viaSubmission
+                    : resolveProjectOrgUnit(projectMapper, a.getProjectId());
+        });
     }
 
     @SuppressWarnings("unchecked")
@@ -138,5 +179,16 @@ public class InspectionUpstreamRouter {
         if (submissionId == null) return null;
         InspSubmissionPO s = mapper.selectById(submissionId);
         return s == null ? null : s.getOrgUnitId();
+    }
+
+    private static Long resolveTaskOrgUnit(InspTaskMapper taskMapper,
+                                           InspProjectMapper projectMapper, Long taskId) {
+        if (taskId == null) return null;
+        InspTaskPO t = taskMapper.selectById(taskId);
+        if (t == null) return null;
+        // 任务自身已有 org_unit_id 时直接用; 否则回溯 project
+        return t.getOrgUnitId() != null
+                ? t.getOrgUnitId()
+                : resolveProjectOrgUnit(projectMapper, t.getProjectId());
     }
 }

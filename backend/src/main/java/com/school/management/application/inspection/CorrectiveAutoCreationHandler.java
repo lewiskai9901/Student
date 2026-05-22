@@ -26,7 +26,6 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 自动整改创建处理器
@@ -51,7 +50,6 @@ public class CorrectiveAutoCreationHandler {
     private final TaskScheduler taskScheduler;
     private final CorrectiveSuggestionService suggestionService;
 
-    private static final AtomicLong CODE_SEQUENCE = new AtomicLong(System.currentTimeMillis() % 100000);
     private static final int MAX_RETRY_ATTEMPTS = 3;
 
     @Async
@@ -183,8 +181,15 @@ public class CorrectiveAutoCreationHandler {
         }
     }
 
+    /**
+     * P1#4: 业务编号生成. 旧实现用 {@code System.currentTimeMillis()} +
+     * 进程内 {@code AtomicLong} 后缀 — 跨 JVM 重启后 AtomicLong 重新从
+     * currentTimeMillis 播种, 多实例 / 重启场景可能碰撞.
+     * insp_corrective_cases 有 uk_case_code 唯一索引, 碰撞会抛异常.
+     * 改为完整雪花 ID, 全局 (含多实例) 唯一无碰撞.
+     */
     private String generateCaseCode() {
-        return "CC-" + System.currentTimeMillis() + "-" + CODE_SEQUENCE.incrementAndGet();
+        return "CC-" + com.baomidou.mybatisplus.core.toolkit.IdWorker.getId();
     }
 
     private String buildIssueDescription(SubmissionDetail detail, CorrectionVerdict verdict) {

@@ -6,6 +6,9 @@ import com.school.management.common.util.SecurityUtils;
 import com.school.management.domain.inspection.model.execution.TargetType;
 import com.school.management.domain.inspection.model.template.TemplateSection;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -28,8 +31,8 @@ public class TemplateSectionController {
 
     @PostMapping
     @CasbinAccess(resource = "insp:template", action = "edit")
-    public Result<TemplateSection> createChildSection(@RequestBody CreateChildSectionRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+    public Result<TemplateSection> createChildSection(@RequestBody @Valid CreateChildSectionRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         TargetType targetType;
         try {
             targetType = request.targetType() != null
@@ -64,8 +67,8 @@ public class TemplateSectionController {
     @PutMapping("/{id}")
     @CasbinAccess(resource = "insp:template", action = "edit")
     public Result<TemplateSection> updateSection(@PathVariable Long id,
-                                                  @RequestBody UpdateSectionRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+                                                  @RequestBody @Valid UpdateSectionRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         TargetType targetType;
         try {
             targetType = request.targetType() != null
@@ -89,7 +92,7 @@ public class TemplateSectionController {
 
     @PostMapping("/reorder")
     @CasbinAccess(resource = "insp:template", action = "edit")
-    public Result<Void> reorderSections(@RequestBody ReorderSectionsRequest request) {
+    public Result<Void> reorderSections(@RequestBody @Valid ReorderSectionsRequest request) {
         sectionService.reorderSections(request.parentSectionId(), request.sectionIds());
         return Result.success();
     }
@@ -97,15 +100,15 @@ public class TemplateSectionController {
     @PutMapping("/{id}/scoring-config")
     @CasbinAccess(resource = "insp:template", action = "edit")
     public Result<TemplateSection> updateScoringConfig(@PathVariable Long id,
-                                                        @RequestBody UpdateScoringConfigRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+                                                        @RequestBody @Valid UpdateScoringConfigRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(sectionService.updateScoringConfig(id, request.scoringConfig(), userId));
     }
 
     @PutMapping("/{id}/status")
     @CasbinAccess(resource = "insp:template", action = "edit")
     public Result<Void> updateStatus(@PathVariable Long id,
-                                     @RequestBody UpdateStatusRequest request) {
+                                     @RequestBody @Valid UpdateStatusRequest request) {
         sectionService.updateSectionStatus(id, request.status());
         return Result.success();
     }
@@ -113,9 +116,9 @@ public class TemplateSectionController {
     // --- Request DTOs ---
 
     public record CreateChildSectionRequest(
-            Long parentSectionId,
-            String sectionCode,
-            String sectionName,
+            @NotNull Long parentSectionId,
+            @NotBlank String sectionCode,
+            @NotBlank String sectionName,
             String targetType,
             Boolean isRepeatable,
             String conditionLogic,
@@ -123,7 +126,7 @@ public class TemplateSectionController {
     ) {}
 
     public record UpdateSectionRequest(
-            String sectionName,
+            @NotBlank String sectionName,
             String targetType,
             String targetSourceMode,
             String targetTypeFilter,
@@ -133,8 +136,8 @@ public class TemplateSectionController {
     ) {}
 
     public record ReorderSectionsRequest(
-            Long parentSectionId,
-            List<Long> sectionIds
+            @NotNull Long parentSectionId,
+            @NotNull List<Long> sectionIds
     ) {}
 
     public record UpdateScoringConfigRequest(
@@ -142,6 +145,6 @@ public class TemplateSectionController {
     ) {}
 
     public record UpdateStatusRequest(
-            String status
+            @NotBlank String status
     ) {}
 }

@@ -7,8 +7,11 @@ import com.school.management.domain.inspection.model.template.TemplateStatus;
 import com.school.management.domain.inspection.repository.TemplateSectionRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -94,17 +97,32 @@ public class TemplateSectionRepositoryImpl implements TemplateSectionRepository 
 
     @Override
     public List<TemplateSection> findDescendants(Long rootSectionId) {
-        List<TemplateSection> result = new ArrayList<>();
-        collectDescendants(rootSectionId, result);
-        return result;
-    }
-
-    private void collectDescendants(Long parentId, List<TemplateSection> accumulator) {
-        List<TemplateSection> children = findByParentSectionId(parentId);
-        for (TemplateSection child : children) {
-            accumulator.add(child);
-            collectDescendants(child.getId(), accumulator);
+        if (rootSectionId == null) {
+            return new ArrayList<>();
         }
+        // 一次性取出该 section 所属 template 的全部 section, 内存建树消除 N+1.
+        TemplateSectionPO root = mapper.selectById(rootSectionId);
+        if (root == null || root.getTemplateId() == null) {
+            return new ArrayList<>();
+        }
+        LambdaQueryWrapper<TemplateSectionPO> qw = new LambdaQueryWrapper<>();
+        qw.eq(TemplateSectionPO::getTemplateId, root.getTemplateId())
+          .orderByAsc(TemplateSectionPO::getSortOrder);
+        Map<Long, List<TemplateSectionPO>> childrenByParent = mapper.selectList(qw).stream()
+                .filter(po -> po.getParentSectionId() != null)
+                .collect(Collectors.groupingBy(TemplateSectionPO::getParentSectionId));
+
+        List<TemplateSection> result = new ArrayList<>();
+        Deque<Long> stack = new ArrayDeque<>();
+        stack.push(rootSectionId);
+        while (!stack.isEmpty()) {
+            Long parentId = stack.pop();
+            for (TemplateSectionPO child : childrenByParent.getOrDefault(parentId, List.of())) {
+                result.add(toDomain(child));
+                stack.push(child.getId());
+            }
+        }
+        return result;
     }
 
     private TemplateSectionPO toPO(TemplateSection domain) {

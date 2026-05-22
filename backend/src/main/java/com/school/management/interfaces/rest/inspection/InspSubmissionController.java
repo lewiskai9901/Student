@@ -4,6 +4,8 @@ import com.school.management.application.inspection.InspSubmissionApplicationSer
 import com.school.management.common.result.Result;
 import com.school.management.domain.inspection.model.execution.*;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,7 +23,7 @@ public class InspSubmissionController {
 
     @PostMapping
     @CasbinAccess(resource = "insp:submission", action = "create")
-    public Result<InspSubmission> createSubmission(@RequestBody CreateSubmissionRequest request) {
+    public Result<InspSubmission> createSubmission(@RequestBody @Valid CreateSubmissionRequest request) {
         return Result.success(submissionService.createSubmission(
                 request.getTaskId(), request.getTargetType(),
                 request.getTargetId(), request.getTargetName()));
@@ -71,15 +73,14 @@ public class InspSubmissionController {
     @PutMapping("/{id}/form-data")
     @CasbinAccess(resource = "insp:submission", action = "execute")
     public Result<InspSubmission> saveFormData(@PathVariable Long id,
-                                                @RequestBody SaveFormDataRequest request) {
+                                                @RequestBody @Valid SaveFormDataRequest request) {
         return Result.success(submissionService.saveFormData(id, request.getFormData()));
     }
 
     @PostMapping("/{id}/complete")
     @CasbinAccess(resource = "insp:submission", action = "execute")
-    public Result<InspSubmission> completeSubmission(@PathVariable Long id,
-                                                      @RequestBody(required = false) CompleteSubmissionRequest request) {
-        // 后端计算分数，忽略前端传入的分数
+    public Result<InspSubmission> completeSubmission(@PathVariable Long id) {
+        // 后端计算分数 — 不接受任何前端传入的分数 (原 CompleteSubmissionRequest 全字段被忽略, 已删除)
         return Result.success(submissionService.completeSubmission(id));
     }
 
@@ -104,7 +105,7 @@ public class InspSubmissionController {
     @PostMapping("/{submissionId}/details")
     @CasbinAccess(resource = "insp:submission", action = "execute")
     public Result<SubmissionDetail> createDetail(@PathVariable Long submissionId,
-                                                  @RequestBody CreateDetailRequest request) {
+                                                  @RequestBody @Valid CreateDetailRequest request) {
         boolean hasConfig = request.getScoringConfig() != null
                 || request.getValidationRules() != null
                 || request.getConditionLogic() != null;
@@ -147,7 +148,7 @@ public class InspSubmissionController {
     @PutMapping("/details/{detailId}/response")
     @CasbinAccess(resource = "insp:submission", action = "execute")
     public Result<SubmissionDetail> updateDetailResponse(@PathVariable Long detailId,
-                                                          @RequestBody UpdateDetailResponseRequest request) {
+                                                          @RequestBody @Valid UpdateDetailResponseRequest request) {
         return Result.success(submissionService.updateDetailResponse(detailId,
                 request.getResponseValue(), request.getScoringMode(),
                 request.getScore(), request.getDimensions()));
@@ -156,14 +157,14 @@ public class InspSubmissionController {
     @PutMapping("/details/{detailId}/remark")
     @CasbinAccess(resource = "insp:submission", action = "execute")
     public Result<SubmissionDetail> updateDetailRemark(@PathVariable Long detailId,
-                                                        @RequestBody RemarkRequest request) {
+                                                        @RequestBody @Valid RemarkRequest request) {
         return Result.success(submissionService.updateDetailRemark(detailId, request.getRemark()));
     }
 
     @PostMapping("/details/{detailId}/flag")
     @CasbinAccess(resource = "insp:submission", action = "execute")
     public Result<SubmissionDetail> flagDetail(@PathVariable Long detailId,
-                                                @RequestBody FlagDetailRequest request) {
+                                                @RequestBody @Valid FlagDetailRequest request) {
         return Result.success(submissionService.flagDetail(detailId, request.getReason()));
     }
 
@@ -185,7 +186,7 @@ public class InspSubmissionController {
     @PostMapping("/{submissionId}/evidences")
     @CasbinAccess(resource = "insp:submission", action = "execute")
     public Result<InspEvidence> addEvidence(@PathVariable Long submissionId,
-                                             @RequestBody AddEvidenceRequest request) {
+                                             @RequestBody @Valid AddEvidenceRequest request) {
         return Result.success(submissionService.addEvidence(submissionId,
                 request.getDetailId(), request.getEvidenceType(),
                 request.getFileName(), request.getFileUrl()));
@@ -208,8 +209,11 @@ public class InspSubmissionController {
 
     @lombok.Data
     public static class CreateSubmissionRequest {
+        @NotNull
         private Long taskId;
+        @NotNull
         private TargetType targetType;
+        @NotNull
         private Long targetId;
         private String targetName;
     }
@@ -217,17 +221,6 @@ public class InspSubmissionController {
     @lombok.Data
     public static class SaveFormDataRequest {
         private String formData;
-    }
-
-    @lombok.Data
-    public static class CompleteSubmissionRequest {
-        private BigDecimal baseScore;
-        private BigDecimal finalScore;
-        private BigDecimal deductionTotal;
-        private BigDecimal bonusTotal;
-        private String scoreBreakdown;
-        private String grade;
-        private Boolean passed;
     }
 
     @lombok.Data
@@ -265,8 +258,10 @@ public class InspSubmissionController {
     @lombok.Data
     public static class AddEvidenceRequest {
         private Long detailId;
+        @NotNull
         private EvidenceType evidenceType;
         private String fileName;
+        @NotNull
         private String fileUrl;
     }
 }

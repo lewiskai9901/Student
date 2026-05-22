@@ -98,6 +98,7 @@ public class SubmissionDetailRepositoryImpl implements SubmissionDetailRepositor
         po.setRemark(d.getRemark());
         po.setCreatedAt(d.getCreatedAt());
         po.setUpdatedAt(d.getUpdatedAt());
+        po.setAppealAdjustedAt(d.getAppealAdjustedAt());
         return po;
     }
 
@@ -125,6 +126,7 @@ public class SubmissionDetailRepositoryImpl implements SubmissionDetailRepositor
                 .flagReason(po.getFlagReason())
                 .remark(po.getRemark())
                 .createdAt(po.getCreatedAt())
-                .updatedAt(po.getUpdatedAt()));
+                .updatedAt(po.getUpdatedAt())
+                .appealAdjustedAt(po.getAppealAdjustedAt()));
     }
 }

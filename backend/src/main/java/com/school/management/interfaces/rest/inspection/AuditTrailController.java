@@ -4,8 +4,11 @@ import com.school.management.application.inspection.AuditTrailApplicationService
 import com.school.management.common.result.Result;
 import com.school.management.domain.inspection.model.platform.AuditTrailEntry;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -14,6 +17,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/inspection/audit-trail")
 @RequiredArgsConstructor
+@Validated
 public class AuditTrailController {
 
     private final AuditTrailApplicationService auditTrailService;
@@ -41,7 +45,7 @@ public class AuditTrailController {
     @GetMapping("/recent")
     @CasbinAccess(resource = "insp:platform", action = "view")
     public Result<List<AuditTrailEntry>> findRecent(
-            @RequestParam(defaultValue = "50") int limit) {
+            @RequestParam(defaultValue = "50") @Min(1) @Max(200) int limit) {
         return Result.success(auditTrailService.findRecent(limit));
     }
 }

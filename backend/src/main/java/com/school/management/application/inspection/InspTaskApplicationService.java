@@ -3,6 +3,7 @@ package com.school.management.application.inspection;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.school.management.application.event.TriggerService;
 import com.school.management.domain.inspection.event.InspectionTriggerPoints;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 import com.school.management.domain.inspection.model.execution.*;
@@ -131,7 +132,10 @@ public class InspTaskApplicationService {
             log.warn("createTriggeredTask: 项目 {} 不存在, 跳过", projectId);
             return null;
         }
-        // 防重: 同一 refType+refId 已有 task → 跳过
+        // 防重 (第一道): 同一 refType+refId 已有 task → 跳过.
+        // 注意这是 best-effort 预检, 与 INSERT 之间仍有竞态窗口 —
+        // 真正的去重保证靠 insp_tasks(source_ref_type, source_ref_id) 唯一索引
+        // (V20260522_1 迁移) + 下方 catch DuplicateKeyException 兜底.
         try {
             Integer existing = jdbcTemplate.queryForObject(
                     "SELECT COUNT(*) FROM insp_tasks " +
@@ -141,7 +145,12 @@ public class InspTaskApplicationService {
                 log.info("createTriggeredTask: refType={} refId={} 已触发过 task, 跳过", refType, refId);
                 return null;
             }
-        } catch (Exception ignored) { /* skip dedup if query fails */ }
+        } catch (Exception e) {
+            // P2#10: 不再静默吞 — dedup 查询失败本身可能是 DB 异常的征兆.
+            // 不阻断创建 (唯一索引仍会兜底防重), 但必须留痕.
+            log.warn("createTriggeredTask: 去重查询失败 — refType={}, refId={}, msg={}",
+                    refType, refId, e.getMessage());
+        }
 
         try {
             preCheckTemplateDrift(project);
@@ -152,7 +161,16 @@ public class InspTaskApplicationService {
 
         String taskCode = generateTaskCode();
         InspTask task = InspTask.createTriggered(taskCode, projectId, refType, refId, reason);
-        InspTask saved = taskRepository.save(task);
+        InspTask saved;
+        try {
+            saved = taskRepository.save(task);
+        } catch (DuplicateKeyException dup) {
+            // P0#2: 并发下两个 listener 同时为同一 refType+refId 建 task —
+            // 唯一索引拒绝第二条. 优雅返回 null (与"已触发过"分支语义一致).
+            log.info("createTriggeredTask: refType={} refId={} 并发触发被唯一索引拦截, 跳过",
+                    refType, refId);
+            return null;
+        }
         eventPublisher.publishAll(saved.getDomainEvents());
         saved.clearDomainEvents();
         metrics.taskCreated();
@@ -404,7 +422,11 @@ public class InspTaskApplicationService {
                 submissionRepository.save(sub);
             }
         }
-        return taskRepository.save(task);
+        InspTask saved = taskRepository.save(task);
+        // P2#18: 撤回后 submission 不再 COMPLETED, 必须重算 ProjectScore,
+        // 否则 insp_project_scores 仍按已撤回的旧分数汇总.
+        recomputeProjectScoreQuietly(saved);
+        return saved;
     }
 
     @Transactional
@@ -426,6 +448,8 @@ public class InspTaskApplicationService {
         InspTask saved = taskRepository.save(task);
         eventPublisher.publishAll(saved.getDomainEvents());
         saved.clearDomainEvents();
+        // P2#18: 驳回后 submission 重开, ProjectScore 需重算 (同 withdrawTask).
+        recomputeProjectScoreQuietly(saved);
         // C: 审计日志
         auditLogger.log("InspTask", saved.getId(), saved.getTaskCode(),
                 "TASK_REJECTED", comment,
@@ -602,6 +626,15 @@ public class InspTaskApplicationService {
      * 按分区树递归，每个有目标配置的分区根据 targetSourceMode 派生目标列表。
      * - INDEPENDENT / 根分区: 从项目 scopeConfig 获取根目标
      * - PARENT_ASSOCIATED: 从父分区的目标列表派生关联实体
+     *
+     * <p>P0#1 事务语义: 本方法内的三步写 (saveAll submissions → saveAll details →
+     * save task 计数) 必须原子. 它是 {@code private}, 仅由本类
+     * {@code @Transactional} 的 create*Task / repopulateSubmissions 调用,
+     * 因此始终运行在调用方事务内 — 任一步失败整体回滚, 不会留下
+     * "有 task 无 submission" 或 "submission 无 detail" 的半成品.
+     * {@code InspectionPlanScheduler.createTaskForPlan} 同样 {@code @Transactional}
+     * 且经 {@code repopulateSubmissions}(也 {@code @Transactional}) 调用, 链路一致.
+     * 切勿把本方法改为 public 直接对外暴露, 否则会绕过事务边界.
      */
     private void populateSubmissions(InspTask task) {
         InspProject project = projectRepository.findById(task.getProjectId()).orElse(null);
@@ -957,6 +990,20 @@ public class InspTaskApplicationService {
     // ========== Internal: Score Computation ==========
 
     /**
+     * P2#18: 重算 task 所属项目当日 ProjectScore — 失败仅告警不阻断生命周期变更.
+     * 用于 withdraw / reject 后同步汇总. 与 publishTask 的 try-catch 风格一致.
+     */
+    private void recomputeProjectScoreQuietly(InspTask task) {
+        if (task == null || task.getProjectId() == null || task.getTaskDate() == null) return;
+        try {
+            scoreAggregationService.recomputeProjectScore(task.getProjectId(), task.getTaskDate());
+        } catch (Exception e) {
+            log.warn("撤回/驳回后重算 ProjectScore 失败: taskCode={}, msg={}",
+                    task.getTaskCode(), e.getMessage());
+        }
+    }
+
+    /**
      * 任务提交后，计算项目分数
      */
     private void tryComputeProjectScore(InspTask task) {
@@ -1017,9 +1064,19 @@ public class InspTaskApplicationService {
         log.info("项目 {} 日期 {} 汇总分数: {}", project.getProjectCode(), cycleDate, avgScore);
     }
 
+    /**
+     * P1#4: 业务编号生成.
+     *
+     * <p>旧实现用 {@code IdWorker.getId() % 9000} 截断为 4 位后缀, 在同一天内
+     * 高并发下碰撞概率不可忽略 (生日悖论). insp_tasks 有 uk_task_code 唯一索引,
+     * 碰撞会以 DuplicateKeyException 抛出并回滚整个 @Transactional —
+     * 在同一事务内 catch-重试无效 (事务已 rollback-only).
+     *
+     * <p>改为直接用完整雪花 ID 做后缀: 全局唯一, 单调, 无碰撞, 无需重试.
+     * 日期前缀保留, 仅用于人类可读 / 排序.
+     */
     private String generateTaskCode() {
         String dateStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        int suffix = Math.abs((int) (IdWorker.getId() % 9000)) + 1000;
-        return "TSK-" + dateStr + "-" + suffix;
+        return "TSK-" + dateStr + "-" + IdWorker.getId();
     }
 }

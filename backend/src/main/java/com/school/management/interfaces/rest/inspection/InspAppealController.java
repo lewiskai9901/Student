@@ -5,6 +5,9 @@ import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
 import com.school.management.domain.inspection.model.appeal.InspAppeal;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,8 +27,8 @@ public class InspAppealController {
     /** 提交申诉 — inspection:appeal:create */
     @PostMapping
     @CasbinAccess(resource = "inspection_appeal", action = "create")
-    public Result<InspAppeal> submit(@RequestBody SubmitAppealRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+    public Result<InspAppeal> submit(@RequestBody @Valid SubmitAppealRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(appealService.submitAppeal(
                 request.getSubmissionDetailId(), userId, request.getSubmitterName(),
                 request.getReason(), request.getAttachments(), request.getExpectedAdjustment()));
@@ -34,8 +37,8 @@ public class InspAppealController {
     /** 审核通过 — inspection:appeal:review */
     @PostMapping("/{id}/approve")
     @CasbinAccess(resource = "inspection_appeal", action = "review")
-    public Result<InspAppeal> approve(@PathVariable Long id, @RequestBody ApproveAppealRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+    public Result<InspAppeal> approve(@PathVariable Long id, @RequestBody @Valid ApproveAppealRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(appealService.approve(id, userId, request.getReviewerName(),
                 request.getComment(), request.getFinalAdjustment()));
     }
@@ -43,8 +46,8 @@ public class InspAppealController {
     /** 审核驳回 — inspection:appeal:review */
     @PostMapping("/{id}/reject")
     @CasbinAccess(resource = "inspection_appeal", action = "review")
-    public Result<InspAppeal> reject(@PathVariable Long id, @RequestBody RejectAppealRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+    public Result<InspAppeal> reject(@PathVariable Long id, @RequestBody @Valid RejectAppealRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(appealService.reject(id, userId, request.getReviewerName(),
                 request.getComment()));
     }
@@ -53,7 +56,7 @@ public class InspAppealController {
     @PostMapping("/{id}/withdraw")
     @CasbinAccess(resource = "inspection_appeal", action = "create")
     public Result<InspAppeal> withdraw(@PathVariable Long id) {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(appealService.withdraw(id, userId));
     }
 
@@ -69,7 +72,7 @@ public class InspAppealController {
     @GetMapping("/my")
     @CasbinAccess(resource = "inspection_appeal", action = "view")
     public Result<List<InspAppeal>> listMy() {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(appealService.listMyAppeals(userId));
     }
 
@@ -91,8 +94,10 @@ public class InspAppealController {
 
     @lombok.Data
     public static class SubmitAppealRequest {
+        @NotNull
         private Long submissionDetailId;
         private String submitterName;
+        @NotBlank
         private String reason;
         private String attachments;
         private BigDecimal expectedAdjustment;
@@ -108,6 +113,7 @@ public class InspAppealController {
     @lombok.Data
     public static class RejectAppealRequest {
         private String reviewerName;
+        @NotBlank
         private String comment;
     }
 }

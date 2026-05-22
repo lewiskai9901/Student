@@ -75,6 +75,14 @@ class InspectionWriteMustSetOrgUnitIdTest {
     private static final Pattern ORG_UNIT_FIELD_PATTERN =
         Pattern.compile("\\bLong\\s+orgUnitId\\b");
 
+    /**
+     * 匹配 `orgUnitId` 字段上的 `@TableField(fill = ... INSERT)` 注解 —
+     * 仅当注解紧贴在 orgUnitId 字段声明之前才算 (注解 + 字段在同一片段内).
+     */
+    private static final Pattern ORG_UNIT_FILL_INSERT_PATTERN =
+        Pattern.compile("@TableField\\s*\\([^)]*fill\\s*=\\s*[^)]*INSERT[^)]*\\)\\s*"
+                      + "(?:private\\s+|protected\\s+|public\\s+)?Long\\s+orgUnitId\\b");
+
     @Test
     void everyInspectionPoMustDeclareOrgUnitIdField() throws IOException {
         List<String> violations = new ArrayList<>();
@@ -176,6 +184,61 @@ class InspectionWriteMustSetOrgUnitIdTest {
 
         assertThat(violations)
             .as("inspection PO 写入路径未被 Router 或显式 setter 覆盖")
+            .isEmpty();
+    }
+
+    /**
+     * 守护核心缺口: 任何 inspection PO 只要在 `orgUnitId` 字段上标了
+     * `@TableField(fill = FieldFill.INSERT)`, 就 *依赖* InspectionDataPermissionFiller
+     * 来填充该字段。而 Filler 仅对 InspectionUpstreamRouter 注册过的 PO 类型生效
+     * ({@code InspectionDataPermissionFiller:51} 对未注册类型直接 return)。
+     *
+     * <p>因此: 标了 fill=INSERT 注解 ⇒ 必须注册进 router, 否则 fill 注解完全失效,
+     * INSERT 时 org_unit_id 永远 NULL, 数据权限过滤漏掉新行。
+     *
+     * <p>这里不限于 EXPECTED_TABLES_WITH_ORG_UNIT — 扫描 *全部* inspection PO,
+     * 这样 insp_submissions 这类不在期望表清单但带 fill 注解的 PO 也会被抓到。
+     *
+     * <p>`.setOrgUnitId(...)` 源码字面量 *不* 作为豁免: 手动 setter 可能传入 null,
+     * 且与 fill 注解的填充语义冲突 — 标了 fill 就该走 router 链路。
+     */
+    @Test
+    void everyPoWithOrgUnitFillAnnotationMustBeRegisteredInRouter() throws IOException {
+        // 提取 router 已注册的 PO 类名
+        Set<String> routerRegistered = new LinkedHashSet<>();
+        if (Files.isRegularFile(ROUTER_FILE)) {
+            String routerSrc = Files.readString(ROUTER_FILE);
+            Matcher rm = ROUTER_REGISTER_PATTERN.matcher(routerSrc);
+            while (rm.find()) {
+                routerRegistered.add(rm.group(1));
+            }
+        }
+
+        List<String> violations = new ArrayList<>();
+        try (Stream<Path> files = Files.walk(PERSISTENCE_ROOT)) {
+            files
+                .filter(p -> p.toString().endsWith("PO.java"))
+                .forEach(p -> {
+                    try {
+                        String content = Files.readString(p);
+                        if (!ORG_UNIT_FILL_INSERT_PATTERN.matcher(content).find()) return;
+                        String fileName = p.getFileName().toString();
+                        String poClass = fileName.substring(0, fileName.length() - ".java".length());
+                        if (!routerRegistered.contains(poClass)) {
+                            violations.add(String.format(
+                                "%s 在 orgUnitId 上标了 @TableField(fill=INSERT) 但未在 " +
+                                "InspectionUpstreamRouter 注册 — fill 注解完全失效 " +
+                                "(InspectionDataPermissionFiller 对未注册类型直接 return), " +
+                                "INSERT 时 org_unit_id 将是 NULL", poClass));
+                        }
+                    } catch (IOException e) {
+                        throw new RuntimeException("Failed to read " + p, e);
+                    }
+                });
+        }
+
+        assertThat(violations)
+            .as("inspection PO 标了 orgUnitId fill 注解但未注册进 router")
             .isEmpty();
     }
 

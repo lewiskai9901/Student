@@ -5,6 +5,9 @@ import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
 import com.school.management.domain.inspection.model.scoring.Indicator;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,7 +34,7 @@ public class IndicatorController {
 
     @PostMapping("/leaf")
     @CasbinAccess(resource = "insp:project", action = "edit")
-    public Result<Indicator> createLeafIndicator(@RequestBody CreateLeafRequest request) {
+    public Result<Indicator> createLeafIndicator(@RequestBody @Valid CreateLeafRequest request) {
         return Result.success(indicatorService.createLeafIndicator(
                 request.getProjectId(), request.getParentIndicatorId(), request.getName(),
                 request.getSourceSectionId(), request.getSourceAggregation(),
@@ -44,7 +47,7 @@ public class IndicatorController {
 
     @PostMapping("/composite")
     @CasbinAccess(resource = "insp:project", action = "edit")
-    public Result<Indicator> createCompositeIndicator(@RequestBody CreateCompositeRequest request) {
+    public Result<Indicator> createCompositeIndicator(@RequestBody @Valid CreateCompositeRequest request) {
         return Result.success(indicatorService.createCompositeIndicator(
                 request.getProjectId(), request.getParentIndicatorId(), request.getName(),
                 request.getCompositeAggregation(), request.getMissingPolicy(),
@@ -58,7 +61,7 @@ public class IndicatorController {
     @PutMapping("/{id}")
     @CasbinAccess(resource = "insp:project", action = "edit")
     public Result<Indicator> updateIndicator(@PathVariable Long id,
-                                              @RequestBody UpdateIndicatorRequest request) {
+                                              @RequestBody @Valid UpdateIndicatorRequest request) {
         return Result.success(indicatorService.updateIndicator(
                 id, request.getName(), request.getEvaluationPeriod(),
                 request.getGradeSchemeId(), request.getSourceSectionId(), request.getSourceAggregation(),
@@ -79,8 +82,10 @@ public class IndicatorController {
 
     @lombok.Data
     public static class CreateLeafRequest {
+        @NotNull
         private Long projectId;
         private Long parentIndicatorId;
+        @NotBlank
         private String name;
         private Long sourceSectionId;
         private String sourceAggregation;
@@ -95,8 +100,10 @@ public class IndicatorController {
 
     @lombok.Data
     public static class CreateCompositeRequest {
+        @NotNull
         private Long projectId;
         private Long parentIndicatorId;
+        @NotBlank
         private String name;
         private String compositeAggregation;
         private String missingPolicy;
@@ -111,6 +118,7 @@ public class IndicatorController {
 
     @lombok.Data
     public static class UpdateIndicatorRequest {
+        @NotBlank
         private String name;
         private String evaluationPeriod;
         private Long gradeSchemeId;

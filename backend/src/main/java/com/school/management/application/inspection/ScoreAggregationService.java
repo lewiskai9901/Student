@@ -325,14 +325,26 @@ public class ScoreAggregationService {
 
         BigDecimal avgScore = totalScore.divide(BigDecimal.valueOf(count), 2, RoundingMode.HALF_UP);
 
-        ProjectScore ps = scoreRepository.findByProjectIdAndCycleDate(project.getId(), cycleDate)
-                .orElse(ProjectScore.create(project.getId(), cycleDate));
-        // 保留现有等级，仅更新分数和计数
-        ps.updateScore(avgScore, ps.getGrade(), count, ps.getDetail());
-        scoreRepository.save(ps);
-
-        log.info("ProjectScore 重算完成: project={}, date={}, avgScore={}, count={}",
-                project.getProjectCode(), cycleDate, avgScore, count);
+        // P2#12: recomputeProjectScore 并发无锁 — 两个线程同时
+        // findByProjectIdAndCycleDate 都 miss → 各自 create → 两条 INSERT.
+        // insp_project_scores(tenant_id, project_id, cycle_date) 唯一索引
+        // (V20260522_1) 会拒绝第二条 INSERT, 保证不会出现重复汇总行.
+        //
+        // 失败方在此 catch — 不在同一 @Transactional 内重试 save (异常已把事务
+        // 标为 rollback-only, 重试 save 也会在 commit 时失败). recompute 对同一
+        // (project, cycleDate) 是幂等的: 胜出线程已写入基于相同数据的正确汇总,
+        // 失败方整段 recompute 回滚即可, 数据最终一致.
+        try {
+            ProjectScore ps = scoreRepository.findByProjectIdAndCycleDate(project.getId(), cycleDate)
+                    .orElse(ProjectScore.create(project.getId(), cycleDate));
+            ps.updateScore(avgScore, ps.getGrade(), count, ps.getDetail());
+            scoreRepository.save(ps);
+        } catch (org.springframework.dao.DuplicateKeyException dup) {
+            log.warn("ProjectScore 并发插入冲突 (唯一索引拦截), 本次重算放弃, " +
+                    "胜出线程已写入等价汇总: project={}, date={}",
+                    project.getProjectCode(), cycleDate);
+            return;
+        }
     }
 
     /** 更新 task 的 completedTargets / skippedTargets 计数（按不重复 targetId 统计） */

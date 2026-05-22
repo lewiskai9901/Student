@@ -4,10 +4,12 @@ import com.school.management.application.inspection.IssueCategoryApplicationServ
 import com.school.management.common.result.Result;
 import com.school.management.domain.inspection.model.corrective.IssueCategory;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import lombok.Data;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/inspection/issue-categories")
@@ -45,14 +47,14 @@ public class IssueCategoryController {
 
     @PostMapping
     @CasbinAccess(resource = "insp:platform", action = "manage")
-    public Result<IssueCategory> create(@RequestBody Map<String, Object> body) {
+    public Result<IssueCategory> create(@RequestBody @Valid CreateIssueCategoryRequest body) {
         IssueCategory result = service.create(
-                (String) body.get("categoryCode"),
-                (String) body.get("categoryName"),
-                body.get("parentId") != null ? Long.valueOf(body.get("parentId").toString()) : null,
-                (String) body.get("description"),
-                (String) body.get("icon"),
-                body.get("sortOrder") != null ? Integer.valueOf(body.get("sortOrder").toString()) : 0,
+                body.getCategoryCode(),
+                body.getCategoryName(),
+                body.getParentId(),
+                body.getDescription(),
+                body.getIcon(),
+                body.getSortOrder() != null ? body.getSortOrder() : 0,
                 null
         );
         return Result.success(result);
@@ -60,13 +62,14 @@ public class IssueCategoryController {
 
     @PutMapping("/{id}")
     @CasbinAccess(resource = "insp:platform", action = "manage")
-    public Result<IssueCategory> update(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+    public Result<IssueCategory> update(@PathVariable Long id,
+                                        @RequestBody @Valid UpdateIssueCategoryRequest body) {
         IssueCategory result = service.update(id,
-                (String) body.get("categoryName"),
-                (String) body.get("description"),
-                (String) body.get("icon"),
-                body.get("sortOrder") != null ? Integer.valueOf(body.get("sortOrder").toString()) : null,
-                body.get("isEnabled") != null ? Boolean.valueOf(body.get("isEnabled").toString()) : null,
+                body.getCategoryName(),
+                body.getDescription(),
+                body.getIcon(),
+                body.getSortOrder(),
+                body.getIsEnabled(),
                 null
         );
         return Result.success(result);
@@ -77,5 +80,29 @@ public class IssueCategoryController {
     public Result<Void> delete(@PathVariable Long id) {
         service.delete(id);
         return Result.success(null);
+    }
+
+    // ========== Request DTOs ==========
+
+    @Data
+    public static class CreateIssueCategoryRequest {
+        @NotBlank
+        private String categoryCode;
+        @NotBlank
+        private String categoryName;
+        private Long parentId;
+        private String description;
+        private String icon;
+        private Integer sortOrder;
+    }
+
+    @Data
+    public static class UpdateIssueCategoryRequest {
+        @NotBlank
+        private String categoryName;
+        private String description;
+        private String icon;
+        private Integer sortOrder;
+        private Boolean isEnabled;
     }
 }

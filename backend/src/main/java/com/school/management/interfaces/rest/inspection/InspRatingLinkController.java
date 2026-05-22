@@ -6,6 +6,9 @@ import com.school.management.domain.inspection.model.rating.InspRatingLink;
 import com.school.management.domain.inspection.repository.InspRatingLinkRepository;
 import com.school.management.exception.BusinessException;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
@@ -36,7 +39,7 @@ public class InspRatingLinkController {
 
     @PostMapping
     @CasbinAccess(resource = "insp:rating", action = "manage")
-    public Result<InspRatingLink> create(@RequestBody CreateLinkRequest request) {
+    public Result<InspRatingLink> create(@RequestBody @Valid CreateLinkRequest request) {
         InspRatingLink link = InspRatingLink.create(
                 request.getProjectId(),
                 request.getRatingConfigId(),
@@ -49,7 +52,7 @@ public class InspRatingLinkController {
 
     @PutMapping("/{id}")
     @CasbinAccess(resource = "insp:rating", action = "manage")
-    public Result<InspRatingLink> update(@PathVariable Long id, @RequestBody UpdateLinkRequest request) {
+    public Result<InspRatingLink> update(@PathVariable Long id, @RequestBody @Valid UpdateLinkRequest request) {
         InspRatingLink link = linkRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Rating link not found: " + id));
         link.update(request.getPeriodType(), request.isAutoCalculate());
@@ -65,7 +68,7 @@ public class InspRatingLinkController {
 
     @PostMapping("/calculate")
     @CasbinAccess(resource = "insp:rating", action = "manage")
-    public Result<Void> manualCalculate(@RequestBody CalculateRequest request) {
+    public Result<Void> manualCalculate(@RequestBody @Valid CalculateRequest request) {
         calculationHandler.calculateRatings(
                 request.getProjectId(),
                 request.getPeriodType(),
@@ -79,8 +82,11 @@ public class InspRatingLinkController {
 
     @lombok.Data
     public static class CreateLinkRequest {
+        @NotNull
         private Long projectId;
+        @NotNull
         private Long ratingConfigId;
+        @NotBlank
         private String periodType;
         private boolean autoCalculate = true;
         private Long createdBy;
@@ -88,13 +94,16 @@ public class InspRatingLinkController {
 
     @lombok.Data
     public static class UpdateLinkRequest {
+        @NotBlank
         private String periodType;
         private boolean autoCalculate;
     }
 
     @lombok.Data
     public static class CalculateRequest {
+        @NotNull
         private Long projectId;
+        @NotBlank
         private String periodType;
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
         private LocalDate periodStart;

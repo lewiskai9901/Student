@@ -6,7 +6,10 @@ import com.school.management.infrastructure.persistence.inspection.execution.Sub
 import com.school.management.infrastructure.persistence.inspection.execution.SubmissionObservationPO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -23,6 +26,7 @@ import java.util.Map;
 @RequestMapping("/inspection/observations")
 @Tag(name = "评分观察记录", description = "检查平台归一化评分观察数据")
 @RequiredArgsConstructor
+@Validated
 public class ObservationController {
 
     private final SubmissionObservationMapper observationMapper;
@@ -36,8 +40,8 @@ public class ObservationController {
             @RequestParam(required = false) String severity,
             @RequestParam(required = false) Boolean isNegative,
             @RequestParam(required = false) String linkedEventTypeCode,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "50") int size) {
+            @RequestParam(defaultValue = "1") @Min(1) int page,
+            @RequestParam(defaultValue = "50") @Min(1) @Max(200) int size) {
 
         Integer isNegativeInt = isNegative == null ? null : (isNegative ? 1 : 0);
         long total = observationMapper.countFiltered(projectId, subjectType, severity, isNegativeInt, linkedEventTypeCode);

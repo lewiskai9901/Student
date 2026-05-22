@@ -6,7 +6,11 @@ import com.school.management.common.util.SecurityUtils;
 import com.school.management.domain.inspection.model.template.ItemType;
 import com.school.management.domain.inspection.model.template.TemplateItem;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -14,6 +18,7 @@ import java.util.List;
 
 @RestController("v7TemplateItemController")
 @RequiredArgsConstructor
+@Validated
 public class TemplateItemController {
 
     private final TemplateItemApplicationService itemService;
@@ -21,8 +26,8 @@ public class TemplateItemController {
     @PostMapping("/inspection/sections/{sectionId}/items")
     @CasbinAccess(resource = "insp:template", action = "edit")
     public Result<TemplateItem> createItem(@PathVariable Long sectionId,
-                                            @RequestBody CreateItemRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+                                            @RequestBody @Valid CreateItemRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(itemService.createItem(
                 sectionId, request.getItemCode(), request.getItemName(),
                 request.getItemType(), request.getDescription(), request.getConfig(),
@@ -43,8 +48,8 @@ public class TemplateItemController {
     @PutMapping("/inspection/items/{itemId}")
     @CasbinAccess(resource = "insp:template", action = "edit")
     public Result<TemplateItem> updateItem(@PathVariable Long itemId,
-                                            @RequestBody UpdateItemRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+                                            @RequestBody @Valid UpdateItemRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(itemService.updateItem(itemId,
                 request.getItemName(), request.getDescription(),
                 request.getItemType(), request.getConfig(), request.getValidationRules(),
@@ -65,16 +70,19 @@ public class TemplateItemController {
     @PutMapping("/inspection/sections/{sectionId}/items/reorder")
     @CasbinAccess(resource = "insp:template", action = "edit")
     public Result<Void> reorderItems(@PathVariable Long sectionId,
-                                      @RequestBody List<Long> itemIds) {
+                                      @RequestBody @NotNull List<Long> itemIds) {
         itemService.reorderItems(sectionId, itemIds);
         return Result.success();
     }
 
     @lombok.Data
     public static class CreateItemRequest {
+        @NotBlank
         private String itemCode;
+        @NotBlank
         private String itemName;
         private String description;
+        @NotNull
         private ItemType itemType;
         private String config;
         private String validationRules;
@@ -94,8 +102,10 @@ public class TemplateItemController {
 
     @lombok.Data
     public static class UpdateItemRequest {
+        @NotBlank
         private String itemName;
         private String description;
+        @NotNull
         private ItemType itemType;
         private String config;
         private String validationRules;

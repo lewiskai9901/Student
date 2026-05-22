@@ -38,19 +38,27 @@ public class InspRatingCalculationHandler {
     private final RatingResultRepository ratingResultRepository;
     private final DomainEventPublisher eventPublisher;
 
+    /**
+     * P1#8: 监听器方法本身标 {@code @Transactional}.
+     *
+     * <p>原实现 {@code @Async} 线程内 {@code this.calculateRatings()} 是自调用,
+     * Spring AOP 代理无法拦截 → {@code calculateRatings} 上的 {@code @Transactional}
+     * 完全失效, 评级结果可能部分落库. 直接给监听器方法加事务即可 (它本身
+     * 不抢已提交的发起方事务 — AFTER_COMMIT + @Async 已是独立线程, 此处新开事务).
+     *
+     * <p>注意: try-catch 仍保留 — 但事务边界在 catch <b>之内</b>会因异常被标记
+     * rollback. 这里 catch 在事务方法<b>外层</b>包不住, 因此把异常处理下沉到
+     * {@code calculateRatings} 内部不可行; 改为让本方法整体在事务中执行,
+     * 任一 link 失败则整批评级回滚, 语义清晰.
+     */
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @Transactional
     public void onPeriodSummaryCalculated(PeriodSummaryCalculatedEvent event) {
         log.info("Rating calculation triggered: projectId={}, periodType={}, period={}-{}",
                 event.getProjectId(), event.getPeriodType(), event.getPeriodStart(), event.getPeriodEnd());
-
-        try {
-            calculateRatings(event.getProjectId(), event.getPeriodType(),
-                    event.getPeriodStart(), event.getPeriodEnd());
-        } catch (Exception e) {
-            log.error("Failed to calculate ratings for project {}: {}",
-                    event.getProjectId(), e.getMessage(), e);
-        }
+        calculateRatings(event.getProjectId(), event.getPeriodType(),
+                event.getPeriodStart(), event.getPeriodEnd());
     }
 
     @Transactional

@@ -3,6 +3,7 @@ package com.school.management.interfaces.rest.inspection;
 import com.school.management.application.inspection.ai.ScoringSuggestionService;
 import com.school.management.common.result.Result;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -24,7 +25,7 @@ public class AiScoringController {
     @PostMapping("/suggest-score")
     @CasbinAccess(resource = "insp:task", action = "execute")
     public Result<ScoringSuggestionService.SuggestScoreResponse> suggestScore(
-            @RequestBody ScoringSuggestionService.SuggestScoreRequest request) {
+            @RequestBody @Valid ScoringSuggestionService.SuggestScoreRequest request) {
         if (request.description() == null || request.description().isBlank()) {
             throw new IllegalArgumentException("观察描述不能为空");
         }

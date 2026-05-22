@@ -15,8 +15,11 @@ import com.school.management.domain.inspection.model.execution.SubmissionDetail;
 import com.school.management.domain.inspection.repository.InspSubmissionRepository;
 import com.school.management.domain.inspection.repository.InspTaskRepository;
 import com.school.management.domain.inspection.repository.SubmissionDetailRepository;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.infrastructure.casbin.CasbinAccess;
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -24,7 +27,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 整改判定引擎 — 候选与确认 API.
@@ -46,8 +48,8 @@ public class CorrectiveSuggestionController {
     private final InspSubmissionRepository submissionRepository;
     private final InspTaskRepository taskRepository;
     private final CorrectiveSuggestionApplicationService suggestionAppService;
-
-    private static final AtomicLong CODE_SEQ = new AtomicLong(System.currentTimeMillis() % 100000);
+    /** 复用单例 — 不要每请求 new ObjectMapper() (开销大). */
+    private final ObjectMapper objectMapper;
 
     /** 候选列表 — 引擎判定结果 (NONE 已过滤). */
     @GetMapping("/candidates")
@@ -73,6 +75,7 @@ public class CorrectiveSuggestionController {
     /** 批量确认 — 把选中的候选项落库为 corrective_case. */
     @PostMapping("/candidates/confirm")
     @CasbinAccess(resource = "insp:corrective", action = "create")
+    @Transactional
     public Result<List<Long>> confirm(@RequestBody ConfirmRequest req) {
         if (req == null || req.submissionId == null || req.detailIds == null || req.detailIds.isEmpty()) {
             throw new IllegalArgumentException("submissionId 与 detailIds 必填");
@@ -96,7 +99,7 @@ public class CorrectiveSuggestionController {
             SubmissionDetail d = detailRepository.findById(detailId).orElse(null);
             if (d == null) continue;
 
-            String caseCode = "CC-" + System.currentTimeMillis() + "-" + CODE_SEQ.incrementAndGet();
+            String caseCode = "CC-" + IdWorker.getId();
             int days = v.getSuggestedDeadlineDays() > 0 ? v.getSuggestedDeadlineDays() : 7;
             CorrectiveCase saved = caseService.createCase(
                     caseCode,
@@ -112,7 +115,7 @@ public class CorrectiveSuggestionController {
                     submission.getTargetName(),
                     null,
                     LocalDateTime.now().plusDays(days),
-                    SecurityUtils.getCurrentUserId());
+                    SecurityUtils.requireCurrentUserId());
 
             // 写入 V110 引擎字段 (suggested_by_system / severity_score / explain_trace / suggestion_reason)
             suggestionAppService.writeEngineFields(
@@ -155,6 +158,8 @@ public class CorrectiveSuggestionController {
     public static class ConfirmRequest {
         public Long submissionId;
         public List<Long> detailIds;
+        // 注: 字段必填校验由 confirm() 方法内显式 if 抛 IllegalArgumentException 处理
+        //     (public 字段类无 getter, Bean Validation 仍可标注但此处沿用既有显式校验)
     }
 
     // ==================== 项目策略 GET / PUT ====================
@@ -328,7 +333,7 @@ public class CorrectiveSuggestionController {
         String json = null;
         if (body != null && !body.isEmpty()) {
             try {
-                json = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(body);
+                json = objectMapper.writeValueAsString(body);
             } catch (Exception e) {
                 throw new IllegalArgumentException("规则 JSON 序列化失败: " + e.getMessage());
             }

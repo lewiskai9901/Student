@@ -27,7 +27,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ThreadLocalRandom;
 
 @Slf4j
 @Service
@@ -152,8 +151,26 @@ public class InspProjectApplicationService {
         return projectRepository.save(project);
     }
 
+    /**
+     * P1#7: 删除项目.
+     *
+     * <p>禁止删除已产生任务的项目 — 硬删会留下 insp_tasks / insp_submissions /
+     * insp_corrective_cases / inspection_appeals / inspection_plans 等一批孤儿,
+     * 这些表通过 project_id 关联但无 FK 级联. 报表 / 审计追溯会拿到悬挂引用.
+     *
+     * <p>选择"禁止"而非"级联清理": 已检查产生的数据是考核证据, 静默级联删除
+     * 会抹掉审计痕迹, 风险远高于让管理员先归档 (archiveProject) 项目.
+     */
     @Transactional
     public void deleteProject(Long id) {
+        projectRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("项目不存在: " + id));
+        long taskCount = taskRepoForStats.findByProjectId(id).size();
+        if (taskCount > 0) {
+            throw new com.school.management.exception.BusinessException(
+                    "项目已产生 " + taskCount + " 个检查任务, 不能删除. " +
+                    "如需停用请改用归档 (archiveProject), 以保留检查记录与审计痕迹.");
+        }
         scoreRepository.deleteByProjectId(id);
         inspectorRepository.deleteByProjectId(id);
         projectRepository.deleteById(id);
@@ -209,7 +226,12 @@ public class InspProjectApplicationService {
                     project.lockScoringConfig(snapshot);
                     log.info("评分配置快照已锁定，projectId={}", project.getId());
                 } catch (Exception e) {
-                    log.error("序列化评分配置快照失败，projectId={}，将使用默认评分配置: {}", project.getId(), e.getMessage());
+                    // P2#13: 快照锁定是项目发布的核心契约 — 序列化失败若仅 log 继续,
+                    // 项目会以"无快照"状态发布, 后续任务评分将与发布时承诺脱节.
+                    // 失败即抛, 让 @Transactional 回滚整个 publish.
+                    log.error("序列化评分配置快照失败，projectId={}: {}", project.getId(), e.getMessage());
+                    throw new com.school.management.exception.BusinessException(
+                            "评分配置快照序列化失败, 项目发布已中止: " + e.getMessage());
                 }
             }, () -> {
                 log.info("项目 {} 未配置评分方案，将使用默认评分逻辑", project.getId());
@@ -444,9 +466,13 @@ public class InspProjectApplicationService {
         return scoreRepository.findByProjectId(projectId);
     }
 
+    /**
+     * P1#4: 业务编号生成. 旧实现用 4 位随机数后缀, 同日并发碰撞概率不可忽略,
+     * 而 insp_projects 有 uk_project_code 唯一索引, 碰撞会 DuplicateKeyException
+     * 回滚事务且无法在同一事务内重试. 改为完整雪花 ID 后缀, 全局唯一无碰撞.
+     */
     private String generateProjectCode() {
         String dateStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        int random = ThreadLocalRandom.current().nextInt(1000, 9999);
-        return "PRJ-" + dateStr + "-" + random;
+        return "PRJ-" + dateStr + "-" + com.baomidou.mybatisplus.core.toolkit.IdWorker.getId();
     }
 }

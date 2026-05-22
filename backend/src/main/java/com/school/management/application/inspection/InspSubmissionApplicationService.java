@@ -192,6 +192,16 @@ public class InspSubmissionApplicationService {
      * 发布检查相关的 EntityEvent：
      * - INSP_VIOLATION: 每条违规记录（VIOLATION_RECORD 类型字段）
      * - INSP_GRADE: 提交整体的评分事件（主体=检查目标）
+     *
+     * <p>P1#5 失败语义区分:
+     * <ul>
+     *   <li><b>observation 落库</b> (step 1-2): 属于业务数据, 失败必须抛出 —
+     *       让 completeSubmission 的 @Transactional 整体回滚, 不能让 submission
+     *       已 COMPLETED 而 observation 静默丢失 (会导致 EscalationPolicy
+     *       重复违规递增基数算错).</li>
+     *   <li><b>通知 / 触发器</b> (step 3-5): 跨边界副作用, 失败可吞 —
+     *       逐个 try-catch 仅 log.warn, 不影响 submission 落库.</li>
+     * </ul>
      */
     private void publishInspectionEvents(InspSubmission submission,
                                           List<SubmissionDetail> details,
@@ -201,47 +211,47 @@ public class InspSubmissionApplicationService {
             return;
         }
 
+        InspTask task = taskRepository.findById(submission.getTaskId()).orElse(null);
+
+        // 构建 ObservationContext (主体所属组织 orgUnit 由具体目标推断)
+        Map<Long, String> itemEventTypeMap = buildItemEventTypeMap(details);
+        Long orgUnitId = null;
+        String orgUnitName = null;
+        // 所有 ORG 类型目标都视为组织单元; 具体是班级/年级/部门/病房 由 entity_type_configs 决定
+        // (通用核心, 不绑定行业)
+        if (submission.getTargetType() == TargetType.ORG) {
+            orgUnitId = submission.getTargetId();
+            orgUnitName = submission.getTargetName();
+        }
+
+        ObservationContext ctx = ObservationContext.builder()
+                .submissionId(submission.getId())
+                .projectId(project.getId())
+                .taskId(submission.getTaskId())
+                .projectName(project.getProjectName())
+                .targetType(submission.getTargetType() != null ? submission.getTargetType().name() : null)
+                .targetId(submission.getTargetId())
+                .targetName(submission.getTargetName())
+                .orgUnitId(orgUnitId)
+                .orgUnitName(orgUnitName)
+                .observedAt(LocalDateTime.now())
+                .itemEventTypeMap(itemEventTypeMap)
+                .build();
+
+        // ===== 关键路径 (step 1-2): observation 提取 + 落库 — 失败必须抛 =====
+        List<ScoringObservation> allObservations = new ArrayList<>();
+        for (SubmissionDetail detail : details) {
+            ObservationExtractor extractor = findExtractor(detail.getItemType());
+            if (extractor == null) continue;
+            allObservations.addAll(extractor.extract(detail, ctx));
+        }
+        // 批量写入 submission_observations 表 — 不 catch, 失败上抛回滚整个 completeSubmission
+        if (observationRepository != null && !allObservations.isEmpty()) {
+            observationRepository.batchInsert(allObservations);
+        }
+
+        // ===== 非关键路径 (step 3-5): 通知 / 触发器 — 失败仅告警, 不阻断 =====
         try {
-            InspTask task = taskRepository.findById(submission.getTaskId()).orElse(null);
-
-            // 构建 ObservationContext (主体所属组织 orgUnit 由具体目标推断)
-            Map<Long, String> itemEventTypeMap = buildItemEventTypeMap(details);
-            Long orgUnitId = null;
-            String orgUnitName = null;
-            // 所有 ORG 类型目标都视为组织单元; 具体是班级/年级/部门/病房 由 entity_type_configs 决定
-            // (通用核心, 不绑定行业)
-            if (submission.getTargetType() == TargetType.ORG) {
-                orgUnitId = submission.getTargetId();
-                orgUnitName = submission.getTargetName();
-            }
-
-            ObservationContext ctx = ObservationContext.builder()
-                    .submissionId(submission.getId())
-                    .projectId(project.getId())
-                    .taskId(submission.getTaskId())
-                    .projectName(project.getProjectName())
-                    .targetType(submission.getTargetType() != null ? submission.getTargetType().name() : null)
-                    .targetId(submission.getTargetId())
-                    .targetName(submission.getTargetName())
-                    .orgUnitId(orgUnitId)
-                    .orgUnitName(orgUnitName)
-                    .observedAt(LocalDateTime.now())
-                    .itemEventTypeMap(itemEventTypeMap)
-                    .build();
-
-            // 1. 提取所有观察（Strategy 模式，零 if/else）
-            List<ScoringObservation> allObservations = new ArrayList<>();
-            for (SubmissionDetail detail : details) {
-                ObservationExtractor extractor = findExtractor(detail.getItemType());
-                if (extractor == null) continue;
-                allObservations.addAll(extractor.extract(detail, ctx));
-            }
-
-            // 2. 批量写入 submission_observations 表
-            if (observationRepository != null && !allObservations.isEmpty()) {
-                observationRepository.batchInsert(allObservations);
-            }
-
             // 3. 负面观察 → 触发 INSP_ITEM_RESULT 事件
             for (ScoringObservation obs : allObservations) {
                 if (!obs.isNegative()) continue;
@@ -301,7 +311,10 @@ public class InspSubmissionApplicationService {
                     allObservations.stream().filter(ScoringObservation::isNegative).count());
 
         } catch (Exception e) {
-            log.error("发布检查事件异常, submissionId={}: {}", submission.getId(), e.getMessage());
+            // P1#5: 此 catch 只覆盖 step 3-5 的通知 / 触发器, observation 已在上方落库成功.
+            // 通知失败不应回滚已完成的 submission, 因此吞掉但告警.
+            log.error("发布检查通知事件异常 (observation 已落库, submission 不回滚), submissionId={}: {}",
+                    submission.getId(), e.getMessage());
         }
     }
 

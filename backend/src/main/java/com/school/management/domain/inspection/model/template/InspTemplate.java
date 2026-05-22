@@ -87,7 +87,12 @@ public class InspTemplate extends AggregateRoot<Long> {
         if (this.status != TemplateStatus.DRAFT && this.status != TemplateStatus.PUBLISHED) {
             throw new IllegalStateException("只有草稿或已发布的模板才能发布新版本");
         }
-        this.latestVersion = this.latestVersion + 1;
+        // P2#17 并发风险: latestVersion+1 的"读-改-写"在两个并发 publish 下可能算出
+        // 同一个新版本号 (lost update), 导致 TemplateVersion 版本号冲突 / 覆盖.
+        // 真正的防护应在持久化层: InspTemplatePO 加 MyBatis-Plus 乐观锁字段 (@Version),
+        // 使并发的第二次 UPDATE 因版本不匹配而失败重试. 当前 PO 是否启用 @Version 需基础设施层
+        // 核实并补齐 — 领域层无法在此修复 (改 PO 不在本层范围).
+        this.latestVersion = (this.latestVersion != null ? this.latestVersion : 0) + 1;
         this.status = TemplateStatus.PUBLISHED;
         this.updatedAt = LocalDateTime.now();
 

@@ -256,10 +256,12 @@ public class InspTask extends AggregateRoot<Long> {
         this.updatedAt = now;
         // V108: 延迟交付计算按 deadlinePolicy 路由
         // - NONE (AD_HOC/SELF_CHECK): 永不算延迟
+        // - RELAXED (TRIGGERED/COMPLAINT): 永不算延迟 — P0#2: TRIGGERED 任务 taskDate=创建当天,
+        //   并非真实 deadline, 按 taskDate 算 late 会产生大量虚假延迟. 与 isOverdue() 对 RELAXED
+        //   "软逾期不影响 KPI" 的语义对齐: 这里直接不标 late, 软逾期提示交由前端按 isOverdue() 展示.
         // - STRICT (SCHEDULED/CROSS_AUDIT): 硬延迟 — 超过 effective due date 即标 late
-        // - RELAXED (TRIGGERED/COMPLAINT): 软延迟 — 标 late 但不影响 KPI (KPI 路由由 reporting 层处理)
         DeadlinePolicy policy = getDeadlinePolicy();
-        if (policy == DeadlinePolicy.NONE) {
+        if (policy == DeadlinePolicy.NONE || policy == DeadlinePolicy.RELAXED) {
             this.lateSubmission = Boolean.FALSE;
             this.lateDays = 0;
         } else {
@@ -428,6 +430,8 @@ public class InspTask extends AggregateRoot<Long> {
         this.status = TaskStatus.IN_PROGRESS;
         this.submittedAt = null;
         this.updatedAt = LocalDateTime.now();
+        // P2#15: 撤回有下游影响 (审核待办移除 / 统计回退), 补领域事件
+        registerEvent(new TaskWithdrawnEvent(this.id, this.taskCode, this.inspectorId));
     }
 
     /**
@@ -464,6 +468,8 @@ public class InspTask extends AggregateRoot<Long> {
         this.inspectorId = inspectorId;
         this.inspectorName = inspectorName;
         this.updatedAt = LocalDateTime.now();
+        // P2#15: 指派有下游影响 (给被指派人发通知), 补领域事件
+        registerEvent(new TaskAssignedEvent(this.id, this.taskCode, inspectorId, inspectorName));
     }
 
     /**

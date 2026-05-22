@@ -1,11 +1,13 @@
 package com.school.management.interfaces.rest.inspection;
 
 import com.school.management.application.inspection.InspectionExportApplicationService;
+import com.school.management.exception.BusinessException;
 import com.school.management.infrastructure.casbin.CasbinAccess;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -43,10 +45,10 @@ public class InspectionExportController {
     @CasbinAccess(resource = "insp:analytics", action = "view")
     public ResponseEntity<byte[]> exportRanking(
             @RequestParam(required = false) Long projectId,
-            @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate) {
-        LocalDate start = startDate != null ? LocalDate.parse(startDate) : LocalDate.now().minusDays(30);
-        LocalDate end = endDate != null ? LocalDate.parse(endDate) : LocalDate.now();
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        LocalDate start = startDate != null ? startDate : LocalDate.now().minusDays(30);
+        LocalDate end = endDate != null ? endDate : LocalDate.now();
 
         List<Map<String, Object>> rows = exportService.queryRanking(projectId, start, end);
 
@@ -159,7 +161,8 @@ public class InspectionExportController {
             return new ResponseEntity<>(bytes, headers2, org.springframework.http.HttpStatus.OK);
         } catch (Exception e) {
             log.error("导出 Excel 失败 sheet={}", sheetName, e);
-            throw new RuntimeException("导出失败: " + e.getMessage(), e);
+            // 不向客户端泄露内部异常细节, 固定文案
+            throw new BusinessException("导出失败，请稍后重试");
         }
     }
 }

@@ -31,6 +31,12 @@ public class SubmissionDetail implements Entity<Long> {
     private Boolean isFlagged;
     private String flagReason;
     private String remark;
+    /**
+     * P1#8: 申诉调整已应用的时间戳 — 非空即已应用过, 用于幂等防重复叠加.
+     * 注: 持久化需基础设施层补 SubmissionDetailPO.appeal_adjusted_at 列 + 迁移脚本 (不在领域层范围).
+     * 列缺失时该字段仅在单次内存内生命周期生效, 跨进程重投递仍可能叠加 — PO 补齐后才完全幂等.
+     */
+    private LocalDateTime appealAdjustedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -59,6 +65,7 @@ public class SubmissionDetail implements Entity<Long> {
         this.isFlagged = builder.isFlagged != null ? builder.isFlagged : false;
         this.flagReason = builder.flagReason;
         this.remark = builder.remark;
+        this.appealAdjustedAt = builder.appealAdjustedAt;
         this.createdAt = builder.createdAt != null ? builder.createdAt : LocalDateTime.now();
         this.updatedAt = builder.updatedAt;
     }
@@ -160,20 +167,40 @@ public class SubmissionDetail implements Entity<Long> {
      * </ul>
      *
      * <p>同时清除 isFlagged 标记 — 申诉通过即认为该扣分项不再视为问题.
+     *
+     * <p>P1#8 幂等性: DEDUCTION 模式做的是增量 (score = current + adj), 事件重复投递
+     * 会把同一笔退分叠加多次. 现以 {@link #appealAdjustedAt} 做幂等标记 —
+     * 已应用过的 detail 再次调用直接跳过 (仅 ADDITION/DIRECT/LEVEL 的覆盖语义本身幂等,
+     * 但统一走标记简化推理). 同时校验 DEDUCTION 收敛方向: score 保存的是负的扣分,
+     * 退分应向 0 收敛, current + adj 不应越过 0 变成正分 — 越界则裁剪到 0.
      */
     public void applyAppealAdjustment(BigDecimal finalAdjustment) {
+        if (this.appealAdjustedAt != null) {
+            return; // 已应用过申诉调整, 幂等跳过 — 防事件重复投递叠加
+        }
         if (finalAdjustment == null) {
-            return; // 没有调整, 仅清旗标
+            // 没有分数调整: 仅清旗标, 但也标记已处理, 避免后续重复进入
+            this.isFlagged = false;
+            this.flagReason = null;
+            this.appealAdjustedAt = LocalDateTime.now();
+            this.updatedAt = this.appealAdjustedAt;
+            return;
         }
         if (this.scoringMode == ScoringMode.DEDUCTION) {
             BigDecimal current = this.score != null ? this.score : BigDecimal.ZERO;
-            this.score = current.add(finalAdjustment);
+            BigDecimal adjusted = current.add(finalAdjustment);
+            // 收敛校验: 扣分 (负值) 退分后不应越过 0 变成"奖励分"
+            if (current.compareTo(BigDecimal.ZERO) < 0 && adjusted.compareTo(BigDecimal.ZERO) > 0) {
+                adjusted = BigDecimal.ZERO;
+            }
+            this.score = adjusted;
         } else {
             this.score = finalAdjustment;
         }
         this.isFlagged = false;
         this.flagReason = null;
-        this.updatedAt = LocalDateTime.now();
+        this.appealAdjustedAt = LocalDateTime.now();
+        this.updatedAt = this.appealAdjustedAt;
     }
 
     // Getters
@@ -202,6 +229,7 @@ public class SubmissionDetail implements Entity<Long> {
     public Boolean getIsFlagged() { return isFlagged; }
     public String getFlagReason() { return flagReason; }
     public String getRemark() { return remark; }
+    public LocalDateTime getAppealAdjustedAt() { return appealAdjustedAt; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 
@@ -229,6 +257,7 @@ public class SubmissionDetail implements Entity<Long> {
         private Boolean isFlagged;
         private String flagReason;
         private String remark;
+        private LocalDateTime appealAdjustedAt;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
 
@@ -253,6 +282,7 @@ public class SubmissionDetail implements Entity<Long> {
         public Builder isFlagged(Boolean isFlagged) { this.isFlagged = isFlagged; return this; }
         public Builder flagReason(String flagReason) { this.flagReason = flagReason; return this; }
         public Builder remark(String remark) { this.remark = remark; return this; }
+        public Builder appealAdjustedAt(LocalDateTime appealAdjustedAt) { this.appealAdjustedAt = appealAdjustedAt; return this; }
         public Builder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
         public Builder updatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; return this; }
 

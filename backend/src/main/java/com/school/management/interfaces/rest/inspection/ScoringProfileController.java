@@ -5,6 +5,9 @@ import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
 import com.school.management.domain.inspection.model.scoring.*;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,8 +26,8 @@ public class ScoringProfileController {
 
     @PostMapping
     @CasbinAccess(resource = "insp:scoring-profile", action = "create")
-    public Result<ScoringProfile> createProfile(@RequestBody CreateProfileRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+    public Result<ScoringProfile> createProfile(@RequestBody @Valid CreateProfileRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(scoringService.createProfile(request.getSectionId(), userId));
     }
 
@@ -57,8 +60,8 @@ public class ScoringProfileController {
     @PutMapping("/{id}")
     @CasbinAccess(resource = "insp:scoring-profile", action = "edit")
     public Result<ScoringProfile> updateProfile(@PathVariable Long id,
-                                                 @RequestBody UpdateProfileRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+                                                 @RequestBody @Valid UpdateProfileRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(scoringService.updateProfile(id,
                 request.getMaxScore(), request.getMinScore(),
                 request.getPrecisionDigits(), userId));
@@ -67,8 +70,8 @@ public class ScoringProfileController {
     @PutMapping("/{id}/advanced-settings")
     @CasbinAccess(resource = "insp:scoring-profile", action = "edit")
     public Result<ScoringProfile> updateAdvancedSettings(@PathVariable Long id,
-                                                          @RequestBody UpdateAdvancedSettingsRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+                                                          @RequestBody @Valid UpdateAdvancedSettingsRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(scoringService.updateAdvancedSettings(id,
                 request.getTrendFactorEnabled(), request.getTrendLookbackDays(),
                 request.getTrendBonusPerPercent(), request.getTrendPenaltyPerPercent(),
@@ -94,7 +97,7 @@ public class ScoringProfileController {
     @PostMapping("/{id}/dimensions")
     @CasbinAccess(resource = "insp:scoring-profile", action = "edit")
     public Result<ScoreDimension> createDimension(@PathVariable Long id,
-                                                    @RequestBody CreateDimensionRequest request) {
+                                                    @RequestBody @Valid CreateDimensionRequest request) {
         return Result.success(scoringService.createDimension(id,
                 request.getDimensionCode(), request.getDimensionName(),
                 request.getWeight(), request.getBaseScore(),
@@ -117,7 +120,7 @@ public class ScoringProfileController {
     @CasbinAccess(resource = "insp:scoring-profile", action = "edit")
     public Result<ScoreDimension> updateDimension(@PathVariable Long id,
                                                     @PathVariable Long dimensionId,
-                                                    @RequestBody UpdateDimensionRequest request) {
+                                                    @RequestBody @Valid UpdateDimensionRequest request) {
         return Result.success(scoringService.updateDimension(dimensionId,
                 request.getDimensionName(), request.getWeight(),
                 request.getBaseScore(), request.getPassThreshold()));
@@ -135,7 +138,7 @@ public class ScoringProfileController {
     @PostMapping("/{id}/grade-bands")
     @CasbinAccess(resource = "insp:scoring-profile", action = "edit")
     public Result<GradeBand> createGradeBand(@PathVariable Long id,
-                                              @RequestBody CreateGradeBandRequest request) {
+                                              @RequestBody @Valid CreateGradeBandRequest request) {
         return Result.success(scoringService.createGradeBand(id,
                 request.getDimensionId(), request.getGradeCode(), request.getGradeName(),
                 request.getMinScore(), request.getMaxScore(),
@@ -152,7 +155,7 @@ public class ScoringProfileController {
     @CasbinAccess(resource = "insp:scoring-profile", action = "edit")
     public Result<GradeBand> updateGradeBand(@PathVariable Long id,
                                               @PathVariable Long bandId,
-                                              @RequestBody UpdateGradeBandRequest request) {
+                                              @RequestBody @Valid UpdateGradeBandRequest request) {
         return Result.success(scoringService.updateGradeBand(bandId,
                 request.getGradeName(), request.getMinScore(), request.getMaxScore(),
                 request.getColor(), request.getIcon()));
@@ -170,7 +173,7 @@ public class ScoringProfileController {
     @PostMapping("/{id}/calculation-rules")
     @CasbinAccess(resource = "insp:scoring-profile", action = "edit")
     public Result<CalculationRule> createRule(@PathVariable Long id,
-                                                 @RequestBody CreateRuleRequest request) {
+                                                 @RequestBody @Valid CreateRuleRequest request) {
         return Result.success(scoringService.createRule(id,
                 request.getRuleCode(), request.getRuleName(), request.getPriority(),
                 request.getRuleType(), request.getConfig(), request.getIsEnabled(),
@@ -190,7 +193,7 @@ public class ScoringProfileController {
     @CasbinAccess(resource = "insp:scoring-profile", action = "edit")
     public Result<CalculationRule> updateRule(@PathVariable Long id,
                                                  @PathVariable Long ruleId,
-                                                 @RequestBody UpdateRuleRequest request) {
+                                                 @RequestBody @Valid UpdateRuleRequest request) {
         return Result.success(scoringService.updateRule(ruleId,
                 request.getRuleName(), request.getPriority(),
                 request.getRuleType(), request.getConfig(), request.getIsEnabled(),
@@ -212,7 +215,7 @@ public class ScoringProfileController {
     @PostMapping("/{id}/escalation-policies")
     @CasbinAccess(resource = "insp:scoring-profile", action = "edit")
     public Result<EscalationPolicy> createEscalationPolicy(@PathVariable Long id,
-                                                            @RequestBody CreateEscalationPolicyRequest request) {
+                                                            @RequestBody @Valid CreateEscalationPolicyRequest request) {
         return Result.success(scoringService.createEscalationPolicy(id,
                 request.getPolicyName(), request.getLookupPeriodDays(),
                 request.getEscalationMode(), request.getMultiplier(), request.getAdder(),
@@ -230,7 +233,7 @@ public class ScoringProfileController {
     @CasbinAccess(resource = "insp:scoring-profile", action = "edit")
     public Result<EscalationPolicy> updateEscalationPolicy(@PathVariable Long id,
                                                             @PathVariable Long policyId,
-                                                            @RequestBody UpdateEscalationPolicyRequest request) {
+                                                            @RequestBody @Valid UpdateEscalationPolicyRequest request) {
         return Result.success(scoringService.updateEscalationPolicy(policyId,
                 request.getPolicyName(), request.getLookupPeriodDays(),
                 request.getEscalationMode(), request.getMultiplier(), request.getAdder(),
@@ -250,8 +253,8 @@ public class ScoringProfileController {
     @PostMapping("/{id}/versions")
     @CasbinAccess(resource = "insp:scoring-profile", action = "edit")
     public Result<ScoringProfileVersion> publishVersion(@PathVariable Long id,
-                                                         @RequestBody PublishVersionRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+                                                         @RequestBody @Valid PublishVersionRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(scoringService.publishVersion(id, request.getChangeSummary(), userId));
     }
 

@@ -5,6 +5,8 @@ import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
 import com.school.management.domain.inspection.model.execution.InspTask;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,7 +25,7 @@ public class InspTaskController {
 
     @PostMapping
     @CasbinAccess(resource = "insp:task", action = "create")
-    public Result<InspTask> createTask(@RequestBody CreateTaskRequest request) {
+    public Result<InspTask> createTask(@RequestBody @Valid CreateTaskRequest request) {
         InspTask task = taskService.createTask(request.getProjectId(),
                 request.getTaskDate(), request.getTimeSlotCode(),
                 request.getTimeSlotStart(), request.getTimeSlotEnd());
@@ -33,8 +35,8 @@ public class InspTaskController {
     /** V108: 检查员发起临时抽查任务 (AD_HOC) — 项目须 allow_ad_hoc=true */
     @PostMapping("/ad-hoc")
     @CasbinAccess(resource = "insp:task", action = "execute")
-    public Result<InspTask> createAdHoc(@RequestBody AdHocRequest request) {
-        Long me = com.school.management.common.util.SecurityUtils.getCurrentUserId();
+    public Result<InspTask> createAdHoc(@RequestBody @Valid AdHocRequest request) {
+        Long me = com.school.management.common.util.SecurityUtils.requireCurrentUserId();
         String myName = com.school.management.common.util.SecurityUtils.getCurrentUsername();
         InspTask task = taskService.createAdHocTask(request.getProjectId(),
                 me, myName, request.getReason());
@@ -59,8 +61,8 @@ public class InspTaskController {
     /** V108: 受检主体发起自查 (SELF_CHECK) — 项目须 allow_self_check=1 */
     @PostMapping("/self-check")
     @CasbinAccess(resource = "insp:task", action = "execute")
-    public Result<InspTask> createSelfCheck(@RequestBody SelfCheckRequest request) {
-        Long me = com.school.management.common.util.SecurityUtils.getCurrentUserId();
+    public Result<InspTask> createSelfCheck(@RequestBody @Valid SelfCheckRequest request) {
+        Long me = com.school.management.common.util.SecurityUtils.requireCurrentUserId();
         String myName = com.school.management.common.util.SecurityUtils.getCurrentUsername();
         return Result.success(taskService.createSelfCheckTask(
                 request.getProjectId(), me, myName, request.getReason()));
@@ -69,14 +71,15 @@ public class InspTaskController {
     /** V108: 检查员发起互查 (CROSS_AUDIT) — 必填 dueDate */
     @PostMapping("/cross-audit")
     @CasbinAccess(resource = "insp:task", action = "execute")
-    public Result<InspTask> createCrossAudit(@RequestBody CrossAuditRequest request) {
-        Long me = com.school.management.common.util.SecurityUtils.getCurrentUserId();
+    public Result<InspTask> createCrossAudit(@RequestBody @Valid CrossAuditRequest request) {
+        Long me = com.school.management.common.util.SecurityUtils.requireCurrentUserId();
         String myName = com.school.management.common.util.SecurityUtils.getCurrentUsername();
         return Result.success(taskService.createCrossAuditTask(
                 request.getProjectId(), me, myName, request.getDueDate(), request.getReason()));
     }
 
     public static class SelfCheckRequest {
+        @NotNull
         private Long projectId;
         private String reason;
         public Long getProjectId() { return projectId; }
@@ -86,7 +89,9 @@ public class InspTaskController {
     }
 
     public static class CrossAuditRequest {
+        @NotNull
         private Long projectId;
+        @NotNull
         private java.time.LocalDate dueDate;
         private String reason;
         public Long getProjectId() { return projectId; }
@@ -108,7 +113,7 @@ public class InspTaskController {
     @PutMapping("/projects/{id}/inspection-mode")
     @CasbinAccess(resource = "insp:project", action = "edit")
     public Result<java.util.Map<String, Object>> updateInspectionMode(
-            @PathVariable Long id, @RequestBody InspectionModeRequest request) {
+            @PathVariable Long id, @RequestBody @Valid InspectionModeRequest request) {
         return Result.success(taskService.updateInspectionMode(id,
                 request.getInspectionMode(),
                 request.getAllowAdHoc(),
@@ -132,6 +137,7 @@ public class InspTaskController {
     }
 
     public static class AdHocRequest {
+        @NotNull
         private Long projectId;
         private String reason;
         public Long getProjectId() { return projectId; }
@@ -147,6 +153,8 @@ public class InspTaskController {
                 .orElseThrow(() -> new IllegalArgumentException("任务不存在: " + id)));
     }
 
+    // TODO: 未传 projectId 时 listAllTasks() 返回全表; insp_tasks 为高基数表 (任务随排期累积).
+    //       建议后续改为分页. 暂保留以不破坏现有 API 契约; 前端列表页普遍带 projectId 过滤.
     @GetMapping
     @CasbinAccess(resource = "insp:task", action = "view")
     public Result<List<InspTask>> listTasks(@RequestParam(required = false) Long projectId) {
@@ -159,14 +167,14 @@ public class InspTaskController {
     @GetMapping("/available")
     @CasbinAccess(resource = "insp:task", action = "view")
     public Result<List<InspTask>> listAvailableTasks() {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(taskService.listAvailableTasksForUser(userId));
     }
 
     @GetMapping("/my-tasks")
     @CasbinAccess(resource = "insp:task", action = "view")
     public Result<List<InspTask>> listMyTasks() {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(taskService.listMyTasks(userId));
     }
 
@@ -175,8 +183,8 @@ public class InspTaskController {
     @PostMapping("/{id}/claim")
     @CasbinAccess(resource = "insp:task", action = "execute")
     public Result<InspTask> claimTask(@PathVariable Long id,
-                                       @RequestBody ClaimTaskRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+                                       @RequestBody @Valid ClaimTaskRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(taskService.claimTask(id, userId, request.getInspectorName()));
     }
 
@@ -201,7 +209,7 @@ public class InspTaskController {
     @PostMapping("/{id}/reject")
     @CasbinAccess(resource = "insp:task", action = "review")
     public Result<InspTask> rejectTask(@PathVariable Long id,
-                                        @RequestBody(required = false) RejectTaskRequest request) {
+                                        @RequestBody(required = false) @Valid RejectTaskRequest request) {
         String comment = request != null ? request.getComment() : "驳回";
         return Result.success(taskService.rejectTask(id, comment));
     }
@@ -209,8 +217,8 @@ public class InspTaskController {
     @PostMapping("/{id}/review")
     @CasbinAccess(resource = "insp:task", action = "review")
     public Result<InspTask> reviewTask(@PathVariable Long id,
-                                        @RequestBody ReviewTaskRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+                                        @RequestBody @Valid ReviewTaskRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         taskService.startReview(id, userId, request.getReviewerName());
         return Result.success(taskService.reviewTask(id, request.getComment()));
     }
@@ -230,7 +238,7 @@ public class InspTaskController {
     @PostMapping("/{id}/assign")
     @CasbinAccess(resource = "insp:task", action = "edit")
     public Result<InspTask> assignTask(@PathVariable Long id,
-                                        @RequestBody AssignTaskRequest request) {
+                                        @RequestBody @Valid AssignTaskRequest request) {
         return Result.success(taskService.assignTask(id,
                 request.getInspectorId(), request.getInspectorName()));
     }
@@ -248,7 +256,7 @@ public class InspTaskController {
     @PostMapping("/{id}/extend-deadline")
     @CasbinAccess(resource = "insp:task", action = "edit")
     public Result<InspTask> extendDeadline(@PathVariable Long id,
-                                            @RequestBody ExtendDeadlineRequest request) {
+                                            @RequestBody @Valid ExtendDeadlineRequest request) {
         return Result.success(taskService.extendTaskDeadline(id, request.getNewDeadline()));
     }
 
@@ -256,7 +264,7 @@ public class InspTaskController {
     @PostMapping("/reassign-departed-inspector/{userId}")
     @CasbinAccess(resource = "insp:task", action = "edit")
     public Result<Integer> reassignDepartedInspector(@PathVariable Long userId,
-                                                       @RequestBody ReassignDepartedInspectorRequest request) {
+                                                       @RequestBody @Valid ReassignDepartedInspectorRequest request) {
         int affected = taskService.reassignDepartedInspector(userId,
                 request.getReason(),
                 request.getFallbackInspectorId(),
@@ -275,7 +283,9 @@ public class InspTaskController {
 
     @lombok.Data
     public static class CreateTaskRequest {
+        @NotNull
         private Long projectId;
+        @NotNull
         private LocalDate taskDate;
         private String timeSlotCode;
         private LocalTime timeSlotStart;
@@ -295,6 +305,7 @@ public class InspTaskController {
 
     @lombok.Data
     public static class AssignTaskRequest {
+        @NotNull
         private Long inspectorId;
         private String inspectorName;
     }
@@ -306,6 +317,7 @@ public class InspTaskController {
 
     @lombok.Data
     public static class ExtendDeadlineRequest {
+        @NotNull
         private LocalDate newDeadline;
     }
 }

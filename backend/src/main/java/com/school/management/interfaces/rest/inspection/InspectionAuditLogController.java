@@ -3,7 +3,10 @@ package com.school.management.interfaces.rest.inspection;
 import com.school.management.application.inspection.InspectionAuditLogApplicationService;
 import com.school.management.common.result.Result;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -21,6 +24,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/inspection/audit-logs")
 @RequiredArgsConstructor
+@Validated
 public class InspectionAuditLogController {
 
     private final InspectionAuditLogApplicationService auditLogService;
@@ -36,8 +40,7 @@ public class InspectionAuditLogController {
     @CasbinAccess(resource = "insp:audit", action = "view")
     public Result<List<Map<String, Object>>> listByEntity(@RequestParam String entityType,
                                                            @RequestParam Long entityId,
-                                                           @RequestParam(defaultValue = "50") int limit) {
-        if (limit > 200) limit = 200;
+                                                           @RequestParam(defaultValue = "50") @Min(1) @Max(200) int limit) {
         return Result.success(auditLogService.listByEntity(entityType, entityId, limit));
     }
 
@@ -45,8 +48,7 @@ public class InspectionAuditLogController {
     @GetMapping("/by-action")
     @CasbinAccess(resource = "insp:audit", action = "view")
     public Result<List<Map<String, Object>>> listByAction(@RequestParam String action,
-                                                           @RequestParam(defaultValue = "100") int limit) {
-        if (limit > 500) limit = 500;
+                                                           @RequestParam(defaultValue = "100") @Min(1) @Max(500) int limit) {
         return Result.success(auditLogService.listByAction(action, limit));
     }
 }

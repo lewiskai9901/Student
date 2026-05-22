@@ -31,6 +31,7 @@ class InspectionDataPermissionFillerTest {
 
     private InspProjectMapper projectMapper;
     private InspSubmissionMapper submissionMapper;
+    private InspTaskMapper taskMapper;
     private CorrectiveCaseMapper caseMapper;
     private InspectionUpstreamRouter router;
     private MeterRegistry meterRegistry;
@@ -41,8 +42,9 @@ class InspectionDataPermissionFillerTest {
     void setUp() {
         projectMapper = mock(InspProjectMapper.class);
         submissionMapper = mock(InspSubmissionMapper.class);
+        taskMapper = mock(InspTaskMapper.class);
         caseMapper = mock(CorrectiveCaseMapper.class);
-        router = new InspectionUpstreamRouter(projectMapper, submissionMapper, caseMapper);
+        router = new InspectionUpstreamRouter(projectMapper, submissionMapper, taskMapper, caseMapper);
         meterRegistry = new SimpleMeterRegistry();
         metrics = new InspectionMetrics(meterRegistry);
         metrics.init();  // @PostConstruct 手动触发 (单测无 Spring 上下文)

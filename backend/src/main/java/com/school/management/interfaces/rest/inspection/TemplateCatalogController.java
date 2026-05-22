@@ -5,6 +5,8 @@ import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
 import com.school.management.domain.inspection.model.template.TemplateCatalog;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,8 +22,8 @@ public class TemplateCatalogController {
 
     @PostMapping
     @CasbinAccess(resource = "insp:catalog", action = "create")
-    public Result<TemplateCatalog> createCatalog(@RequestBody CreateCatalogRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+    public Result<TemplateCatalog> createCatalog(@RequestBody @Valid CreateCatalogRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(catalogService.createCatalog(
                 request.getCatalogCode(), request.getCatalogName(),
                 request.getParentId(), request.getDescription(),
@@ -43,8 +45,8 @@ public class TemplateCatalogController {
     @PutMapping("/{id}")
     @CasbinAccess(resource = "insp:catalog", action = "edit")
     public Result<TemplateCatalog> updateCatalog(@PathVariable Long id,
-                                                  @RequestBody UpdateCatalogRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+                                                  @RequestBody @Valid UpdateCatalogRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(catalogService.updateCatalog(id,
                 request.getCatalogName(), request.getDescription(),
                 request.getParentId(), request.getIcon(),
@@ -60,7 +62,9 @@ public class TemplateCatalogController {
 
     @lombok.Data
     public static class CreateCatalogRequest {
+        @NotBlank
         private String catalogCode;
+        @NotBlank
         private String catalogName;
         private Long parentId;
         private String description;
@@ -70,6 +74,7 @@ public class TemplateCatalogController {
 
     @lombok.Data
     public static class UpdateCatalogRequest {
+        @NotBlank
         private String catalogName;
         private String description;
         private Long parentId;

@@ -5,6 +5,8 @@ import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
 import com.school.management.domain.inspection.model.execution.ScoringPreset;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,8 +28,8 @@ public class ScoringPresetController {
     @PostMapping("/inspection/templates/{templateId}/scoring-presets")
     @CasbinAccess(resource = "insp:execution", action = "edit")
     public Result<ScoringPreset> createPreset(@PathVariable Long templateId,
-                                               @RequestBody CreateScoringPresetRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+                                               @RequestBody @Valid CreateScoringPresetRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(scoringPresetService.createPreset(
                 templateId, request.getPresetName(), request.getPresetType(),
                 request.getItemValues(), userId));
@@ -36,7 +38,7 @@ public class ScoringPresetController {
     @PutMapping("/{id}")
     @CasbinAccess(resource = "insp:execution", action = "edit")
     public Result<ScoringPreset> updatePreset(@PathVariable Long id,
-                                               @RequestBody UpdateScoringPresetRequest request) {
+                                               @RequestBody @Valid UpdateScoringPresetRequest request) {
         return Result.success(scoringPresetService.updatePreset(
                 id, request.getPresetName(), request.getItemValues()));
     }
@@ -56,13 +58,16 @@ public class ScoringPresetController {
 
     @lombok.Data
     public static class CreateScoringPresetRequest {
+        @NotBlank
         private String presetName;
+        @NotBlank
         private String presetType;
         private String itemValues;
     }
 
     @lombok.Data
     public static class UpdateScoringPresetRequest {
+        @NotBlank
         private String presetName;
         private String itemValues;
     }

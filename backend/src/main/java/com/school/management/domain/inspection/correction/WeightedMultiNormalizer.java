@@ -73,10 +73,21 @@ public class WeightedMultiNormalizer implements SeverityNormalizer {
             JsonNode val = respNode.get(key);
             if (val == null || val.isNull()) continue;
 
+            // P1#9: val.numberValue() 对 NaN/Infinity (Jackson 允许的非标准 JSON 数值)
+            // 转 BigDecimal 会抛 NumberFormatException — 包 try-catch, 解析失败则该维度
+            // score 视为 null (该维度不参与判定), 不让整个 normalize 崩溃.
+            BigDecimal subScore = null;
+            if (val.isNumber()) {
+                try {
+                    subScore = new BigDecimal(val.numberValue().toString());
+                } catch (NumberFormatException nfe) {
+                    log.debug("WEIGHTED_MULTI dim '{}' numeric parse failed: {}", key, nfe.getMessage());
+                }
+            }
             // 构造一个临时 SubmissionDetail 调对应 normalizer
             SubmissionDetail sub = SubmissionDetail.builder()
                     .responseValue(val.isTextual() ? val.asText() : val.toString())
-                    .score(val.isNumber() ? new BigDecimal(val.numberValue().toString()) : null)
+                    .score(subScore)
                     .scoringMode(parseMode(mode))
                     .build();
             SeverityNormalizer subNorm = SeverityNormalizer.of(parseMode(mode));

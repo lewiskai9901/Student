@@ -7,6 +7,9 @@ import com.school.management.domain.inspection.model.template.ItemType;
 import com.school.management.domain.inspection.model.template.LibraryItem;
 import com.school.management.domain.inspection.model.template.TemplateItem;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -44,8 +47,8 @@ public class LibraryItemController {
 
     @PostMapping
     @CasbinAccess(resource = "insp:template", action = "edit")
-    public Result<LibraryItem> createLibraryItem(@RequestBody CreateLibraryItemRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+    public Result<LibraryItem> createLibraryItem(@RequestBody @Valid CreateLibraryItemRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(libraryItemService.createLibraryItem(
                 request.getItemCode(), request.getItemName(), request.getItemType(),
                 request.getDescription(), request.getCategory(), request.getTags(),
@@ -57,7 +60,7 @@ public class LibraryItemController {
     @PutMapping("/{id}")
     @CasbinAccess(resource = "insp:template", action = "edit")
     public Result<LibraryItem> updateLibraryItem(@PathVariable Long id,
-                                                  @RequestBody UpdateLibraryItemRequest request) {
+                                                  @RequestBody @Valid UpdateLibraryItemRequest request) {
         return Result.success(libraryItemService.updateLibraryItem(id,
                 request.getItemName(), request.getDescription(), request.getItemType(),
                 request.getCategory(), request.getTags(),
@@ -83,16 +86,19 @@ public class LibraryItemController {
     @PostMapping("/inspection/sections/{sectionId}/items/from-library")
     @CasbinAccess(resource = "insp:template", action = "edit")
     public Result<TemplateItem> createItemFromLibrary(@PathVariable Long sectionId,
-                                                       @RequestBody CreateFromLibraryRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+                                                       @RequestBody @Valid CreateFromLibraryRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(libraryItemService.createItemFromLibrary(
                 sectionId, request.getLibraryItemId(), request.isSyncWithLibrary(), userId));
     }
 
     @lombok.Data
     public static class CreateLibraryItemRequest {
+        @NotBlank
         private String itemCode;
+        @NotBlank
         private String itemName;
+        @NotNull
         private ItemType itemType;
         private String description;
         private String category;
@@ -106,7 +112,9 @@ public class LibraryItemController {
 
     @lombok.Data
     public static class UpdateLibraryItemRequest {
+        @NotBlank
         private String itemName;
+        @NotNull
         private ItemType itemType;
         private String description;
         private String category;
@@ -120,6 +128,7 @@ public class LibraryItemController {
 
     @lombok.Data
     public static class CreateFromLibraryRequest {
+        @NotNull
         private Long libraryItemId;
         private boolean syncWithLibrary;
     }

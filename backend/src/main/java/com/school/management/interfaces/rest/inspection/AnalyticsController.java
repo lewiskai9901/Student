@@ -5,6 +5,8 @@ import com.school.management.application.inspection.AnalyticsQueryService;
 import com.school.management.common.result.Result;
 import com.school.management.domain.inspection.model.analytics.*;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
@@ -156,14 +158,14 @@ public class AnalyticsController {
 
     @PostMapping("/rebuild-daily")
     @CasbinAccess(resource = "insp:analytics", action = "manage")
-    public Result<Void> rebuildDaily(@RequestBody RebuildDailyRequest request) {
+    public Result<Void> rebuildDaily(@RequestBody @Valid RebuildDailyRequest request) {
         projectionService.rebuildDailySummary(request.getProjectId(), request.getDate());
         return Result.success(null);
     }
 
     @PostMapping("/rebuild-period")
     @CasbinAccess(resource = "insp:analytics", action = "manage")
-    public Result<Void> rebuildPeriod(@RequestBody RebuildPeriodRequest request) {
+    public Result<Void> rebuildPeriod(@RequestBody @Valid RebuildPeriodRequest request) {
         projectionService.rebuildPeriodSummary(request.getProjectId(),
                 request.getPeriodType(), request.getPeriodStart());
         return Result.success(null);
@@ -207,15 +209,20 @@ public class AnalyticsController {
 
     @lombok.Data
     public static class RebuildDailyRequest {
+        @NotNull
         private Long projectId;
+        @NotNull
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
         private LocalDate date;
     }
 
     @lombok.Data
     public static class RebuildPeriodRequest {
+        @NotNull
         private Long projectId;
+        @NotNull
         private PeriodType periodType;
+        @NotNull
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
         private LocalDate periodStart;
     }

@@ -100,7 +100,7 @@ public class ScoreCalculationDomainService {
 
         // Step 8: 等级映射
         String grade = mapGrade(finalScore, gradeBands, null);
-        boolean passed = isPassed(finalScore, dimensions, dimensionScores);
+        boolean passed = isPassed(finalScore, dimensionScores, profile);
 
         // Step 9: 构建结果
         return new ScoreResult(
@@ -298,12 +298,14 @@ public class ScoreCalculationDomainService {
 
                     List<JsonNode> sorted = new ArrayList<>();
                     thresholds.forEach(sorted::add);
-                    sorted.sort(Comparator.comparingInt(n -> n.get("count").asInt()));
+                    // P1#4: 用 path() 而非 get() — 缺 "count" 字段时返回 MissingNode (asInt 默认 0)
+                    // 而非 null, 避免 NPE; 配置错误的阈值项退化为 count=0/penalty=0 不参与判定.
+                    sorted.sort(Comparator.comparingInt(n -> n.path("count").asInt(0)));
 
                     BigDecimal penalty = BigDecimal.ZERO;
                     for (JsonNode t : sorted) {
-                        int count = t.get("count").asInt();
-                        BigDecimal p = new BigDecimal(t.get("penalty").asText());
+                        int count = t.path("count").asInt(0);
+                        BigDecimal p = getDecimal(t, "penalty", BigDecimal.ZERO);
                         if (deductionCount >= count) {
                             penalty = p;
                         }
@@ -350,9 +352,26 @@ public class ScoreCalculationDomainService {
                 .orElse(null);
     }
 
+    /**
+     * 判定整体是否通过.
+     *
+     * <p>P1#5: 旧实现在 dimensionScores 为空时直接返回 true — 无维度配置的项目
+     * 所有提交都"通过", 掩盖了模板缺维度的配置错误. 现修复为:
+     * <ul>
+     *   <li>有维度: 所有维度均通过才算通过 (原逻辑)</li>
+     *   <li>无维度: 退回用 finalScore 对 profile 阈值判定 — finalScore 需 ≥ minScore.
+     *       minScore 是 profile 唯一可用的合格底线 (无独立 passThreshold 字段),
+     *       默认 0, 即至少不为负分.</li>
+     * </ul>
+     */
     private boolean isPassed(BigDecimal finalScore,
-                             List<ScoreDimension> dimensions,
-                             Map<Long, DimensionScoreResult> dimensionScores) {
+                             Map<Long, DimensionScoreResult> dimensionScores,
+                             ScoringProfile profile) {
+        if (dimensionScores == null || dimensionScores.isEmpty()) {
+            BigDecimal threshold = profile != null && profile.getMinScore() != null
+                    ? profile.getMinScore() : BigDecimal.ZERO;
+            return finalScore != null && finalScore.compareTo(threshold) >= 0;
+        }
         for (DimensionScoreResult dsr : dimensionScores.values()) {
             if (!dsr.isPassed()) {
                 return false;

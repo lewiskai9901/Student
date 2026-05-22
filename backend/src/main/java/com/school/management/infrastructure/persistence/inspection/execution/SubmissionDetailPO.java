@@ -39,6 +39,9 @@ public class SubmissionDetailPO {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    /** 申诉调整幂等标记: 非空表示该 detail 已应用过申诉调整, 防 AppealApprovedEvent 重复投递叠加扣分 */
+    private LocalDateTime appealAdjustedAt;
+
     @TableLogic
     private Integer deleted;
 }

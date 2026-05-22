@@ -1,6 +1,7 @@
 package com.school.management.domain.inspection.model.execution;
 
 import com.school.management.domain.inspection.event.SubmissionCompletedEvent;
+import com.school.management.domain.inspection.event.SubmissionSkippedEvent;
 import com.school.management.domain.shared.AggregateRoot;
 
 import java.math.BigDecimal;
@@ -182,11 +183,17 @@ public class InspSubmission extends AggregateRoot<Long> {
 
     /**
      * 重算分数（不改变状态，用于级联重算场景）
-     * 可在 COMPLETED 状态下调用，更新分数字段。
+     *
+     * <p>P1#7: 仅 COMPLETED 状态允许重算. 旧实现无状态守卫, 在 SKIPPED / PENDING /
+     * IN_PROGRESS 上重算会写入"未检查却有分"的脏数据 (跳过的提交本不该有分,
+     * 未完成的提交分数尚未定稿). 重算只对已完成提交的既定分数做级联更新.
      */
     public void recalculate(BigDecimal baseScore, BigDecimal finalScore,
                             BigDecimal deductionTotal, BigDecimal bonusTotal,
                             String scoreBreakdown, String grade, Boolean passed) {
+        if (this.status != SubmissionStatus.COMPLETED) {
+            throw new IllegalStateException("只有已完成的提交才能重算分数, 当前状态: " + this.status);
+        }
         this.baseScore = baseScore;
         this.finalScore = finalScore;
         this.deductionTotal = deductionTotal != null ? deductionTotal : BigDecimal.ZERO;
@@ -206,6 +213,8 @@ public class InspSubmission extends AggregateRoot<Long> {
         }
         this.status = SubmissionStatus.SKIPPED;
         this.updatedAt = LocalDateTime.now();
+        // P2#15: 跳过有下游影响 (覆盖率统计 / 未检查目标清单), 补领域事件
+        registerEvent(new SubmissionSkippedEvent(this.id, this.taskId, this.targetId));
     }
 
     /**

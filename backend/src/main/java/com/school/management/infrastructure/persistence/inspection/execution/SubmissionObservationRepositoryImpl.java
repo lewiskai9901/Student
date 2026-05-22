@@ -1,9 +1,10 @@
 package com.school.management.infrastructure.persistence.inspection.execution;
 
+import com.baomidou.mybatisplus.core.batch.MybatisBatch;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.school.management.domain.inspection.model.execution.ScoringObservation;
 import com.school.management.domain.inspection.repository.SubmissionObservationRepository;
-import lombok.RequiredArgsConstructor;
+import org.apache.ibatis.session.SqlSessionFactory;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
@@ -12,16 +13,29 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Repository
-@RequiredArgsConstructor
 public class SubmissionObservationRepositoryImpl implements SubmissionObservationRepository {
 
     private final SubmissionObservationMapper mapper;
+    private final SqlSessionFactory sqlSessionFactory;
+
+    public SubmissionObservationRepositoryImpl(SubmissionObservationMapper mapper,
+                                               SqlSessionFactory sqlSessionFactory) {
+        this.mapper = mapper;
+        this.sqlSessionFactory = sqlSessionFactory;
+    }
 
     @Override
     public void batchInsert(List<ScoringObservation> observations) {
-        for (ScoringObservation obs : observations) {
-            mapper.insert(toPO(obs));
+        if (observations == null || observations.isEmpty()) {
+            return;
         }
+        List<SubmissionObservationPO> poList =
+                observations.stream().map(this::toPO).collect(Collectors.toList());
+        // Observations don't need generated IDs returned — use MybatisBatch for true JDBC batching.
+        MybatisBatch<SubmissionObservationPO> mybatisBatch = new MybatisBatch<>(sqlSessionFactory, poList);
+        MybatisBatch.Method<SubmissionObservationPO> method =
+                new MybatisBatch.Method<>(SubmissionObservationMapper.class);
+        mybatisBatch.execute(method.insert());
     }
 
     @Override
@@ -58,7 +72,9 @@ public class SubmissionObservationRepositoryImpl implements SubmissionObservatio
 
     private SubmissionObservationPO toPO(ScoringObservation obs) {
         SubmissionObservationPO po = new SubmissionObservationPO();
-        po.setTenantId(1L);
+        // tenant 默认 0L (单租户), 与其余 RepositoryImpl 一致 —
+        // ScoringObservation 领域对象无 tenantId 字段, 由 tenant 拦截器休眠期兜底
+        po.setTenantId(0L);
         po.setSubmissionId(obs.getSubmissionId());
         po.setDetailId(obs.getDetailId());
         po.setProjectId(obs.getProjectId());

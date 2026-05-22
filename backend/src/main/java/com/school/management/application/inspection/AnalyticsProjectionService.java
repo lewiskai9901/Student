@@ -45,90 +45,89 @@ public class AnalyticsProjectionService {
 
     // ========== Event-Driven Projection ==========
 
+    /**
+     * P1#8 + P1#9: 监听器方法本身标 {@code @Transactional}.
+     *
+     * <p>原实现在 {@code @Async} 线程内自调用 {@code rebuildDailySummary} 等
+     * {@code @Transactional} 方法 — Spring AOP 代理对同类自调用不生效, 这些方法的
+     * 事务注解形同虚设. {@code rebuildDailySummary} 先 {@code delete} 再逐条
+     * {@code save}, 若无有效事务, save 中途失败会留下"已删旧汇总但新汇总不全"
+     * 的破损状态 (P1#9).
+     *
+     * <p>修法: 给监听器方法直接加 {@code @Transactional}, 自调用的 rebuild 方法
+     * 以 REQUIRED 传播加入同一事务 → delete + rebuild 原子. 同时去掉内层
+     * try-catch — 在 {@code @Transactional} 方法内 catch 异常会让代理误以为正常
+     * 返回而提交破损数据; 让异常传播出去触发回滚, 由 {@code @Async} 执行器记录.
+     */
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @Transactional
     public void onTaskPublished(TaskPublishedEvent event) {
         log.info("Analytics projection triggered by TaskPublishedEvent: taskId={}, projectId={}",
                 event.getTaskId(), event.getProjectId());
-        try {
-            InspTask task = taskRepository.findById(event.getTaskId()).orElse(null);
-            if (task == null || task.getTaskDate() == null) return;
-
-            rebuildDailySummary(event.getProjectId(), task.getTaskDate());
-        } catch (Exception e) {
-            log.error("Failed to project analytics for task {}: {}", event.getTaskId(), e.getMessage(), e);
-        }
+        InspTask task = taskRepository.findById(event.getTaskId()).orElse(null);
+        if (task == null || task.getTaskDate() == null) return;
+        rebuildDailySummary(event.getProjectId(), task.getTaskDate());
     }
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @Transactional
     public void onSubmissionCompleted(SubmissionCompletedEvent event) {
         log.info("Analytics projection: SubmissionCompletedEvent submissionId={}", event.getSubmissionId());
-        try {
-            // Find the submission and task
-            InspSubmission submission = submissionRepository.findById(event.getSubmissionId()).orElse(null);
-            if (submission == null) return;
-            InspTask task = taskRepository.findById(event.getTaskId()).orElse(null);
-            if (task == null) return;
+        // Find the submission and task
+        InspSubmission submission = submissionRepository.findById(event.getSubmissionId()).orElse(null);
+        if (submission == null) return;
+        InspTask task = taskRepository.findById(event.getTaskId()).orElse(null);
+        if (task == null) return;
 
-            // Rebuild daily summary for the task date
-            if (task.getTaskDate() != null) {
-                rebuildDailySummary(task.getProjectId(), task.getTaskDate());
-            }
+        // Rebuild daily summary for the task date
+        if (task.getTaskDate() != null) {
+            rebuildDailySummary(task.getProjectId(), task.getTaskDate());
+        }
 
-            // Update inspector summary
-            if (task.getInspectorId() != null) {
-                updateInspectorSummary(task.getProjectId(), task.getInspectorId(), task.getInspectorName());
-            }
-        } catch (Exception e) {
-            log.error("Failed to project SubmissionCompletedEvent: {}", e.getMessage(), e);
+        // Update inspector summary
+        if (task.getInspectorId() != null) {
+            updateInspectorSummary(task.getProjectId(), task.getInspectorId(), task.getInspectorName());
         }
     }
 
+    // P1#8: 以下监听器同样标 @Transactional — 它们自调用的
+    // updateCorrectiveSummary* / updateInspectorSummary 也是 @Transactional 方法,
+    // 自调用会绕过代理. 加事务后 rebuild 写入原子, 异常传播触发回滚.
+
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @Transactional
     public void onCorrectiveCaseCreated(CorrectiveCaseCreatedEvent event) {
         log.info("Analytics projection: CorrectiveCaseCreatedEvent caseId={}", event.getCaseId());
-        try {
-            updateCorrectiveSummaryForProject(event);
-        } catch (Exception e) {
-            log.error("Failed to project CorrectiveCaseCreatedEvent: {}", e.getMessage(), e);
-        }
+        updateCorrectiveSummaryForProject(event);
     }
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @Transactional
     public void onCaseClosed(CaseClosedEvent event) {
         log.info("Analytics projection: CaseClosedEvent caseId={}", event.getCaseId());
-        try {
-            updateCorrectiveSummaryForCase(event.getCaseId());
-        } catch (Exception e) {
-            log.error("Failed to project CaseClosedEvent: {}", e.getMessage(), e);
-        }
+        updateCorrectiveSummaryForCase(event.getCaseId());
     }
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @Transactional
     public void onEffectivenessFailed(EffectivenessFailedEvent event) {
         log.info("Analytics projection: EffectivenessFailedEvent caseId={}", event.getCaseId());
-        try {
-            updateCorrectiveSummaryForCase(event.getCaseId());
-        } catch (Exception e) {
-            log.error("Failed to project EffectivenessFailedEvent: {}", e.getMessage(), e);
-        }
+        updateCorrectiveSummaryForCase(event.getCaseId());
     }
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @Transactional
     public void onTaskCancelled(TaskCancelledEvent event) {
         log.info("Analytics projection: TaskCancelledEvent taskId={}", event.getTaskId());
-        try {
-            InspTask task = taskRepository.findById(event.getTaskId()).orElse(null);
-            if (task != null && task.getInspectorId() != null) {
-                updateInspectorSummary(task.getProjectId(), task.getInspectorId(), task.getInspectorName());
-            }
-        } catch (Exception e) {
-            log.error("Failed to project TaskCancelledEvent: {}", e.getMessage(), e);
+        InspTask task = taskRepository.findById(event.getTaskId()).orElse(null);
+        if (task != null && task.getInspectorId() != null) {
+            updateInspectorSummary(task.getProjectId(), task.getInspectorId(), task.getInspectorName());
         }
     }
 

@@ -8,6 +8,9 @@ import com.school.management.domain.inspection.model.corrective.CaseStatus;
 import com.school.management.domain.inspection.model.corrective.CorrectiveCase;
 import com.school.management.domain.inspection.model.corrective.CorrectiveSubtask;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,14 +29,14 @@ public class CorrectiveCaseController {
 
     @PostMapping
     @CasbinAccess(resource = "insp:corrective", action = "create")
-    public Result<CorrectiveCase> createCase(@RequestBody CreateCaseRequest request) {
+    public Result<CorrectiveCase> createCase(@RequestBody @Valid CreateCaseRequest request) {
         CorrectiveCase c = caseService.createCase(
                 request.getCaseCode(), request.getIssueDescription(),
                 request.getPriority(), request.getSubmissionId(), request.getDetailId(),
                 request.getProjectId(), request.getTaskId(),
                 request.getTargetType(), request.getTargetId(), request.getTargetName(),
                 request.getRequiredAction(), request.getDeadline(),
-                SecurityUtils.getCurrentUserId());
+                SecurityUtils.requireCurrentUserId());
         return Result.success(c);
     }
 
@@ -44,6 +47,9 @@ public class CorrectiveCaseController {
                 .orElseThrow(() -> new IllegalArgumentException("整改案例不存在: " + id)));
     }
 
+    // TODO: 当未传任何过滤条件时 listAll() 返回全表; corrective_case 为潜在高基数表.
+    //       建议后续改为分页 (新增 page/size 参数 + PageResult). 暂保留以不破坏现有 API 契约;
+    //       实践中前端列表页基本都带 projectId/status 过滤, 风险可控.
     @GetMapping
     @CasbinAccess(resource = "insp:corrective", action = "view")
     public Result<List<CorrectiveCase>> listCases(
@@ -61,7 +67,7 @@ public class CorrectiveCaseController {
     @GetMapping("/my-cases")
     @CasbinAccess(resource = "insp:corrective", action = "view")
     public Result<List<CorrectiveCase>> listMyCases() {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(caseService.listByAssignee(userId));
     }
 
@@ -83,7 +89,7 @@ public class CorrectiveCaseController {
     @PostMapping("/{id}/assign")
     @CasbinAccess(resource = "insp:corrective", action = "manage")
     public Result<CorrectiveCase> assignCase(@PathVariable Long id,
-                                              @RequestBody AssignCaseRequest request) {
+                                              @RequestBody @Valid AssignCaseRequest request) {
         return Result.success(caseService.assignCase(id, request.getAssigneeId(), request.getAssigneeName()));
     }
 
@@ -96,7 +102,7 @@ public class CorrectiveCaseController {
     @PostMapping("/{id}/submit-correction")
     @CasbinAccess(resource = "insp:corrective", action = "execute")
     public Result<CorrectiveCase> submitCorrection(@PathVariable Long id,
-                                                     @RequestBody SubmitCorrectionRequest request) {
+                                                     @RequestBody @Valid SubmitCorrectionRequest request) {
         return Result.success(caseService.submitCorrection(id,
                 request.getCorrectionNote(), request.getEvidenceIds()));
     }
@@ -104,8 +110,8 @@ public class CorrectiveCaseController {
     @PostMapping("/{id}/verify")
     @CasbinAccess(resource = "insp:corrective", action = "manage")
     public Result<CorrectiveCase> verifyCase(@PathVariable Long id,
-                                              @RequestBody VerifyCaseRequest request) {
-        Long verifierId = SecurityUtils.getCurrentUserId();
+                                              @RequestBody @Valid VerifyCaseRequest request) {
+        Long verifierId = SecurityUtils.requireCurrentUserId();
         return Result.success(caseService.verifyCase(id, verifierId,
                 request.getVerifierName(), request.getNote()));
     }
@@ -113,8 +119,8 @@ public class CorrectiveCaseController {
     @PostMapping("/{id}/reject")
     @CasbinAccess(resource = "insp:corrective", action = "manage")
     public Result<CorrectiveCase> rejectCase(@PathVariable Long id,
-                                              @RequestBody RejectCaseRequest request) {
-        Long verifierId = SecurityUtils.getCurrentUserId();
+                                              @RequestBody @Valid RejectCaseRequest request) {
+        Long verifierId = SecurityUtils.requireCurrentUserId();
         return Result.success(caseService.rejectCase(id, verifierId,
                 request.getVerifierName(), request.getReason()));
     }
@@ -138,7 +144,7 @@ public class CorrectiveCaseController {
     @PostMapping("/reassign-departed-user/{userId}")
     @CasbinAccess(resource = "insp:corrective", action = "manage")
     public Result<Integer> reassignDepartedUser(@PathVariable Long userId,
-                                                  @RequestBody ReassignDepartedRequest request) {
+                                                  @RequestBody @Valid ReassignDepartedRequest request) {
         int affected = caseService.reassignDepartedAssignee(userId,
                 request.getReason(),
                 request.getFallbackAssigneeId(),
@@ -164,18 +170,18 @@ public class CorrectiveCaseController {
     @PostMapping("/{caseId}/subtasks")
     @CasbinAccess(resource = "insp:corrective", action = "manage")
     public Result<CorrectiveSubtask> createSubtask(@PathVariable Long caseId,
-                                                     @RequestBody CreateSubtaskRequest request) {
+                                                     @RequestBody @Valid CreateSubtaskRequest request) {
         return Result.success(caseService.createSubtask(
                 caseId, request.getSubtaskName(), request.getDescription(),
                 request.getAssigneeId(), request.getPriority(), request.getDueDate(),
-                SecurityUtils.getCurrentUserId()));
+                SecurityUtils.requireCurrentUserId()));
     }
 
     @PutMapping("/{caseId}/subtasks/{subtaskId}")
     @CasbinAccess(resource = "insp:corrective", action = "manage")
     public Result<CorrectiveSubtask> updateSubtask(@PathVariable Long caseId,
                                                      @PathVariable Long subtaskId,
-                                                     @RequestBody CreateSubtaskRequest request) {
+                                                     @RequestBody @Valid CreateSubtaskRequest request) {
         return Result.success(caseService.updateSubtask(
                 subtaskId, request.getSubtaskName(), request.getDescription(),
                 request.getAssigneeId(), request.getPriority(), request.getDueDate()));

@@ -6,6 +6,8 @@ import com.school.management.domain.inspection.model.execution.SubmissionDetail;
 import com.school.management.domain.inspection.repository.InspSubmissionRepository;
 import com.school.management.domain.inspection.repository.SubmissionDetailRepository;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,7 +35,7 @@ public class InspSyncController {
      */
     @PostMapping("/pull")
     @CasbinAccess(resource = "insp:submission", action = "view")
-    public Result<SyncPullResponse> pull(@RequestBody SyncPullRequest request) {
+    public Result<SyncPullResponse> pull(@RequestBody @Valid SyncPullRequest request) {
         List<InspSubmission> submissions;
         if (request.getLastSyncAt() != null) {
             submissions = submissionRepository.findModifiedAfter(
@@ -60,7 +62,7 @@ public class InspSyncController {
     @PostMapping("/push")
     @CasbinAccess(resource = "insp:submission", action = "execute")
     @Transactional
-    public Result<SyncPushResponse> push(@RequestBody SyncPushRequest request) {
+    public Result<SyncPushResponse> push(@RequestBody @Valid SyncPushRequest request) {
         List<SyncPushResult> results = new ArrayList<>();
 
         for (SyncPushItem item : request.getItems()) {
@@ -113,6 +115,7 @@ public class InspSyncController {
 
     @lombok.Data
     public static class SyncPullRequest {
+        @NotNull
         private Long taskId;
         private LocalDateTime lastSyncAt;
     }
@@ -126,11 +129,13 @@ public class InspSyncController {
 
     @lombok.Data
     public static class SyncPushRequest {
-        private List<SyncPushItem> items;
+        @NotNull
+        private List<@Valid SyncPushItem> items;
     }
 
     @lombok.Data
     public static class SyncPushItem {
+        @NotNull
         private Long submissionId;
         private String formData;
         private Integer clientSyncVersion;

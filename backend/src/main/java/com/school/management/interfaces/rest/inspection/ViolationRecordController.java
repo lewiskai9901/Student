@@ -5,6 +5,9 @@ import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
 import com.school.management.domain.inspection.model.execution.ViolationRecord;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -27,8 +30,8 @@ public class ViolationRecordController {
 
     @PostMapping
     @CasbinAccess(resource = "insp:violation", action = "create")
-    public Result<ViolationRecord> createViolationRecord(@RequestBody CreateViolationRecordRequest request) {
-        Long operatorId = SecurityUtils.getCurrentUserId();
+    public Result<ViolationRecord> createViolationRecord(@RequestBody @Valid CreateViolationRecordRequest request) {
+        Long operatorId = SecurityUtils.requireCurrentUserId();
         return Result.success(violationRecordService.createViolationRecord(
                 request.submissionId(), request.submissionDetailId(),
                 request.sectionId(), request.itemId(),
@@ -60,7 +63,7 @@ public class ViolationRecordController {
     @PutMapping("/{id}")
     @CasbinAccess(resource = "insp:violation", action = "edit")
     public Result<ViolationRecord> updateViolationRecord(@PathVariable Long id,
-                                                          @RequestBody UpdateViolationRecordRequest request) {
+                                                          @RequestBody @Valid UpdateViolationRecordRequest request) {
         return Result.success(violationRecordService.updateViolationRecord(id,
                 request.description(), request.severity(), request.score(),
                 request.evidenceUrls(), request.classInfo()));
@@ -76,23 +79,23 @@ public class ViolationRecordController {
     // --- Request DTOs ---
 
     public record CreateViolationRecordRequest(
-            Long submissionId,
+            @NotNull Long submissionId,
             Long submissionDetailId,
             Long sectionId,
             Long itemId,
-            Long userId,
+            @NotNull Long userId,
             String userName,
             String classInfo,
             LocalDateTime occurredAt,
-            String severity,
-            String description,
+            @NotBlank String severity,
+            @NotBlank String description,
             String evidenceUrls,
             BigDecimal score
     ) {}
 
     public record UpdateViolationRecordRequest(
-            String description,
-            String severity,
+            @NotBlank String description,
+            @NotBlank String severity,
             BigDecimal score,
             String evidenceUrls,
             String classInfo

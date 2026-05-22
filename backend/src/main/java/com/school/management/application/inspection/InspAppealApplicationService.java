@@ -257,9 +257,13 @@ public class InspAppealApplicationService {
         return appealRepository.findByProjectId(projectId);
     }
 
+    /**
+     * P1#4: 业务编号生成. 旧实现 {@code IdWorker.getId() % 9000} 截断后缀,
+     * 同日并发碰撞概率不可忽略; inspection_appeals 有 uk_appeal_code 唯一索引,
+     * 碰撞会回滚事务且同事务内无法重试. 改为完整雪花 ID, 全局唯一无碰撞.
+     */
     private String generateAppealCode() {
         String dateStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        int suffix = Math.abs((int) (IdWorker.getId() % 9000)) + 1000;
-        return "APL-" + dateStr + "-" + suffix;
+        return "APL-" + dateStr + "-" + IdWorker.getId();
     }
 }

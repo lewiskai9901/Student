@@ -2,6 +2,7 @@ package com.school.management.application.inspection;
 
 import com.school.management.infrastructure.inspection.InspectionScopeHelper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +14,7 @@ import java.util.Map;
 /**
  * 整改建议引擎相关数据访问 — 从 CorrectiveSuggestionController 抽离的 jdbc 持久化逻辑.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CorrectiveSuggestionApplicationService {
@@ -33,7 +35,12 @@ public class CorrectiveSuggestionApplicationService {
                     severityScore,
                     explainTraceJson,
                     caseId);
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            // P2#20: V110 引擎字段是非关键增强数据 (建议理由 / 严重度分 / 解释链),
+            // 写失败不应影响主整改流程, 故吞掉; 但必须留痕便于排查引擎字段缺失.
+            log.debug("写入 V110 引擎字段失败 (非关键, 已忽略): caseId={}, msg={}",
+                    caseId, e.getMessage());
+        }
     }
 
     /** 更新项目整改策略. */

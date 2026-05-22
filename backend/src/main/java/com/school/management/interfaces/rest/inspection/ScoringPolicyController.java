@@ -6,6 +6,8 @@ import com.school.management.domain.inspection.model.scoring.PolicyCalcRule;
 import com.school.management.domain.inspection.model.scoring.PolicyGradeBand;
 import com.school.management.domain.inspection.model.scoring.ScoringPolicy;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -51,7 +53,7 @@ public class ScoringPolicyController {
 
     @PostMapping
     @CasbinAccess(resource = "insp:scoring-policy", action = "create")
-    public Result<ScoringPolicy> createPolicy(@RequestBody CreatePolicyRequest request) {
+    public Result<ScoringPolicy> createPolicy(@RequestBody @Valid CreatePolicyRequest request) {
         ScoringPolicy policy = policyService.createPolicy(
                 request.getPolicyCode(), request.getPolicyName(), request.getDescription(),
                 request.getPrecisionDigits(), request.getSortOrder());
@@ -68,7 +70,7 @@ public class ScoringPolicyController {
     @PutMapping("/{id}")
     @CasbinAccess(resource = "insp:scoring-policy", action = "edit")
     public Result<ScoringPolicy> updatePolicy(@PathVariable Long id,
-                                               @RequestBody UpdatePolicyRequest request) {
+                                               @RequestBody @Valid UpdatePolicyRequest request) {
         ScoringPolicy policy = policyService.updatePolicy(id,
                 request.getPolicyName(), request.getDescription(),
                 request.getPrecisionDigits(), request.getSortOrder());
@@ -93,7 +95,7 @@ public class ScoringPolicyController {
     @PostMapping("/{id}/grade-bands")
     @CasbinAccess(resource = "insp:scoring-policy", action = "edit")
     public Result<PolicyGradeBand> createGradeBand(@PathVariable Long id,
-                                                    @RequestBody GradeBandRequest request) {
+                                                    @RequestBody @Valid GradeBandRequest request) {
         PolicyGradeBand band = policyService.createGradeBand(id,
                 request.getGradeCode(), request.getGradeName(),
                 request.getMinPercent(), request.getMaxPercent(), request.getSortOrder());
@@ -104,7 +106,7 @@ public class ScoringPolicyController {
     @CasbinAccess(resource = "insp:scoring-policy", action = "edit")
     public Result<PolicyGradeBand> updateGradeBand(@PathVariable Long id,
                                                     @PathVariable Long bandId,
-                                                    @RequestBody GradeBandRequest request) {
+                                                    @RequestBody @Valid GradeBandRequest request) {
         PolicyGradeBand band = policyService.updateGradeBand(id, bandId,
                 request.getGradeCode(), request.getGradeName(),
                 request.getMinPercent(), request.getMaxPercent(), request.getSortOrder());
@@ -129,7 +131,7 @@ public class ScoringPolicyController {
     @PostMapping("/{id}/calc-rules")
     @CasbinAccess(resource = "insp:scoring-policy", action = "edit")
     public Result<PolicyCalcRule> createCalcRule(@PathVariable Long id,
-                                                  @RequestBody CalcRuleRequest request) {
+                                                  @RequestBody @Valid CalcRuleRequest request) {
         PolicyCalcRule rule = policyService.createCalcRule(id,
                 request.getRuleCode(), request.getRuleName(),
                 request.getRuleType(), request.getPriority(), request.getConfig());
@@ -140,7 +142,7 @@ public class ScoringPolicyController {
     @CasbinAccess(resource = "insp:scoring-policy", action = "edit")
     public Result<PolicyCalcRule> updateCalcRule(@PathVariable Long id,
                                                   @PathVariable Long ruleId,
-                                                  @RequestBody CalcRuleRequest request) {
+                                                  @RequestBody @Valid CalcRuleRequest request) {
         PolicyCalcRule rule = policyService.updateCalcRule(id, ruleId,
                 request.getRuleCode(), request.getRuleName(),
                 request.getRuleType(), request.getPriority(),
@@ -159,7 +161,9 @@ public class ScoringPolicyController {
 
     @Data
     public static class CreatePolicyRequest {
+        @NotBlank
         private String policyCode;
+        @NotBlank
         private String policyName;
         private String description;
         private Integer precisionDigits;
@@ -168,6 +172,7 @@ public class ScoringPolicyController {
 
     @Data
     public static class UpdatePolicyRequest {
+        @NotBlank
         private String policyName;
         private String description;
         private Integer precisionDigits;
@@ -176,7 +181,9 @@ public class ScoringPolicyController {
 
     @Data
     public static class GradeBandRequest {
+        @NotBlank
         private String gradeCode;
+        @NotBlank
         private String gradeName;
         private BigDecimal minPercent;
         private BigDecimal maxPercent;
@@ -185,8 +192,11 @@ public class ScoringPolicyController {
 
     @Data
     public static class CalcRuleRequest {
+        @NotBlank
         private String ruleCode;
+        @NotBlank
         private String ruleName;
+        @NotBlank
         private String ruleType;
         private Integer priority;
         private String config;

@@ -2,6 +2,7 @@ package com.school.management.application.inspection;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.application.inspection.dto.ProjectStatsSummary;
+import com.school.management.exception.BusinessException;
 import com.school.management.domain.inspection.repository.projection.ProjectTaskStats;
 import com.school.management.domain.inspection.model.execution.*;
 import com.school.management.domain.inspection.model.template.TemplateSection;
@@ -306,15 +307,35 @@ class InspProjectApplicationServiceTest {
 
     // ============================================================
     @Nested
-    @DisplayName("deleteProject — 级联删除")
+    @DisplayName("deleteProject — 无任务才允许删, 级联清理")
     class DeleteTests {
         @Test
-        @DisplayName("删除时同时清 score / inspector / project")
+        @DisplayName("无任务的项目: 级联清 score / inspector / project")
         void shouldCascadeDelete() {
+            when(projectRepository.findById(1L)).thenReturn(Optional.of(draft(1L)));
+            when(taskRepository.findByProjectId(1L)).thenReturn(List.of());
             service.deleteProject(1L);
             verify(scoreRepository).deleteByProjectId(1L);
             verify(inspectorRepository).deleteByProjectId(1L);
             verify(projectRepository).deleteById(1L);
+        }
+
+        @Test
+        @DisplayName("已产生检查任务的项目: 拒绝删除, 引导改用归档")
+        void shouldRejectDeleteWhenHasTasks() {
+            when(projectRepository.findById(1L)).thenReturn(Optional.of(draft(1L)));
+            when(taskRepository.findByProjectId(1L)).thenReturn(List.of(mock(InspTask.class)));
+            assertThatThrownBy(() -> service.deleteProject(1L))
+                    .isInstanceOf(BusinessException.class);
+            verify(projectRepository, never()).deleteById(anyLong());
+        }
+
+        @Test
+        @DisplayName("项目不存在抛 IllegalArgumentException")
+        void shouldRejectDeleteNotFound() {
+            when(projectRepository.findById(999L)).thenReturn(Optional.empty());
+            assertThatThrownBy(() -> service.deleteProject(999L))
+                    .isInstanceOf(IllegalArgumentException.class);
         }
     }
 

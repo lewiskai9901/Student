@@ -9,7 +9,11 @@ import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
 import com.school.management.domain.inspection.model.execution.*;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -30,14 +34,16 @@ public class InspProjectController {
 
     @PostMapping
     @CasbinAccess(resource = "insp:project", action = "create")
-    public Result<InspProject> createProject(@RequestBody CreateProjectRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+    public Result<InspProject> createProject(@RequestBody @Valid CreateProjectRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         InspProject project = projectService.createProject(
                 request.getProjectName(), request.getRootSectionId(),
                 request.getStartDate(), request.getOrgUnitId(), userId);
         return Result.success(project);
     }
 
+    // TODO: insp_projects 通常为中低基数表 (项目数有限), 暂保留全量返回.
+    //       若项目数显著增长, 改为分页 (优先用 /with-stats 聚合视图).
     @GetMapping
     @CasbinAccess(resource = "insp:project", action = "view")
     public Result<List<InspProject>> listProjects(
@@ -78,8 +84,8 @@ public class InspProjectController {
     @PutMapping("/{id}")
     @CasbinAccess(resource = "insp:project", action = "edit")
     public Result<InspProject> updateProject(@PathVariable Long id,
-                                              @RequestBody UpdateProjectRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+                                              @RequestBody @Valid UpdateProjectRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         InspProject project = projectService.updateProject(id,
                 request.getProjectName(), request.getRootSectionId(),
                 request.getScoringProfileId(), request.getScopeType(),
@@ -93,8 +99,8 @@ public class InspProjectController {
     @PatchMapping("/{id}/config")
     @CasbinAccess(resource = "insp:project", action = "edit")
     public Result<InspProject> updateOperationalConfig(@PathVariable Long id,
-                                                        @RequestBody OperationalConfigRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+                                                        @RequestBody @Valid OperationalConfigRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(projectService.updateOperationalConfig(id,
                 request.getAssignmentMode(), request.getReviewRequired(),
                 request.getAutoPublish(), request.getProjectName(), userId));
@@ -112,7 +118,7 @@ public class InspProjectController {
     @PostMapping("/{id}/publish")
     @CasbinAccess(resource = "insp:project", action = "publish")
     public Result<InspProject> publishProject(@PathVariable Long id,
-                                               @RequestBody PublishProjectRequest request) {
+                                               @RequestBody @Valid PublishProjectRequest request) {
         return Result.success(projectService.publishProject(id, request.getTemplateVersionId()));
     }
 
@@ -137,8 +143,8 @@ public class InspProjectController {
     @PutMapping("/{id}/policy")
     @CasbinAccess(resource = "insp:project", action = "edit")
     public Result<InspProject> updatePolicyConfig(@PathVariable Long id,
-                                                    @RequestBody UpdatePolicyConfigRequest request) {
-        Long userId = com.school.management.common.util.SecurityUtils.getCurrentUserId();
+                                                    @RequestBody @Valid UpdatePolicyConfigRequest request) {
+        Long userId = com.school.management.common.util.SecurityUtils.requireCurrentUserId();
         return Result.success(projectService.updatePolicyConfig(id,
                 request.getMaxRejectCount(),
                 request.getMaxEscalationLevel(),
@@ -188,8 +194,8 @@ public class InspProjectController {
     @PostMapping("/{id}/grade-score")
     @CasbinAccess(resource = "insp:project", action = "edit")
     public Result<ProjectScore> gradeScore(@PathVariable Long id,
-                                            @RequestParam String cycleDate) {
-        return Result.success(scoreAggregationService.gradeProjectScore(id, LocalDate.parse(cycleDate)));
+                                            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate cycleDate) {
+        return Result.success(scoreAggregationService.gradeProjectScore(id, cycleDate));
     }
 
     // ========== Advanced Scoring Settings (project-level) ==========
@@ -206,8 +212,8 @@ public class InspProjectController {
     @PatchMapping("/{id}/advanced-scoring")
     @CasbinAccess(resource = "insp:project", action = "edit")
     public Result<?> updateAdvancedScoring(@PathVariable Long id,
-                                            @RequestBody AdvancedScoringRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+                                            @RequestBody @Valid AdvancedScoringRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         InspProject project = projectService.getProject(id)
                 .orElseThrow(() -> new IllegalArgumentException("项目不存在: " + id));
         if (project.getScoringProfileId() == null) {
@@ -238,7 +244,7 @@ public class InspProjectController {
     @PostMapping("/{projectId}/inspectors")
     @CasbinAccess(resource = "insp:project", action = "edit")
     public Result<ProjectInspector> addInspector(@PathVariable Long projectId,
-                                                  @RequestBody AddInspectorRequest request) {
+                                                  @RequestBody @Valid AddInspectorRequest request) {
         return Result.success(projectService.addInspector(projectId,
                 request.getUserId(), request.getUserName(), request.getRole()));
     }
@@ -255,7 +261,7 @@ public class InspProjectController {
 
     @PostMapping("/target-preview")
     @CasbinAccess(resource = "insp:project", action = "view")
-    public Result<Integer> previewTargetCount(@RequestBody TargetPreviewRequest request) {
+    public Result<Integer> previewTargetCount(@RequestBody @Valid TargetPreviewRequest request) {
         List<TargetPopulationService.TargetInfo> targets = targetPopulationService.resolveTargets(
                 request.getScopeType(), request.getScopeConfig(), request.getTargetType());
         return Result.success(targets.size());
@@ -275,14 +281,17 @@ public class InspProjectController {
 
     @lombok.Data
     public static class CreateProjectRequest {
+        @NotBlank
         private String projectName;
         private Long rootSectionId;   // 可选：null 表示通过计划关联模板（多模板项目）
-        private Long orgUnitId;       // 必填：项目覆盖范围的 org root (数据权限边界)
+        @NotNull                      // 必填：项目覆盖范围的 org root (数据权限边界)
+        private Long orgUnitId;
         private LocalDate startDate;
     }
 
     @lombok.Data
     public static class UpdateProjectRequest {
+        @NotBlank
         private String projectName;
         private Long rootSectionId;
         private Long scoringProfileId;
@@ -302,15 +311,19 @@ public class InspProjectController {
 
     @lombok.Data
     public static class AddInspectorRequest {
+        @NotNull
         private Long userId;
         private String userName;
+        @NotNull
         private InspectorRole role;
     }
 
     @lombok.Data
     public static class TargetPreviewRequest {
+        @NotNull
         private ScopeType scopeType;
         private String scopeConfig;
+        @NotNull
         private TargetType targetType;
     }
 

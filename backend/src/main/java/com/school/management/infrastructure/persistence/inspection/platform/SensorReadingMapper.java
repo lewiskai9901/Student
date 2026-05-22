@@ -14,7 +14,11 @@ public interface SensorReadingMapper extends BaseMapper<SensorReadingPO> {
     @Select("SELECT * FROM insp_sensor_readings WHERE sensor_id = #{sensorId} ORDER BY recorded_at DESC LIMIT #{limit}")
     List<SensorReadingPO> findBySensorId(@Param("sensorId") Long sensorId, @Param("limit") int limit);
 
-    @Select("SELECT * FROM insp_sensor_readings WHERE sensor_id = #{sensorId} AND recorded_at BETWEEN #{from} AND #{to} ORDER BY recorded_at ASC")
+    /**
+     * 时间范围查询 — 强制 LIMIT 10000 安全上限, 防止宽时间窗返回海量行打爆内存.
+     * 传感器读数高频写入, 单传感器一天可达数千行; 调用方需自行收窄时间窗.
+     */
+    @Select("SELECT * FROM insp_sensor_readings WHERE sensor_id = #{sensorId} AND recorded_at BETWEEN #{from} AND #{to} ORDER BY recorded_at ASC LIMIT 10000")
     List<SensorReadingPO> findBySensorIdBetween(@Param("sensorId") Long sensorId,
                                                  @Param("from") LocalDateTime from,
                                                  @Param("to") LocalDateTime to);

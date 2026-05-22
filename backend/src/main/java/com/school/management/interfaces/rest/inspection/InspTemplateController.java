@@ -8,8 +8,13 @@ import com.school.management.domain.inspection.model.template.TemplateSection;
 import com.school.management.domain.inspection.model.template.TemplateStatus;
 import com.school.management.domain.inspection.model.template.TemplateVersion;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,14 +28,15 @@ import java.util.List;
 @RestController
 @RequestMapping("/inspection/templates")
 @RequiredArgsConstructor
+@Validated
 public class InspTemplateController {
 
     private final InspTemplateApplicationService templateService;
 
     @PostMapping
     @CasbinAccess(resource = "insp:template", action = "create")
-    public Result<TemplateSection> createRootSection(@RequestBody CreateTemplateRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+    public Result<TemplateSection> createRootSection(@RequestBody @Valid CreateTemplateRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         TemplateSection root = templateService.createRootSection(
                 request.name(), request.description(),
                 request.catalogId(), request.tags(), request.targetType(), userId);
@@ -40,8 +46,8 @@ public class InspTemplateController {
     @GetMapping
     @CasbinAccess(resource = "insp:template", action = "view")
     public Result<PageResult<TemplateSection>> listRootSections(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "1") @Min(1) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(200) int size,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Long catalogId,
             @RequestParam(required = false) String keyword) {
@@ -74,8 +80,8 @@ public class InspTemplateController {
     @PutMapping("/{id}")
     @CasbinAccess(resource = "insp:template", action = "edit")
     public Result<TemplateSection> updateRootSection(@PathVariable Long id,
-                                                      @RequestBody UpdateTemplateRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+                                                      @RequestBody @Valid UpdateTemplateRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(templateService.updateRootSection(id,
                 request.name(), request.description(),
                 request.catalogId(), request.tags(), userId));
@@ -91,7 +97,7 @@ public class InspTemplateController {
     @PostMapping("/{id}/publish")
     @CasbinAccess(resource = "insp:template", action = "publish")
     public Result<TemplateVersion> publishRootSection(@PathVariable Long id) {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(templateService.publishRootSection(id, userId));
     }
 
@@ -112,7 +118,7 @@ public class InspTemplateController {
     @PostMapping("/{id}/duplicate")
     @CasbinAccess(resource = "insp:template", action = "create")
     public Result<TemplateSection> duplicateRootSection(@PathVariable Long id) {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(templateService.duplicateRootSection(id, userId));
     }
 
@@ -139,7 +145,7 @@ public class InspTemplateController {
     // --- Request DTOs ---
 
     public record CreateTemplateRequest(
-            String name,
+            @NotBlank String name,
             String description,
             Long catalogId,
             String tags,
@@ -148,7 +154,7 @@ public class InspTemplateController {
     ) {}
 
     public record UpdateTemplateRequest(
-            String name,
+            @NotBlank String name,
             String description,
             Long catalogId,
             String tags

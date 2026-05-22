@@ -292,14 +292,24 @@ public class CorrectiveCase extends AggregateRoot<Long> {
      * 效果验证不达标 — 重新打开案例
      *
      * <p>升级链有上限: escalationLevel 已达 {@link #MAX_AUTO_ESCALATION_LEVEL}
-     * 时不再自动重新打开,而是保持 CLOSED + effectivenessStatus=FAILED,
-     * 需上级人工介入. 避免整改方应付式提交导致案例无限循环升级.
+     * 时不再自动 +1 升级,但仍把案例重新打开为 OPEN (清空 assignee) 等待上级人工
+     * 重新分派接管,并发出 {@link EffectivenessEscalationCappedEvent}.
+     * 避免整改方应付式提交导致案例无限循环升级.
      */
     public void failEffectiveness(String note) {
         failEffectiveness(note, MAX_AUTO_ESCALATION_LEVEL);
     }
 
-    /** review #E: 接受项目级上限. NULL/<=0 沿用系统默认. */
+    /**
+     * review #E: 接受项目级上限. NULL/<=0 沿用系统默认.
+     *
+     * <p>P0#1 自洽性修复: 达上限前的旧实现把案例留在 CLOSED + effectivenessStatus=FAILED,
+     * 而 confirmEffectiveness/failEffectiveness 入口都要求 effectivenessStatus==PENDING
+     * → 案例永久卡在不可流转状态. 现在达上限同样把案例重新打开为 OPEN
+     * (escalationLevel 不再自动 +1, 等待上级人工重新分派接管), 状态 OPEN+FAILED 自洽 —
+     * 案例回到工作流, FAILED 仅记录这次效果验证不达标的结局. 并发出
+     * {@link EffectivenessEscalationCappedEvent} 标记"需人工接管", 与普通自动升级区分.
+     */
     public void failEffectiveness(String note, Integer maxEscalationLevel) {
         if (this.status != CaseStatus.CLOSED || this.effectivenessStatus != EffectivenessStatus.PENDING) {
             throw new IllegalStateException("只有已关闭且待效果验证的案例才能标记效果不达标");
@@ -309,13 +319,23 @@ public class CorrectiveCase extends AggregateRoot<Long> {
         this.effectivenessStatus = EffectivenessStatus.FAILED;
         this.effectivenessNote = note;
         this.updatedAt = LocalDateTime.now();
-        if (this.escalationLevel >= effectiveMax) {
-            registerEvent(new EffectivenessFailedEvent(this.id, this.caseCode, this.escalationLevel));
+        int currentLevel = escalationLevelValue();
+        if (currentLevel >= effectiveMax) {
+            // 达上限: 不再自动加级别, 但仍重新打开案例 — 避免卡在不可达状态, 转人工接管
+            this.status = CaseStatus.OPEN;
+            this.assigneeId = null;
+            this.assigneeName = null;
+            registerEvent(new EffectivenessEscalationCappedEvent(this.id, this.caseCode, currentLevel));
             return;
         }
         this.status = CaseStatus.OPEN;
-        this.escalationLevel = this.escalationLevel + 1;
+        this.escalationLevel = currentLevel + 1;
         registerEvent(new EffectivenessFailedEvent(this.id, this.caseCode, this.escalationLevel));
+    }
+
+    /** P1#3: escalationLevel reconstruct 时 DB 可能为 NULL, 拆箱前兜底 0. */
+    private int escalationLevelValue() {
+        return this.escalationLevel != null ? this.escalationLevel : 0;
     }
 
     /**
@@ -353,11 +373,12 @@ public class CorrectiveCase extends AggregateRoot<Long> {
         }
         int effectiveMax = maxEscalationLevel != null && maxEscalationLevel > 0
                 ? maxEscalationLevel : MAX_AUTO_ESCALATION_LEVEL;
-        if (this.escalationLevel >= effectiveMax) {
+        int currentLevel = escalationLevelValue();
+        if (currentLevel >= effectiveMax) {
             throw new IllegalStateException(
                 "案例已达自动升级上限 " + effectiveMax + " 级, 需人工介入");
         }
-        this.escalationLevel = this.escalationLevel + 1;
+        this.escalationLevel = currentLevel + 1;
         this.status = CaseStatus.OPEN;
         this.assigneeId = null;
         this.assigneeName = null;
@@ -377,11 +398,12 @@ public class CorrectiveCase extends AggregateRoot<Long> {
     public void slaBreach(Integer maxEscalationLevel) {
         int effectiveMax = maxEscalationLevel != null && maxEscalationLevel > 0
                 ? maxEscalationLevel : MAX_AUTO_ESCALATION_LEVEL;
-        if (this.escalationLevel >= effectiveMax) {
-            registerEvent(new SlaBreachedEvent(this.id, this.caseCode, this.escalationLevel, this.deadline));
+        int currentLevel = escalationLevelValue();
+        if (currentLevel >= effectiveMax) {
+            registerEvent(new SlaBreachedEvent(this.id, this.caseCode, currentLevel, this.deadline));
             return;
         }
-        this.escalationLevel = this.escalationLevel + 1;
+        this.escalationLevel = currentLevel + 1;
         this.updatedAt = LocalDateTime.now();
         registerEvent(new SlaBreachedEvent(this.id, this.caseCode, this.escalationLevel, this.deadline));
     }
@@ -418,7 +440,8 @@ public class CorrectiveCase extends AggregateRoot<Long> {
     public LocalDateTime getDeadline() { return deadline; }
     public Long getAssigneeId() { return assigneeId; }
     public String getAssigneeName() { return assigneeName; }
-    public Integer getEscalationLevel() { return escalationLevel; }
+    /** P1#3: DB NULL 兜底 0 — 调用方拆箱安全. */
+    public Integer getEscalationLevel() { return escalationLevel != null ? escalationLevel : 0; }
     public CaseStatus getStatus() { return status; }
     public String getCorrectionNote() { return correctionNote; }
     public List<Long> getCorrectionEvidenceIds() { return correctionEvidenceIds; }

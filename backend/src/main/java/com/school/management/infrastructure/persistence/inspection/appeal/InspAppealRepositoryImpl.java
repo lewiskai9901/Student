@@ -32,9 +32,9 @@ public class InspAppealRepositoryImpl implements InspAppealRepository {
 
     @Override
     public Optional<InspAppeal> findById(Long id) {
+        // @TableLogic on InspAppealPO.deleted — selectById already excludes 软删行, 无需手判
         InspAppealPO po = mapper.selectById(id);
-        return po != null && (po.getDeleted() == null || po.getDeleted() == 0)
-                ? Optional.of(toDomain(po)) : Optional.empty();
+        return po != null ? Optional.of(toDomain(po)) : Optional.empty();
     }
 
     @Override

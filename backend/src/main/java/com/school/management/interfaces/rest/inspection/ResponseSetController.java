@@ -6,7 +6,12 @@ import com.school.management.common.util.SecurityUtils;
 import com.school.management.domain.inspection.model.template.ResponseSet;
 import com.school.management.domain.inspection.model.template.ResponseSetOption;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import com.school.management.common.PageResult;
@@ -16,14 +21,15 @@ import java.util.List;
 @RestController
 @RequestMapping("/inspection/response-sets")
 @RequiredArgsConstructor
+@Validated
 public class ResponseSetController {
 
     private final ResponseSetApplicationService responseSetService;
 
     @PostMapping
     @CasbinAccess(resource = "insp:response-set", action = "create")
-    public Result<ResponseSet> createResponseSet(@RequestBody CreateResponseSetRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+    public Result<ResponseSet> createResponseSet(@RequestBody @Valid CreateResponseSetRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(responseSetService.createResponseSet(
                 request.getSetCode(), request.getSetName(), request.getIsGlobal(), userId));
     }
@@ -31,8 +37,8 @@ public class ResponseSetController {
     @GetMapping
     @CasbinAccess(resource = "insp:response-set", action = "view")
     public Result<PageResult<ResponseSet>> listResponseSets(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "1") @Min(1) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(200) int size,
             @RequestParam(required = false) String keyword) {
         return Result.success(responseSetService.listResponseSets(page, size, keyword));
     }
@@ -47,8 +53,8 @@ public class ResponseSetController {
     @PutMapping("/{id}")
     @CasbinAccess(resource = "insp:response-set", action = "edit")
     public Result<ResponseSet> updateResponseSet(@PathVariable Long id,
-                                                  @RequestBody UpdateResponseSetRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+                                                  @RequestBody @Valid UpdateResponseSetRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(responseSetService.updateResponseSet(
                 id, request.getSetName(), request.getIsGlobal(), request.getIsEnabled(), userId));
     }
@@ -65,7 +71,7 @@ public class ResponseSetController {
     @PostMapping("/{id}/options")
     @CasbinAccess(resource = "insp:response-set", action = "edit")
     public Result<ResponseSetOption> addOption(@PathVariable Long id,
-                                                @RequestBody CreateOptionRequest request) {
+                                                @RequestBody @Valid CreateOptionRequest request) {
         return Result.success(responseSetService.addOption(
                 id, request.getOptionValue(), request.getOptionLabel(),
                 request.getOptionColor(), request.getScore(),
@@ -82,7 +88,7 @@ public class ResponseSetController {
     @CasbinAccess(resource = "insp:response-set", action = "edit")
     public Result<ResponseSetOption> updateOption(@PathVariable Long id,
                                                    @PathVariable Long optionId,
-                                                   @RequestBody UpdateOptionRequest request) {
+                                                   @RequestBody @Valid UpdateOptionRequest request) {
         return Result.success(responseSetService.updateOption(
                 optionId, request.getOptionLabel(), request.getOptionColor(),
                 request.getScore(), request.getIsFlagged(), request.getSortOrder()));
@@ -97,13 +103,16 @@ public class ResponseSetController {
 
     @lombok.Data
     public static class CreateResponseSetRequest {
+        @NotBlank
         private String setCode;
+        @NotBlank
         private String setName;
         private Boolean isGlobal;
     }
 
     @lombok.Data
     public static class UpdateResponseSetRequest {
+        @NotBlank
         private String setName;
         private Boolean isGlobal;
         private Boolean isEnabled;
@@ -111,7 +120,9 @@ public class ResponseSetController {
 
     @lombok.Data
     public static class CreateOptionRequest {
+        @NotBlank
         private String optionValue;
+        @NotBlank
         private String optionLabel;
         private String optionColor;
         private BigDecimal score;

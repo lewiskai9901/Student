@@ -136,6 +136,15 @@ public class InspProject extends AggregateRoot<Long> {
         return new InspProject(builder);
     }
 
+    /**
+     * 发布项目.
+     *
+     * <p>P1#6: templateVersionId 允许为 null — 这是 V66 多模板设计的有意行为:
+     * 多模板项目不在项目级锁单一模板版本, 而是每个 {@link InspectionPlan} 各自
+     * 绑定 rootSectionId + 模板版本. 单模板项目则在此锁版本快照.
+     * (对比 {@link #relockTemplateVersion} 拒绝 null — 那是"升级到指定新版本"语义,
+     * 目标版本必须明确; 而 publish 的 null 表示"无项目级模板, 走计划级".)
+     */
     public void publish(Long templateVersionId) {
         if (this.status != ProjectStatus.DRAFT) {
             throw new IllegalStateException("只有草稿项目才能发布");

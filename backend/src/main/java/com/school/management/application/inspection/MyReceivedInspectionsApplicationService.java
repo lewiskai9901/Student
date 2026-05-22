@@ -27,6 +27,9 @@ public class MyReceivedInspectionsApplicationService {
     /** 历史检查记录 — 按时间倒序. */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> queryInspections(List<Long> myOrgs, Long projectId, int days) {
+        // P0#3: myOrgs 为空时拼出的 "target_id IN ()" 是非法 SQL — 直接返回空结果.
+        // (controller 已判空, 此处为防御性二次校验, 避免本服务被其他 caller 直接调用时崩.)
+        if (myOrgs == null || myOrgs.isEmpty()) return java.util.Collections.emptyList();
         StringBuilder sql = new StringBuilder(
                 "SELECT s.id AS submissionId, s.created_at AS inspectedAt, " +
                 "  s.target_id AS subjectId, s.target_name AS subjectName, " +
@@ -54,6 +57,7 @@ public class MyReceivedInspectionsApplicationService {
     /** 4 周趋势 — 按周聚合. */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> queryTrends(List<Long> myOrgs, int weeks) {
+        if (myOrgs == null || myOrgs.isEmpty()) return java.util.Collections.emptyList(); // P0#3
         StringBuilder sql = new StringBuilder(
                 "SELECT YEARWEEK(s.created_at, 3) AS isoWeek, " +
                 "  DATE(MIN(s.created_at)) AS weekStart, " +
@@ -76,6 +80,7 @@ public class MyReceivedInspectionsApplicationService {
     /** Top N 反复出问题的检查项 (近 30 天). */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> queryRecurring(List<Long> myOrgs, int limit) {
+        if (myOrgs == null || myOrgs.isEmpty()) return java.util.Collections.emptyList(); // P0#3
         StringBuilder sql = new StringBuilder(
                 "SELECT d.item_code AS itemCode, MAX(d.item_name) AS itemName, " +
                 "  MAX(d.section_name) AS sectionName, " +
@@ -102,6 +107,7 @@ public class MyReceivedInspectionsApplicationService {
     /** 统计概览 — 检查次数 / 平均分. */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> querySummaryInspections(List<Long> myOrgs, int days) {
+        if (myOrgs == null || myOrgs.isEmpty()) return java.util.Collections.emptyList(); // P0#3
         StringBuilder placeholders = new StringBuilder();
         for (int i = 0; i < myOrgs.size(); i++) placeholders.append(i == 0 ? "?" : ",?");
         return jdbcTemplate.queryForList(
@@ -118,6 +124,7 @@ public class MyReceivedInspectionsApplicationService {
     /** 统计概览 — 整改未关闭 / 逾期数. */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> querySummaryCorrectives(List<Long> myOrgs) {
+        if (myOrgs == null || myOrgs.isEmpty()) return java.util.Collections.emptyList(); // P0#3
         StringBuilder placeholders = new StringBuilder();
         for (int i = 0; i < myOrgs.size(); i++) placeholders.append(i == 0 ? "?" : ",?");
         return jdbcTemplate.queryForList(

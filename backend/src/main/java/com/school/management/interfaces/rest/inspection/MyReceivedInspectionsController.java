@@ -4,7 +4,10 @@ import com.school.management.application.inspection.MyReceivedInspectionsApplica
 import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -26,13 +29,14 @@ import java.util.Map;
 @RestController
 @RequestMapping("/inspection/received")
 @RequiredArgsConstructor
+@Validated
 public class MyReceivedInspectionsController {
 
     private final MyReceivedInspectionsApplicationService receivedService;
 
     /** 解析当前用户所在的 org_unit ID 列表. */
     private List<Long> myOrgUnitIds() {
-        return receivedService.resolveOrgUnitIds(SecurityUtils.getCurrentUserId());
+        return receivedService.resolveOrgUnitIds(SecurityUtils.requireCurrentUserId());
     }
 
     /** 历史检查记录 — 按时间倒序. */
@@ -40,7 +44,7 @@ public class MyReceivedInspectionsController {
     @CasbinAccess(resource = "insp:received", action = "view")
     public Result<List<Map<String, Object>>> myInspections(
             @RequestParam(required = false) Long projectId,
-            @RequestParam(defaultValue = "30") int days) {
+            @RequestParam(defaultValue = "30") @Min(1) @Max(365) int days) {
         List<Long> myOrgs = myOrgUnitIds();
         if (myOrgs.isEmpty()) return Result.success(List.of());
         return Result.success(receivedService.queryInspections(myOrgs, projectId, days));
@@ -74,7 +78,7 @@ public class MyReceivedInspectionsController {
     @GetMapping("/summary")
     @CasbinAccess(resource = "insp:received", action = "view")
     public Result<Map<String, Object>> mySummary(
-            @RequestParam(defaultValue = "30") int days) {
+            @RequestParam(defaultValue = "30") @Min(1) @Max(365) int days) {
         List<Long> myOrgs = myOrgUnitIds();
         Map<String, Object> out = new HashMap<>();
         out.put("orgUnitCount", myOrgs.size());

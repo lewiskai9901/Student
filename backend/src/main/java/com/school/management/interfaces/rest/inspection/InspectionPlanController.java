@@ -6,6 +6,9 @@ import com.school.management.common.util.SecurityUtils;
 import com.school.management.domain.inspection.model.execution.InspTask;
 import com.school.management.domain.inspection.model.execution.InspectionPlan;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -26,8 +29,8 @@ public class InspectionPlanController {
 
     @PostMapping
     @CasbinAccess(resource = "insp:plan", action = "create")
-    public Result<InspectionPlan> createPlan(@RequestBody CreatePlanRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+    public Result<InspectionPlan> createPlan(@RequestBody @Valid CreatePlanRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(planService.createPlan(
                 request.projectId(), request.planName(), request.rootSectionId(),
                 request.sectionIds(), request.inspectorIds(),
@@ -52,7 +55,7 @@ public class InspectionPlanController {
     @PutMapping("/{id}")
     @CasbinAccess(resource = "insp:plan", action = "edit")
     public Result<InspectionPlan> updatePlan(@PathVariable Long id,
-                                              @RequestBody UpdatePlanRequest request) {
+                                              @RequestBody @Valid UpdatePlanRequest request) {
         return Result.success(planService.updatePlan(id,
                 request.planName(), request.rootSectionId(), request.sectionIds(),
                 request.inspectorIds(),
@@ -82,15 +85,15 @@ public class InspectionPlanController {
     @PostMapping("/{id}/trigger")
     @CasbinAccess(resource = "insp:plan", action = "execute")
     public Result<InspTask> triggerOnDemandPlan(@PathVariable Long id) {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(planService.triggerOnDemandPlan(id, userId));
     }
 
     // --- Request DTOs ---
 
     public record CreatePlanRequest(
-            Long projectId,
-            String planName,
+            @NotNull Long projectId,
+            @NotBlank String planName,
             Long rootSectionId,
             String sectionIds,
             String scheduleMode,
@@ -103,7 +106,7 @@ public class InspectionPlanController {
     ) {}
 
     public record UpdatePlanRequest(
-            String planName,
+            @NotBlank String planName,
             Long rootSectionId,
             String sectionIds,
             String scheduleMode,
