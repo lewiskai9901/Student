@@ -47,6 +47,8 @@ export interface CreateProjectRequest {
   projectName: string
   rootSectionId: LongId
   startDate: string
+  /** 项目数据权限边界 org root — 后端 @NotNull 必填 */
+  orgUnitId: LongId
 }
 
 export interface UpdateProjectRequest {

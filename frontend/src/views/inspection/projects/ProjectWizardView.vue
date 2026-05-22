@@ -249,6 +249,8 @@ async function handleCreate() {
       projectName: form.projectName,
       rootSectionId: form.rootSectionId!,
       startDate: form.startDate,
+      // 项目数据权限边界 — 取检查范围首个组织 (Step1 已校验 scopeIds 非空)
+      orgUnitId: form.scopeIds[0],
     })
     createdProjectId = project.id
 
