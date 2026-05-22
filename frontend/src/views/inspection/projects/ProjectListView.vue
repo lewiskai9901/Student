@@ -360,7 +360,7 @@ const buckets = computed(() => {
         hint: '完结 / 暂停 / 归档',
         tone: 'pass',
         items: data.filter(s => ['COMPLETED', 'ARCHIVED', 'PAUSED', 'DRAFT'].includes(s.project.status)),
-        emptyHint: '—',
+        emptyHint: '尚无已闭环项目',
       },
     ]
   }
@@ -496,12 +496,19 @@ function strictnessHint(s?: string): string {
 async function loadPolicies() {
   // 并发加载所有项目策略
   const ids = summaries.value.map(s => s.project.id).filter(Boolean) as LongId[]
+  let failed = 0
   await Promise.all(ids.map(async id => {
     try {
       const p = await http.get<any>(`/inspection/corrective/projects/${id}/policy`)
       if (p?.strictness) policyMap.value[id] = p.strictness
-    } catch { /* ignore individual failure */ }
+    } catch {
+      // 个别失败不阻断整体, 但累计后给一次可见提示, 不静默吞
+      failed++
+    }
   }))
+  if (failed > 0) {
+    ElMessage.warning(`${failed} 个项目的整改策略加载失败, 严格度标签可能缺失`)
+  }
 }
 watch(() => summaries.value.length, () => { loadPolicies() }, { immediate: false })
 
@@ -758,9 +765,9 @@ onMounted(async () => {
       </div>
       <template v-else>
         <header class="tl-head" v-if="timelineRange">
-          <span class="tl-axis-label insp-num">{{ timelineRange.min }}</span>
+          <span class="tl-axis-label insp-num">{{ fmtDate(timelineRange.min) }}</span>
           <div class="tl-axis-spacer" />
-          <span class="tl-axis-label insp-num">{{ timelineRange.max }}</span>
+          <span class="tl-axis-label insp-num">{{ fmtDate(timelineRange.max) }}</span>
         </header>
         <div class="tl-grid" v-if="timelineRange">
           <div v-if="todayMarker" class="tl-today" :style="{ left: todayMarker }">
@@ -775,7 +782,11 @@ onMounted(async () => {
               <span v-else class="tl-out-of-range">超出当前缩放窗口</span>
             </div>
           </div>
-          <div v-if="projectsWithDates.length === 0" class="bucket-empty">当前窗口无项目, 请切换缩放</div>
+          <InspEmptyState v-if="projectsWithDates.length === 0"
+            title="当前缩放窗口无项目"
+            description="切换上方的缩放范围 (本月 / 本季 / 本年 / 自适应) 查看项目">
+            <template #icon><Inbox :size="28" /></template>
+          </InspEmptyState>
         </div>
 
         <!-- 没有日期的项目 -->
@@ -880,10 +891,10 @@ onMounted(async () => {
   font-weight: 500;
   cursor: help;
 }
-.strict-strict  { background: #fee2e2; color: #b91c1c; }
-.strict-normal  { background: #ede9fe; color: #6d28d9; }
-.strict-lenient { background: #d1fae5; color: #047857; }
-.strict-off     { background: #f3f4f6; color: #9ca3af; }
+.strict-strict  { background: var(--insp-fail-pale); color: var(--insp-fail); }
+.strict-normal  { background: var(--insp-accent-paler); color: var(--insp-accent); }
+.strict-lenient { background: var(--insp-pass-pale); color: var(--insp-pass); }
+.strict-off     { background: var(--insp-bg-subtle); color: var(--insp-ink-quaternary); }
 
 /* ─ Head + KPI ─────── */
 .prj-head {
@@ -1159,8 +1170,8 @@ onMounted(async () => {
   gap: 14px;
   padding: 6px 12px;
   margin-bottom: 10px;
-  background: linear-gradient(90deg, rgba(26, 109, 255, 0.06) 0%, transparent 100%);
-  border: 1px solid rgba(26, 109, 255, 0.18);
+  background: linear-gradient(90deg, var(--insp-accent-paler) 0%, transparent 100%);
+  border: 1px solid var(--insp-accent-pale);
   border-radius: var(--insp-radius-md);
   font-size: 11px;
   color: var(--insp-ink-secondary);

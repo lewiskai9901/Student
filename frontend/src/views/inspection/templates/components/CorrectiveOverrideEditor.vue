@@ -7,6 +7,11 @@
     </summary>
 
     <div class="cor-body">
+      <div v-if="loadError" class="cor-error">
+        <span>整改覆盖规则加载失败，为避免覆盖既有规则，保存已禁用。</span>
+        <el-button size="small" text type="primary" :disabled="!itemId"
+                   @click="itemId && loadOverride(itemId)">重试</el-button>
+      </div>
       <p class="cor-hint">
         覆盖此检查项的整改判定规则. 留空 = 走项目级策略.
         优先级: neverCorrect &gt; forceCorrect &gt; thresholdOverride &gt; 项目级.
@@ -89,8 +94,8 @@
       </div>
 
       <div class="cor-actions">
-        <el-button size="small" @click="clear">清除</el-button>
-        <el-button type="primary" size="small" :loading="saving" @click="save">
+        <el-button size="small" :disabled="loadError" @click="clear">清除</el-button>
+        <el-button type="primary" size="small" :loading="saving" :disabled="loadError" @click="save">
           保存覆盖规则
         </el-button>
       </div>
@@ -101,7 +106,7 @@
 <script setup lang="ts">
 import type { LongId } from '@/types/common'
 import { ref, computed, watch } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { getItemOverride, saveItemOverride } from '@/api/inspection/correctiveCase'
 
 interface Props {
@@ -110,6 +115,9 @@ interface Props {
 
 const props = defineProps<Props>()
 
+// 常见"不合格"响应值的快捷建议. el-select allow-create 允许自由输入,
+// 此处仅为常用值的下拉补全, 非穷举. P2: 理想做法是按当前检查项绑定的
+// 选项集动态拉取候选值 — 属功能开发, 暂留快捷建议.
 const COMMON_RESPONSES = ['FAIL', 'D', 'NO', 'FALSE', '0', 'C', 'E']
 
 const rule = ref({
@@ -125,6 +133,7 @@ const rule = ref({
 const useThreshold = ref(false)
 const useDeadline = ref(false)
 const saving = ref(false)
+const loadError = ref(false)
 
 const hasRule = computed(() =>
   rule.value.neverCorrect ||
@@ -133,9 +142,9 @@ const hasRule = computed(() =>
   useDeadline.value
 )
 
-watch(() => props.itemId, async itemId => {
+async function loadOverride(itemId: LongId) {
   resetRule()
-  if (!itemId) return
+  loadError.value = false
   try {
     const json = await getItemOverride(itemId)
     if (!json) return
@@ -154,9 +163,18 @@ watch(() => props.itemId, async itemId => {
       rule.value.deadlineMedium = obj.deadlineOverride.medium ?? null
       rule.value.deadlineLow = obj.deadlineOverride.low ?? null
     }
-  } catch (e) {
-    console.warn('加载 ItemRule 失败', e)
+  } catch (e: unknown) {
+    // 加载失败需可见, 并禁用保存以免覆盖未知的既有规则
+    loadError.value = true
+    ElMessage.error('整改覆盖规则加载失败: ' + ((e as Error)?.message || '未知错误'))
   }
+}
+
+watch(() => props.itemId, itemId => {
+  resetRule()
+  loadError.value = false
+  if (!itemId) return
+  loadOverride(itemId)
 }, { immediate: true })
 
 function resetRule() {
@@ -205,22 +223,33 @@ async function save() {
     await saveItemOverride(props.itemId, payload)
     ElMessage.success(Object.keys(payload).length === 0 ? '已清除覆盖规则' : '已保存覆盖规则')
   } catch (e: unknown) {
-    console.error('保存 ItemRule 失败', e)
-    ElMessage.error('保存失败')
+    ElMessage.error('保存失败: ' + ((e as Error)?.message || '未知错误'))
   } finally {
     saving.value = false
   }
 }
 
 async function clear() {
+  if (!props.itemId) {
+    resetRule()
+    return
+  }
+  try {
+    await ElMessageBox.confirm(
+      '确认清除此检查项的整改触发覆盖规则？清除后将改用项目级策略，此操作不可恢复。',
+      '清除覆盖规则',
+      { type: 'warning', confirmButtonText: '确认清除', cancelButtonText: '取消' }
+    )
+  } catch {
+    return // 用户取消
+  }
   resetRule()
-  if (!props.itemId) return
   saving.value = true
   try {
     await saveItemOverride(props.itemId, {})
     ElMessage.success('已清除覆盖规则')
-  } catch {
-    ElMessage.error('清除失败')
+  } catch (e: unknown) {
+    ElMessage.error('清除失败: ' + ((e as Error)?.message || '未知错误'))
   } finally {
     saving.value = false
   }
@@ -262,6 +291,16 @@ async function clear() {
   background: #f5f3ff; color: #5b21b6;
   font-size: 12px; line-height: 1.5;
   border-radius: 4px;
+}
+.cor-error {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin: 12px 0 0;
+  padding: 8px 12px;
+  background: var(--insp-fail-pale);
+  color: var(--insp-fail);
+  border: 1px solid var(--insp-fail-border);
+  border-radius: 4px;
+  font-size: 12px; line-height: 1.5;
 }
 .cor-row {
   display: flex; align-items: center; gap: 12px;

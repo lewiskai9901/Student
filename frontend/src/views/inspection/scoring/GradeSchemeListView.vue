@@ -97,6 +97,7 @@ function openEdit(scheme: GradeScheme) {
     grades: scheme.grades.map(g => ({
       code: g.code, name: g.name,
       color: g.color || '#6b7280', icon: g.icon || '',
+      eventTypeCode: g.eventTypeCode,
     })),
   }
   dialogVisible.value = true
@@ -252,6 +253,10 @@ onMounted(() => loadSchemes())
 
         <!-- Grades table -->
         <div class="dlg-divider">等级定义</div>
+        <p class="dlg-hint">
+          此处仅定义等级的名称与展示样式，等级按顺序自动分桶；
+          具体分数区间在「评分方案」的等级映射中按方案单独配置。
+        </p>
         <div class="dlg-grades">
           <div v-for="(g, i) in form.grades" :key="i" class="dlg-grade-row">
             <input v-model="g.code" class="dlg-grade-input code" placeholder="编码" />
@@ -358,6 +363,7 @@ onMounted(() => loadSchemes())
   padding-top: 4px; border-top: 1px solid #f3f4f6;
 }
 
+.dlg-hint { font-size: 11px; color: #9ca3af; line-height: 1.5; margin: -4px 0 2px; }
 .dlg-grades { display: flex; flex-direction: column; gap: 6px; }
 .dlg-grade-row { display: flex; align-items: center; gap: 4px; }
 .dlg-grade-input {

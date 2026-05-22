@@ -30,6 +30,7 @@ const editor = useTemplateEditor(rootSectionIdRef)
 const rootSection = computed(() => tplStore.currentRootSection)
 const responseSets = ref<ResponseSet[]>([])
 const loadError = ref<string | null>(null)
+const loading = ref(true)
 const selectedSectionId = ref<LongId | null>(null)
 const selectedItem = ref<TemplateItem | null>(null)
 const selectedKey = computed(() => {
@@ -170,9 +171,11 @@ const sfDirty = ref(false)
 // 类型选项列表（根据 targetType 动态加载）
 interface TypeOption { code: string; name: string }
 const typeFilterOptions = ref<TypeOption[]>([])
+const typeFilterError = ref<string | null>(null)
 
 async function loadTypeFilterOptions(targetType: string | null) {
   typeFilterOptions.value = []
+  typeFilterError.value = null
   if (!targetType) return
   try {
     // P1: P5 收敛后 user_types/place_types 表已 DROP, 统一走 entity_type_configs
@@ -184,8 +187,9 @@ async function loadTypeFilterOptions(targetType: string | null) {
       const types = await http.get<any[]>('/entity-type-configs', { params: { entityType: targetType } })
       typeFilterOptions.value = (types || []).map((t: any) => ({ code: t.typeCode || t.code, name: t.displayName || t.typeName || t.name }))
     }
-  } catch (e) {
-    // ignore — 类型配置可选, 失败不阻塞
+  } catch (e: any) {
+    // 类型过滤可选, 失败不阻塞编辑, 但要明确提示而非静默隐藏功能区块
+    typeFilterError.value = e?.message || '类型选项加载失败'
   }
 }
 
@@ -240,9 +244,37 @@ async function handleAddSection(parentSectionId?: LongId) {
     selectedItem.value = null
   } catch (e: any) { if (e !== 'cancel') ElMessage.error(e.message || '添加失败') }
 }
+/** 递归统计某分区下的子分区数与检查项数 */
+function countSectionCascade(id: LongId): { sections: number; items: number } {
+  let sections = 0
+  let items = (editor.itemsBySection.value.get(String(id)) || []).length
+  const children = editor.sections.value.filter(s => s.parentSectionId === id)
+  for (const child of children) {
+    sections += 1
+    const sub = countSectionCascade(child.id)
+    sections += sub.sections
+    items += sub.items
+  }
+  return { sections, items }
+}
+
 async function handleRemoveSection(id: LongId) {
   if (isReadonly.value) return
-  try { await ElMessageBox.confirm('确认删除？', '删除', { type: 'warning' }); await editor.removeSection(id); if (selectedSectionId.value === id) { selectedSectionId.value = null; selectedItem.value = null } }
+  try {
+    const target = editor.sections.value.find(s => s.id === id)
+    const { sections, items } = countSectionCascade(id)
+    let msg = `确认删除分区「${target?.sectionName || ''}」？`
+    if (sections > 0 || items > 0) {
+      const parts: string[] = []
+      if (sections > 0) parts.push(`${sections} 个子分区`)
+      if (items > 0) parts.push(`${items} 个检查项`)
+      msg += `\n将同时删除其下 ${parts.join(' 和 ')}，此操作不可恢复。`
+    }
+    await ElMessageBox.confirm(msg, '删除分区', { type: 'warning', confirmButtonText: '确认删除' })
+    await editor.removeSection(id)
+    if (selectedSectionId.value === id) { selectedSectionId.value = null; selectedItem.value = null }
+    ElMessage.success('已删除')
+  }
   catch (e: any) { if (e !== 'cancel') ElMessage.error(e.message || '删除失败') }
 }
 
@@ -290,6 +322,7 @@ const scoringStore = useInspScoringStore()
 const scoringProfile = ref<ScoringProfile | null>(null)
 const showScoring = ref(true)
 const scoringLoading = ref(false)
+const scoringError = ref<string | null>(null)
 
 // 展开汇总规则时才加载
 const scoringSectionId = ref<LongId | null>(null)
@@ -299,6 +332,7 @@ async function loadScoringForSection(sectionId: LongId) {
   scoringSectionId.value = sectionId
   scoringLoading.value = true
   scoringProfile.value = null
+  scoringError.value = null
   try {
     let p = await scoringStore.loadProfileBySection(sectionId)
     if (!p) {
@@ -312,7 +346,10 @@ async function loadScoringForSection(sectionId: LongId) {
         scoringStore.loadRules(p.id),
       ])
     }
-  } catch (e) { console.warn('Load scoring profile failed', e); scoringProfile.value = null }
+  } catch (e: any) {
+    scoringProfile.value = null
+    scoringError.value = e?.message || '汇总规则加载失败'
+  }
   finally { scoringLoading.value = false }
 }
 
@@ -325,7 +362,7 @@ async function saveScoringBasic() {
       precisionDigits: scoringProfile.value.precisionDigits,
     })
     if (updated) scoringProfile.value = updated
-  } catch (e) { console.warn('Save scoring basic settings failed', e) }
+  } catch (e: any) { ElMessage.error('保存评分设置失败: ' + (e?.message || '未知错误')) }
 }
 
 function toggleScoring() {
@@ -358,9 +395,6 @@ async function handleUpdateRule(id: LongId, data: UpdateRuleRequest) {
 async function handleDeleteRule(id: LongId) {
   if (!scoringProfile.value) return
   await scoringStore.deleteRule(scoringProfile.value.id, id)
-}
-async function handleApplyGradePreset(presetKey: string) {
-  // handled by GradeBandEditor internally
 }
 
 // ===== Grade mapping mode + validation =====
@@ -546,8 +580,23 @@ async function handlePublish() {
 
 // ===== Init =====
 async function loadData() {
-  try { await tplStore.loadRootSection(rootSectionId.value); rootSectionIdRef.value = rootSectionId.value; loadError.value = null } catch (e: any) { loadError.value = e.message || '加载失败' }
-  try { responseSets.value = await tplStore.loadResponseSets() } catch (e) { console.warn('Load response sets failed', e) }
+  loading.value = true
+  loadError.value = null
+  try {
+    await tplStore.loadRootSection(rootSectionId.value)
+    rootSectionIdRef.value = rootSectionId.value
+  } catch (e: any) {
+    loadError.value = e?.message || '模板加载失败'
+    loading.value = false
+    return
+  }
+  loading.value = false
+  try {
+    responseSets.value = await tplStore.loadResponseSets()
+  } catch (e: any) {
+    // 选项集加载失败不阻塞模板编辑, 但要可见
+    ElMessage.error('选项集加载失败: ' + (e?.message || '未知错误'))
+  }
   // 默认选中根节点并加载汇总规则
   selectedSectionId.value = rootSectionId.value
   loadScoringForSection(rootSectionId.value)
@@ -565,7 +614,17 @@ function getItemTypeLabel(item: TemplateItem) {
 <template>
   <div class="te-root insp-shell">
     <InspErrorState v-if="loadError" :message="loadError" @retry="loadData" />
-    <div v-else-if="!rootSection" class="te-loading">加载中...</div>
+    <div v-else-if="loading || !rootSection" class="te-loading-wrap">
+      <div class="te-skeleton te-skeleton--header" />
+      <div class="te-skeleton-body">
+        <div class="te-skeleton te-skeleton--tree" />
+        <div class="te-skeleton-main">
+          <div class="te-skeleton te-skeleton--line" style="width:40%" />
+          <div class="te-skeleton te-skeleton--line" style="width:80%" />
+          <div class="te-skeleton te-skeleton--line" style="width:60%" />
+        </div>
+      </div>
+    </div>
 
     <template v-else>
       <!-- ===== Top bar (Audit Hub style) ===== -->
@@ -756,12 +815,24 @@ function getItemTypeLabel(item: TemplateItem) {
                   <div v-if="isRootSelected && !rootForm.targetType" class="te-target-error">
                     必须设置检查对象类型
                   </div>
+                  <div v-else-if="typeFilterError" class="te-target-error">
+                    类型选项加载失败：{{ typeFilterError }}
+                    <button class="te-target-retry" @click="loadTypeFilterOptions(isRootSelected ? rootForm.targetType : sf.targetType)">重试</button>
+                  </div>
                 </div>
 
                 <!-- ── 汇总规则（带标题分割线） ── -->
                 <div class="te-divider-title"><span>汇总规则</span></div>
 
-                <div v-if="scoringLoading" class="te-scoring-loading">加载中...</div>
+                <div v-if="scoringLoading" class="te-scoring-skeleton">
+                  <div class="te-skeleton te-skeleton--line" style="width:100%" />
+                  <div class="te-skeleton te-skeleton--line" style="width:70%" />
+                  <div class="te-skeleton te-skeleton--line" style="width:50%" />
+                </div>
+                <div v-else-if="scoringError" class="te-scoring-error">
+                  <span>{{ scoringError }}</span>
+                  <button class="te-scoring-retry" @click="selectedSectionId != null && loadScoringForSection(selectedSectionId)">重试</button>
+                </div>
                 <template v-else-if="scoringProfile">
                   <!-- 基础数值 -->
                   <div class="te-flat-group">
@@ -801,7 +872,11 @@ function getItemTypeLabel(item: TemplateItem) {
               </div>
             </template>
 
-            <div v-else class="te-props-empty">选择左侧分区或字段</div>
+            <div v-else class="te-props-empty">
+              <FileText :size="28" class="te-props-empty__icon" />
+              <p class="te-props-empty__title">从左侧选择分区或检查项</p>
+              <p class="te-props-empty__sub">选中后可在此编辑属性、评分规则与验证规则</p>
+            </div>
           </main>
         </template>
       </div>
@@ -823,7 +898,36 @@ function getItemTypeLabel(item: TemplateItem) {
 
 <style scoped>
 .te-root { display: flex; flex-direction: column; height: 100%; background: var(--insp-bg-page); }
-.te-loading { display: flex; align-items: center; justify-content: center; flex: 1; font-size: 13px; color: var(--insp-ink-tertiary); }
+
+/* Loading skeleton */
+.te-loading-wrap { display: flex; flex-direction: column; flex: 1; padding: 12px 16px; gap: 12px; }
+.te-skeleton-body { display: flex; flex: 1; gap: 12px; }
+.te-skeleton-main { flex: 1; display: flex; flex-direction: column; gap: 10px; padding-top: 8px; }
+.te-skeleton {
+  background: linear-gradient(90deg, var(--insp-bg-subtle) 25%, var(--insp-bg-sunken) 37%, var(--insp-bg-subtle) 63%);
+  background-size: 400% 100%;
+  border-radius: var(--insp-radius-sm);
+  animation: te-skeleton-shimmer 1.4s ease infinite;
+}
+.te-skeleton--header { height: 48px; }
+.te-skeleton--tree { width: 260px; flex-shrink: 0; }
+.te-skeleton--line { height: 14px; }
+@keyframes te-skeleton-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0 0; }
+}
+.te-scoring-skeleton { display: flex; flex-direction: column; gap: 8px; padding: 8px 0; }
+.te-scoring-error {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; color: var(--insp-fail);
+  padding: 8px 10px; background: var(--insp-fail-pale);
+  border: 1px solid var(--insp-fail-border); border-radius: var(--insp-radius-sm);
+}
+.te-scoring-retry, .te-target-retry {
+  margin-left: auto; font-size: 11px; color: var(--insp-accent);
+  background: none; border: none; cursor: pointer; padding: 0;
+  text-decoration: underline;
+}
 
 /* Header (Audit Hub aligned) */
 .te-header {
@@ -1052,10 +1156,23 @@ function getItemTypeLabel(item: TemplateItem) {
 }
 .te-props-empty {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   flex: 1;
+  gap: var(--insp-sp-1);
+  color: var(--insp-ink-quaternary);
+}
+.te-props-empty__icon { color: var(--insp-ink-quaternary); margin-bottom: var(--insp-sp-2); }
+.te-props-empty__title {
+  margin: 0;
   font-size: var(--insp-text-sm);
+  font-weight: var(--insp-fw-semibold);
+  color: var(--insp-ink-secondary);
+}
+.te-props-empty__sub {
+  margin: 0;
+  font-size: var(--insp-text-xs);
   color: var(--insp-ink-quaternary);
 }
 
@@ -1131,27 +1248,26 @@ function getItemTypeLabel(item: TemplateItem) {
 
 /* Error for unset root targetType */
 .te-target-error {
-  font-size: 10px; color: #ef4444; padding: 3px 8px;
-  background: #fef2f2; border-radius: 4px; border-left: 2px solid #ef4444;
+  display: flex; align-items: center;
+  font-size: 10px; color: var(--insp-fail); padding: 3px 8px;
+  background: var(--insp-fail-pale); border-radius: 4px;
+  border-left: 2px solid var(--insp-fail);
 }
 
 /* Readonly hint */
-.te-readonly-hint { font-size: 11px; color: #9ca3af; padding: 2px 8px; background: #f4f6f9; border-radius: 4px; }
+.te-readonly-hint { font-size: 11px; color: var(--insp-ink-quaternary); padding: 2px 8px; background: var(--insp-bg-subtle); border-radius: 4px; }
 .te-header-actions { display: flex; align-items: center; gap: 8px; }
 
 /* Divider with title */
 .te-divider-title {
   display: flex; align-items: center; gap: 10px;
-  font-size: 11px; font-weight: 600; color: #6b7280;
+  font-size: 11px; font-weight: 600; color: var(--insp-ink-tertiary);
   letter-spacing: 0.02em;
 }
 .te-divider-title::after {
-  content: ''; flex: 1; height: 1px; background: #e8ecf0;
+  content: ''; flex: 1; height: 1px; background: var(--insp-border-default);
 }
-.te-divider-title--sub { font-size: 10px; font-weight: 500; color: #9ca3af; }
-
-/* Scoring loading */
-.te-scoring-loading { font-size: 11px; color: #9ca3af; padding: 8px 0; text-align: center; }
+.te-divider-title--sub { font-size: 10px; font-weight: 500; color: var(--insp-ink-quaternary); }
 
 /* Form fields */
 .te-prop-field { display: flex; flex-direction: column; }

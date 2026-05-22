@@ -121,7 +121,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeySP))
   <div class="insp-shell sp-page">
     <header class="sp-head">
       <div class="sp-head__lead">
-        <span class="insp-eyebrow">评分方案 · Scoring Profiles</span>
+        <span class="insp-eyebrow">检查平台 · 评分</span>
         <h1 class="sp-title">评分方案</h1>
       </div>
       <div class="sp-stats">

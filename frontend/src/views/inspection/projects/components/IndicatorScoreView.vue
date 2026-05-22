@@ -177,7 +177,14 @@ const globalStats = computed(() => {
   }
 })
 
-function scoreColor(s: number | null) { if (s == null) return '#d1d5db'; if (s >= 90) return '#16a34a'; if (s >= 75) return '#2563eb'; if (s >= 60) return '#d97706'; return '#ef4444' }
+// P2 #16: 统一用 --insp-* 语义 token, 不再硬编码多套色板
+function scoreColor(s: number | null) {
+  if (s == null) return 'var(--insp-ink-quaternary)'
+  if (s >= 90) return 'var(--insp-pass)'
+  if (s >= 75) return 'var(--insp-info)'
+  if (s >= 60) return 'var(--insp-warn)'
+  return 'var(--insp-fail)'
+}
 
 // ═══ Load ═══
 async function loadData() {
@@ -185,11 +192,18 @@ async function loadData() {
   try {
     const [ind, gs, tks] = await Promise.all([getIndicators(props.projectId), getGradeSchemes(), getTasks({ projectId: props.projectId })])
     indicators.value = ind; gradeSchemes.value = gs; tasks.value = tks
-    const allSubs: InspSubmission[] = []
-    for (const t of tks) { try { allSubs.push(...await getSubmissions({ taskId: t.id })) } catch {} }
-    submissions.value = allSubs
+    // P1 #13: 并发拉取各任务提交记录, 替代 N+1 串行 await; 失败计数后给可见提示
+    let subFailed = 0
+    const subResults = await Promise.all(tks.map(async t => {
+      try { return await getSubmissions({ taskId: t.id }) }
+      catch (e: any) { console.warn(`加载任务 ${t.id} 提交记录失败`, e); subFailed++; return null }
+    }))
+    submissions.value = subResults.flatMap(r => r ?? [])
+    if (subFailed > 0) {
+      ElMessage.warning(`${subFailed} 个任务的提交记录加载失败, 成绩分析可能不完整`)
+    }
     await loadScores()
-  } catch (e: any) { ElMessage.error(e.message || '加载失败') }
+  } catch (e: any) { ElMessage.error('加载失败: ' + (e?.message || '未知错误')) }
   finally { loading.value = false }
 }
 async function loadScores() {
@@ -288,13 +302,13 @@ onUnmounted(() => { if (timeTickerInterval) clearInterval(timeTickerInterval) })
       <div class="da-stat-sep" />
       <div class="da-stat"><span class="da-stat-v">{{ globalStats.targets }}</span><span class="da-stat-l">目标数</span></div>
       <div class="da-stat-sep" />
-      <div class="da-stat"><span class="da-stat-v" style="color:#2563eb">{{ globalStats.avg }}</span><span class="da-stat-l">平均分</span></div>
+      <div class="da-stat"><span class="da-stat-v" style="color:var(--insp-info)">{{ globalStats.avg }}</span><span class="da-stat-l">平均分</span></div>
       <div class="da-stat-sep" />
-      <div class="da-stat"><span class="da-stat-v" style="color:#16a34a">{{ globalStats.max }}</span><span class="da-stat-l">最高</span></div>
+      <div class="da-stat"><span class="da-stat-v" style="color:var(--insp-pass)">{{ globalStats.max }}</span><span class="da-stat-l">最高</span></div>
       <div class="da-stat-sep" />
-      <div class="da-stat"><span class="da-stat-v" style="color:#ef4444">{{ globalStats.min }}</span><span class="da-stat-l">最低</span></div>
+      <div class="da-stat"><span class="da-stat-v" style="color:var(--insp-fail)">{{ globalStats.min }}</span><span class="da-stat-l">最低</span></div>
       <div class="da-stat-sep" />
-      <div class="da-stat"><span class="da-stat-v" style="color:#0d9488">{{ globalStats.passRate }}%</span><span class="da-stat-l">达标率</span></div>
+      <div class="da-stat"><span class="da-stat-v" style="color:var(--insp-pass)">{{ globalStats.passRate }}%</span><span class="da-stat-l">达标率</span></div>
       <div class="da-stat-sep" />
       <div class="da-stat"><span class="da-stat-v">{{ globalStats.sections }}</span><span class="da-stat-l">分区数</span></div>
     </div>
@@ -416,7 +430,7 @@ onUnmounted(() => { if (timeTickerInterval) clearInterval(timeTickerInterval) })
   padding: 4px 6px; border: 1px solid #e5e7eb; border-radius: 6px;
   font-size: 12px; color: #374151; outline: none; background: #fff;
 }
-.da-select:focus { border-color: #6366f1; }
+.da-select:focus { border-color: var(--insp-accent); }
 .da-date { padding: 3px 6px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 11px; width: 100px; }
 .da-sep { color: #d1d5db; font-size: 11px; }
 .da-search {
@@ -428,9 +442,9 @@ onUnmounted(() => { if (timeTickerInterval) clearInterval(timeTickerInterval) })
 .da-compute {
   display: flex; align-items: center; gap: 3px; margin-left: auto;
   padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;
-  background: #f5f3ff; color: #6366f1; border: 1px solid #e0e0ff; cursor: pointer;
+  background: var(--insp-accent-paler); color: var(--insp-accent); border: 1px solid var(--insp-accent-pale); cursor: pointer;
 }
-.da-compute:hover { background: #ede9fe; }
+.da-compute:hover { background: var(--insp-accent-pale); }
 .da-compute:disabled { opacity: 0.5; }
 
 /* ═══ Stats ═══ */
@@ -455,7 +469,7 @@ onUnmounted(() => { if (timeTickerInterval) clearInterval(timeTickerInterval) })
   color: #6b7280; background: none; border: none; cursor: pointer; transition: all 0.15s;
 }
 .da-tab:hover { background: #f3f4f6; }
-.da-tab.on { background: #6366f1; color: #fff; }
+.da-tab.on { background: var(--insp-accent); color: #fff; }
 .da-tab-count { font-size: 11px; color: #9ca3af; margin-left: auto; }
 
 /* ═══ Table ═══ */
@@ -496,7 +510,7 @@ onUnmounted(() => { if (timeTickerInterval) clearInterval(timeTickerInterval) })
 .da-range-bar::after {
   content: ''; position: absolute; top: 0; height: 100%; border-radius: 2px;
   left: var(--min, 0%); right: calc(100% - var(--max, 100%));
-  background: #6366f1;
+  background: var(--insp-accent);
 }
 .da-range-text { font-size: 9px; color: #9ca3af; text-align: center; }
 

@@ -11,6 +11,8 @@ import { useInspExecutionStore } from '@/stores/inspection/inspExecutionStore'
 import { useOfflineSync } from '@/composables/inspection/useOfflineSync'
 import { useCamera } from '@/composables/inspection/useCamera'
 import { useGeolocation } from '@/composables/inspection/useGeolocation'
+import { uploadImage } from '@/api/upload'
+import { addEvidence } from '@/api/inspection/submission'
 import {
   TaskStatusConfig, type TaskStatus,
   SubmissionStatusConfig, type SubmissionStatus,
@@ -32,7 +34,7 @@ const {
 
 // Camera & GPS
 const { capturePhoto } = useCamera()
-const { position, loading: geoLoading, getCurrentPosition } = useGeolocation()
+const { loading: geoLoading, error: geoError, getCurrentPosition } = useGeolocation()
 
 // State
 const loading = ref(false)
@@ -111,7 +113,9 @@ async function handleSubmitTask() {
     await store.submitTask(taskId)
     ElMessage.success('任务已提交')
     loadData()
-  } catch (e: any) { if (e !== 'cancel') console.warn('Operation failed', e) }
+  } catch (e: any) {
+    if (e !== 'cancel') ElMessage.error('提交失败: ' + (e?.message || '未知错误'))
+  }
 }
 
 async function handleStartFilling() {
@@ -130,7 +134,9 @@ async function handleSkipSubmission() {
     await store.skipSubmission(currentSubmission.value.id)
     ElMessage.success('已跳过')
     loadData()
-  } catch (e: any) { if (e !== 'cancel') console.warn('Operation failed', e) }
+  } catch (e: any) {
+    if (e !== 'cancel') ElMessage.error('跳过失败: ' + (e?.message || '未知错误'))
+  }
 }
 
 async function handleSync() {
@@ -149,18 +155,61 @@ async function handleSync() {
   }
 }
 
+// 上传中状态 (拍照/定位共用, 防重复点击)
+const capturing = ref(false)
+
 async function handleTakePhoto() {
+  if (!currentSubmission.value) {
+    ElMessage.warning('请先选择检查目标')
+    return
+  }
   const file = await capturePhoto()
-  if (file) {
-    ElMessage.success(`拍照成功: ${file.name}`)
-    // TODO: upload via evidence API
+  if (!file) return
+  capturing.value = true
+  try {
+    // 1. 上传图片文件拿到 URL
+    const uploaded = await uploadImage(file)
+    // 2. 关联为当前提交的证据
+    await addEvidence(currentSubmission.value.id, {
+      evidenceType: 'PHOTO',
+      fileName: uploaded.name || file.name,
+      fileUrl: uploaded.url,
+    })
+    ElMessage.success('照片已上传并关联')
+  } catch (e: any) {
+    const msg = e?.response?.data?.message || e?.message || '未知错误'
+    ElMessage.error('照片上传失败: ' + msg)
+  } finally {
+    capturing.value = false
   }
 }
 
 async function handleGetLocation() {
+  if (!currentSubmission.value) {
+    ElMessage.warning('请先选择检查目标')
+    return
+  }
   const pos = await getCurrentPosition()
-  if (pos) {
-    ElMessage.success(`定位成功: ${pos.latitude.toFixed(6)}, ${pos.longitude.toFixed(6)}`)
+  if (!pos) {
+    // useGeolocation 已设置 error, 给出可见反馈
+    ElMessage.error('定位失败: ' + (geoError.value || '无法获取位置'))
+    return
+  }
+  capturing.value = true
+  try {
+    const coord = `${pos.latitude.toFixed(6)}, ${pos.longitude.toFixed(6)}`
+    // 以地图链接作为 fileUrl 落库, 坐标写入 fileName, evidenceType=GPS_POINT
+    await addEvidence(currentSubmission.value.id, {
+      evidenceType: 'GPS_POINT',
+      fileName: `GPS ${coord}`,
+      fileUrl: `https://uri.amap.com/marker?position=${pos.longitude},${pos.latitude}`,
+    })
+    ElMessage.success(`定位已记录: ${coord}`)
+  } catch (e: any) {
+    const msg = e?.response?.data?.message || e?.message || '未知错误'
+    ElMessage.error('定位记录失败: ' + msg)
+  } finally {
+    capturing.value = false
   }
 }
 
@@ -178,6 +227,25 @@ async function handleResolveConflict(submissionId: LongId, keepLocal: boolean) {
 
 function goBack() {
   router.push('/inspection/tasks')
+}
+
+// 冲突对话框: 字段级 diff, 取代暴力 substring(0,200) 截断
+interface FieldDiff { key: string; local: string; server: string }
+function computeConflictDiff(localStr?: string | null, serverStr?: string | null): FieldDiff[] {
+  let local: Record<string, any> = {}
+  let server: Record<string, any> = {}
+  try { local = JSON.parse(localStr || '{}') || {} } catch { local = {} }
+  try { server = JSON.parse(serverStr || '{}') || {} } catch { server = {} }
+  const keys = new Set([...Object.keys(local), ...Object.keys(server)])
+  const diffs: FieldDiff[] = []
+  for (const k of keys) {
+    const lv = local[k]
+    const sv = server[k]
+    const ls = lv == null ? '' : String(lv)
+    const ss = sv == null ? '' : String(sv)
+    if (ls !== ss) diffs.push({ key: k, local: ls || '（空）', server: ss || '（空）' })
+  }
+  return diffs
 }
 
 onMounted(async () => {
@@ -283,11 +351,11 @@ onMounted(async () => {
             >
               <SkipForward class="w-3.5 h-3.5 mr-1" />跳过
             </el-button>
-            <el-button size="small" @click="handleTakePhoto">
-              <Camera class="w-3.5 h-3.5 mr-1" />拍照
+            <el-button size="small" @click="handleTakePhoto" :loading="capturing">
+              <Camera class="w-3.5 h-3.5 mr-1" />拍照取证
             </el-button>
-            <el-button size="small" @click="handleGetLocation" :loading="geoLoading">
-              <MapPin class="w-3.5 h-3.5 mr-1" />定位
+            <el-button size="small" @click="handleGetLocation" :loading="geoLoading || capturing">
+              <MapPin class="w-3.5 h-3.5 mr-1" />定位取证
             </el-button>
           </div>
 
@@ -309,7 +377,11 @@ onMounted(async () => {
 
         <!-- 检查明细列表 (卡片式，适合移动) -->
         <div class="px-4 py-3 space-y-2">
-          <div class="text-xs text-gray-500 font-medium mb-1">检查项 ({{ details.length }})</div>
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs text-gray-500 font-medium">检查项 ({{ details.length }})</span>
+            <!-- 移动端为只读查看视图: 打分请在桌面执行页完成 -->
+            <span class="text-[11px] text-gray-400 bg-gray-100 rounded px-1.5 py-0.5">仅查看 · 打分请用桌面执行页</span>
+          </div>
           <div
             v-for="detail in details"
             :key="detail.id"
@@ -333,14 +405,21 @@ onMounted(async () => {
               {{ detail.responseValue }}
             </div>
           </div>
-          <div v-if="details.length === 0" class="text-center text-sm text-gray-400 py-8">
-            暂无检查明细
+          <div v-if="details.length === 0" class="text-center text-gray-400 py-8">
+            <div class="text-sm">暂无检查明细</div>
+            <div class="text-xs mt-1 text-gray-300">
+              点击上方"开始填写"后，检查项将自动加载
+            </div>
           </div>
         </div>
       </template>
 
-      <div v-else class="flex items-center justify-center h-full text-gray-400 text-sm">
-        暂无检查目标
+      <div v-else class="flex flex-col items-center justify-center h-full text-gray-400 px-8 text-center">
+        <span class="text-sm">暂无检查目标</span>
+        <span class="text-xs mt-1 text-gray-300">
+          该任务还未分配检查目标，请联系任务管理员，或返回任务列表重新进入
+        </span>
+        <el-button class="mt-3" size="small" @click="goBack">返回任务列表</el-button>
       </div>
     </div>
 
@@ -365,19 +444,26 @@ onMounted(async () => {
             <AlertTriangle class="w-4 h-4 inline text-amber-500 mr-1" />
             提交 #{{ conflict.submissionId }}
           </div>
-          <div class="grid grid-cols-2 gap-2 text-xs">
-            <div class="bg-blue-50 p-2 rounded">
-              <div class="font-medium text-blue-600 mb-1">本地版本 (v{{ conflict.localSyncVersion }})</div>
-              <div class="text-gray-600 break-all max-h-20 overflow-y-auto">
-                {{ conflict.localFormData?.substring(0, 200) }}...
-              </div>
+          <!-- 字段级 diff: 仅展示有差异的字段 -->
+          <div class="text-xs">
+            <div class="grid grid-cols-[1fr_1fr] gap-1 mb-1 font-medium">
+              <span class="text-blue-600">本地版本 (v{{ conflict.localSyncVersion }})</span>
+              <span class="text-green-600">服务器版本 (v{{ conflict.serverSyncVersion }})</span>
             </div>
-            <div class="bg-green-50 p-2 rounded">
-              <div class="font-medium text-green-600 mb-1">服务器版本 (v{{ conflict.serverSyncVersion }})</div>
-              <div class="text-gray-600 break-all max-h-20 overflow-y-auto">
-                {{ conflict.serverFormData?.substring(0, 200) }}...
+            <template v-if="computeConflictDiff(conflict.localFormData, conflict.serverFormData).length">
+              <div
+                v-for="diff in computeConflictDiff(conflict.localFormData, conflict.serverFormData)"
+                :key="diff.key"
+                class="mb-1"
+              >
+                <div class="text-gray-400">{{ diff.key }}</div>
+                <div class="grid grid-cols-[1fr_1fr] gap-1">
+                  <span class="bg-blue-50 px-1.5 py-0.5 rounded text-gray-700 break-all">{{ diff.local }}</span>
+                  <span class="bg-green-50 px-1.5 py-0.5 rounded text-gray-700 break-all">{{ diff.server }}</span>
+                </div>
               </div>
-            </div>
+            </template>
+            <div v-else class="text-gray-400 py-1">两个版本内容相同（仅版本号不同）</div>
           </div>
           <div class="flex gap-2 mt-2">
             <el-button size="small" type="primary" @click="handleResolveConflict(conflict.submissionId, true)">

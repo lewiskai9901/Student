@@ -517,6 +517,44 @@
 }
 .pdv-review-link:hover { text-decoration: underline; }
 
+/* ========== Score Tab partial-load warning (P1 #12) ========== */
+.pdv-score-warn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  background: var(--insp-fail-pale);
+  border: 1px solid var(--insp-fail-border);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--insp-fail);
+}
+.pdv-score-warn__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--insp-fail);
+  color: #fff;
+  font-weight: 700;
+  font-size: 11px;
+}
+.pdv-score-warn__retry {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--insp-fail);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.pdv-score-warn__retry:hover { text-decoration: underline; }
+
 /* ========== Result Stats ========== */
 .pdv-result-stats {
   display: flex;

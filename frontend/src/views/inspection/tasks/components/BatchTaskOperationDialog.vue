@@ -197,7 +197,7 @@ function handleExecute() {
             />
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
-                <span class="text-sm text-gray-700">{{ task.taskCode || `Task #${task.id}` }}</span>
+                <span class="text-sm text-gray-700">{{ task.taskCode || `任务 #${task.id}` }}</span>
                 <el-tag
                   size="small"
                   :type="(TaskStatusConfig[task.status as TaskStatus]?.type as any) || 'info'"
@@ -221,7 +221,7 @@ function handleExecute() {
             <el-checkbox disabled :model-value="false" />
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
-                <span class="text-sm text-gray-500">{{ task.taskCode || `Task #${task.id}` }}</span>
+                <span class="text-sm text-gray-500">{{ task.taskCode || `任务 #${task.id}` }}</span>
                 <el-tag
                   size="small"
                   type="info"

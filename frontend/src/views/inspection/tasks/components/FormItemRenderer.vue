@@ -6,9 +6,13 @@
  * Delegates to appropriate Element Plus components based on item type.
  */
 import type { LongId } from '@/types/common'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Camera, MapPin, ScanLine, PenTool } from 'lucide-vue-next'
+import { ElMessage } from 'element-plus'
 import type { ItemType } from '@/types/insp/enums'
+import { uploadImage } from '@/api/upload'
+import { uploadFile } from '@/api/file'
+import { useGeolocation } from '@/composables/inspection/useGeolocation'
 
 interface ItemDef {
   id: LongId
@@ -65,6 +69,40 @@ function update(val: any) {
 }
 
 const itemType = computed(() => props.item.itemType as ItemType)
+
+// ---------- 媒体上传 (PHOTO / VIDEO / FILE_UPLOAD) ----------
+const uploading = ref(false)
+
+async function handleUpload(uploadFileObj: any) {
+  const raw: File | undefined = uploadFileObj?.raw ?? uploadFileObj
+  if (!raw) return
+  uploading.value = true
+  try {
+    const url = props.item.itemType === 'PHOTO'
+      ? (await uploadImage(raw)).url
+      : (await uploadFile(raw, 'inspection-form')).fileUrl
+    update(url)
+    ElMessage.success('上传成功')
+  } catch (e: any) {
+    const msg = e?.response?.data?.message || e?.message || '未知错误'
+    ElMessage.error('上传失败: ' + msg)
+  } finally {
+    uploading.value = false
+  }
+}
+
+// ---------- GPS 定位 ----------
+const { loading: gpsLoading, error: gpsError, getCurrentPosition } = useGeolocation()
+
+async function handleGetGps() {
+  const pos = await getCurrentPosition()
+  if (pos) {
+    update(`${pos.latitude.toFixed(6)}, ${pos.longitude.toFixed(6)}`)
+    ElMessage.success('定位成功')
+  } else {
+    ElMessage.error('定位失败: ' + (gpsError.value || '无法获取位置'))
+  }
+}
 
 </script>
 
@@ -229,59 +267,72 @@ const itemType = computed(() => props.item.itemType as ItemType)
 
     <!-- PHOTO -->
     <div v-else-if="itemType === 'PHOTO'" class="flex items-center gap-2">
-      <div
+      <a
         v-if="modelValue"
-        class="w-20 h-20 rounded-md border border-gray-200 overflow-hidden"
+        :href="modelValue"
+        target="_blank"
+        rel="noopener"
+        class="w-20 h-20 rounded-md border border-gray-200 overflow-hidden block"
       >
         <img :src="modelValue" class="w-full h-full object-cover" alt="photo" />
-      </div>
-      <div
+      </a>
+      <el-upload
         v-if="!readonly"
-        class="w-20 h-20 rounded-md border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-blue-400 transition"
+        :auto-upload="false"
+        :show-file-list="false"
+        accept="image/*"
+        :on-change="handleUpload"
       >
-        <Camera class="w-6 h-6 text-gray-400" />
-      </div>
+        <el-button size="small" :loading="uploading">
+          <Camera class="w-3.5 h-3.5 mr-1" />{{ modelValue ? '重新上传' : '上传照片' }}
+        </el-button>
+      </el-upload>
       <span v-if="!modelValue && readonly" class="text-sm text-gray-400">未上传</span>
     </div>
 
     <!-- VIDEO -->
     <div v-else-if="itemType === 'VIDEO'" class="flex items-center gap-2">
-      <div
+      <el-upload
         v-if="!readonly"
-        class="w-24 h-16 rounded-md border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-blue-400 transition"
+        :auto-upload="false"
+        :show-file-list="false"
+        accept="video/*"
+        :on-change="handleUpload"
       >
-        <span class="text-xs text-gray-400">上传视频</span>
-      </div>
-      <span v-if="modelValue" class="text-xs text-blue-500 truncate max-w-[200px]">
-        {{ modelValue }}
-      </span>
+        <el-button size="small" :loading="uploading">{{ modelValue ? '重新上传' : '上传视频' }}</el-button>
+      </el-upload>
+      <a v-if="modelValue" :href="modelValue" target="_blank" rel="noopener"
+         class="text-xs text-blue-500 truncate max-w-[200px]">查看视频</a>
       <span v-else-if="readonly" class="text-sm text-gray-400">未上传</span>
     </div>
 
-    <!-- SIGNATURE -->
+    <!-- SIGNATURE — 需签名板第三方库, 桌面端暂不支持 -->
     <div
       v-else-if="itemType === 'SIGNATURE'"
       class="rounded-md border border-gray-200 bg-gray-50 px-3 py-4 text-center"
     >
       <PenTool class="w-6 h-6 text-gray-300 mx-auto mb-1" />
-      <p class="text-xs text-gray-400">
-        {{ readonly ? (modelValue ? '已签名' : '未签名') : '点击签名区域进行签名' }}
+      <p v-if="modelValue" class="text-xs text-gray-500">已签名</p>
+      <p v-else class="text-xs text-gray-400">
+        手写签名暂不支持（需移动端 / 签名板），可在移动端补充
       </p>
     </div>
 
     <!-- FILE_UPLOAD -->
     <div v-else-if="itemType === 'FILE_UPLOAD'">
-      <el-upload
-        :disabled="readonly"
-        :auto-upload="false"
-        :limit="5"
-        accept="*/*"
-      >
-        <el-button size="small" :disabled="readonly">选择文件</el-button>
-        <template #tip>
-          <div class="text-xs text-gray-400 mt-1">支持任意文件类型</div>
-        </template>
-      </el-upload>
+      <div class="flex items-center gap-2">
+        <a v-if="modelValue" :href="modelValue" target="_blank" rel="noopener"
+           class="text-xs text-blue-500 truncate max-w-[200px]">已上传文件</a>
+        <el-upload
+          v-if="!readonly"
+          :auto-upload="false"
+          :show-file-list="false"
+          :on-change="handleUpload"
+        >
+          <el-button size="small" :loading="uploading">{{ modelValue ? '重新上传' : '选择文件' }}</el-button>
+        </el-upload>
+        <span v-else-if="!modelValue" class="text-sm text-gray-400">未上传</span>
+      </div>
     </div>
 
     <!-- GPS -->
@@ -291,21 +342,26 @@ const itemType = computed(() => props.item.itemType as ItemType)
     >
       <MapPin class="w-4 h-4 text-gray-400" />
       <span v-if="modelValue" class="text-sm text-gray-600">{{ modelValue }}</span>
-      <span v-else class="text-sm text-gray-400">
-        {{ readonly ? '未采集' : '点击获取当前位置' }}
-      </span>
+      <el-button v-if="!readonly" size="small" :loading="gpsLoading" @click="handleGetGps">
+        {{ modelValue ? '重新定位' : '获取当前位置' }}
+      </el-button>
+      <span v-else-if="!modelValue" class="text-sm text-gray-400">未采集</span>
     </div>
 
-    <!-- BARCODE -->
+    <!-- BARCODE — 需扫码第三方库, 桌面端暂不支持手工录入兜底 -->
     <div
       v-else-if="itemType === 'BARCODE'"
       class="flex items-center gap-2 rounded-md border border-gray-200 px-3 py-2"
     >
       <ScanLine class="w-4 h-4 text-gray-400" />
-      <span v-if="modelValue" class="text-sm text-gray-600">{{ modelValue }}</span>
-      <span v-else class="text-sm text-gray-400">
-        {{ readonly ? '未扫描' : '点击扫描条码' }}
-      </span>
+      <el-input
+        :model-value="modelValue ?? ''"
+        :disabled="readonly"
+        size="small"
+        placeholder="手工录入条码（扫码需移动端）"
+        class="flex-1"
+        @update:model-value="update"
+      />
     </div>
 
     <!-- Fallback: Unknown Type -->

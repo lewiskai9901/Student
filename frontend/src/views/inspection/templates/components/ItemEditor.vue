@@ -11,6 +11,7 @@ import {
   ScoringModeConfig, type ScoringMode,
 } from '@/types/insp/enums'
 import type { TemplateItem, ResponseSet, ResponseSetOption } from '@/types/insp/template'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { responseSetApi } from '@/api/inspection/responseSet'
 import { useKbdHint } from '@/composables/useKbdHint'
 import { eventTypeApi } from '@/api/event'
@@ -32,11 +33,22 @@ const emit = defineEmits<{
 // ==================== Refs ====================
 const itemNameInput = ref<HTMLInputElement | null>(null)
 const availableEventTypes = ref<EventType[]>([])
+const eventTypesLoading = ref(false)
+const eventTypesError = ref(false)
 
-// Load event types for association dropdown
-;(async () => {
-  try { availableEventTypes.value = (await eventTypeApi.list()) as any || [] } catch { /* ignore */ }
-})()
+// Load event types for association dropdown (标准 loading/error 模式)
+async function loadEventTypes() {
+  eventTypesLoading.value = true
+  eventTypesError.value = false
+  try {
+    availableEventTypes.value = (await eventTypeApi.list()) as any || []
+  } catch {
+    availableEventTypes.value = []
+    eventTypesError.value = true
+  } finally {
+    eventTypesLoading.value = false
+  }
+}
 
 // ==================== Tab State ====================
 const activeTab = ref<'scoring' | 'validation' | 'condition'>('scoring')
@@ -44,10 +56,11 @@ const activeTab = ref<'scoring' | 'validation' | 'condition'>('scoring')
 // ==================== A+ 优化: 评分模式分组 + 折叠 ====================
 // 90% 用户只用前 3 个 (PASS_FAIL/DEDUCTION/ADDITION), 其它折叠到"更多"
 const COMMON_MODES: ScoringMode[] = ['PASS_FAIL', 'DEDUCTION', 'ADDITION']
+// 仅使用 ScoringMode 类型中真实存在的枚举值, 与参数渲染区 (ie-params) 一一对应
 const ADVANCED_MODES_BY_GROUP: Record<string, ScoringMode[]> = {
-  '直接打分类': ['DIRECT', 'GRADE', 'SCORE_TABLE'] as ScoringMode[],
-  '量表 / 评级': ['CUMULATIVE', 'TIERED_DEDUCTION', 'GRADE_TIER', 'WEIGHTED'] as ScoringMode[],
-  '高级算法': ['RISK_MATRIX', 'THRESHOLD', 'FORMULA'] as ScoringMode[],
+  '直接打分类': ['DIRECT', 'LEVEL', 'SCORE_TABLE'],
+  '量表 / 评级': ['CUMULATIVE', 'TIERED_DEDUCTION', 'RATING_SCALE', 'WEIGHTED_MULTI'],
+  '高级算法': ['RISK_MATRIX', 'THRESHOLD', 'FORMULA'],
 }
 const showAdvancedModes = ref(false)
 // 如果当前模式是高级模式, 自动展开
@@ -87,7 +100,10 @@ function onItemEditorKey(e: KeyboardEvent) {
 // J7: composable
 const { showKbdHint, dismissKbdHint } = useKbdHint('insp_ie_kbd_hint_dismissed')
 
-onMounted(() => window.addEventListener('keydown', onItemEditorKey))
+onMounted(() => {
+  window.addEventListener('keydown', onItemEditorKey)
+  loadEventTypes()
+})
 onUnmounted(() => window.removeEventListener('keydown', onItemEditorKey))
 
 // ==================== Form State ====================
@@ -596,27 +612,69 @@ watch(() => props.item, (item) => {
   }
 }, { immediate: true })
 
-function handleSave() {
+async function handleSave() {
   if (itemCategory.value === 'scored') {
     // === Scored item save ===
 
+    // #4: 保存前检测将被丢弃的不兼容验证规则, 弹确认告知用户
+    const allowedRules = SCORING_MODE_ALLOWED_RULES[scoring.mode]
+    if (allowedRules) {
+      const dropped = validationRulesList.value.filter(r => !allowedRules.includes(r.type))
+      if (dropped.length > 0) {
+        const labels = dropped
+          .map(r => RULE_TYPE_OPTIONS.find(o => o.value === r.type)?.label || r.type)
+          .join('、')
+        try {
+          await ElMessageBox.confirm(
+            `当前评分模式「${ScoringModeConfig[scoring.mode]?.label || scoring.mode}」不支持以下 ${dropped.length} 条验证规则：${labels}。\n继续保存将删除这些规则。`,
+            '验证规则不兼容',
+            { type: 'warning', confirmButtonText: '继续保存并删除', cancelButtonText: '返回修改' }
+          )
+        } catch {
+          return // 用户取消, 不保存
+        }
+      }
+    }
+
+    // #5: 收集被自动修正的非法配置, 保存后 toast 告知
+    const corrections: string[] = []
+
     // Validate scoring config constraints
-    if (scoring.mode === 'PASS_FAIL' && scoring.failScore > 0) scoring.failScore = 0
-    if (scoring.mode === 'DEDUCTION' && scoring.maxDeduction > 0) scoring.maxDeduction = 0
-    if (scoring.mode === 'DIRECT' && scoring.minScore >= scoring.maxScore) scoring.maxScore = scoring.minScore + 1
-    if (scoring.mode === 'LEVEL' && scoring.levels.length < 2)
+    if (scoring.mode === 'PASS_FAIL' && scoring.failScore > 0) {
+      corrections.push(`不通过扣分不能为正数, 已修正为 0`)
+      scoring.failScore = 0
+    }
+    if (scoring.mode === 'DEDUCTION' && scoring.maxDeduction > 0) {
+      corrections.push(`最大扣分不能为正数, 已修正为 0`)
+      scoring.maxDeduction = 0
+    }
+    if (scoring.mode === 'DIRECT' && scoring.minScore >= scoring.maxScore) {
+      scoring.maxScore = scoring.minScore + 1
+      corrections.push(`最高分需大于最低分, 已修正最高分为 ${scoring.maxScore}`)
+    }
+    if (scoring.mode === 'LEVEL' && scoring.levels.length < 2) {
       scoring.levels = [{ label: '优', score: 10 }, { label: '差', score: 0 }]
-    if (scoring.mode === 'SCORE_TABLE' && scoring.options.length < 2)
+      corrections.push(`等级评分至少需要 2 个等级, 已补全默认等级`)
+    }
+    if (scoring.mode === 'SCORE_TABLE' && scoring.options.length < 2) {
       scoring.options = [{ label: '优秀', description: '', score: 10 }, { label: '差', description: '', score: 0 }]
-    if (scoring.mode === 'TIERED_DEDUCTION')
+      corrections.push(`评分标准表至少需要 2 个档位, 已补全默认档位`)
+    }
+    if (scoring.mode === 'TIERED_DEDUCTION') {
+      if (scoring.tiers.some(t => t.score > 0)) corrections.push(`分级扣分的扣分值不能为正数, 已修正`)
       scoring.tiers = scoring.tiers.map(t => ({ ...t, score: Math.min(0, t.score) }))
+    }
     if (scoring.mode === 'RATING_SCALE') {
-      scoring.maxStars = Math.max(3, Math.min(10, scoring.maxStars))
-      scoring.scorePerStar = Math.max(1, scoring.scorePerStar)
+      const cs = Math.max(3, Math.min(10, scoring.maxStars))
+      if (cs !== scoring.maxStars) { corrections.push(`星数需在 3~10 之间, 已修正为 ${cs}`); scoring.maxStars = cs }
+      const cp = Math.max(1, scoring.scorePerStar)
+      if (cp !== scoring.scorePerStar) { corrections.push(`每星分值至少为 1, 已修正为 ${cp}`); scoring.scorePerStar = cp }
     }
     if (scoring.mode === 'WEIGHTED_MULTI') {
-      if (scoring.dimensions.length < 1)
+      if (scoring.dimensions.length < 1) {
         scoring.dimensions = [{ key: 'dim1', label: '维度1', weight: 100, maxScore: 10 }]
+        corrections.push(`多维加权至少需要 1 个维度, 已补全默认维度`)
+      }
       const weightSum = scoring.dimensions.reduce((s, d) => s + d.weight, 0)
       if (weightSum !== 100 && weightSum > 0) {
         const factor = 100 / weightSum
@@ -624,18 +682,25 @@ function handleSave() {
         const newSum = scoring.dimensions.reduce((s, d) => s + d.weight, 0)
         if (newSum !== 100 && scoring.dimensions.length > 0)
           scoring.dimensions[scoring.dimensions.length - 1].weight += 100 - newSum
+        corrections.push(`维度权重之和需为 100%, 已按比例归一化`)
       }
     }
-    if (scoring.mode === 'THRESHOLD' && scoring.thresholds.length < 1)
+    if (scoring.mode === 'THRESHOLD' && scoring.thresholds.length < 1) {
       scoring.thresholds = [{ max: null, label: '默认', score: 10 }]
-    if (scoring.mode === 'RISK_MATRIX') {
-      if (scoring.probabilities.length < 2) scoring.probabilities = [{ label: '低', value: 1 }, { label: '高', value: 5 }]
-      if (scoring.impacts.length < 2) scoring.impacts = [{ label: '小', value: 1 }, { label: '大', value: 5 }]
+      corrections.push(`区间评分至少需要 1 个区间, 已补全默认区间`)
     }
-    if (scoring.mode === 'FORMULA' && scoring.formulaInputs.length < 1)
+    if (scoring.mode === 'RISK_MATRIX') {
+      if (scoring.probabilities.length < 2) { scoring.probabilities = [{ label: '低', value: 1 }, { label: '高', value: 5 }]; corrections.push(`可能性至少需要 2 项, 已补全`) }
+      if (scoring.impacts.length < 2) { scoring.impacts = [{ label: '小', value: 1 }, { label: '大', value: 5 }]; corrections.push(`影响至少需要 2 项, 已补全`) }
+    }
+    if (scoring.mode === 'FORMULA' && scoring.formulaInputs.length < 1) {
       scoring.formulaInputs = [{ key: 'value', label: '值' }]
-    if (scoring.mode === 'FORMULA' && scoring.formulaMaxScore <= scoring.formulaMinScore)
+      corrections.push(`公式评分至少需要 1 个输入, 已补全`)
+    }
+    if (scoring.mode === 'FORMULA' && scoring.formulaMaxScore <= scoring.formulaMinScore) {
       scoring.formulaMaxScore = scoring.formulaMinScore + 1
+      corrections.push(`公式最高分需大于最低分, 已修正最高分为 ${scoring.formulaMaxScore}`)
+    }
 
     // Data hardening
     if (scoring.mode === 'LEVEL') {
@@ -665,10 +730,17 @@ function handleSave() {
       if (scoring.impacts.length < 2) scoring.impacts = [{ label: '小', value: 1 }, { label: '大', value: 5 }]
     }
 
-    // Auto-remove validation rules not applicable to current scoring mode
-    const allowedRules = SCORING_MODE_ALLOWED_RULES[scoring.mode]
+    // Auto-remove validation rules not applicable to current scoring mode (已在上方确认)
     if (allowedRules) {
       validationRulesList.value = validationRulesList.value.filter(r => allowedRules.includes(r.type))
+    }
+
+    // #5: 告知自动修正结果
+    if (corrections.length > 0) {
+      ElMessage.warning({
+        message: `已自动修正 ${corrections.length} 处配置：` + corrections.join('；'),
+        duration: 5000,
+      })
     }
 
     // Serialize
@@ -740,21 +812,27 @@ const captureNeedsResponseSet = computed(() =>
 
 const rsOptions = ref<ResponseSetOption[]>([])
 const rsOptionsLoading = ref(false)
+const rsOptionsError = ref(false)
 
-watch(() => form.value.responseSetId, async (newId) => {
-  if (!newId) {
+async function loadRsOptions(id: LongId | null) {
+  if (!id) {
     rsOptions.value = []
+    rsOptionsError.value = false
     return
   }
   rsOptionsLoading.value = true
+  rsOptionsError.value = false
   try {
-    rsOptions.value = await responseSetApi.getOptions(newId)
+    rsOptions.value = await responseSetApi.getOptions(id)
   } catch {
     rsOptions.value = []
+    rsOptionsError.value = true
   } finally {
     rsOptionsLoading.value = false
   }
-}, { immediate: true })
+}
+
+watch(() => form.value.responseSetId, (newId) => { loadRsOptions(newId) }, { immediate: true })
 
 // Whether scoring is driven by response set
 const scoringFromResponseSet = computed(() =>
@@ -810,7 +888,7 @@ const scoringFromResponseSet = computed(() =>
             <el-radio-button value="INLINE">结构化检查</el-radio-button>
             <el-radio-button value="EVENT_STREAM">巡查快速记录</el-radio-button>
           </el-radio-group>
-          <div v-if="form.inputMode === 'EVENT_STREAM'" style="font-size:11px;color:#9ca3af;margin-top:4px;">
+          <div v-if="form.inputMode === 'EVENT_STREAM'" class="ie-hint">
             检查员搜索目标后快速打分，适合随机抽查、巡查等场景
           </div>
         </div>
@@ -820,13 +898,16 @@ const scoringFromResponseSet = computed(() =>
       <div class="ie-section">
         <div class="ie-fld">
           <label>事件关联</label>
-          <select v-model="form.eventTypeCode" class="ie-event-select">
-            <option :value="undefined">不关联事件</option>
+          <select v-model="form.eventTypeCode" class="ie-event-select" :disabled="eventTypesError">
+            <option :value="undefined">{{ eventTypesLoading ? '加载中…' : '不关联事件' }}</option>
             <option v-for="et in availableEventTypes" :key="et.typeCode" :value="et.typeCode">
               {{ et.categoryName }} / {{ et.typeName }}
             </option>
           </select>
-          <div style="font-size:10px;color:#9ca3af;margin-top:2px;">检查此项不合格时自动生成对应事件</div>
+          <button v-if="eventTypesError" type="button" class="ie-inline-retry" @click="loadEventTypes">
+            事件类型加载失败，点击重试
+          </button>
+          <div v-else class="ie-hint-sm">检查此项不合格时自动生成对应事件</div>
         </div>
       </div>
 
@@ -896,7 +977,15 @@ const scoringFromResponseSet = computed(() =>
                 <span class="ie-rs-score">{{ opt.score ?? 0 }}分</span>
               </div>
             </div>
-            <div v-else-if="form.responseSetId && rsOptionsLoading" class="ie-muted">加载选项中...</div>
+            <!-- #7/#10: 选项集加载中 / 失败 / 空 三态分明 -->
+            <div v-else-if="form.responseSetId && rsOptionsLoading" class="ie-muted">加载选项中…</div>
+            <div v-else-if="form.responseSetId && rsOptionsError" class="ie-rs-state ie-rs-state--error">
+              <span>选项集加载失败，已临时退回手动评分模式</span>
+              <button type="button" class="ie-inline-retry" @click="loadRsOptions(form.responseSetId)">重试</button>
+            </div>
+            <div v-else-if="form.responseSetId && !rsOptionsLoading && rsOptions.length === 0" class="ie-rs-state">
+              该选项集暂无选项，请先在选项集管理中添加选项，或改用手动评分模式
+            </div>
           </template>
           <!-- Scoring mode inline (when NOT driven by response set) -->
           <template v-if="!scoringFromResponseSet">
@@ -1005,7 +1094,9 @@ const scoringFromResponseSet = computed(() =>
                   <div v-for="(lv, i) in scoring.levels" :key="i" class="ie-list-row">
                     <input v-model="lv.label" class="ie-list-input w-flex" placeholder="标签" />
                     <input v-model.number="lv.score" type="number" class="ie-list-input w-60" placeholder="分值" />
-                    <button class="ie-btn-icon-del" @click="scoring.levels.splice(i, 1)"><Trash2 :size="11" /></button>
+                    <button class="ie-btn-icon-del" :disabled="scoring.levels.length <= 2"
+                      :title="scoring.levels.length <= 2 ? '至少需保留 2 个等级' : '删除'"
+                      @click="scoring.levels.splice(i, 1)"><Trash2 :size="11" /></button>
                   </div>
                 </div>
                 <button class="ie-link-btn" @click="scoring.levels.push({ label: '', score: 0 })"><Plus :size="11" /> 添加</button>
@@ -1016,7 +1107,9 @@ const scoringFromResponseSet = computed(() =>
                   <div v-for="(opt, i) in scoring.options" :key="i" class="ie-list-row">
                     <input v-model="opt.label" class="ie-list-input w-flex" placeholder="档位名" />
                     <input v-model.number="opt.score" type="number" class="ie-list-input w-60" placeholder="分值" />
-                    <button class="ie-btn-icon-del" @click="scoring.options.splice(i, 1)"><Trash2 :size="11" /></button>
+                    <button class="ie-btn-icon-del" :disabled="scoring.options.length <= 2"
+                      :title="scoring.options.length <= 2 ? '至少需保留 2 个档位' : '删除'"
+                      @click="scoring.options.splice(i, 1)"><Trash2 :size="11" /></button>
                   </div>
                 </div>
                 <button class="ie-link-btn" @click="scoring.options.push({ label: '', description: '', score: 0 })"><Plus :size="11" /> 添加</button>
@@ -1034,7 +1127,9 @@ const scoringFromResponseSet = computed(() =>
                   <div v-for="(t, i) in scoring.tiers" :key="i" class="ie-list-row">
                     <input v-model="t.label" class="ie-list-input w-flex" placeholder="档位名" />
                     <input v-model.number="t.score" type="number" :max="0" class="ie-list-input w-60" placeholder="扣分" />
-                    <button class="ie-btn-icon-del" @click="scoring.tiers.splice(i, 1)"><Trash2 :size="11" /></button>
+                    <button class="ie-btn-icon-del" :disabled="scoring.tiers.length <= 1"
+                      :title="scoring.tiers.length <= 1 ? '至少需保留 1 个档位' : '删除'"
+                      @click="scoring.tiers.splice(i, 1)"><Trash2 :size="11" /></button>
                   </div>
                 </div>
                 <button class="ie-link-btn" @click="scoring.tiers.push({ label: '', score: 0 })"><Plus :size="11" /> 添加</button>
@@ -1054,7 +1149,9 @@ const scoringFromResponseSet = computed(() =>
                     <input v-model="dim.label" class="ie-list-input w-flex" placeholder="名称" />
                     <input v-model.number="dim.weight" type="number" class="ie-list-input w-50" placeholder="%" />
                     <span class="ie-unit">%</span>
-                    <button class="ie-btn-icon-del" @click="scoring.dimensions.splice(i, 1)"><Trash2 :size="11" /></button>
+                    <button class="ie-btn-icon-del" :disabled="scoring.dimensions.length <= 1"
+                      :title="scoring.dimensions.length <= 1 ? '至少需保留 1 个维度' : '删除'"
+                      @click="scoring.dimensions.splice(i, 1)"><Trash2 :size="11" /></button>
                   </div>
                 </div>
                 <button class="ie-link-btn" @click="scoring.dimensions.push({ key: `dim${scoring.dimensions.length+1}`, label: '', weight: 0, maxScore: 10 })"><Plus :size="11" /> 添加</button>
@@ -1068,7 +1165,9 @@ const scoringFromResponseSet = computed(() =>
                     <input v-model.number="th.max" type="number" class="ie-list-input w-60" :placeholder="i === scoring.thresholds.length - 1 ? '∞' : 'max'" />
                     <input v-model="th.label" class="ie-list-input w-flex" placeholder="标签" />
                     <input v-model.number="th.score" type="number" class="ie-list-input w-60" placeholder="分值" />
-                    <button class="ie-btn-icon-del" @click="scoring.thresholds.splice(i, 1)"><Trash2 :size="11" /></button>
+                    <button class="ie-btn-icon-del" :disabled="scoring.thresholds.length <= 1"
+                      :title="scoring.thresholds.length <= 1 ? '至少需保留 1 个区间' : '删除'"
+                      @click="scoring.thresholds.splice(i, 1)"><Trash2 :size="11" /></button>
                   </div>
                 </div>
                 <button class="ie-link-btn" @click="scoring.thresholds.push({ max: null, label: '', score: 0 })"><Plus :size="11" /> 添加</button>
@@ -1096,7 +1195,9 @@ const scoringFromResponseSet = computed(() =>
                   <div v-for="(p, i) in scoring.probabilities" :key="'p'+i" class="ie-list-row">
                     <input v-model="p.label" class="ie-list-input w-flex" placeholder="标签" />
                     <input v-model.number="p.value" type="number" class="ie-list-input w-60" />
-                    <button class="ie-btn-icon-del" @click="scoring.probabilities.splice(i, 1)"><Trash2 :size="11" /></button>
+                    <button class="ie-btn-icon-del" :disabled="scoring.probabilities.length <= 2"
+                      :title="scoring.probabilities.length <= 2 ? '至少需保留 2 项可能性' : '删除'"
+                      @click="scoring.probabilities.splice(i, 1)"><Trash2 :size="11" /></button>
                   </div>
                 </div>
                 <label class="ie-fld-label">影响</label>
@@ -1104,7 +1205,9 @@ const scoringFromResponseSet = computed(() =>
                   <div v-for="(imp, i) in scoring.impacts" :key="'i'+i" class="ie-list-row">
                     <input v-model="imp.label" class="ie-list-input w-flex" placeholder="标签" />
                     <input v-model.number="imp.value" type="number" class="ie-list-input w-60" />
-                    <button class="ie-btn-icon-del" @click="scoring.impacts.splice(i, 1)"><Trash2 :size="11" /></button>
+                    <button class="ie-btn-icon-del" :disabled="scoring.impacts.length <= 2"
+                      :title="scoring.impacts.length <= 2 ? '至少需保留 2 项影响' : '删除'"
+                      @click="scoring.impacts.splice(i, 1)"><Trash2 :size="11" /></button>
                   </div>
                 </div>
               </template>
@@ -1141,7 +1244,11 @@ const scoringFromResponseSet = computed(() =>
 
         <!-- Tab: 验证规则 -->
         <div v-if="activeTab === 'validation'" class="ie-tab-pane">
-          <div v-if="validationRulesList.length === 0" class="ie-muted">暂无验证规则</div>
+          <div v-if="validationRulesList.length === 0" class="ie-empty">
+            <ShieldCheck :size="22" class="ie-empty__icon" />
+            <p class="ie-empty__title">暂无验证规则</p>
+            <p class="ie-empty__sub">添加规则可约束检查员的录入，如必填、照片数量、数值范围等</p>
+          </div>
           <div v-for="(rule, idx) in validationRulesList" :key="idx" class="ie-rule">
             <div class="ie-rule-top">
               <span class="ie-rule-num">{{ idx + 1 }}</span>
@@ -1278,7 +1385,8 @@ const scoringFromResponseSet = computed(() =>
 .ie-rule-body { padding:8px; display:flex; flex-direction:column; gap:6px; }
 
 .ie-btn-icon-del { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:4px; border:none; background:none; color:#b8c0cc; cursor:pointer; transition:all 0.12s; flex-shrink:0; }
-.ie-btn-icon-del:hover { background:#fef2f2; color:#ef4444; }
+.ie-btn-icon-del:hover:not(:disabled) { background:#fef2f2; color:#ef4444; }
+.ie-btn-icon-del:disabled { opacity:0.35; cursor:not-allowed; }
 
 .ie-link-btn { display:inline-flex; align-items:center; gap:3px; font-size:11px; font-weight:500; color:#1a6dff; background:none; border:none; cursor:pointer; padding:4px 0; transition:color 0.12s; }
 .ie-link-btn:hover { color:#1558d6; }
@@ -1468,5 +1576,63 @@ const scoringFromResponseSet = computed(() =>
 @media (max-width: 1366px) {
   .ie-mode-grid { flex-wrap: wrap; }
   .ie-mode-chip { flex: 0 0 auto; }
+}
+
+/* ═══════ 加载失败 / 重试 / 空状态 (token 化) ═══════ */
+.ie-hint-sm { font-size: 10px; color: var(--insp-ink-quaternary); margin-top: 2px; }
+.ie-inline-retry {
+  margin-top: 3px;
+  font-size: 10px;
+  color: var(--insp-fail);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-align: left;
+}
+.ie-inline-retry:hover { color: var(--insp-fail); filter: brightness(0.9); }
+
+.ie-rs-state {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--insp-ink-tertiary);
+  padding: 8px 10px;
+  background: var(--insp-bg-subtle);
+  border: 1px dashed var(--insp-border-default);
+  border-radius: var(--insp-radius-sm);
+  line-height: 1.4;
+}
+.ie-rs-state--error {
+  color: var(--insp-fail);
+  background: var(--insp-fail-pale);
+  border-style: solid;
+  border-color: var(--insp-fail-border);
+}
+
+/* 验证规则空状态 (与 InspEmptyState 视觉对齐) */
+.ie-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 20px 12px;
+  color: var(--insp-ink-quaternary);
+}
+.ie-empty__icon { color: var(--insp-ink-quaternary); margin-bottom: 6px; }
+.ie-empty__title {
+  margin: 0;
+  font-size: var(--insp-text-sm);
+  font-weight: var(--insp-fw-semibold);
+  color: var(--insp-ink-secondary);
+}
+.ie-empty__sub {
+  margin: 3px 0 0;
+  font-size: var(--insp-text-xs);
+  color: var(--insp-ink-quaternary);
+  max-width: 260px;
+  line-height: 1.5;
 }
 </style>

@@ -63,16 +63,20 @@
               </span>
             </div>
           </template>
-          <div ref="trendChartRef" class="chart-200"></div>
-          <div v-if="!trendData.length" class="text-center text-gray-400 py-8 text-sm">暂无趋势数据</div>
+          <div v-show="!sectionError.trend" ref="trendChartRef" class="chart-200"></div>
+          <div v-if="sectionError.trend" class="section-error">
+            趋势数据加载失败 ·
+            <el-button link type="primary" size="small" @click="loadTrend">重试</el-button>
+          </div>
+          <div v-else-if="!trendData.length" class="text-center text-gray-400 py-8 text-sm">暂无趋势数据</div>
         </el-card>
 
         <!-- 待整改 -->
         <el-card shadow="never">
           <template #header>
             <div class="card-head">
-              <span> 待整改 <el-tag size="small" type="danger" v-if="openCases.length">{{ openCases.length }}</el-tag></span>
-              <el-button size="small" link @click="goAllCases">全部 ></el-button>
+              <span>待整改 <el-tag size="small" type="danger" v-if="openCases.length">{{ openCases.length }}</el-tag></span>
+              <el-button size="small" link @click="goAllCases">全部 →</el-button>
             </div>
           </template>
           <div class="case-list">
@@ -87,8 +91,12 @@
                 <el-button size="small" link type="primary" @click="goCase(c)">查看 / 整改</el-button>
               </div>
             </div>
-            <div v-if="!openCases.length" class="text-center text-gray-400 py-6 text-sm">
-               当前无待整改单, 表现良好
+            <div v-if="sectionError.cases" class="section-error">
+              待整改列表加载失败 ·
+              <el-button link type="primary" size="small" @click="loadCases">重试</el-button>
+            </div>
+            <div v-else-if="!openCases.length" class="text-center text-gray-400 py-6 text-sm">
+              当前无待整改单, 表现良好
             </div>
           </div>
         </el-card>
@@ -98,9 +106,13 @@
       <div class="grid-2">
         <el-card shadow="never">
           <template #header>
-            <div class="card-head"><span> 高频扣分点 Top 3</span></div>
+            <div class="card-head"><span>高频扣分点 Top 3</span></div>
           </template>
-          <div v-if="!topIssues.length" class="text-center text-gray-400 py-6 text-sm">本期暂无扣分</div>
+          <div v-if="sectionError.details" class="section-error">
+            检查明细加载失败 ·
+            <el-button link type="primary" size="small" @click="loadLatestDetails">重试</el-button>
+          </div>
+          <div v-else-if="!topIssues.length" class="text-center text-gray-400 py-6 text-sm">本期暂无扣分</div>
           <div v-else class="issue-list">
             <div v-for="(it, i) in topIssues" :key="i" class="issue-item">
               <span class="issue-rank">{{ i + 1 }}</span>
@@ -115,12 +127,12 @@
 
         <el-card shadow="never">
           <template #header>
-            <div class="card-head"><span> 我做得好的</span></div>
+            <div class="card-head"><span>我做得好的</span></div>
           </template>
           <div v-if="!goodItems.length" class="text-center text-gray-400 py-6 text-sm">继续努力</div>
           <div v-else class="good-list">
             <div v-for="(g, i) in goodItems" :key="i" class="good-item">
-              <span class="good-icon"></span>
+              <CircleCheck :size="14" class="good-icon" />
               <span class="good-text">{{ g.text }}</span>
             </div>
           </div>
@@ -131,7 +143,7 @@
       <div class="grid-2">
         <el-card shadow="never">
           <template #header>
-            <div class="card-head"><span> 申诉历史</span></div>
+            <div class="card-head"><span>申诉历史</span></div>
           </template>
           <div v-if="!appealStats.total" class="text-center text-gray-400 py-6 text-sm">
             尚未提交过申诉
@@ -158,10 +170,14 @@
 
         <el-card shadow="never">
           <template #header>
-            <div class="card-head"><span> 重复扣分项</span></div>
+            <div class="card-head"><span>重复扣分项</span></div>
           </template>
-          <div v-if="!repeatItems.length" class="text-center text-gray-400 py-6 text-sm">
-             无重复扣分, 整改有效
+          <div v-if="sectionError.history" class="section-error">
+            历史扣分记录加载失败 ·
+            <el-button link type="primary" size="small" @click="loadHistoricalFlagged">重试</el-button>
+          </div>
+          <div v-else-if="!repeatItems.length" class="text-center text-gray-400 py-6 text-sm">
+            无重复扣分, 整改有效
           </div>
           <div v-else class="repeat-list">
             <div v-for="r in repeatItems" :key="r.itemCode" class="repeat-item">
@@ -178,7 +194,7 @@
         <template #header>
           <div class="card-head">
             <el-button size="small" link @click="showDetails = !showDetails">
-              {{ showDetails ? 'v 收起' : '> 展开' }} 完整明细 ({{ allDetails.length }} 条)
+              {{ showDetails ? '收起' : '展开' }} 完整明细 ({{ allDetails.length }} 条)
             </el-button>
             <span class="hint" v-if="showDetails">点击  申诉对扣分有异议的条目</span>
           </div>
@@ -238,6 +254,7 @@ import { useEntityLabel } from '@/composables/useEntityLabel'
 const { group } = useEntityLabel()
 import { ElMessage } from 'element-plus'
 import { RefreshRight } from '@element-plus/icons-vue'
+import { CircleCheck } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts/core'
 import { LineChart } from 'echarts/charts'
@@ -304,6 +321,11 @@ const trendData = ref<DailyTarget[]>([])
 const allCases = ref<CorrectiveCase[]>([])
 const allDetails = ref<SubmissionDetailRow[]>([])
 const showDetails = ref(false)
+
+// 区分"加载失败"与"真空数据" — 各分区独立错误态
+const sectionError = ref<{ trend: boolean; cases: boolean; details: boolean; history: boolean }>({
+  trend: false, cases: false, details: false, history: false,
+})
 
 const trendChartRef = ref<HTMLElement | null>(null)
 let trendChart: ECharts | null = null
@@ -450,19 +472,25 @@ async function loadTrend() {
   if (!projectId.value || !current.value) return
   const end = new Date()
   const start = new Date(); start.setDate(end.getDate() - 30)
+  sectionError.value.trend = false
   try {
     const data = await analyticsApi.getTrend(
       projectId.value, current.value.targetType, current.value.targetId,
       start.toISOString().slice(0, 10), end.toISOString().slice(0, 10)
     ) as DailyTarget[]
     trendData.value = data.sort((a, b) => a.summaryDate.localeCompare(b.summaryDate)).slice(-6)
-  } catch { trendData.value = [] }
+  } catch (e: any) {
+    trendData.value = []
+    sectionError.value.trend = true
+    ElMessage.error('趋势数据加载失败: ' + (e?.message || '未知错误'))
+  }
   await nextTick()
   drawTrend()
 }
 
 async function loadCases() {
   if (!current.value || !projectId.value) return
+  sectionError.value.cases = false
   try {
     // 后端 list 暂不支持 orgUnitId 过滤, 拉项目级再客户端按 targetId 过滤
     const r = await http.get<CorrectiveCase[]>('/inspection/corrective-cases', {
@@ -471,12 +499,17 @@ async function loadCases() {
     const all = ((r as any) || []) as any[]
     const tid = String(current.value.targetId)
     allCases.value = all.filter(c => String(c.targetId) === tid)
-  } catch { allCases.value = [] }
+  } catch (e: any) {
+    allCases.value = []
+    sectionError.value.cases = true
+    ElMessage.error('待整改列表加载失败: ' + (e?.message || '未知错误'))
+  }
 }
 
 /** 拉最近一次提交的 details */
 async function loadLatestDetails() {
   if (!current.value || !projectId.value) return
+  sectionError.value.details = false
   try {
     // 最近一次 submission for this target
     const subsResp = await http.get<any>('/inspection/submissions', {
@@ -487,7 +520,11 @@ async function loadLatestDetails() {
     const submissionId = subs[0].id
     const details = await http.get<any>('/inspection/submissions/' + submissionId + '/details')
     allDetails.value = (details as any) || []
-  } catch { allDetails.value = [] }
+  } catch (e: any) {
+    allDetails.value = []
+    sectionError.value.details = true
+    ElMessage.error('检查明细加载失败: ' + (e?.message || '未知错误'))
+  }
 }
 
 async function loadAll() {
@@ -505,6 +542,7 @@ async function loadAll() {
 /** 拉历史 5 次提交的 details, 聚合 isFlagged itemCode 统计复发 */
 async function loadHistoricalFlagged() {
   if (!current.value || !projectId.value) return
+  sectionError.value.history = false
   try {
     const subsResp = await http.get<any>('/inspection/submissions', {
       params: { projectId: projectId.value, targetType: current.value.targetType,
@@ -512,22 +550,30 @@ async function loadHistoricalFlagged() {
     })
     const subs = (subsResp as any)?.records ?? subsResp ?? []
     const map = new Map<string, { itemName: string; sectionName: string; dates: Set<string> }>()
-    for (const s of subs.slice(0, 6)) {
-      try {
-        const details = await http.get<any>('/inspection/submissions/' + s.id + '/details') as any[]
-        const date = (s.createdAt || s.completedAt || '').slice(0, 10) || s.id
-        for (const d of details) {
-          if (!d.isFlagged) continue
-          const key = d.itemCode || d.itemName
-          if (!map.has(key)) {
-            map.set(key, { itemName: d.itemName, sectionName: d.sectionName, dates: new Set() })
-          }
-          map.get(key)!.dates.add(date)
+    // 并发拉各次提交明细 (原串行最多 6 次往返)
+    const detailResults = await Promise.all(
+      subs.slice(0, 6).map((s: any) =>
+        http.get<any>('/inspection/submissions/' + s.id + '/details')
+          .then(d => ({ s, details: (d as any[]) || [] }))
+          .catch(() => ({ s, details: [] as any[] })))
+    )
+    for (const { s, details } of detailResults) {
+      const date = (s.createdAt || s.completedAt || '').slice(0, 10) || s.id
+      for (const d of details) {
+        if (!d.isFlagged) continue
+        const key = d.itemCode || d.itemName
+        if (!map.has(key)) {
+          map.set(key, { itemName: d.itemName, sectionName: d.sectionName, dates: new Set() })
         }
-      } catch { /* skip */ }
+        map.get(key)!.dates.add(date)
+      }
     }
     historicalFlaggedItems.value = map
-  } catch { historicalFlaggedItems.value = new Map() }
+  } catch (e: any) {
+    historicalFlaggedItems.value = new Map()
+    sectionError.value.history = true
+    ElMessage.error('历史扣分记录加载失败: ' + (e?.message || '未知错误'))
+  }
 }
 
 /** 拉申诉成功率 — 当前用户提交过的所有申诉 */
@@ -595,9 +641,9 @@ function priorityType(p: string) {
 function deadlineLabel(c: CorrectiveCase) {
   if (!c.deadline) return ''
   const days = Math.ceil((new Date(c.deadline).getTime() - Date.now()) / 86400000)
-  if (days < 0) return ` 已超期 ${-days}d`
-  if (days === 0) return ` 今日截止`
-  if (days <= 2) return ` ${days} 天内`
+  if (days < 0) return `已超期 ${-days}d`
+  if (days === 0) return `今日截止`
+  if (days <= 2) return `${days} 天内`
   return `${days} 天后`
 }
 function caseUrgencyClass(c: CorrectiveCase) {
@@ -608,8 +654,8 @@ function caseUrgencyClass(c: CorrectiveCase) {
   return ''
 }
 function goCase(c: CorrectiveCase) {
-  router.push(`/inspection/corrective?caseId=${c.id}`)
-    .catch(() => ElMessage.info('整改单 #' + c.caseCode))
+  // 直接跳整改详情页 (原 ?caseId 伪兜底已移除)
+  router.push(`/inspection/corrective/${c.id}`)
 }
 function goAllCases() {
   if (!current.value) return
@@ -720,8 +766,14 @@ onUnmounted(() => {
 /* ── 鼓励 ── */
 .good-list { display: flex; flex-direction: column; gap: 8px; }
 .good-item { display: flex; gap: 10px; align-items: center; padding: 6px 10px; background: #f0fdf4; border-radius: 6px; }
-.good-icon { font-size: 14px; }
+.good-icon { color: #22c55e; flex-shrink: 0; }
 .good-text { font-size: 13px; color: #166534; }
+
+/* 分区加载失败态 */
+.section-error {
+  text-align: center; padding: 24px 12px;
+  font-size: 13px; color: var(--insp-fail);
+}
 
 /* ── 申诉历史 ── */
 .appeal-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }

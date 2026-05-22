@@ -31,6 +31,8 @@ const totalRecovered = computed(() =>
 async function loadData() {
   loading.value = true
   try {
+    // NOTE(#18 P1): getMyAppeals 全量返回, 无分页. 个人申诉量通常有限可接受;
+    // 数据量大时需后端 /inspection/appeals/my 增加分页参数后再接前端分页.
     appeals.value = await appealApi.getMyAppeals()
   } catch (e: any) {
     ElMessage.error(e.message || '加载申诉失败')

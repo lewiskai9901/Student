@@ -436,6 +436,13 @@ function openEditSchedule(plan: InspectionPlan) {
 
 async function handleSaveSchedule() {
   if (!scheduleForm.value.planName.trim()) { ElMessage.warning('请输入调度组名称'); return }
+  // P1 #10: 按 freqMode 校验周/月选择非空, 否则会产生永不触发的空调度
+  if (scheduleForm.value.freqMode === 'WEEKLY' && scheduleForm.value.weekDays.length === 0) {
+    ElMessage.warning('按周检查需至少选择一个星期'); return
+  }
+  if (scheduleForm.value.freqMode === 'MONTHLY' && scheduleForm.value.monthDays.length === 0) {
+    ElMessage.warning('按月检查需至少选择一个日期'); return
+  }
   scheduleSaving.value = true
   try {
     const fm = scheduleForm.value.freqMode
@@ -770,7 +777,7 @@ defineExpose({ reload: loadAll })
     <div class="scv-section">
       <div class="scv-head">
         <div class="scv-head-left">
-          <Calendar class="w-4 h-4" style="color:#8b5cf6" />
+          <Calendar class="w-4 h-4" style="color:var(--insp-accent)" />
           <span class="scv-title">调度组</span>
           <span v-if="plans.length" class="scv-count">{{ plans.length }}</span>
         </div>
@@ -852,7 +859,7 @@ defineExpose({ reload: loadAll })
     <div class="scv-section">
       <div class="scv-head">
         <div class="scv-head-left">
-          <BarChart3 class="w-4 h-4" style="color:#8b5cf6" />
+          <BarChart3 class="w-4 h-4" style="color:var(--insp-accent)" />
           <span class="scv-title">分区评价配置</span>
           <span v-if="hasTreeData" class="scv-count">{{ flatSectionsWithDepth.length }} 个分区</span>
           <span v-else-if="props.sections.length" class="scv-count">{{ props.sections.length }} 个分区</span>

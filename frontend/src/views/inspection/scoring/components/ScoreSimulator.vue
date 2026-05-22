@@ -14,6 +14,13 @@
     <!-- Loading -->
     <div v-if="loadingItems" class="sim-empty">加载检查项...</div>
 
+    <!-- Load error (区分于"空数据") -->
+    <div v-else-if="loadError" class="sim-error">
+      <AlertTriangle :size="20" class="sim-error-icon" />
+      <span class="sim-error-text">检查项加载失败</span>
+      <button class="sim-error-retry" @click="loadTemplateItems">重试</button>
+    </div>
+
     <!-- No scored items -->
     <div v-else-if="scoredItems.length === 0" class="sim-empty">
       无可评分的检查项
@@ -110,7 +117,7 @@
 <script setup lang="ts">
 import type { LongId } from '@/types/common'
 import { ref, computed, watch, onMounted } from 'vue'
-import { Calculator, RotateCcw } from 'lucide-vue-next'
+import { Calculator, RotateCcw, AlertTriangle } from 'lucide-vue-next'
 import { inspTemplateApi } from '@/api/inspection/template'
 import type { TemplateItem } from '@/types/insp/template'
 import type { ScoringProfile, ScoreDimension, GradeBand, CalculationRule } from '@/types/insp/scoring'
@@ -137,6 +144,14 @@ interface SimItem {
   itemScore: number
 }
 
+// 与 RuleConfigForm 写入的 config.conditions 结构对齐
+interface SimCondition {
+  itemCode: string
+  operator: string
+  value: string | number
+  minCount?: number
+}
+
 interface DimGroup {
   dimensionId: LongId | null
   dimensionName: string
@@ -148,6 +163,7 @@ interface DimGroup {
 }
 
 const loadingItems = ref(true)
+const loadError = ref(false)
 const scoredItems = ref<SimItem[]>([])
 const calcSteps = ref<string[]>([])
 
@@ -162,14 +178,15 @@ const precision = computed(() => props.profile?.precisionDigits ?? 2)
 
 async function loadTemplateItems() {
   loadingItems.value = true
+  loadError.value = false
   try {
     // Load sections for this template
     const sections = await inspTemplateApi.getSections(props.templateId)
-    const allItems: TemplateItem[] = []
-    for (const section of sections) {
-      const items = await inspTemplateApi.getItems(section.id)
-      allItems.push(...items)
-    }
+    // 并发加载各分区检查项, 避免串行 N+1
+    const itemLists = await Promise.all(
+      sections.map(section => inspTemplateApi.getItems(section.id))
+    )
+    const allItems: TemplateItem[] = itemLists.flat()
     // Filter scored items and build SimItem list
     scoredItems.value = allItems
       .filter(it => it.isScored)
@@ -190,6 +207,8 @@ async function loadTemplateItems() {
     recalculate()
   } catch (e) {
     console.error('Failed to load template items for simulator', e)
+    loadError.value = true
+    scoredItems.value = []
   } finally {
     loadingItems.value = false
   }
@@ -254,6 +273,41 @@ const dimensionGroups = computed<DimGroup[]>(() => {
 })
 
 // ==================== Calculation ====================
+
+// ==================== Rule condition evaluation ====================
+// 模拟器按 mockQuantity / itemScore 估算条件是否满足。
+// 注意: 历史累计 (minCount > 1) 无法在客户端模拟, 此处仅按"当次"判断。
+
+function compareNumber(actual: number, operator: string, target: number): boolean {
+  switch (operator) {
+    case 'eq': return actual === target
+    case 'neq': return actual !== target
+    case 'gt': return actual > target
+    case 'gte': return actual >= target
+    case 'lt': return actual < target
+    case 'lte': return actual <= target
+    default: return false
+  }
+}
+
+function evalCondition(cond: SimCondition): boolean {
+  const item = scoredItems.value.find(it => it.itemCode === cond.itemCode)
+  if (!item) return false
+  // 数值条件: 对扣/加分项, 用 mockQuantity (违规次数) 作为比较基准
+  const numTarget = typeof cond.value === 'number' ? cond.value : Number(cond.value)
+  if (!Number.isNaN(numTarget)) {
+    return compareNumber(item.mockQuantity || 0, cond.operator, numTarget)
+  }
+  // 文本条件 (通过/不通过、等级): 模拟器无法取真实结果, 视为未触发
+  return false
+}
+
+function evalConditionGroup(conditions: SimCondition[], logic: string): boolean {
+  if (conditions.length === 0) return false
+  return logic === 'ALL'
+    ? conditions.every(evalCondition)
+    : conditions.some(evalCondition)
+}
 
 function recalculate() {
   const steps: string[] = []
@@ -324,45 +378,62 @@ function recalculate() {
   }
 
   // Step 4: Apply rules (simplified client-side simulation)
+  // 与 RuleConfigForm 数据契约统一: 规则配置使用 config.conditions 数组
   for (const rule of props.rules) {
     if (!rule.isEnabled) continue
     try {
       const config = JSON.parse(rule.config)
+      const conditions: SimCondition[] = config.conditions || []
+      const logic: string = config.conditionLogic || 'ANY'
       switch (rule.ruleType) {
         case 'VETO': {
-          const vetoItems: string[] = config.vetoItems || []
-          const triggered = scoredItems.value.some(
-            it => vetoItems.includes(it.itemCode) && it.itemScore !== 0
-          )
-          if (triggered) {
+          if (evalConditionGroup(conditions, logic)) {
             const vetoScore = config.vetoScore ?? 0
-            steps.push(`[VETO] ${rule.ruleName}: 触发一票否决 > ${vetoScore}`)
+            steps.push(`${rule.ruleName}: 触发一票否决，设为 ${vetoScore} 分`)
             total = vetoScore
           }
           break
         }
+        case 'PENALTY': {
+          if (evalConditionGroup(conditions, logic)) {
+            const penalty = config.penaltyScore ?? 5
+            steps.push(`${rule.ruleName}: 触发额外扣分 -${penalty}`)
+            total -= penalty
+          }
+          break
+        }
         case 'BONUS': {
-          const bonusItems: string[] = config.bonusItems || []
-          const count = scoredItems.value.filter(
-            it => bonusItems.includes(it.itemCode) && it.itemScore > 0
-          ).length
-          if (count > 0) {
-            const bonus = (config.bonusScore ?? 0) * count
-            steps.push(`[BONUS] ${rule.ruleName}: +${bonus}`)
+          if (evalConditionGroup(conditions, logic)) {
+            const bonus = config.bonusScore ?? 5
+            steps.push(`${rule.ruleName}: 触发加分 +${bonus}`)
             total += bonus
           }
           break
         }
         case 'PROGRESSIVE': {
           const thresholds = (config.thresholds || []) as { count: number; penalty: number }[]
-          const deductionCount = scoredItems.value.filter(it => it.itemScore < 0).length
+          // 累计满足监控条件的项数
+          const hitCount = conditions.filter(c => evalCondition(c)).length
           let penalty = 0
-          for (const t of thresholds.sort((a, b) => a.count - b.count)) {
-            if (deductionCount >= t.count) penalty = t.penalty
+          for (const t of [...thresholds].sort((a, b) => a.count - b.count)) {
+            if (hitCount >= t.count) penalty = t.penalty
           }
           if (penalty > 0) {
-            steps.push(`[PROGRESSIVE] ${rule.ruleName}: ${deductionCount}项违规 > -${penalty}`)
+            steps.push(`${rule.ruleName}: ${hitCount} 项违规，扣 ${penalty} 分`)
             total -= penalty
+          }
+          break
+        }
+        case 'PROGRESSIVE_BONUS': {
+          const thresholds = (config.thresholds || []) as { count: number; bonus: number }[]
+          const hitCount = conditions.filter(c => evalCondition(c)).length
+          let bonus = 0
+          for (const t of [...thresholds].sort((a, b) => a.count - b.count)) {
+            if (hitCount >= t.count) bonus = t.bonus
+          }
+          if (bonus > 0) {
+            steps.push(`${rule.ruleName}: ${hitCount} 项达标，加 ${bonus} 分`)
+            total += bonus
           }
           break
         }
@@ -436,65 +507,76 @@ onMounted(() => {
 <style scoped>
 .sim-root { display:flex; flex-direction:column; gap:0; }
 
-.sim-header { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid #eef0f3; }
+.sim-header { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid var(--insp-border-subtle); }
 .sim-header-left { display:flex; align-items:center; gap:6px; }
-.sim-icon { color:#8c95a3; }
-.sim-title { font-size:13px; font-weight:600; color:#1e2a3a; }
+.sim-icon { color:var(--insp-ink-tertiary); }
+.sim-title { font-size:13px; font-weight:600; color:var(--insp-ink-primary); }
 
-.sim-btn-ghost { background:none; border:1px solid #dce1e8; border-radius:6px; padding:4px 8px; cursor:pointer; color:#8c95a3; display:flex; align-items:center; }
-.sim-btn-ghost:hover { color:#1a6dff; border-color:#b3d1ff; }
+.sim-btn-ghost { background:none; border:1px solid var(--insp-border-default); border-radius:6px; padding:4px 8px; cursor:pointer; color:var(--insp-ink-tertiary); display:flex; align-items:center; }
+.sim-btn-ghost:hover { color:var(--insp-accent); border-color:var(--insp-accent); }
 
-.sim-empty { text-align:center; padding:24px 16px; color:#b8c0cc; font-size:12px; }
+.sim-empty { text-align:center; padding:24px 16px; color:var(--insp-ink-quaternary); font-size:12px; }
+
+/* Load error state */
+.sim-error { display:flex; flex-direction:column; align-items:center; gap:8px; padding:24px 16px; }
+.sim-error-icon { color:var(--insp-fail); }
+.sim-error-text { font-size:12px; color:var(--insp-ink-secondary); }
+.sim-error-retry {
+  font-size:11px; padding:4px 14px; border:1px solid var(--insp-border-default);
+  border-radius:6px; background:var(--insp-bg-surface); color:var(--insp-ink-secondary);
+  cursor:pointer; transition:border-color var(--insp-t-fast), color var(--insp-t-fast);
+}
+.sim-error-retry:hover { border-color:var(--insp-accent); color:var(--insp-accent); }
 
 /* ===== Result banner ===== */
-.sim-result-banner { display:flex; align-items:center; gap:10px; padding:14px 16px; background:linear-gradient(135deg, #f0f7ff 0%, #f8f9fb 100%); border-bottom:1px solid #eef0f3; }
+.sim-result-banner { display:flex; align-items:center; gap:10px; padding:14px 16px; background:var(--insp-bg-subtle); border-bottom:1px solid var(--insp-border-subtle); }
 .sim-result-main { display:flex; align-items:baseline; gap:2px; }
-.sim-result-score { font-size:28px; font-weight:700; color:#1e2a3a; font-variant-numeric:tabular-nums; }
-.sim-result-unit { font-size:12px; color:#8c95a3; }
+.sim-result-score { font-size:28px; font-weight:700; color:var(--insp-ink-primary); font-variant-numeric:tabular-nums; }
+.sim-result-unit { font-size:12px; color:var(--insp-ink-tertiary); }
 .sim-result-grade { font-size:11px; font-weight:600; color:#fff; padding:3px 10px; border-radius:99px; }
-.sim-result-fail { font-size:11px; color:#d93025; font-weight:500; margin-left:auto; }
+.sim-result-fail { font-size:11px; color:var(--insp-fail); font-weight:500; margin-left:auto; }
 
 /* ===== Dimension groups ===== */
 .sim-dims { display:flex; flex-direction:column; }
-.sim-dim-group { border-bottom:1px solid #eef0f3; }
-.sim-dim-header { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:#fafbfc; }
-.sim-dim-name { font-size:12px; font-weight:600; color:#1e2a3a; }
-.sim-dim-meta { display:flex; align-items:center; gap:4px; font-size:11px; color:#8c95a3; }
-.sim-dim-sep { color:#dce1e8; }
-.sim-dim-score { font-weight:600; color:#1a6dff; }
-.sim-dim-score.is-fail { color:#d93025; }
+.sim-dim-group { border-bottom:1px solid var(--insp-border-subtle); }
+.sim-dim-header { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:var(--insp-bg-subtle); }
+.sim-dim-name { font-size:12px; font-weight:600; color:var(--insp-ink-primary); }
+.sim-dim-meta { display:flex; align-items:center; gap:4px; font-size:11px; color:var(--insp-ink-tertiary); }
+.sim-dim-sep { color:var(--insp-border-default); }
+.sim-dim-score { font-weight:600; color:var(--insp-accent); }
+.sim-dim-score.is-fail { color:var(--insp-fail); }
 
 /* ===== Items ===== */
 .sim-items { display:flex; flex-direction:column; }
-.sim-item { display:flex; align-items:center; justify-content:space-between; padding:6px 16px; gap:8px; border-top:1px solid #f4f5f7; }
-.sim-item:hover { background:#fafbfc; }
+.sim-item { display:flex; align-items:center; justify-content:space-between; padding:6px 16px; gap:8px; border-top:1px solid var(--insp-border-subtle); }
+.sim-item:hover { background:var(--insp-bg-subtle); }
 
 .sim-item-left { display:flex; align-items:center; gap:6px; flex:1; min-width:0; overflow:hidden; }
 .sim-item-mode { font-size:10px; font-weight:700; width:18px; height:18px; border-radius:4px; display:flex; align-items:center; justify-content:center; color:#fff; flex-shrink:0; }
-.mode-deduction { background:#ef4444; }
-.mode-addition { background:#22c55e; }
-.mode-fixed { background:#3b82f6; }
-.mode-response_mapped { background:#a855f7; }
-.sim-item-name { font-size:12px; color:#374151; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.sim-item-weight { font-size:10px; color:#8c95a3; background:#f4f6f9; padding:1px 4px; border-radius:3px; flex-shrink:0; }
+.mode-deduction { background:var(--insp-fail); }
+.mode-addition { background:var(--insp-pass); }
+.mode-fixed { background:var(--insp-accent); }
+.mode-response_mapped { background:var(--insp-info, #a855f7); }
+.sim-item-name { font-size:12px; color:var(--insp-ink-secondary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sim-item-weight { font-size:10px; color:var(--insp-ink-tertiary); background:var(--insp-bg-subtle); padding:1px 4px; border-radius:3px; flex-shrink:0; }
 
 .sim-item-right { display:flex; align-items:center; gap:4px; flex-shrink:0; }
-.sim-input { border:1px solid #dce1e8; border-radius:6px; padding:3px 6px; font-size:12px; outline:none; color:#1e2a3a; background:#fff; text-align:center; }
-.sim-input:focus { border-color:#7aadff; box-shadow:0 0 0 2px rgba(26,109,255,0.08); }
+.sim-input { border:1px solid var(--insp-border-default); border-radius:6px; padding:3px 6px; font-size:12px; outline:none; color:var(--insp-ink-primary); background:var(--insp-bg-surface); text-align:center; }
+.sim-input:focus { border-color:var(--insp-accent); box-shadow:0 0 0 2px var(--insp-accent-paler); }
 .sim-input-qty { width:44px; }
-.sim-item-x { font-size:10px; color:#b8c0cc; }
-.sim-item-config { font-size:12px; color:#5a6474; font-variant-numeric:tabular-nums; min-width:24px; text-align:right; }
-.sim-item-eq { font-size:10px; color:#b8c0cc; }
+.sim-item-x { font-size:10px; color:var(--insp-ink-quaternary); }
+.sim-item-config { font-size:12px; color:var(--insp-ink-secondary); font-variant-numeric:tabular-nums; min-width:24px; text-align:right; }
+.sim-item-eq { font-size:10px; color:var(--insp-ink-quaternary); }
 .sim-item-result { font-size:12px; font-weight:600; font-variant-numeric:tabular-nums; min-width:48px; text-align:right; }
-.sim-item-result.is-neg { color:#ef4444; }
-.sim-item-result.is-pos { color:#22c55e; }
+.sim-item-result.is-neg { color:var(--insp-fail); }
+.sim-item-result.is-pos { color:var(--insp-pass); }
 
 /* ===== Calc steps ===== */
-.sim-steps-detail { border-top:1px solid #eef0f3; }
-.sim-steps-summary { padding:10px 16px; font-size:11px; color:#8c95a3; cursor:pointer; user-select:none; }
-.sim-steps-summary:hover { color:#5a6474; }
+.sim-steps-detail { border-top:1px solid var(--insp-border-subtle); }
+.sim-steps-summary { padding:10px 16px; font-size:11px; color:var(--insp-ink-tertiary); cursor:pointer; user-select:none; }
+.sim-steps-summary:hover { color:var(--insp-ink-secondary); }
 .sim-steps { padding:0 16px 12px; display:flex; flex-direction:column; gap:4px; }
 .sim-step { display:flex; align-items:baseline; gap:6px; }
-.sim-step-num { font-size:9px; font-weight:700; color:#fff; background:#1a6dff; width:16px; height:16px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-.sim-step-text { font-size:11px; color:#5a6474; font-family:monospace; word-break:break-all; }
+.sim-step-num { font-size:9px; font-weight:700; color:#fff; background:var(--insp-accent); width:16px; height:16px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.sim-step-text { font-size:11px; color:var(--insp-ink-secondary); font-family:var(--insp-font-mono, monospace); word-break:break-all; }
 </style>

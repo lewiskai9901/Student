@@ -137,25 +137,20 @@
             <span class="hint">透明度指标</span>
           </div>
         </template>
-        <div class="appeal-stats">
+        <div class="appeal-stats appeal-stats--single">
           <div class="appeal-cell">
             <div class="appeal-num">{{ pendingAppeals }}</div>
-            <div class="appeal-lbl">待处理</div>
-          </div>
-          <div class="appeal-cell">
-            <div class="appeal-num text-success">{{ appealApproveRate }}%</div>
-            <div class="appeal-lbl">通过率</div>
-          </div>
-          <div class="appeal-cell">
-            <div class="appeal-num">{{ avgAppealDays }}d</div>
-            <div class="appeal-lbl">平均处理</div>
+            <div class="appeal-lbl">待处理申诉</div>
           </div>
         </div>
         <div class="appeal-hint" v-if="pendingAppeals === 0">
-          √ 当前无积压, 透明度良好
+          当前无积压, 透明度良好
+        </div>
+        <div class="appeal-hint appeal-hint--warn" v-else>
+          {{ pendingAppeals }} 条申诉待审核处理
         </div>
         <el-button class="mt-2 w-full" size="small" @click="goAppeals" link type="primary">
-          查看申诉详情 >
+          查看申诉详情 →
         </el-button>
       </el-card>
 
@@ -192,14 +187,14 @@
       <template #header>
         <div class="card-head">
           <span> 活跃预警</span>
-          <el-button link type="primary" size="small" @click="goAlerts">完整列表 ></el-button>
+          <el-button link type="primary" size="small" @click="goAlerts">完整列表 →</el-button>
         </div>
       </template>
       <el-table :data="activeAlerts.slice(0, 8)" size="small" v-loading="loading">
         <el-table-column label="级别" width="80">
           <template #default="{ row }">
             <el-tag size="small" :type="row.severity === 'CRITICAL' ? 'danger' : 'warning'">
-              {{ row.severity }}
+              {{ severityLabel(row.severity) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -217,7 +212,7 @@
         </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
-            <el-tag size="small" :type="row.status === 'OPEN' ? 'danger' : 'info'">{{ row.status }}</el-tag>
+            <el-tag size="small" :type="row.status === 'OPEN' ? 'danger' : 'info'">{{ alertStatusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
       </el-table>
@@ -248,13 +243,15 @@ interface AlertItem {
 }
 
 const projectId = ref<LongId | null>(null)
-const projects = ref<{ id: LongId; projectName: string }[]>([])
+// 直接复用 executionStore.projects, 不再重复维护本地副本
+const projects = computed(() =>
+  (executionStore.projects || []).map((p: any) => ({ id: p.id as LongId, projectName: p.projectName as string }))
+)
 const loading = ref(false)
 
 const allDailyAgg = ref<Map<LongId, DailyTarget>>(new Map())
 const correctiveSummary = ref<any>(null)
 const activeAlerts = ref<AlertItem[]>([])
-const inspectorList = ref<{ name: string; count: number; rank: number; pct: number }[]>([])
 const taskKpi = ref<any>(null)
 
 function kpiColor(rate?: number) {
@@ -264,8 +261,14 @@ function kpiColor(rate?: number) {
   return 'text-danger'
 }
 const pendingAppeals = ref(0)
-const appealApproveRate = ref(0)
-const avgAppealDays = ref(0)
+
+// 枚举 label 映射 (统一展示, 不裸露 OPEN/CRITICAL)
+const SEVERITY_LABEL: Record<string, string> = { INFO: '信息', WARNING: '警告', CRITICAL: '严重' }
+const ALERT_STATUS_LABEL: Record<string, string> = {
+  OPEN: '待处理', ACKNOWLEDGED: '已确认', RESOLVED: '已解决', DISMISSED: '已忽略',
+}
+function severityLabel(s?: string) { return s ? (SEVERITY_LABEL[s] || s) : '—' }
+function alertStatusLabel(s?: string) { return s ? (ALERT_STATUS_LABEL[s] || s) : '—' }
 
 const redlineBroken = computed(() =>
   Array.from(allDailyAgg.value.values()).filter(t => Math.abs(Number(t.totalDeductions || 0)) >= 100)
@@ -305,31 +308,34 @@ const closeRateColor = computed(() => {
 
 async function loadProjects() {
   await executionStore.loadProjects()
-  projects.value = (executionStore.projects || []).map((p: any) => ({ id: p.id, projectName: p.projectName }))
   if (projects.value.length && !projectId.value) projectId.value = projects.value[0].id
 }
 
-/** 累计 30 天 daily summaries 聚合到 target */
+/** 累计 30 天 daily summaries 聚合到 target.
+ *  并发拉取 30 天 ranking (原串行阻塞首屏).
+ *  注: 后端无"区间聚合"接口, 建议未来加 /analytics/deduction-aggregate?days=30 替代此 30 次扇出. */
 async function loadDailyAgg() {
   if (!projectId.value) return
   const map = new Map<LongId, DailyTarget>()
   const today = new Date()
-  // 拉最近 30 天每天 ranking, 按 targetId 累加 totalDeductions
+  const dates: string[] = []
   for (let i = 0; i < 30; i++) {
     const d = new Date(today); d.setDate(today.getDate() - i)
-    const ds = d.toISOString().slice(0, 10)
-    try {
-      const rows = await analyticsApi.getDailyRanking(projectId.value, ds) as any[]
-      for (const r of rows) {
-        const id = r.targetId
-        if (!map.has(id)) {
-          map.set(id, { targetId: id, targetName: r.targetName, avgScore: null, totalDeductions: 0,
-                        orgUnitId: r.orgUnitId, orgUnitName: r.orgUnitName })
-        }
-        const t = map.get(id)!
-        t.totalDeductions = (Number(t.totalDeductions) || 0) + Number(r.totalDeductions || 0)
+    dates.push(d.toISOString().slice(0, 10))
+  }
+  const results = await Promise.all(
+    dates.map(ds => analyticsApi.getDailyRanking(projectId.value!, ds).catch(() => [] as any[]))
+  )
+  for (const rows of results) {
+    for (const r of (rows as any[])) {
+      const id = r.targetId
+      if (!map.has(id)) {
+        map.set(id, { targetId: id, targetName: r.targetName, avgScore: null, totalDeductions: 0,
+                      orgUnitId: r.orgUnitId, orgUnitName: r.orgUnitName })
       }
-    } catch { /* skip */ }
+      const t = map.get(id)!
+      t.totalDeductions = (Number(t.totalDeductions) || 0) + Number(r.totalDeductions || 0)
+    }
   }
   allDailyAgg.value = map
 }
@@ -350,19 +356,11 @@ async function loadAlerts() {
   } catch { activeAlerts.value = [] }
 }
 
-async function loadInspectors() {
-  // 用 audit-logs 推导每个检查员任务量 (没有专门 API)
-  // fallback: 简化为占位数据
-  inspectorList.value = []
-}
-
 async function loadAppeals() {
   try {
     const pending = await http.get<any[]>('/inspection/appeals/pending')
     pendingAppeals.value = ((pending as any) || []).length
-    // approve rate / avg days 需要全量 audit, 简化估算
-    appealApproveRate.value = 0
-    avgAppealDays.value = 0
+    // 通过率 / 平均处理时长需后端审计聚合接口, 无真实数据来源故不展示恒 0 指标.
   } catch { pendingAppeals.value = 0 }
 }
 
@@ -378,7 +376,7 @@ async function loadTaskKpi() {
 async function loadAll() {
   loading.value = true
   try {
-    await Promise.all([loadDailyAgg(), loadCorrective(), loadAlerts(), loadInspectors(), loadAppeals(), loadTaskKpi()])
+    await Promise.all([loadDailyAgg(), loadCorrective(), loadAlerts(), loadAppeals(), loadTaskKpi()])
   } finally { loading.value = false }
 }
 
@@ -427,20 +425,14 @@ onMounted(async () => {
 .redline-fill.warn { background: linear-gradient(90deg, #f59e0b, #ea580c); }
 .redline-num { color: #ef4444; font-weight: 600; text-align: right; }
 
-/* 检查员 */
-.inspector-list { display: flex; flex-direction: column; gap: 8px; }
-.inspector-item { display: grid; grid-template-columns: 24px 90px 1fr 40px; gap: 12px; align-items: center; font-size: 13px; }
-.inspector-item .rank { background: #f1f5f9; color: #64748b; border-radius: 4px; text-align: center; font-size: 11px; padding: 2px; }
-.bar-bg { height: 6px; background: #f1f5f9; border-radius: 3px; overflow: hidden; }
-.bar { height: 100%; background: #3b82f6; border-radius: 3px; }
-.num { text-align: right; font-weight: 500; color: #475569; }
-
 /* 申诉 */
 .appeal-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px 0; }
+.appeal-stats--single { grid-template-columns: 1fr; }
 .appeal-cell { text-align: center; }
 .appeal-num { font-size: 24px; font-weight: 700; color: #1e293b; line-height: 1; font-variant-numeric: tabular-nums; }
 .appeal-lbl { font-size: 11px; color: #94a3b8; margin-top: 4px; }
 .appeal-hint { text-align: center; font-size: 12px; color: #64748b; padding: 8px 0; background: #f0fdf4; border-radius: 6px; margin: 8px 0; }
+.appeal-hint--warn { background: var(--insp-warn-pale); color: var(--insp-warn); }
 
 /* 整改环形图 */
 .circle-progress { position: relative; display: flex; justify-content: center; padding: 8px 0; }

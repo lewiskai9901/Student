@@ -238,7 +238,7 @@ async function handleSave() {
       <div class="gse-row">
         <div class="gse-field" style="flex: 1">
           <label class="gse-label">方案名称</label>
-          <el-input v-model="form.displayName" placeholder="如：卫生流动红旗" size="small" />
+          <el-input v-model="form.displayName" placeholder="如：标准五级评定" size="small" />
         </div>
         <div class="gse-field" style="width: 160px">
           <label class="gse-label">映射类型</label>
@@ -262,8 +262,13 @@ async function handleSave() {
       </el-button>
     </div>
 
-    <!-- Grade table -->
-    <el-table :data="form.grades" size="small" stripe class="gse-table" max-height="320">
+    <!-- Grade table — 仅在有等级时显示, 否则显示空状态 -->
+    <div v-if="form.grades.length === 0" class="gse-empty">
+      <p class="gse-empty__title">暂无等级</p>
+      <p class="gse-empty__sub">点击上方快速模板，或在下方添加第一个等级</p>
+      <el-button type="primary" size="small" @click="addGrade">+ 添加第一个等级</el-button>
+    </div>
+    <el-table v-else :data="form.grades" size="small" stripe class="gse-table" max-height="320">
       <el-table-column label="#" width="40" align="center">
         <template #default="{ $index }">
           <span class="text-xs text-gray-400">{{ $index + 1 }}</span>
@@ -303,7 +308,7 @@ async function handleSave() {
       </el-table-column>
     </el-table>
 
-    <el-button text type="primary" size="small" class="gse-add-btn" @click="addGrade">+ 添加等级</el-button>
+    <el-button v-if="form.grades.length > 0" text type="primary" size="small" class="gse-add-btn" @click="addGrade">+ 添加等级</el-button>
 
     <!-- Validation warnings -->
     <div v-if="validationWarnings.length > 0" class="gse-warnings">
@@ -358,6 +363,27 @@ async function handleSave() {
 }
 .gse-table {
   width: 100%;
+}
+.gse-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 28px 16px;
+  border: 1px dashed #dce1e8;
+  border-radius: 6px;
+  background: #fafbfc;
+}
+.gse-empty__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+}
+.gse-empty__sub {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: #9ca3af;
 }
 .gse-add-btn {
   margin-top: 8px;

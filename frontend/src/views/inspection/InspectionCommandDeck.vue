@@ -355,7 +355,7 @@ onMounted(() => loadAll())
               <span class="bin-row__deadline" :class="{ 'is-overdue': isOverdue(c.deadline) }">
                 <Clock :size="11" /> {{ deadlineLabel(c.deadline) }}
               </span>
-              <button class="bin-cta">处理 ></button>
+              <button class="bin-cta">处理 →</button>
             </div>
           </li>
         </ul>
@@ -372,7 +372,7 @@ onMounted(() => loadAll())
             <FileWarning :size="14" class="bin-icon" />
             <span class="bin-title">我的申诉</span>
           </div>
-          <button class="bin-link" @click="router.push('/inspection/appeals/my')">查看全部 ></button>
+          <button class="bin-link" @click="router.push('/inspection/appeals/my')">查看全部 →</button>
         </header>
         <div class="bin-stats-row" v-if="myAppeals.length">
           <div class="stat-cell">
@@ -408,7 +408,7 @@ onMounted(() => loadAll())
             <Sparkles :size="14" class="bin-icon" />
             <span class="bin-title">关于我的检查</span>
           </div>
-          <button class="bin-link" @click="goAboutMe">完整记录 ></button>
+          <button class="bin-link" @click="goAboutMe">完整记录 →</button>
         </header>
         <p class="bin-hint">
           查看针对你或你所在组织的检查记录, 不服扣分可发起申诉.

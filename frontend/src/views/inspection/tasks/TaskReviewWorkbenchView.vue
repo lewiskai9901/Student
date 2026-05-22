@@ -4,7 +4,7 @@
  * 双栏 + 键盘驱动 (J/K 切换 · A 通过+发布 · R 驳回 · E 延期 · Esc 取消)
  */
 import type { LongId } from '@/types/common'
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import SubmitAppealDialog from '@/views/inspection/appeals/components/SubmitAppealDialog.vue'
@@ -26,6 +26,9 @@ const MAX_AUTO_REJECT = 3
 const loading = ref(false)
 const loadingDetails = ref(false)
 const submitting = ref(false)
+// 加载失败态: 区分"无待审/无明细"与"加载出错"
+const queueLoadError = ref('')
+const detailsLoadError = ref('')
 const submittedTasks = ref<InspTask[]>([])
 // P2: 仅看延迟交付 (审核侧 cherry pick)
 const lateOnly = ref(false)
@@ -39,6 +42,13 @@ const submissionDetails = ref<Map<LongId, SubmissionDetail[]>>(new Map())
 
 const reviewComment = ref('')
 const showRejectInline = ref(false)
+// 驳回理由输入框 ref — autofocus 在动态渲染下失效, 改 ref + nextTick().focus()
+const rejectTextareaRef = ref<HTMLTextAreaElement | null>(null)
+
+// 切到驳回态时聚焦输入框
+watch(showRejectInline, (open) => {
+  if (open) nextTick(() => rejectTextareaRef.value?.focus())
+})
 
 // 申诉对话框
 const appealDialog = ref(false)
@@ -65,6 +75,7 @@ const subjectAggregate = computed(() => {
 // ── Loaders ──
 async function loadSubmittedTasks() {
   loading.value = true
+  queueLoadError.value = ''
   try {
     const all = await getTasks()
     submittedTasks.value = all.filter(t => t.status === 'SUBMITTED' || t.status === 'UNDER_REVIEW')
@@ -81,7 +92,8 @@ async function loadSubmittedTasks() {
       await selectTask(submittedTasks.value[0])
     }
   } catch (e: any) {
-    ElMessage.error(e.message || '加载待审任务失败')
+    queueLoadError.value = e?.message || '未知错误'
+    ElMessage.error('加载待审任务失败: ' + queueLoadError.value)
   } finally {
     loading.value = false
   }
@@ -92,18 +104,35 @@ async function selectTask(task: InspTask) {
   reviewComment.value = ''
   showRejectInline.value = false
   loadingDetails.value = true
+  detailsLoadError.value = ''
   try {
     const subs = await getSubmissions({ taskId: task.id })
     taskSubmissions.value = (subs || []).filter(s => s.taskId === task.id)
+    // 并发拉明细; 任一明细加载失败需让审核员知道, 不能静默
+    let failedCount = 0
     const detailMap = new Map<LongId, SubmissionDetail[]>()
-    for (const sub of taskSubmissions.value) {
-      try {
-        detailMap.set(sub.id, await getDetails(sub.id))
-      } catch { /* ignore */ }
-    }
+    const results = await Promise.all(
+      taskSubmissions.value.map(async (sub) => {
+        try {
+          return { id: sub.id, dets: await getDetails(sub.id) }
+        } catch {
+          failedCount++
+          return { id: sub.id, dets: [] as SubmissionDetail[] }
+        }
+      })
+    )
+    for (const r of results) detailMap.set(r.id, r.dets)
     submissionDetails.value = detailMap
+    if (failedCount > 0) {
+      detailsLoadError.value = `${failedCount} 个受检对象的明细加载失败`
+      ElMessage.warning(detailsLoadError.value + '，显示可能不完整')
+    }
   } catch (e: any) {
-    console.warn('Load details failed', e)
+    // 整体加载失败 — 区分于"无明细", 给出明确错误态
+    detailsLoadError.value = e?.message || '明细加载失败'
+    taskSubmissions.value = []
+    submissionDetails.value = new Map()
+    ElMessage.error('打分数据加载失败: ' + detailsLoadError.value)
   } finally {
     loadingDetails.value = false
   }
@@ -112,17 +141,32 @@ async function selectTask(task: InspTask) {
 // ── Verdict actions ──
 async function approve() {
   if (!selectedTaskId.value) return
+  // 审核人姓名缺失时阻止操作 — 不能伪造 'admin' 污染审计记录
+  const reviewerName = authStore.userName
+  if (!reviewerName) {
+    ElMessage.error('无法获取当前用户姓名，请重新登录后再审核')
+    return
+  }
   submitting.value = true
   try {
+    // 第一步: 审核通过
     await reviewTask(selectedTaskId.value, {
-      reviewerName: authStore.userName || 'admin',
+      reviewerName,
       comment: reviewComment.value || '审核通过',
     })
+  } catch (e: any) {
+    ElMessage.error('审核失败: ' + (e?.message || '未知错误'))
+    submitting.value = false
+    return
+  }
+  // 第二步: 发布. reviewTask 已成功, publish 失败时单独提示且不跳到下一条,
+  // 让审核员知道该任务"已审核未发布", 可手动重试
+  try {
     await publishTask(selectedTaskId.value)
     ElMessage.success('已通过并发布')
     moveToNext()
   } catch (e: any) {
-    ElMessage.error(e.message || '审批失败')
+    ElMessage.error('已通过审核，但发布失败: ' + (e?.message || '未知错误') + '，请稍后重试发布')
   } finally {
     submitting.value = false
   }
@@ -319,10 +363,15 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
               :title="`延迟 ${t.lateDays} 天交付`"
             >迟{{ t.lateDays }}</span>
           </li>
-          <li v-if="!loading && filteredTasks.length === 0 && lateOnly" class="queue-empty">
+          <li v-if="!loading && queueLoadError" class="queue-empty">
+            <div class="insp-stamp queue-empty__err">待审清单加载失败</div>
+            <p class="queue-empty__hint">{{ queueLoadError }}</p>
+            <button class="insp-btn insp-btn--sm" @click="loadSubmittedTasks">重新加载</button>
+          </li>
+          <li v-else-if="!loading && filteredTasks.length === 0 && lateOnly" class="queue-empty">
             <div class="insp-stamp">没有延迟交付任务</div>
           </li>
-          <li v-if="!loading && submittedTasks.length === 0" class="queue-empty">
+          <li v-else-if="!loading && submittedTasks.length === 0" class="queue-empty">
             <div class="insp-stamp">无待审</div>
           </li>
         </ol>
@@ -433,8 +482,17 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
               </ul>
             </article>
 
-            <div v-if="!loadingDetails && taskSubmissions.length === 0" class="subs-empty">
+            <div v-if="!loadingDetails && detailsLoadError && taskSubmissions.length === 0" class="subs-empty">
+              <span class="insp-stamp subs-empty__err">打分数据加载失败</span>
+              <p class="subs-empty__hint">{{ detailsLoadError }}</p>
+              <button class="insp-btn insp-btn--sm" @click="selectedTask && selectTask(selectedTask)">重新加载</button>
+            </div>
+            <div v-else-if="!loadingDetails && taskSubmissions.length === 0" class="subs-empty">
               <span class="insp-stamp">无打分数据</span>
+            </div>
+            <div v-else-if="!loadingDetails && detailsLoadError" class="subs-empty subs-empty--inline">
+              <span class="subs-empty__hint">部分明细加载失败：{{ detailsLoadError }}</span>
+              <button class="insp-btn insp-btn--sm" @click="selectedTask && selectTask(selectedTask)">重新加载</button>
             </div>
           </section>
 
@@ -473,9 +531,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
                 <span class="insp-stamp">驳回</span>
                 <span class="reject-warn">驳回必须填写明确理由让检查员理解需要修改什么</span>
               </div>
-              <textarea v-model="reviewComment" rows="4" class="verdict-input"
-                        placeholder="例: 经济2025-2 班的卫生扣分缺乏照片证据, 请补充后重新提交"
-                        autofocus />
+              <textarea ref="rejectTextareaRef" v-model="reviewComment" rows="4" class="verdict-input"
+                        placeholder="例: 经济2025-2 班的卫生扣分缺乏照片证据, 请补充后重新提交" />
               <div class="verdict-actions">
                 <button class="insp-btn" @click="showRejectInline = false">取消</button>
                 <button class="insp-btn insp-btn--primary"
@@ -485,6 +542,13 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           </section>
         </template>
 
+        <div v-else-if="queueLoadError" class="detail-empty">
+          <div class="insp-stamp detail-empty__err">加载失败</div>
+          <p class="detail-empty__hint">
+            待审清单加载失败：{{ queueLoadError }}
+          </p>
+          <button class="insp-btn insp-btn--sm" @click="loadSubmittedTasks">重新加载</button>
+        </div>
         <div v-else class="detail-empty">
           <div class="insp-stamp">无待审</div>
           <p class="detail-empty__hint">
@@ -610,7 +674,18 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 .queue-item__progress { font-family: var(--insp-font-mono); font-size: var(--insp-text-xs); color: var(--insp-ink-tertiary); }
 .queue-item__progress .dim { color: var(--insp-ink-quaternary); }
 
-.queue-empty { padding: var(--insp-sp-8) var(--insp-sp-5); text-align: center; }
+.queue-empty {
+  padding: var(--insp-sp-8) var(--insp-sp-5);
+  text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: var(--insp-sp-3);
+}
+.queue-empty__err { color: var(--insp-fail); }
+.queue-empty__hint {
+  margin: 0;
+  font-size: var(--insp-text-xs);
+  color: var(--insp-ink-tertiary);
+  max-width: 240px;
+}
 
 /* ─ Detail ─────── */
 .detail {
@@ -798,7 +873,17 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 }
 .detail-row__appeal:hover { background: var(--insp-accent-paler); }
 
-.subs-empty { padding: var(--insp-sp-8); text-align: center; }
+.subs-empty {
+  padding: var(--insp-sp-8); text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: var(--insp-sp-3);
+}
+.subs-empty--inline { padding: var(--insp-sp-4); }
+.subs-empty__err { color: var(--insp-fail); }
+.subs-empty__hint {
+  margin: 0;
+  font-size: var(--insp-text-sm);
+  color: var(--insp-ink-tertiary);
+}
 
 /* ─ Verdict ─────── */
 .verdict { margin-top: var(--insp-sp-5); }
@@ -858,9 +943,11 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 }
 .detail-empty__hint {
   margin-top: var(--insp-sp-4);
+  margin-bottom: var(--insp-sp-4);
   color: var(--insp-ink-tertiary);
   font-size: var(--insp-text-md);
 }
+.detail-empty__err { color: var(--insp-fail); }
 
 /* ─ Responsive ─────── */
 @media (max-width: 1100px) {

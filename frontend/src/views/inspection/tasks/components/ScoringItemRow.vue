@@ -8,10 +8,14 @@
  */
 import type { LongId } from '@/types/common'
 import { computed, ref } from 'vue'
-import { Check, X, Flag, Sparkles } from 'lucide-vue-next'
+import { Check, X, Flag, Sparkles, Camera } from 'lucide-vue-next'
+import { ElMessage } from 'element-plus'
 import type { SubmissionDetail } from '@/types/insp/project'
 import AiSuggestionDialog from './AiSuggestionDialog.vue'
 import type { SuggestScoreResponse } from '@/api/inspection/aiScoring'
+import { uploadImage } from '@/api/upload'
+import { uploadFile } from '@/api/file'
+import { addEvidence } from '@/api/inspection/submission'
 
 const props = defineProps<{
   detail: SubmissionDetail
@@ -87,6 +91,49 @@ const captureNeedsExpandedInput = computed(() => {
   if (!props.isNonScoring(props.detail)) return false
   return ['TEXTAREA', 'TEXT', 'RICH_TEXT', 'NUMBER', 'DATE', 'TIME', 'DATETIME', 'SELECT', 'RADIO'].includes(props.detail.itemType)
 })
+
+// ---------- PHOTO / VIDEO 桌面上传 ----------
+const mediaUploading = ref(false)
+
+// itemType → 证据类型 / 中文名
+const MEDIA_META: Record<string, { evidence: 'PHOTO' | 'VIDEO' | 'DOCUMENT'; label: string }> = {
+  PHOTO: { evidence: 'PHOTO', label: '照片' },
+  VIDEO: { evidence: 'VIDEO', label: '视频' },
+  FILE_UPLOAD: { evidence: 'DOCUMENT', label: '文件' },
+}
+
+async function handleMediaUpload(file: File) {
+  const d = props.detail
+  const meta = MEDIA_META[d.itemType] || MEDIA_META.FILE_UPLOAD
+  mediaUploading.value = true
+  try {
+    // 图片走 uploadImage, 其余走通用 uploadFile
+    const url = meta.evidence === 'PHOTO'
+      ? (await uploadImage(file)).url
+      : (await uploadFile(file, 'inspection-evidence', d.submissionId)).fileUrl
+    // 关联为该提交的证据
+    await addEvidence(d.submissionId, {
+      detailId: String(d.id).startsWith('tmp-') ? undefined : d.id,
+      evidenceType: meta.evidence,
+      fileName: file.name,
+      fileUrl: url,
+    })
+    // URL 写回 responseValue 通道, 触发持久化
+    emit('update:remarkInput', d.id, url)
+    emit('remarkChange', d)
+    ElMessage.success(`${meta.label}已上传`)
+  } catch (e: any) {
+    const msg = e?.response?.data?.message || e?.message || '未知错误'
+    ElMessage.error(`${meta.label}上传失败: ` + msg)
+  } finally {
+    mediaUploading.value = false
+  }
+}
+
+function onMediaChange(uploadFileObj: any) {
+  const raw: File | undefined = uploadFileObj?.raw ?? uploadFileObj
+  if (raw) handleMediaUpload(raw)
+}
 </script>
 
 <template>
@@ -526,13 +573,42 @@ const captureNeedsExpandedInput = computed(() => {
         />
       </div>
 
-      <!-- PHOTO placeholder -->
+      <!-- PHOTO / VIDEO 上传 (桌面端) -->
       <div
         v-else-if="detail.itemType === 'PHOTO' || detail.itemType === 'VIDEO'"
         class="px-3 pb-2"
       >
-        <div class="flex items-center gap-2 text-xs text-gray-400 py-1">
-          <span>{{ detail.itemType === 'PHOTO' ? '' : '' }} {{ detail.itemType === 'PHOTO' ? '拍照' : '视频' }}功能将在移动端支持</span>
+        <div class="flex items-center gap-2">
+          <!-- 已上传预览 -->
+          <a
+            v-if="remarkInputs[detail.id]"
+            :href="remarkInputs[detail.id]"
+            target="_blank"
+            rel="noopener"
+            class="w-16 h-16 rounded border border-gray-200 overflow-hidden bg-gray-50 flex items-center justify-center shrink-0"
+          >
+            <img
+              v-if="detail.itemType === 'PHOTO'"
+              :src="remarkInputs[detail.id]"
+              class="w-full h-full object-cover"
+              alt="证据"
+            />
+            <span v-else class="text-[10px] text-blue-500 px-1 text-center">查看视频</span>
+          </a>
+          <!-- 上传按钮 -->
+          <el-upload
+            v-if="editable && !isDisabled"
+            :auto-upload="false"
+            :show-file-list="false"
+            :accept="detail.itemType === 'PHOTO' ? 'image/*' : 'video/*'"
+            :on-change="onMediaChange"
+          >
+            <el-button size="small" :loading="mediaUploading">
+              <Camera class="w-3.5 h-3.5 mr-1" />
+              {{ remarkInputs[detail.id] ? '重新上传' : (detail.itemType === 'PHOTO' ? '上传照片' : '上传视频') }}
+            </el-button>
+          </el-upload>
+          <span v-else-if="!remarkInputs[detail.id]" class="text-xs text-gray-400">未上传</span>
         </div>
       </div>
 
@@ -551,15 +627,43 @@ const captureNeedsExpandedInput = computed(() => {
         />
       </div>
 
-      <!-- SIGNATURE / FILE_UPLOAD / GPS / BARCODE placeholders -->
+      <!-- FILE_UPLOAD 文件上传 (桌面端) -->
       <div
-        v-else-if="['SIGNATURE', 'FILE_UPLOAD', 'GPS', 'BARCODE'].includes(detail.itemType)"
+        v-else-if="detail.itemType === 'FILE_UPLOAD'"
+        class="px-3 pb-2"
+      >
+        <div class="flex items-center gap-2">
+          <a
+            v-if="remarkInputs[detail.id]"
+            :href="remarkInputs[detail.id]"
+            target="_blank"
+            rel="noopener"
+            class="text-xs text-blue-500 truncate max-w-[200px]"
+          >已上传文件</a>
+          <el-upload
+            v-if="editable && !isDisabled"
+            :auto-upload="false"
+            :show-file-list="false"
+            :on-change="onMediaChange"
+          >
+            <el-button size="small" :loading="mediaUploading">
+              {{ remarkInputs[detail.id] ? '重新上传' : '选择文件' }}
+            </el-button>
+          </el-upload>
+          <span v-else-if="!remarkInputs[detail.id]" class="text-xs text-gray-400">未上传</span>
+        </div>
+      </div>
+
+      <!-- SIGNATURE / GPS / BARCODE — 需第三方/移动端能力, 暂以手工录入兜底 -->
+      <!-- 签名板需 signature_pad、扫码需 zxing/原生相机, 桌面端无现成能力, 故保留文本录入 -->
+      <div
+        v-else-if="['SIGNATURE', 'GPS', 'BARCODE'].includes(detail.itemType)"
         class="px-3 pb-2"
       >
         <input
           :value="remarkInputs[detail.id]"
           class="w-full rounded border border-gray-200 bg-gray-50/50 px-2 py-1.5 text-xs text-gray-700 outline-none focus:border-blue-300 placeholder:text-gray-400"
-          :placeholder="`请输入${detail.itemName}...`"
+          :placeholder="detail.itemType === 'GPS' ? '手工录入坐标 (经度,纬度)，移动端支持自动定位' : detail.itemType === 'BARCODE' ? '手工录入条码，移动端支持扫码' : '手工录入签名说明，移动端支持手写签名'"
           @input="(e) => emit('update:remarkInput', detail.id, (e.target as HTMLInputElement).value)"
           @blur="emit('remarkChange', detail)"
           @keyup.enter="emit('remarkChange', detail)"

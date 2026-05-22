@@ -14,6 +14,7 @@ import {
   resolveAlert,
   dismissAlert,
 } from '@/api/inspection/alert'
+import { getProjects } from '@/api/inspection/project'
 import type {
   AlertRule,
   CreateAlertRuleRequest,
@@ -30,6 +31,7 @@ const rules = ref<AlertRule[]>([])
 const alerts = ref<Alert[]>([])
 const activeTab = ref<'alerts' | 'rules'>('alerts')
 const statusFilter = ref<AlertStatus | ''>('')
+const projectOptions = ref<{ id: LongId; projectName: string }[]>([])
 
 // Dialog
 const dialogVisible = ref(false)
@@ -100,6 +102,10 @@ function statusLabel(status: AlertStatus): string {
   return statusOptions.find(o => o.value === status)?.label ?? status
 }
 
+function severityLabel(severity: AlertSeverity): string {
+  return severityOptions.find(o => o.value === severity)?.label ?? severity
+}
+
 // ==================== Data Loading ====================
 
 const filteredAlerts = computed(() => {
@@ -123,10 +129,19 @@ async function loadAlerts() {
   }
 }
 
+async function loadProjectOptions() {
+  try {
+    const list = await getProjects({})
+    projectOptions.value = (list || []).map(p => ({ id: p.id, projectName: p.projectName }))
+  } catch {
+    projectOptions.value = []
+  }
+}
+
 async function loadData() {
   loading.value = true
   try {
-    await Promise.all([loadRules(), loadAlerts()])
+    await Promise.all([loadRules(), loadAlerts(), loadProjectOptions()])
   } finally {
     loading.value = false
   }
@@ -160,11 +175,36 @@ function openEdit(rule: AlertRule) {
   dialogVisible.value = true
 }
 
+/** 校验 JSON 字符串, 返回错误信息或 null */
+function validateJson(raw: string, label: string, requireObject = false): string | null {
+  const s = (raw || '').trim()
+  if (!s) return null // 空值由上层决定是否允许
+  try {
+    const parsed = JSON.parse(s)
+    if (requireObject && (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed))) {
+      return `${label}必须是 JSON 对象 (如 {"threshold": 70})`
+    }
+    return null
+  } catch {
+    return `${label}不是合法的 JSON 格式`
+  }
+}
+
 async function handleSubmit() {
   if (!form.value.ruleName.trim()) {
     ElMessage.warning('请输入规则名称')
     return
   }
+  // 阈值配置必填且须为合法 JSON 对象
+  if (!form.value.thresholdConfig.trim()) {
+    ElMessage.warning('请填写阈值配置')
+    return
+  }
+  const thErr = validateJson(form.value.thresholdConfig, '阈值配置', true)
+  if (thErr) { ElMessage.error(thErr); return }
+  // 通知渠道可选, 但若填写须为合法 JSON
+  const ncErr = validateJson(form.value.notificationChannels, '通知渠道')
+  if (ncErr) { ElMessage.error(ncErr); return }
   try {
     if (editingId.value) {
       await updateAlertRule(editingId.value, { ...form.value })
@@ -274,7 +314,7 @@ onMounted(() => loadData())
           <el-table-column label="严重级别" width="90" align="center">
             <template #default="{ row }">
               <el-tag :type="severityTagType(row.severity)" size="small">
-                {{ row.severity }}
+                {{ severityLabel(row.severity) }}
               </el-tag>
             </template>
           </el-table-column>
@@ -345,7 +385,7 @@ onMounted(() => loadData())
           </el-table-column>
           <el-table-column label="严重级别" width="90" align="center">
             <template #default="{ row }">
-              <el-tag :type="severityTagType(row.severity)" size="small">{{ row.severity }}</el-tag>
+              <el-tag :type="severityTagType(row.severity)" size="small">{{ severityLabel(row.severity) }}</el-tag>
             </template>
           </el-table-column>
           <el-table-column label="阈值配置" min-width="180" show-overflow-tooltip>
@@ -416,8 +456,15 @@ onMounted(() => loadData())
           />
           <div class="text-xs text-gray-400 mt-1">JSON 数组格式，可选</div>
         </el-form-item>
-        <el-form-item label="关联项目ID">
-          <el-input-number v-model="form.projectId" :min="0" controls-position="right" placeholder="可选" />
+        <el-form-item label="关联项目">
+          <el-select v-model="form.projectId" clearable filterable placeholder="全部项目 (不限定)" class="w-full">
+            <el-option
+              v-for="p in projectOptions"
+              :key="p.id"
+              :label="p.projectName"
+              :value="p.id"
+            />
+          </el-select>
         </el-form-item>
       </el-form>
       <template #footer>

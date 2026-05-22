@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { LongId } from '@/types/common'
 import { computed, ref, watch } from 'vue'
+import { onClickOutside } from '@vueuse/core'
 import { Plus, Trash2, X } from 'lucide-vue-next'
 import type { RuleType } from '@/types/insp/scoring'
 import { ScoringModeConfig, type ScoringMode } from '@/types/insp/enums'
@@ -386,6 +387,9 @@ const customFormulaVariables = [
 // ==================== Item picker dropdown ====================
 
 const showItemPicker = ref(false)
+// 每个 ruleType 分支只渲染一个 .sp-add-cond-wrap, 单 ref 即可
+const itemPickerRef = ref<HTMLElement | null>(null)
+onClickOutside(itemPickerRef, () => { showItemPicker.value = false })
 </script>
 
 <template>
@@ -494,7 +498,7 @@ const showItemPicker = ref(false)
         </div>
 
         <!-- Add item picker -->
-        <div class="sp-add-cond-wrap">
+        <div class="sp-add-cond-wrap" ref="itemPickerRef">
           <button class="sp-text-btn" @click="showItemPicker = !showItemPicker">
             <Plus :size="12" /> 添加触发项
           </button>
@@ -637,7 +641,7 @@ const showItemPicker = ref(false)
           </div>
         </div>
 
-        <div class="sp-add-cond-wrap">
+        <div class="sp-add-cond-wrap" ref="itemPickerRef">
           <button class="sp-text-btn" @click="showItemPicker = !showItemPicker">
             <Plus :size="12" /> 添加监控项
           </button>
@@ -815,7 +819,7 @@ const showItemPicker = ref(false)
           </div>
         </div>
 
-        <div class="sp-add-cond-wrap">
+        <div class="sp-add-cond-wrap" ref="itemPickerRef">
           <button class="sp-text-btn" @click="showItemPicker = !showItemPicker">
             <Plus :size="12" /> 添加监控项
           </button>

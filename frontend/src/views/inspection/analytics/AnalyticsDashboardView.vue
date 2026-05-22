@@ -30,6 +30,27 @@
 
     <hr class="insp-rule insp-rule--strong head-divider" />
 
+    <!-- 项目加载失败 / 无项目 -->
+    <InspErrorState v-if="projectLoadError && !initializing"
+      :message="projectLoadError" @retry="retryLoad" />
+
+    <!-- 骨架屏 — 仅首次初始化时 (图表容器需常驻 DOM, 刷新用 v-loading 覆盖) -->
+    <template v-else-if="initializing">
+      <div class="skeleton-kpi">
+        <div v-for="i in 6" :key="i" class="sk-block sk-kpi" />
+      </div>
+      <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
+        <div class="sk-block sk-card" />
+        <div class="sk-block sk-card" />
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div class="sk-block sk-card" />
+        <div class="sk-block sk-card" />
+        <div class="sk-block sk-card" />
+      </div>
+    </template>
+
+    <div v-else v-loading="dashboardLoading">
     <!-- KPI Bar -->
     <section v-if="correctiveSummary" class="kpi-row">
       <div class="kpi-cell">
@@ -157,12 +178,14 @@
         <div ref="correctiveChartRef" class="chart-container" />
       </el-card>
     </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import type { LongId } from '@/types/common'
 import { ref, reactive, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ElMessage } from 'element-plus'
 import { use } from 'echarts/core'
 import { LineChart, BarChart, PieChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
@@ -175,6 +198,7 @@ import { PeriodTypeConfig } from '@/types/insp/enums'
 import type { PeriodType } from '@/types/insp/enums'
 import type { DailySummary } from '@/types/insp/analytics'
 import { CaseStatusConfig } from '@/types/insp/enums'
+import InspErrorState from '@/views/inspection/shared/InspErrorState.vue'
 
 use([LineChart, BarChart, PieChart, GridComponent, TooltipComponent, LegendComponent, CanvasRenderer])
 
@@ -182,6 +206,9 @@ const store = useInspAnalyticsStore()
 const executionStore = useInspExecutionStore()
 
 const projects = ref<{ id: LongId; projectName: string }[]>([])
+const projectLoadError = ref('')
+const initializing = ref(true)
+const dashboardLoading = ref(false)
 
 const filters = reactive({
   projectId: null as LongId | null,
@@ -198,19 +225,32 @@ const correctiveChartRef = ref<HTMLElement | null>(null)
 let trendChart: ECharts | null = null
 let comparisonChart: ECharts | null = null
 let correctiveChart: ECharts | null = null
+let resizeObserver: ResizeObserver | null = null
 
 // ========== Lifecycle ==========
 
 onMounted(async () => {
-  await loadProjects()
-  initCharts()
-  window.addEventListener('resize', handleResize)
+  initializing.value = true
+  try {
+    await loadProjects()
 
-  // Set default trend range: last 14 days
-  const end = new Date()
-  const start = new Date()
-  start.setDate(start.getDate() - 14)
-  trendRange.value = [start.toISOString().slice(0, 10), end.toISOString().slice(0, 10)]
+    // Set default trend range: last 14 days
+    const end = new Date()
+    const start = new Date()
+    start.setDate(start.getDate() - 14)
+    trendRange.value = [start.toISOString().slice(0, 10), end.toISOString().slice(0, 10)]
+  } finally {
+    initializing.value = false
+  }
+
+  await nextTick()
+  initCharts()
+
+  // 用 ResizeObserver 观察图表容器自身尺寸变化 (侧栏折叠等), 取代仅监听 window
+  resizeObserver = new ResizeObserver(() => handleResize())
+  for (const el of [trendChartRef.value, comparisonChartRef.value, correctiveChartRef.value]) {
+    if (el) resizeObserver.observe(el)
+  }
 
   if (filters.projectId) {
     await loadDashboard()
@@ -218,7 +258,8 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  window.removeEventListener('resize', handleResize)
+  resizeObserver?.disconnect()
+  resizeObserver = null
   trendChart?.dispose()
   comparisonChart?.dispose()
   correctiveChart?.dispose()
@@ -234,9 +275,13 @@ async function loadProjects() {
       filters.projectId = projects.value[0].id
       // 选定项目后, 自动定位最近一个有数据的日期 (向前回溯 14 天)
       await locateLatestDateWithData()
+    } else if (projects.value.length === 0) {
+      projectLoadError.value = '当前没有可用的检查项目'
     }
-  } catch {
+  } catch (e: any) {
     projects.value = []
+    projectLoadError.value = e?.message || '项目列表加载失败'
+    ElMessage.error('项目列表加载失败: ' + projectLoadError.value)
   }
 }
 
@@ -262,16 +307,39 @@ async function onProjectChange() {
   await loadDashboard()
 }
 
+async function retryLoad() {
+  projectLoadError.value = ''
+  initializing.value = true
+  try {
+    await loadProjects()
+  } finally {
+    initializing.value = false
+  }
+  await nextTick()
+  initCharts()
+  if (resizeObserver) {
+    for (const el of [trendChartRef.value, comparisonChartRef.value, correctiveChartRef.value]) {
+      if (el) resizeObserver.observe(el)
+    }
+  }
+  if (filters.projectId) await loadDashboard()
+}
+
 async function loadDashboard() {
   if (!filters.projectId || !filters.date) return
 
-  await Promise.all([
-    store.fetchDailyRanking(filters.projectId, filters.date),
-    store.fetchComparison(filters.projectId, filters.date),
-    store.fetchPeriodSummary(filters.projectId, filters.periodType, calculatePeriodStart(filters.periodType, filters.date)),
-    store.fetchCorrectiveSummary(filters.projectId),
-    loadTrend(),
-  ])
+  dashboardLoading.value = true
+  try {
+    await Promise.all([
+      store.fetchDailyRanking(filters.projectId, filters.date),
+      store.fetchComparison(filters.projectId, filters.date),
+      store.fetchPeriodSummary(filters.projectId, filters.periodType, calculatePeriodStart(filters.periodType, filters.date)),
+      store.fetchCorrectiveSummary(filters.projectId),
+      loadTrend(),
+    ])
+  } finally {
+    dashboardLoading.value = false
+  }
 
   await nextTick()
   updateTrendChart()
@@ -509,4 +577,25 @@ function passRate(row: DailySummary): string {
 .text-warning { color: #E6A23C; }
 .text-danger { color: #F56C6C; }
 .text-primary { color: #409EFF; }
+
+/* ── 骨架屏 ── */
+.skeleton-kpi {
+  display: flex; gap: var(--insp-sp-4);
+  margin-bottom: var(--insp-sp-6);
+}
+.sk-block {
+  background: linear-gradient(90deg,
+    var(--insp-bg-subtle) 25%,
+    var(--insp-bg-sunken) 37%,
+    var(--insp-bg-subtle) 63%);
+  background-size: 400% 100%;
+  animation: sk-shimmer 1.4s ease infinite;
+  border-radius: var(--insp-radius-md);
+}
+.sk-kpi { flex: 1; height: 76px; }
+.sk-card { height: 332px; }
+@keyframes sk-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
 </style>

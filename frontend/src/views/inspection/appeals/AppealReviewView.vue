@@ -20,6 +20,8 @@ const showRejectInline = ref(false)
 async function loadData() {
   loading.value = true
   try {
+    // NOTE(#18 P1): getPendingAppeals 当前全量返回, 无分页. 待审清单通常较短可接受;
+    // 若单项目积压申诉量大, 需后端 /inspection/appeals/pending 增加分页参数后再接前端分页.
     appeals.value = await appealApi.getPendingAppeals()
     // auto-select first if none chosen
     if (!selectedId.value && appeals.value.length > 0) {
@@ -56,11 +58,21 @@ function fmtTime(s?: string) {
 
 async function submitApprove() {
   if (!selected.value) return
+  // 通过时 finalAdjustment 必须为有效数字 (扣分按此值调整, undefined/NaN 会导致后端调整异常)
+  const adj = approveForm.value.finalAdjustment
+  if (adj == null || Number.isNaN(Number(adj))) {
+    ElMessage.warning('请填写有效的实际调整值')
+    return
+  }
+  if (!approveForm.value.comment.trim()) {
+    ElMessage.warning('通过申诉需填写审核备注, 便于申诉人理解裁决依据')
+    return
+  }
   submitting.value = true
   try {
     await appealApi.approveAppeal(selected.value.id, {
       comment: approveForm.value.comment,
-      finalAdjustment: approveForm.value.finalAdjustment,
+      finalAdjustment: Number(adj),
     })
     ElMessage.success('已通过, 扣分已自动调整')
     moveToNext()
@@ -258,7 +270,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeyDown))
                 <textarea
                   v-model="approveForm.comment" rows="2"
                   class="comment-input"
-                  placeholder="可选"
+                  placeholder="说明通过裁决的依据 (必填)"
                 />
               </label>
 

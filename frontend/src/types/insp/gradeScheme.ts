@@ -23,6 +23,8 @@ export interface GradeDefinition {
   color: string | null
   icon: string | null
   sortOrder: number
+  /** 关联的事件类型 (与 GradeDefinitionInput 对齐, 编辑回填用) */
+  eventTypeCode?: string
 }
 
 export interface CreateGradeSchemeRequest {

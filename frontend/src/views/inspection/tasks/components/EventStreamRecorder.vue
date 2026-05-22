@@ -13,6 +13,7 @@ import { useInspExecutionStore } from '@/stores/inspection/inspExecutionStore'
 import { getSimpleUserList } from '@/api/user'
 import { getOrgUnits } from '@/api/organization'
 import { searchPlaces } from '@/api/universalPlace'
+import { createDetail as createDetailApi } from '@/api/inspection/submission'
 import type { InspSubmission, SubmissionDetail, UpdateDetailResponseRequest } from '@/types/insp/project'
 import type { ScoringMode } from '@/types/insp/enums'
 
@@ -216,11 +217,29 @@ const recordedTargets = ref<RecordedTarget[]>([])
 
 const saving = ref(false)
 
+/**
+ * 占位 detail (id 形如 "tmp-xxx") 在保存前必须先 persist, 否则
+ * updateDetailResponse 用占位 id 调用会 404. 参考 TaskExecutionView.ensureDetailPersisted.
+ */
+async function ensureDetailPersisted(item: SubmissionDetail): Promise<SubmissionDetail> {
+  if (item.id && !String(item.id).startsWith('tmp-')) return item
+  return await createDetailApi(item.submissionId, {
+    templateItemId: item.templateItemId,
+    itemCode: item.itemCode,
+    itemName: item.itemName,
+    itemType: item.itemType,
+    sectionId: item.sectionId,
+    sectionName: item.sectionName,
+    scoringMode: item.scoringMode || 'DIRECT',
+  } as any)
+}
+
 async function saveAndNext() {
   if (!selectedResult.value || props.disabled) return
   saving.value = true
   try {
     let savedCount = 0
+    const failedItems: string[] = []
     for (const item of props.items) {
       const mode = item.scoringMode
       if (!mode) continue
@@ -272,11 +291,21 @@ async function saveAndNext() {
       }
 
       try {
-        await store.updateDetailResponse(item.id, data)
+        // 先 persist 占位 detail (tmp-xxx), 再用真实 id 保存评分
+        const persisted = await ensureDetailPersisted(item)
+        await store.updateDetailResponse(persisted.id, data)
         savedCount++
       } catch (e: any) {
         console.error(`Failed to save item ${item.itemName}:`, e)
+        failedItems.push(item.itemName)
       }
+    }
+
+    if (failedItems.length > 0) {
+      // 明确提示失败项, 不再静默
+      const preview = failedItems.slice(0, 3).join('、')
+      const more = failedItems.length > 3 ? ` 等 ${failedItems.length} 项` : ''
+      ElMessage.error(`${failedItems.length} 项保存失败: ${preview}${more}`)
     }
 
     if (savedCount > 0) {
@@ -295,8 +324,10 @@ async function saveAndNext() {
         summary: summary || `${savedCount} 项已评分`,
       })
 
-      ElMessage.success(`${selectedResult.value.name}: ${savedCount} 项已保存`)
-    } else {
+      if (failedItems.length === 0) {
+        ElMessage.success(`${selectedResult.value.name}: ${savedCount} 项已保存`)
+      }
+    } else if (failedItems.length === 0) {
       ElMessage.warning('没有需要保存的评分')
     }
 
@@ -466,7 +497,8 @@ function closePanel() {
     <!-- Record log -->
     <div class="esr-log">
       <div class="esr-log-header">
-        已记录 <strong>{{ recordedTargets.length }}</strong> 个目标
+        本次会话已记录 <strong>{{ recordedTargets.length }}</strong> 个目标
+        <span class="esr-log-note">（仅本次会话，刷新后清空，评分已落库）</span>
       </div>
       <div v-for="rec in recordedTargets" :key="String(rec.targetId)" class="esr-log-item">
         <span class="esr-log-name">{{ rec.targetName }}</span>
@@ -780,6 +812,11 @@ function closePanel() {
 
 .esr-log-header strong {
   color: #1f2937;
+}
+
+.esr-log-note {
+  font-size: 11px;
+  color: #9ca3af;
 }
 
 .esr-log-item {

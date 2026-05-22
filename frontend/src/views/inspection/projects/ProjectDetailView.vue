@@ -8,6 +8,7 @@ import {
   ClipboardCheck, Check, X, ListTree, LayoutDashboard,
 } from 'lucide-vue-next'
 import { useInspExecutionStore } from '@/stores/inspection/inspExecutionStore'
+import { useAuthStore } from '@/stores/auth'
 import {
   ProjectStatusConfig, type ProjectStatus,
   InspectorRoleConfig, type InspectorRole,
@@ -35,7 +36,13 @@ import InspSpinner from '../shared/InspSpinner.vue'
 const route = useRoute()
 const router = useRouter()
 const store = useInspExecutionStore()
+const auth = useAuthStore()
 const projectId = route.params.id as string
+
+// 当前登录用户姓名 — 用于审核/领取等操作署名, 不再硬编码 'admin'/'当前用户'
+const currentUserName = computed(() =>
+  auth.user?.realName || auth.user?.username || ''
+)
 
 // ========== State ==========
 const loading = ref(false)
@@ -43,6 +50,8 @@ const project = ref<InspProject | null>(null)
 const inspectors = ref<ProjectInspector[]>([])
 const allTasks = ref<InspTask[]>([])
 const allSubmissions = ref<InspSubmission[]>([])
+// P1 #12: 部分子任务的提交记录加载失败时, 成绩统计会悄悄缺数据 — 用此标志在成绩 Tab 顶部明示
+const submissionsLoadFailedCount = ref(0)
 const sectionNameMap = ref<Map<LongId, { name: string; targetType?: string }>>(new Map())
 const sectionTree = ref<SectionTreeNode[]>([])
 const sectionList = computed(() => [...sectionNameMap.value.entries()].map(([id, info]) => ({ id, sectionName: info.name, targetType: info.targetType })))
@@ -243,13 +252,22 @@ const pendingAssignTasks = computed(() => filteredTasks.value.filter(t => t.stat
 const assigningTaskId = ref<LongId | null>(null)
 
 async function handleAssignTask(task: InspTask, inspector: ProjectInspector) {
+  // P1 #11: 选检查员后二次确认, 避免误点 el-select 即刻指派
+  try {
+    await ElMessageBox.confirm(
+      `将任务「${task.taskCode}」指派给 ${inspector.userName}？`,
+      '确认指派', { type: 'info' }
+    )
+  } catch {
+    return // 用户取消
+  }
   try {
     assigningTaskId.value = task.id
     await assignTask(task.id, { inspectorId: inspector.userId, inspectorName: inspector.userName })
     ElMessage.success(`已分配给 ${inspector.userName}`)
     await loadProject()
   } catch (e: any) {
-    ElMessage.error(e.message || '分配失败')
+    ElMessage.error('分配失败: ' + (e?.message || '未知错误'))
   } finally {
     assigningTaskId.value = null
   }
@@ -262,7 +280,7 @@ const pendingReviewCount = computed(() => pendingReviewTasks.value.length)
 async function handleApproveTask(task: InspTask) {
   try {
     await ElMessageBox.confirm(`通过任务 ${task.taskCode} 的审核？`, '确认审核', { type: 'info' })
-    await store.reviewTask(task.id, { reviewerName: 'admin', comment: '审核通过' })
+    await store.reviewTask(task.id, { reviewerName: currentUserName.value, comment: '审核通过' })
     ElMessage.success('审核通过')
     loadProject()
   } catch (e: any) {
@@ -273,7 +291,7 @@ async function handleApproveTask(task: InspTask) {
 async function handleRejectTask(task: InspTask) {
   try {
     const { value: comment } = await ElMessageBox.prompt('请输入驳回原因', '驳回任务', { type: 'warning', inputPlaceholder: '驳回原因...' }) as any
-    await store.reviewTask(task.id, { reviewerName: 'admin', comment: comment || '审核驳回' })
+    await store.reviewTask(task.id, { reviewerName: currentUserName.value, comment: comment || '审核驳回' })
     ElMessage.success('已驳回')
     loadProject()
   } catch (e: any) {
@@ -372,6 +390,13 @@ const inspectorStats = computed(() => {
     if (b.active !== a.active) return b.active - a.active
     return b.assigned - a.assigned
   })
+})
+
+// P2 #17: 预聚合 inspectorStats 为 Map, 模板里按 userName 直接 O(1) 取, 避免每行重复 .find()
+const inspectorStatsByName = computed(() => {
+  const m = new Map<string, (typeof inspectorStats.value)[number]>()
+  for (const s of inspectorStats.value) m.set(s.name, s)
+  return m
 })
 
 // 检查员搜索 (人员卡片过滤)
@@ -553,11 +578,23 @@ async function loadProject() {
       } catch (e) { /* no root grade mapping */ rootGradeBands.value = [] }
     }
     allTasks.value = []; allSubmissions.value = []
+    submissionsLoadFailedCount.value = 0
     try {
       const tasks = await getTasks({ projectId })
       allTasks.value.push(...tasks)
-      for (const t of tasks) { try { allSubmissions.value.push(...await getSubmissions({ taskId: t.id })) } catch (e: any) { console.warn(`加载任务 ${t.id} 的提交记录失败`, e) } }
-    } catch (e: any) { console.error('加载任务列表失败', e); ElMessage.error('加载任务列表失败') }
+      // P1 #5: 并发加载各任务的提交记录, 替代 N+1 串行 await
+      const subResults = await Promise.all(tasks.map(async t => {
+        try { return await getSubmissions({ taskId: t.id }) }
+        catch (e: any) { console.warn(`加载任务 ${t.id} 的提交记录失败`, e); return null }
+      }))
+      for (const r of subResults) {
+        if (r) allSubmissions.value.push(...r)
+        else submissionsLoadFailedCount.value++
+      }
+      if (submissionsLoadFailedCount.value > 0) {
+        ElMessage.warning(`${submissionsLoadFailedCount.value} 个任务的提交记录加载失败, 成绩统计可能不完整`)
+      }
+    } catch (e: any) { console.error('加载任务列表失败', e); ElMessage.error('加载任务列表失败: ' + (e?.message || '未知错误')) }
     configDirty.value = false
   } catch (e: any) { ElMessage.error(e.message || '加载失败') }
   finally { loading.value = false }
@@ -693,7 +730,7 @@ async function handleComplete() {
 async function handleArchive() { try { await ElMessageBox.confirm('确定归档？归档后不可恢复为活跃状态。', '确认归档', { type: 'warning' }); await inspProjectApi.archive(projectId); ElMessage.success('已归档'); loadProject() } catch (e: any) {
     if (e !== 'cancel' && e?.toString?.() !== 'cancel') { console.error('归档项目失败', e); ElMessage.error('归档项目失败，请重试') }
   } }
-async function handleClaim(task: InspTask) { try { await store.claimTask(task.id, { inspectorName: '当前用户' }); ElMessage.success('已领取'); loadProject() } catch (e: any) { ElMessage.error(e.message || '失败') } }
+async function handleClaim(task: InspTask) { try { await store.claimTask(task.id, { inspectorName: currentUserName.value }); ElMessage.success('已领取'); loadProject() } catch (e: any) { ElMessage.error(e.message || '领取失败') } }
 
 // ========== Inspector ==========
 async function searchUsers(q: string) { if (!q.trim()) { addResults.value = []; return }; addLoading.value = true; try { addResults.value = await getSimpleUserList(q.trim()) } catch (e: any) { console.warn('搜索用户失败', e); addResults.value = [] }; addLoading.value = false }
@@ -1063,176 +1100,15 @@ onMounted(async () => {
 
       <!-- ===== 成绩统计 Tab ===== -->
       <div v-if="activeTab === 'scores'">
+        <!-- P1 #12: 部分提交记录加载失败 — 明示统计可能缺数据 -->
+        <div v-if="submissionsLoadFailedCount > 0" class="pdv-score-warn">
+          <span class="pdv-score-warn__icon">!</span>
+          <span>{{ submissionsLoadFailedCount }} 个任务的提交记录加载失败, 下方成绩统计可能不完整</span>
+          <button class="pdv-score-warn__retry" @click="loadProject">重新加载</button>
+        </div>
         <IndicatorScoreView v-if="!isDraft" :project-id="projectId" />
 
-        <!-- Legacy score aggregation removed — IndicatorScoreView handles everything -->
-        <template v-if="false">
-          <!-- Filter Bar -->
-          <div class="flex items-center gap-3 mb-5">
-            <el-radio-group v-model="dateRangeType" size="small">
-              <el-radio-button value="today">今日</el-radio-button>
-              <el-radio-button value="week">本周</el-radio-button>
-              <el-radio-button value="month">本月</el-radio-button>
-              <el-radio-button value="custom">自定义</el-radio-button>
-              <el-radio-button value="all">全部</el-radio-button>
-            </el-radio-group>
-            <el-date-picker v-if="dateRangeType === 'custom'" v-model="customDateRange"
-              type="daterange" range-separator="至" start-placeholder="开始" end-placeholder="结束"
-              size="small" value-format="YYYY-MM-DD" style="width: 220px" />
-          </div>
-
-          <!-- Dimension Tabs -->
-          <div class="flex gap-1 mb-5 border-b border-gray-100 pb-3">
-            <button v-for="tab in dimensionTabs" :key="tab.key"
-              :class="['px-3.5 py-1.5 rounded-full text-sm font-medium transition-all',
-                selectedDimension === tab.key
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100']"
-              @click="selectedDimension = tab.key">
-              {{ tab.label }}
-            </button>
-          </div>
-
-          <!-- Stats Cards -->
-          <div v-if="dimensionStats" class="grid gap-4 mb-5"
-               :class="dimensionHasGrades ? 'grid-cols-5' : 'grid-cols-3'">
-            <div class="bg-white rounded-xl border border-gray-100 p-4 text-center">
-              <div class="text-2xl font-bold text-gray-800">{{ dimensionStats!.total }}</div>
-              <div class="text-xs text-gray-400 mt-1">已评目标</div>
-            </div>
-            <div class="bg-white rounded-xl border border-gray-100 p-4 text-center">
-              <div class="text-2xl font-bold text-blue-600">{{ dimensionStats!.avg }}</div>
-              <div class="text-xs text-gray-400 mt-1">平均分</div>
-            </div>
-            <div class="bg-white rounded-xl border border-gray-100 p-4 text-center">
-              <div class="text-2xl font-bold text-gray-600">
-                {{ dimensionStats!.max }}<span class="text-sm font-normal text-gray-300"> / {{ dimensionStats!.min }}</span>
-              </div>
-              <div class="text-xs text-gray-400 mt-1">最高 / 最低</div>
-            </div>
-            <div v-if="dimensionHasGrades" class="bg-white rounded-xl border border-gray-100 p-4 text-center">
-              <div class="text-2xl font-bold text-emerald-600">{{ dimensionStats!.passed }}</div>
-              <div class="text-xs text-gray-400 mt-1">达标</div>
-            </div>
-            <div v-if="dimensionHasGrades" class="bg-white rounded-xl border border-gray-100 p-4 text-center">
-              <div class="text-2xl font-bold text-red-500">{{ dimensionStats!.failed }}</div>
-              <div class="text-xs text-gray-400 mt-1">未达标</div>
-            </div>
-          </div>
-
-          <!-- Score Distribution (only for overall) -->
-          <div v-if="selectedDimension === 'overall' && sectionScores.length > 0" class="bg-white rounded-xl border border-gray-100 p-4 mb-5">
-            <div class="text-xs font-semibold text-gray-500 mb-3">各维度平均分</div>
-            <div class="flex flex-col gap-2">
-              <div v-for="item in sectionScores" :key="item.name" class="flex items-center gap-2">
-                <span class="text-xs text-gray-500 w-24 truncate flex-shrink-0" :title="item.name">{{ item.name }}</span>
-                <div class="flex-1 h-5 bg-gray-50 rounded overflow-hidden">
-                  <div class="h-full rounded transition-all duration-300"
-                    :style="{ width: item.avg + '%', backgroundColor: getSectionScoreColor(item.avg) }" />
-                </div>
-                <span class="text-xs font-semibold w-10 text-right" :style="{ color: getSectionScoreColor(item.avg) }">
-                  {{ item.avg.toFixed(1) }}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Rankings Table -->
-          <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
-            <div class="px-5 py-3 border-b border-gray-50 flex items-center justify-between">
-              <span class="text-sm font-semibold text-gray-700">
-                {{ selectedDimension === 'overall' ? '综合排名' : dimensionTabs.find(t => t.key === selectedDimension)?.label + '排名' }}
-              </span>
-              <span class="text-xs text-gray-400">{{ dimensionScores.length }} 个目标</span>
-            </div>
-
-            <div v-if="dimensionScores.length === 0" class="py-16 text-center text-gray-400 text-sm">
-              暂无成绩数据
-            </div>
-
-            <el-table v-else :data="dimensionScores" size="small" row-key="targetId"
-              :row-class-name="({rowIndex}: any) => rowIndex < 3 ? 'top-rank-row' : ''">
-
-              <!-- Expand (only for overall) -->
-              <el-table-column v-if="selectedDimension === 'overall'" type="expand" width="32">
-                <template #default="{ row }">
-                  <div class="px-6 py-3 bg-gray-50/60">
-                    <div class="grid grid-cols-2 gap-x-8 gap-y-2">
-                      <div v-for="sec in row.sections" :key="sec.sectionName"
-                           class="flex items-center justify-between py-1">
-                        <div class="flex items-center gap-2">
-                          <span class="text-sm text-gray-600">{{ sec.sectionName }}</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                          <span class="text-sm font-semibold" :style="{ color: getSectionScoreColor(sec.score) }">
-                            {{ sec.score.toFixed(1) }}
-                          </span>
-                          <span v-if="sec.grade" class="text-[11px] px-1.5 py-0.5 rounded font-medium"
-                            :style="getGradeColor(sec.grade, sec.sectionId) ? {
-                              background: getGradeColor(sec.grade, sec.sectionId) + '18',
-                              color: getGradeColor(sec.grade, sec.sectionId) ?? undefined,
-                            } : undefined"
-                            :class="!getGradeColor(sec.grade, sec.sectionId) ? 'bg-blue-50 text-blue-600' : ''">
-                            {{ sec.grade }}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </template>
-              </el-table-column>
-
-              <!-- Rank -->
-              <el-table-column label="#" width="50" align="center">
-                <template #default="{ row }">
-                  <span v-if="row.rank === 1" class="text-lg">&#x1F947;</span>
-                  <span v-else-if="row.rank === 2" class="text-lg">&#x1F948;</span>
-                  <span v-else-if="row.rank === 3" class="text-lg">&#x1F949;</span>
-                  <span v-else class="text-sm text-gray-400 font-medium">{{ row.rank }}</span>
-                </template>
-              </el-table-column>
-
-              <!-- Target Name -->
-              <el-table-column prop="targetName" label="检查目标" min-width="180">
-                <template #default="{ row }">
-                  <span class="text-sm font-medium text-gray-700">{{ row.targetName }}</span>
-                </template>
-              </el-table-column>
-
-              <!-- Score -->
-              <el-table-column label="得分" width="90" align="center">
-                <template #default="{ row }">
-                  <span class="text-sm font-bold" :style="{ color: getSectionScoreColor(row.totalScore) }">
-                    {{ row.totalScore.toFixed(1) }}
-                  </span>
-                </template>
-              </el-table-column>
-
-              <!-- Grade (conditional) -->
-              <el-table-column v-if="dimensionHasGrades" label="等级" width="100" align="center">
-                <template #default="{ row }">
-                  <span v-if="row.grade" class="pdv-grade-badge"
-                    :style="getGradeColor(row.grade) ? {
-                      background: getGradeColor(row.grade) + '18',
-                      color: getGradeColor(row.grade) ?? undefined,
-                      borderColor: getGradeColor(row.grade) + '30',
-                    } : undefined"
-                    :class="!getGradeColor(row.grade) ? (
-                      row.grade.includes('不') ? 'bg-red-50 text-red-600' :
-                      row.grade === '优秀' ? 'bg-emerald-50 text-emerald-600' :
-                      row.grade === '合格' ? 'bg-amber-50 text-amber-600' :
-                      'bg-blue-50 text-blue-600'
-                    ) : ''">
-                    <span v-if="getGradeColor(row.grade)" class="pdv-grade-dot" :style="{ background: getGradeColor(row.grade) ?? undefined }" />
-                    {{ row.grade }}
-                  </span>
-                  <span v-else class="text-gray-300">-</span>
-                </template>
-              </el-table-column>
-            </el-table>
-          </div>
-        </template>
-
+        <!-- P1 #14: Legacy score aggregation 整段死代码 (v-if="false") 已删除 — IndicatorScoreView 承接全部 -->
         <div v-else class="py-20 text-center">
           <BarChart3 class="w-10 h-10 text-gray-300 mx-auto mb-3" />
           <div class="text-sm text-gray-400">项目发布后可查看成绩统计</div>
@@ -1315,7 +1191,7 @@ onMounted(async () => {
           <div v-else class="pdv-insp-list">
             <div v-for="insp in filteredInspectors" :key="insp.id"
                  class="pdv-insp-row"
-                 :class="{ 'pdv-insp-row--overdue': (inspectorStats.find(s => s.name === insp.userName)?.overdue ?? 0) > 0 }">
+                 :class="{ 'pdv-insp-row--overdue': (inspectorStatsByName.get(insp.userName)?.overdue ?? 0) > 0 }">
               <div class="pdv-insp-avatar">{{ (insp.userName || '?')[0] }}</div>
               <div class="pdv-insp-meta">
                 <div class="pdv-insp-name-line">
@@ -1323,27 +1199,27 @@ onMounted(async () => {
                   <span class="pdv-insp-role">{{ InspectorRoleConfig[insp.role as InspectorRole]?.label }}</span>
                 </div>
                 <div class="pdv-insp-stats" v-if="!isDraft">
-                  <template v-if="inspectorStats.find(s => s.name === insp.userName)">
+                  <template v-if="inspectorStatsByName.get(insp.userName)">
                     <span class="pdv-stat">
-                      分配 <b>{{ inspectorStats.find(s => s.name === insp.userName)!.assigned }}</b>
+                      分配 <b>{{ inspectorStatsByName.get(insp.userName)!.assigned }}</b>
                     </span>
                     <span class="pdv-stat">
-                      完成 <b style="color: var(--insp-pass)">{{ inspectorStats.find(s => s.name === insp.userName)!.completed }}</b>
+                      完成 <b style="color: var(--insp-pass)">{{ inspectorStatsByName.get(insp.userName)!.completed }}</b>
                     </span>
-                    <span class="pdv-stat" v-if="inspectorStats.find(s => s.name === insp.userName)!.active > 0">
-                      进行中 <b style="color: var(--insp-info)">{{ inspectorStats.find(s => s.name === insp.userName)!.active }}</b>
+                    <span class="pdv-stat" v-if="inspectorStatsByName.get(insp.userName)!.active > 0">
+                      进行中 <b style="color: var(--insp-info)">{{ inspectorStatsByName.get(insp.userName)!.active }}</b>
                     </span>
-                    <span class="pdv-stat pdv-stat--alert" v-if="inspectorStats.find(s => s.name === insp.userName)!.overdue > 0">
-                      逾期 <b>{{ inspectorStats.find(s => s.name === insp.userName)!.overdue }}</b>
+                    <span class="pdv-stat pdv-stat--alert" v-if="inspectorStatsByName.get(insp.userName)!.overdue > 0">
+                      逾期 <b>{{ inspectorStatsByName.get(insp.userName)!.overdue }}</b>
                     </span>
                   </template>
                   <span v-else class="pdv-stat-empty">暂无任务</span>
                 </div>
                 <!-- 负载饱和度条 -->
-                <div v-if="!isDraft && inspectorStats.find(s => s.name === insp.userName)" class="pdv-insp-bar">
+                <div v-if="!isDraft && inspectorStatsByName.get(insp.userName)" class="pdv-insp-bar">
                   <div class="pdv-insp-bar-bg">
                     <div class="pdv-insp-bar-done"
-                         :style="{ width: ((inspectorStats.find(s => s.name === insp.userName)!.completed / Math.max(inspectorStats.find(s => s.name === insp.userName)!.assigned, 1)) * 100) + '%' }" />
+                         :style="{ width: ((inspectorStatsByName.get(insp.userName)!.completed / Math.max(inspectorStatsByName.get(insp.userName)!.assigned, 1)) * 100) + '%' }" />
                   </div>
                 </div>
               </div>
@@ -1547,7 +1423,7 @@ onMounted(async () => {
 
         <!-- V108: 检查模式配置 -->
         <div class="cfg-card">
-          <div class="cfg-card-title"> 检查模式 (Day3)</div>
+          <div class="cfg-card-title">检查模式</div>
           <div class="cfg-desc">控制本项目允许哪些检查行为 — 计划任务/临时抽查/自查 等.</div>
           <div class="cfg-row2">
             <div class="cfg-field">
@@ -1597,7 +1473,7 @@ onMounted(async () => {
 
         <!-- V110: 整改判定策略 -->
         <div class="cfg-card">
-          <div class="cfg-card-title">整改判定策略 (V110)</div>
+          <div class="cfg-card-title">整改判定策略</div>
           <div class="cfg-desc">
             控制系统如何识别"需要整改的检查项". 99% 项目选预设即可,
             高级用户可自定义阈值与 deadline.

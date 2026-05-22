@@ -89,8 +89,9 @@ const props = defineProps<{
   currentVersion: number
 }>()
 
+// 携带 onDone 回调: 发布成功后才关弹窗/清空, 失败保留供重试
 const emit = defineEmits<{
-  publish: [changeSummary: string]
+  publish: [changeSummary: string, onDone: (ok: boolean) => void]
 }>()
 
 const showPublish = ref(false)
@@ -132,15 +133,17 @@ function toggleExpand(ver: ScoringProfileVersion) {
   }
 }
 
-async function handlePublish() {
+function handlePublish() {
+  if (publishing.value) return
   publishing.value = true
-  try {
-    emit('publish', changeSummary.value)
-    showPublish.value = false
-    changeSummary.value = ''
-  } finally {
+  emit('publish', changeSummary.value, (ok: boolean) => {
     publishing.value = false
-  }
+    // 仅成功时关弹窗并清空; 失败保留弹窗供重试
+    if (ok) {
+      showPublish.value = false
+      changeSummary.value = ''
+    }
+  })
 }
 </script>
 

@@ -153,6 +153,13 @@ function openEdit(plan: InspectionPlan) {
 
 async function handleSave() {
   if (!form.value.planName.trim()) { ElMessage.warning('请输入计划名称'); return }
+  // P1 #10: 按 freqMode 校验周/月选择非空, 否则会产生永不触发的空调度
+  if (form.value.freqMode === 'WEEKLY' && form.value.weekDays.length === 0) {
+    ElMessage.warning('按周检查需至少选择一个星期'); return
+  }
+  if (form.value.freqMode === 'MONTHLY' && form.value.monthDays.length === 0) {
+    ElMessage.warning('按月检查需至少选择一个日期'); return
+  }
   saving.value = true
   try {
     const fm = form.value.freqMode
@@ -213,7 +220,7 @@ onMounted(() => loadPlans())
   <div class="ipc" v-loading="loading">
     <div class="ipc-head">
       <div class="ipc-head-left">
-        <Calendar class="w-4 h-4" style="color:#8b5cf6" />
+        <Calendar class="w-4 h-4" style="color:var(--insp-accent)" />
         <span class="ipc-title">检查计划</span>
         <span v-if="plans.length" class="ipc-count">{{ plans.length }}</span>
       </div>
@@ -222,7 +229,7 @@ onMounted(() => loadPlans())
 
     <!-- Empty -->
     <div v-if="!plans.length && !loading" class="ipc-empty">
-      <Calendar class="w-8 h-8" style="color:#ddd8fe" />
+      <Calendar class="w-8 h-8" style="color:var(--insp-accent-pale)" />
       <p>暂无检查计划</p>
       <span>添加计划来设定检查频率和分工</span>
     </div>
@@ -387,14 +394,14 @@ onMounted(() => loadPlans())
 .ipc-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .ipc-head-left { display: flex; align-items: center; gap: 8px; }
 .ipc-title { font-size: 14px; font-weight: 700; color: #1e1b4b; }
-.ipc-count { font-size: 10px; color: #8b5cf6; background: #f3f0ff; padding: 1px 7px; border-radius: 10px; font-weight: 700; }
+.ipc-count { font-size: 10px; color: var(--insp-accent); background: var(--insp-accent-paler); padding: 1px 7px; border-radius: 10px; font-weight: 700; }
 
 .ipc-add-btn {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600;
-  background: #8b5cf6; color: #fff; border: none; cursor: pointer; transition: background 0.15s;
+  background: var(--insp-accent); color: #fff; border: none; cursor: pointer; transition: background 0.15s;
 }
-.ipc-add-btn:hover { background: #7c3aed; }
+.ipc-add-btn:hover { background: var(--insp-accent-strong, var(--insp-accent)); }
 
 .ipc-empty { text-align: center; padding: 36px 0; }
 .ipc-empty p { font-size: 13px; color: #9ca3af; margin: 8px 0 2px; }
@@ -413,7 +420,7 @@ onMounted(() => loadPlans())
 .ipc-card-name { font-size: 13px; font-weight: 700; color: #1e1b4b; }
 .ipc-pills { display: flex; gap: 4px; flex: 1; }
 .ipc-pill { font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
-.ipc-pill.purple { background: #f3f0ff; color: #8b5cf6; }
+.ipc-pill.purple { background: var(--insp-accent-paler); color: var(--insp-accent); }
 .ipc-pill.amber { background: #fffbeb; color: #d97706; }
 .ipc-pill.green { background: #f0fdf4; color: #16a34a; }
 .ipc-pill.gray { background: #f3f4f6; color: #9ca3af; }
@@ -425,7 +432,7 @@ onMounted(() => loadPlans())
   display: inline-flex; align-items: center; justify-content: center; transition: all 0.15s;
 }
 .ipc-op:hover { background: #f3f4f6; color: #374151; }
-.ipc-op.accent:hover { background: #f3f0ff; color: #8b5cf6; }
+.ipc-op.accent:hover { background: var(--insp-accent-paler); color: var(--insp-accent); }
 .ipc-op.danger:hover { background: #fef2f2; color: #ef4444; }
 
 .ipc-card-row2 { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #9ca3af; flex-wrap: wrap; }
@@ -443,7 +450,7 @@ onMounted(() => loadPlans())
   width: 100%; padding: 9px 12px; border: 1.5px solid #e5e7eb; border-radius: 8px;
   font-size: 13px; color: #1f2937; outline: none; transition: border-color 0.15s;
 }
-.fd-input:focus { border-color: #8b5cf6; }
+.fd-input:focus { border-color: var(--insp-accent); }
 .fd-input::placeholder { color: #d1d5db; }
 
 /* Pills (sections / inspectors) */
@@ -453,8 +460,8 @@ onMounted(() => loadPlans())
   font-size: 12px; font-weight: 500; color: #6b7280; background: #fff;
   cursor: pointer; transition: all 0.15s; user-select: none;
 }
-.fd-pill:hover { border-color: #c4b5fd; }
-.fd-pill.on { border-color: #8b5cf6; background: #f5f3ff; color: #6d28d9; font-weight: 600; }
+.fd-pill:hover { border-color: var(--insp-accent-pale); }
+.fd-pill.on { border-color: var(--insp-accent); background: var(--insp-accent-paler); color: var(--insp-accent-strong, var(--insp-accent)); font-weight: 600; }
 
 /* Frequency buttons */
 .fd-freq { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
@@ -464,8 +471,8 @@ onMounted(() => loadPlans())
   background: #fff; color: #6b7280; cursor: pointer; transition: all 0.15s;
   font-size: 12px; font-weight: 600;
 }
-.fd-freq-btn:hover { border-color: #c4b5fd; }
-.fd-freq-btn.on { border-color: #8b5cf6; background: #f5f3ff; color: #6d28d9; }
+.fd-freq-btn:hover { border-color: var(--insp-accent-pale); }
+.fd-freq-btn.on { border-color: var(--insp-accent); background: var(--insp-accent-paler); color: var(--insp-accent-strong, var(--insp-accent)); }
 
 /* Frequency count */
 .fd-freq-count { display: flex; gap: 4px; }
@@ -474,8 +481,8 @@ onMounted(() => loadPlans())
   font-size: 12px; font-weight: 600; color: #6b7280; background: #fff;
   cursor: pointer; transition: all 0.12s;
 }
-.fd-fc-btn:hover { border-color: #c4b5fd; }
-.fd-fc-btn.on { border-color: #8b5cf6; background: #8b5cf6; color: #fff; }
+.fd-fc-btn:hover { border-color: var(--insp-accent-pale); }
+.fd-fc-btn.on { border-color: var(--insp-accent); background: var(--insp-accent); color: #fff; }
 
 /* Week day picker */
 .fd-week { display: flex; gap: 4px; }
@@ -484,8 +491,8 @@ onMounted(() => loadPlans())
   font-size: 12px; font-weight: 600; color: #6b7280; background: #fff;
   cursor: pointer; transition: all 0.12s;
 }
-.fd-wday:hover { border-color: #c4b5fd; }
-.fd-wday.on { border-color: #8b5cf6; background: #8b5cf6; color: #fff; }
+.fd-wday:hover { border-color: var(--insp-accent-pale); }
+.fd-wday.on { border-color: var(--insp-accent); background: var(--insp-accent); color: #fff; }
 
 /* Month day grid */
 .fd-month {
@@ -496,8 +503,8 @@ onMounted(() => loadPlans())
   font-size: 11px; font-weight: 600; color: #6b7280; background: #fff;
   cursor: pointer; transition: all 0.12s;
 }
-.fd-mday:hover { border-color: #c4b5fd; }
-.fd-mday.on { border-color: #8b5cf6; background: #8b5cf6; color: #fff; }
+.fd-mday:hover { border-color: var(--insp-accent-pale); }
+.fd-mday.on { border-color: var(--insp-accent); background: var(--insp-accent); color: #fff; }
 
 /* Time slots */
 .fd-slots { display: flex; flex-direction: column; gap: 6px; }
@@ -506,7 +513,7 @@ onMounted(() => loadPlans())
   padding: 6px 10px; border: 1.5px solid #e5e7eb; border-radius: 8px;
   font-size: 13px; color: #1f2937; outline: none; width: 110px;
 }
-.fd-time:focus { border-color: #8b5cf6; }
+.fd-time:focus { border-color: var(--insp-accent); }
 .fd-time-sep { color: #d1d5db; font-size: 12px; }
 .fd-slot-del {
   width: 24px; height: 24px; border: none; border-radius: 6px;
@@ -519,7 +526,7 @@ onMounted(() => loadPlans())
   padding: 4px 10px; border: 1px dashed #e5e7eb; border-radius: 6px;
   font-size: 11px; color: #9ca3af; background: none; cursor: pointer; transition: all 0.12s;
 }
-.fd-slot-add:hover { color: #8b5cf6; border-color: #c4b5fd; background: #f5f3ff; }
+.fd-slot-add:hover { color: var(--insp-accent); border-color: var(--insp-accent-pale); background: var(--insp-accent-paler); }
 
 /* Checkbox */
 .fd-check-row {
@@ -535,7 +542,7 @@ onMounted(() => loadPlans())
 }
 .fd-btn.ghost { background: #f3f4f6; color: #6b7280; }
 .fd-btn.ghost:hover { background: #e5e7eb; }
-.fd-btn.primary { background: #8b5cf6; color: #fff; }
-.fd-btn.primary:hover { background: #7c3aed; }
+.fd-btn.primary { background: var(--insp-accent); color: #fff; }
+.fd-btn.primary:hover { background: var(--insp-accent-strong, var(--insp-accent)); }
 .fd-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>

@@ -34,10 +34,15 @@ interface EngineKpi {
   topRecurring: Array<{ itemCode: string; itemName: string; recurCount: number }>
 }
 const kpi = ref<EngineKpi | null>(null)
+const kpiLoadFailed = ref(false)
 async function loadKpi() {
   try {
     kpi.value = await http.get<EngineKpi>('/inspection/corrective/kpi')
-  } catch (e) { console.warn('加载 KPI 失败', e) }
+    kpiLoadFailed.value = false
+  } catch (e: any) {
+    kpiLoadFailed.value = true
+    ElMessage.warning('引擎 KPI 加载失败: ' + (e?.message || '未知错误'))
+  }
 }
 
 // ── Loaders ──
@@ -403,9 +408,12 @@ onUnmounted(() => window.removeEventListener('keydown', onGlobalKeyCC))
             v-if="c.status !== 'CLOSED' && c.status !== 'ESCALATED'"
             class="insp-btn insp-btn--sm" @click="handleEscalate(c)"
           >升级</button>
-          <button class="insp-btn insp-btn--sm insp-btn--ghost" @click="handleDelete(c)" title="删除">
-            ×
-          </button>
+          <!-- 删除仅对 OPEN (未分配) 案件开放 — 已分配/进行中的案件删除代价高, 防误操作 -->
+          <button
+            v-if="c.status === 'OPEN'"
+            class="insp-btn insp-btn--sm insp-btn--ghost row-actions__del"
+            @click="handleDelete(c)" title="删除案件"
+          >删除</button>
         </div>
       </article>
 
@@ -691,6 +699,8 @@ onUnmounted(() => window.removeEventListener('keydown', onGlobalKeyCC))
   align-items: flex-start;
   padding-top: 2px;
 }
+.row-actions__del { color: var(--insp-fail); }
+.row-actions__del:hover { border-color: var(--insp-fail); }
 
 /* ─ Empty ─────── */
 .empty { padding: 80px 0; text-align: center; }

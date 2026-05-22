@@ -31,6 +31,7 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { http } from '@/utils/request'
+import { Flag } from 'lucide-vue-next'
 import {
   getSubmissions, getDetails, updateDetailResponse, flagDetail, unflagDetail,
 } from '@/api/inspection/submission'
@@ -176,14 +177,13 @@ async function loadAll() {
     const subs = await getSubmissions({ taskId })
     submissions.value = (subs || []).filter(s => s.taskId === taskId)
 
-    const allDets: SubmissionDetail[] = []
-    for (const sub of submissions.value) {
-      try {
-        const dets = await getDetails(sub.id)
-        for (const d of dets) allDets.push(d)
-      } catch { /* ignore */ }
-    }
-    allDetails.value = allDets
+    // 并发拉取各提交的明细 (取代逐个串行 N+1)
+    const detResults = await Promise.all(
+      submissions.value.map(sub =>
+        getDetails(sub.id).catch(() => [] as SubmissionDetail[])
+      )
+    )
+    allDetails.value = detResults.flat()
   } catch (e: any) {
     // 友好化错误提示: 网络错/会话过期 > 直接说人话, 不抛底层异常文案
     const status = e?.response?.status
@@ -203,6 +203,10 @@ async function loadAll() {
 // ── Scoring actions ──
 async function setResponse(detail: SubmissionDetail, value: string, score?: number) {
   trackAction()
+  // 记录旧值用于失败时精准回滚 (不再整页 reload, 避免光标/进度丢失)
+  const prevResponse = detail.responseValue
+  const prevScore = detail.score
+  const prevUpdatedAt = detail.updatedAt
   // optimistic
   detail.responseValue = value
   if (score != null) detail.score = score
@@ -214,9 +218,11 @@ async function setResponse(detail: SubmissionDetail, value: string, score?: numb
       score,
     })
   } catch (e: any) {
-    ElMessage.error(e?.message || '保存失败')
-    // revert
-    loadAll()
+    ElMessage.error('保存失败: ' + (e?.message || '未知错误'))
+    // 仅回滚该格乐观值, 保留其他格评分与当前光标/进度
+    detail.responseValue = prevResponse
+    detail.score = prevScore
+    detail.updatedAt = prevUpdatedAt
   }
 }
 
@@ -228,11 +234,21 @@ async function passCurrent() {
   advanceTarget()
 }
 
+/** 从 detail 的 scoringConfig 取不通过分值, 缺省 -5 (不再硬编码) */
+function failScoreOf(d: SubmissionDetail): number {
+  try {
+    const cfg = JSON.parse(d.scoringConfig || '{}')
+    const fs = cfg.failScore
+    if (typeof fs === 'number') return fs
+  } catch { /* ignore */ }
+  return -5
+}
+
 async function failCurrent() {
   const d = detailForCurrentCell.value
   if (!d) return
   triggerFlash(`${d.itemCode}-${d.submissionId}`, 'fail')
-  await setResponse(d, 'FAIL', -5)
+  await setResponse(d, 'FAIL', failScoreOf(d))
   advanceTarget()
 }
 
@@ -284,6 +300,23 @@ async function handleSubmit() {
     ElMessage.error(e?.message || '提交失败')
   } finally {
     submitting.value = false
+  }
+}
+
+// ── Remark ──
+async function saveRemark() {
+  const id = editingRemarkId.value
+  if (id == null) return
+  const d = allDetails.value.find(x => x.id === id)
+  if (!d) { editingRemarkId.value = null; return }
+  try {
+    await http.put(`/inspection/submissions/details/${d.id}/remark`, { remark: remarkDraft.value })
+    d.remark = remarkDraft.value
+    ElMessage.success('备注已保存')
+    editingRemarkId.value = null
+  } catch (e: any) {
+    // 失败明确提示, 不再静默吞错; 保持抽屉打开让用户重试
+    ElMessage.error('备注保存失败: ' + (e?.message || '未知错误'))
   }
 }
 
@@ -556,7 +589,7 @@ watch(currentField, () => { targetIdx.value = 0 })
             @click.stop="targetIdx = i; flagCurrent()"
             title="标记为问题项 (空格)"
           >
-            <span class="flag-glyph">^</span>
+            <Flag :size="13" class="flag-glyph" />
           </button>
         </li>
       </ol>
@@ -697,17 +730,7 @@ watch(currentField, () => { targetIdx.value = 0 })
         <textarea
           v-model="remarkDraft" class="remark-input" rows="3"
           placeholder="备注 (Esc 关闭, 回车保存)"
-          @keydown.enter.prevent="async () => {
-            const d = allDetails.find(x => x.id === editingRemarkId)
-            if (d) {
-              try {
-                await http.put(`/inspection/submissions/details/${d.id}/remark`, { remark: remarkDraft })
-                d.remark = remarkDraft
-                ElMessage.success('已保存')
-              } catch {}
-            }
-            editingRemarkId = null
-          }"
+          @keydown.enter.prevent="saveRemark"
         />
       </div>
     </Transition>
@@ -1146,6 +1169,7 @@ watch(currentField, () => { targetIdx.value = 0 })
   font-size: 16px; font-weight: 600;
   cursor: pointer;
   transition: background var(--insp-t-fast);
+  position: relative;
 }
 .cell--empty { color: var(--insp-ink-quaternary); }
 .cell--pass { background: var(--insp-pass-pale); color: var(--insp-pass); }
@@ -1157,12 +1181,14 @@ watch(currentField, () => { targetIdx.value = 0 })
   z-index: 1;
   position: relative;
 }
+/* 问题项标记: 右上角三角角标 (取代字符 ^) */
 .m-cell.is-flagged::after {
-  content: '^';
+  content: '';
   position: absolute;
-  top: 1px; right: 3px;
-  font-size: 8px;
-  color: var(--insp-fail);
+  top: 0; right: 0;
+  width: 0; height: 0;
+  border-top: 7px solid var(--insp-fail);
+  border-left: 7px solid transparent;
 }
 
 /* ── Focus mode ─────── */

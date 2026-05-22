@@ -57,6 +57,9 @@ const submissions = ref<InspSubmission[]>([])
 // 上次同类检查问题提示 (顶部 banner)
 const prevIssuesHint = ref<{ itemName: string; itemCode: string; sectionName: string }[]>([])
 const prevIssuesDate = ref<string>('')
+// 防漏判数据 (复发/上次问题) 加载失败标记 — 失败需轻量提示, 不能静默
+const prevIssuesLoadFailed = ref(false)
+const recurrenceLoadFailed = ref(false)
 const details = ref<SubmissionDetail[]>([])
 const allSections = ref<TemplateSection[]>([])
 const rootSectionId = ref<LongId | null>(null)
@@ -96,17 +99,18 @@ const lastSavedText = computed(() => {
   return `${hh}:${mm}:${ss}`
 })
 
-// 任意 input 变化即视为 "已保存" (失败时各 handler 自己 ElMessage.error)
-watch([numberInputs, selectInputs, textInputs], () => {
-  if (Object.keys(numberInputs.value).length === 0 &&
-      Object.keys(selectInputs.value).length === 0 &&
-      Object.keys(textInputs.value).length === 0) return
+// 保存指示: 由真实 API 回调驱动, 不再用定时器伪造
+// markSaving() 在发起保存前调用, markSaved() 仅在 API 成功后调用
+function markSaving() {
   savingActive.value = true
-  setTimeout(() => {
-    lastSavedAt.value = Date.now()
-    savingActive.value = false
-  }, 250)
-}, { deep: true })
+}
+function markSaved() {
+  savingActive.value = false
+  lastSavedAt.value = Date.now()
+}
+function markSaveFailed() {
+  savingActive.value = false
+}
 
 // AI 辅助打分对话框 (Track 5)
 const aiDialogOpen = ref(false)
@@ -152,6 +156,7 @@ const isEditable = computed(() => {
 
 const selectedTargetId = ref<LongId | null>(null)
 const targetSearch = ref('')
+const targetSearchRef = ref<{ focus: () => void } | null>(null)
 const targetFilter = ref<'all' | 'pending' | 'completed'>('all')
 const targetContextFilter = ref<string>('')
 
@@ -389,8 +394,8 @@ useScoringShortcuts({
   },
   onSubmit: () => { handleSubmitTask?.() },
   onSearch: () => {
-    const el = document.querySelector('input[placeholder*="搜索"]') as HTMLElement | null
-    if (el) el.focus()
+    // 用组件 ref 而非 placeholder 文本匹配 — placeholder 改动不会再让快捷键失效
+    targetSearchRef.value?.focus()
   },
   onEscape: () => {
     if (task.value?.status === 'IN_PROGRESS') confirmExit()
@@ -799,27 +804,8 @@ const scoreSummary = computed(() => {
   }
 })
 
-/**
- * Estimate-only grade calculation with hardcoded thresholds.
- * Used only for real-time preview during IN_PROGRESS status.
- * The actual grade is calculated by the backend scoring engine
- * (ScoringProfile + dimensions + grade bands) on submission complete.
- */
-function getGrade(score: number): string {
-  if (score >= 95) return 'A+'
-  if (score >= 90) return 'A'
-  if (score >= 80) return 'B'
-  if (score >= 70) return 'C'
-  if (score >= 60) return 'D'
-  return 'F'
-}
-
-function getGradeColor(grade: string): string {
-  const c: Record<string, string> = {
-    'A+': '#10b981', A: '#10b981', B: '#1a6dff', C: '#f59e0b', D: '#ef4444', F: '#dc2626',
-  }
-  return c[grade] || '#6b7280'
-}
+// 注: 等级 (grade) 不在前端用硬编码阈值计算 — 阈值随项目 ScoringProfile/grade bands
+// 配置而变. completeSubmission 提交空 grade, 由后端打分引擎按项目配置统一计算回写.
 
 // ==================== Deduction button groups ====================
 
@@ -869,11 +855,29 @@ function getCumulativeConfig(detail: SubmissionDetail): { countLabel: string; sc
 
 // ==================== Input handlers ====================
 
+/**
+ * 统一保存通道: 持久化占位 detail + 提交评分 + 驱动真实"已保存"指示.
+ * 成功才 markSaved(), 失败 markSaveFailed() 并抛出由调用方提示.
+ */
+async function persistDetailResponse(
+  detail: SubmissionDetail,
+  data: { responseValue: string; scoringMode?: ScoringMode; score?: number },
+): Promise<void> {
+  markSaving()
+  try {
+    const real = await ensureDetailPersisted(detail)
+    await store.updateDetailResponse(real.id, data as any)
+    markSaved()
+  } catch (e) {
+    markSaveFailed()
+    throw e
+  }
+}
+
 async function handleDeductionSelect(detail: SubmissionDetail, val: number) {
   numberInputs.value[detail.id] = val
   try {
-    const real = await ensureDetailPersisted(detail)
-    await store.updateDetailResponse(real.id, {
+    await persistDetailResponse(detail, {
       responseValue: String(val),
       scoringMode: 'DEDUCTION',
       score: val,
@@ -886,8 +890,7 @@ async function handlePassFail(detail: SubmissionDetail, val: 'PASS' | 'FAIL') {
   if (isDeselect) {
     delete selectInputs.value[detail.id]
     try {
-      const real = await ensureDetailPersisted(detail)
-      await store.updateDetailResponse(real.id, { responseValue: '', scoringMode: 'PASS_FAIL', score: 0 })
+      await persistDetailResponse(detail, { responseValue: '', scoringMode: 'PASS_FAIL', score: 0 })
     } catch (e: any) { console.error('取消评判失败', e); ElMessage.error('取消评判失败，请重试') }
     return
   }
@@ -895,8 +898,7 @@ async function handlePassFail(detail: SubmissionDetail, val: 'PASS' | 'FAIL') {
   const cfg = parseScoringConfig(detail)
   const score = val === 'PASS' ? (cfg.passScore ?? 0) : (cfg.failScore ?? -5)
   try {
-    const real = await ensureDetailPersisted(detail)
-    await store.updateDetailResponse(real.id, {
+    await persistDetailResponse(detail, {
       responseValue: val,
       scoringMode: 'PASS_FAIL',
       score,
@@ -910,16 +912,14 @@ async function handleGradeSelect(detail: SubmissionDetail, label: string, score:
     delete selectInputs.value[detail.id]
     delete numberInputs.value[detail.id]
     try {
-      const real = await ensureDetailPersisted(detail)
-      await store.updateDetailResponse(real.id, { responseValue: '', scoringMode: detail.scoringMode!, score: 0 })
+      await persistDetailResponse(detail, { responseValue: '', scoringMode: detail.scoringMode!, score: 0 })
     } catch (e: any) { console.error('取消等级失败', e); ElMessage.error('取消等级失败，请重试') }
     return
   }
   selectInputs.value[detail.id] = label
   numberInputs.value[detail.id] = score
   try {
-    const real = await ensureDetailPersisted(detail)
-    await store.updateDetailResponse(real.id, {
+    await persistDetailResponse(detail, {
       responseValue: label,
       scoringMode: detail.scoringMode!,
       score,
@@ -930,8 +930,7 @@ async function handleGradeSelect(detail: SubmissionDetail, label: string, score:
 async function handleAdditionSelect(detail: SubmissionDetail, val: number) {
   numberInputs.value[detail.id] = val
   try {
-    const real = await ensureDetailPersisted(detail)
-    await store.updateDetailResponse(real.id, {
+    await persistDetailResponse(detail, {
       responseValue: String(val),
       scoringMode: 'ADDITION',
       score: val,
@@ -942,8 +941,7 @@ async function handleAdditionSelect(detail: SubmissionDetail, val: number) {
 async function handleDirectInput(detail: SubmissionDetail, val: number) {
   numberInputs.value[detail.id] = val
   try {
-    const real = await ensureDetailPersisted(detail)
-    await store.updateDetailResponse(real.id, {
+    await persistDetailResponse(detail, {
       responseValue: String(val),
       scoringMode: 'DIRECT',
       score: val,
@@ -956,8 +954,7 @@ async function handleRatingScale(detail: SubmissionDetail, stars: number) {
   if (isDeselect) {
     delete numberInputs.value[detail.id]
     try {
-      const real = await ensureDetailPersisted(detail)
-      await store.updateDetailResponse(real.id, { responseValue: '', scoringMode: 'RATING_SCALE', score: 0 })
+      await persistDetailResponse(detail, { responseValue: '', scoringMode: 'RATING_SCALE', score: 0 })
     } catch (e: any) { console.error('取消评分失败', e); ElMessage.error('取消评分失败，请重试') }
     return
   }
@@ -967,8 +964,7 @@ async function handleRatingScale(detail: SubmissionDetail, stars: number) {
   const maxStars = getRatingMax(detail)
   const score = Math.round((stars / maxStars) * maxScore)
   try {
-    const real = await ensureDetailPersisted(detail)
-    await store.updateDetailResponse(real.id, {
+    await persistDetailResponse(detail, {
       responseValue: String(stars),
       scoringMode: 'RATING_SCALE',
       score,
@@ -996,13 +992,11 @@ function handleCumulativeChange(detail: SubmissionDetail, delta: number) {
   numberInputs.value[detail.id] = next
   const cfg = getCumulativeConfig(detail)
   const score = next * cfg.scorePerUnit
-  ensureDetailPersisted(detail).then(real =>
-    store.updateDetailResponse(real.id, {
-      responseValue: String(next),
-      scoringMode: 'CUMULATIVE',
-      score,
-    })
-  ).catch((e: any) => { console.error('计数保存失败', e); ElMessage.error('计数保存失败，请重试') })
+  persistDetailResponse(detail, {
+    responseValue: String(next),
+    scoringMode: 'CUMULATIVE',
+    score,
+  }).catch((e: any) => { console.error('计数保存失败', e); ElMessage.error('计数保存失败，请重试') })
 }
 
 async function handleTextInput(detail: SubmissionDetail, val: string) {
@@ -1012,8 +1006,7 @@ async function handleTextInput(detail: SubmissionDetail, val: string) {
 async function saveTextInput(detail: SubmissionDetail) {
   const val = textInputs.value[detail.id] ?? ''
   try {
-    const real = await ensureDetailPersisted(detail)
-    await store.updateDetailResponse(real.id, {
+    await persistDetailResponse(detail, {
       responseValue: val,
       score: undefined,
     })
@@ -1058,6 +1051,12 @@ async function loadData() {
         submissions.value = await store.loadSubmissions(taskId)
       } catch (e: any) {
         console.warn('重新填充 submissions 失败', e)
+        // 失败给可见提示 + 重试入口, 不再静默
+        ElMessage({
+          type: 'error',
+          message: '检查目标加载失败: ' + (e?.message || '未知错误') + '，点击页面"刷新"可重试',
+          duration: 6000,
+        })
       }
     }
 
@@ -1117,7 +1116,11 @@ async function loadData() {
     }
 
     // 加载上次同 (project, target_set) 检查的扣分项 (置顶提示, 防止漏判)
-    loadPrevIssues().catch(() => { /* non-fatal */ })
+    loadPrevIssues().then(() => {
+      if (prevIssuesLoadFailed.value) {
+        ElMessage.warning('上次检查问题点未能加载，请留意可能漏判，可刷新重试')
+      }
+    })
   } catch (e: any) {
     ElMessage.error(e.message || '加载失败')
   } finally {
@@ -1128,6 +1131,7 @@ async function loadData() {
 /** 拉同项目最近一次已发布任务的 flagged 明细, 提示当前检查员上次问题点 */
 async function loadPrevIssues() {
   if (!task.value || !task.value.projectId) return
+  prevIssuesLoadFailed.value = false
   try {
     const allTasks = await http.get<any[]>('/inspection/tasks', {
       params: { projectId: task.value.projectId, size: 5 }
@@ -1166,7 +1170,9 @@ async function loadPrevIssues() {
     prevIssuesHint.value = Array.from(issues.values()).sort((a, b) => a.score - b.score)
     prevIssuesDate.value = prev.taskDate || ''
   } catch (e) {
-    /* non-fatal */
+    // 防漏判数据加载失败 — 轻量可见提示, 检查员需知道"上次问题点"没拉到
+    console.warn('加载上次检查问题点失败', e)
+    prevIssuesLoadFailed.value = true
   }
 }
 
@@ -1200,6 +1206,7 @@ const correctiveDialogSubmissions = ref<LongId[]>([])
 const recurrenceMap = ref<Record<string, { recurCount: number; lastSeenAt: string | null }>>({})
 async function loadRecurrence(targetId: LongId) {
   recurrenceMap.value = {}
+  recurrenceLoadFailed.value = false
   if (!task.value?.projectId || !targetId) return
   try {
     const list = await getRecurrenceForSubject(task.value.projectId, targetId)
@@ -1207,7 +1214,10 @@ async function loadRecurrence(targetId: LongId) {
     for (const r of list) m[r.itemCode] = { recurCount: r.recurCount, lastSeenAt: r.lastSeenAt }
     recurrenceMap.value = m
   } catch (e) {
+    // 复发警示数据加载失败 — 防漏判关键数据, 给轻量可见提示
     console.warn('加载复发数据失败', e)
+    recurrenceLoadFailed.value = true
+    ElMessage.warning('复发警示数据未能加载，请留意可能漏判')
   }
 }
 function recurOf(itemCode?: string | null): number {
@@ -1301,14 +1311,14 @@ async function handleCompleteTarget() {
         else if (d.scoringMode === 'DIRECT' && num != null) base = num
       }
       const finalScore = Math.max(0, base - deductions + bonuses)
-      const grade = getGrade(finalScore)
       await store.completeSubmission(group.submission.id, {
         baseScore: finalScore,
         finalScore,
         deductionTotal: deductions,
         bonusTotal: bonuses,
         scoreBreakdown: JSON.stringify({ passCount, failCount, deductions, bonuses }),
-        grade,
+        // grade 留空: 由后端按项目 ScoringProfile/grade bands 配置计算回写
+        grade: '',
         passed: finalScore >= 60,
       })
     }
@@ -1432,7 +1442,7 @@ onMounted(() => loadData())
       <div class="sidebar">
         <div class="sidebar-header">
           <div class="search-box">
-            <el-input v-model="targetSearch" placeholder="按名称/序号搜索 (/)" size="small" clearable>
+            <el-input ref="targetSearchRef" v-model="targetSearch" placeholder="按名称/序号搜索 (/)" size="small" clearable>
               <template #prefix><Search :size="13" /></template>
             </el-input>
           </div>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { onClickOutside } from '@vueuse/core'
 import { Code, AlertCircle, Check, ChevronDown } from 'lucide-vue-next'
 
 // ==================== Types ====================
@@ -53,6 +54,8 @@ const TEMPLATES: FormulaTemplate[] = [
 ]
 
 const showTemplates = ref(false)
+const templatesRef = ref<HTMLElement | null>(null)
+onClickOutside(templatesRef, () => { showTemplates.value = false })
 
 function applyTemplate(t: FormulaTemplate) {
   formula.value = t.formula
@@ -140,7 +143,32 @@ watch(formula, (val) => {
   }
 }, { immediate: true })
 
-const isValid = computed(() => syntaxError.value === null && formula.value.trim() !== '')
+// ==================== Variable name validation (#9) ====================
+// 语法正确不代表变量名正确, 解析标识符与白名单比对
+
+// 允许的 JS 内建标识符 (公式里合法使用)
+const ALLOWED_GLOBALS = new Set([
+  'Math', 'true', 'false', 'null', 'undefined',
+  'Number', 'parseInt', 'parseFloat', 'Infinity', 'NaN',
+])
+
+const unknownVariables = computed<string[]>(() => {
+  const val = formula.value
+  if (!val || !val.trim()) return []
+  const known = new Set(props.availableVariables.map(v => v.name))
+  // 提取所有标识符 token, 排除紧跟 "." 后的属性名 (如 Math.max 的 max)
+  const found = new Set<string>()
+  const re = /(\.)?\b([A-Za-z_$][\w$]*)\b/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(val)) !== null) {
+    const isProperty = m[1] === '.'
+    const name = m[2]
+    if (isProperty) continue
+    if (known.has(name) || ALLOWED_GLOBALS.has(name)) continue
+    found.add(name)
+  }
+  return [...found]
+})
 
 // ==================== Chinese preview ====================
 
@@ -176,14 +204,14 @@ const formulaPreview = computed(() => {
         <Code :size="14" class="fe-header-icon" />
         <span class="fe-title">公式规则</span>
       </div>
-      <label class="fe-toggle">
+      <label class="fe-toggle" title="切换公式输入框为等宽字体，便于对齐阅读">
         <input type="checkbox" v-model="advancedMode" />
-        <span>代码模式</span>
+        <span>等宽字体</span>
       </label>
     </div>
 
     <!-- Template picker -->
-    <div class="fe-templates">
+    <div class="fe-templates" ref="templatesRef">
       <button class="fe-tmpl-trigger" @click="showTemplates = !showTemplates">
         选择预设模板
         <ChevronDown :size="12" :class="{ 'fe-rot': showTemplates }" />
@@ -243,7 +271,7 @@ const formulaPreview = computed(() => {
     </div>
 
     <!-- Formula input -->
-    <div class="fe-input-area" :class="{ 'has-error': syntaxError }">
+    <div class="fe-input-area" :class="{ 'has-error': syntaxError || unknownVariables.length > 0 }">
       <textarea
         ref="textareaRef"
         v-model="formula"
@@ -260,13 +288,19 @@ const formulaPreview = computed(() => {
       <template v-if="!formula.trim()">
         <span class="fe-status-hint">请构建公式</span>
       </template>
-      <template v-else-if="isValid">
-        <Check :size="12" class="fe-icon-ok" />
-        <span class="fe-status-ok">公式有效</span>
-      </template>
-      <template v-else>
+      <template v-else-if="syntaxError">
         <AlertCircle :size="12" class="fe-icon-err" />
         <span class="fe-status-err">{{ syntaxError }}</span>
+      </template>
+      <template v-else-if="unknownVariables.length > 0">
+        <AlertCircle :size="12" class="fe-icon-err" />
+        <span class="fe-status-err">
+          未知变量：{{ unknownVariables.join('、') }}（请使用上方提供的变量）
+        </span>
+      </template>
+      <template v-else>
+        <Check :size="12" class="fe-icon-ok" />
+        <span class="fe-status-ok">公式有效</span>
       </template>
     </div>
 

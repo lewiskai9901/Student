@@ -2,7 +2,9 @@
   <div class="adv-root">
     <div class="adv-top">
       <h3 class="adv-title">高级评分设置</h3>
-      <button v-if="isDirty" class="adv-save" @click="handleSave">保存</button>
+      <button v-if="isDirty" class="adv-save" :disabled="saving" @click="handleSave">
+        {{ saving ? '保存中...' : '保存' }}
+      </button>
     </div>
 
     <!-- 1. 进退步奖惩 -->
@@ -182,9 +184,13 @@ const props = defineProps<{
   profile: ScoringProfile
 }>()
 
+// 传回 onDone 回调, 让父组件保存完成/失败后通知本组件,
+// 失败时保留 isDirty, 用户可重试
 const emit = defineEmits<{
-  save: [data: UpdateAdvancedSettingsRequest]
+  save: [data: UpdateAdvancedSettingsRequest, onDone: (ok: boolean) => void]
 }>()
+
+const saving = ref(false)
 
 const isDirty = ref(false)
 const expanded = reactive({ trend: false, decay: false, rater: false, cal: false })
@@ -235,8 +241,13 @@ function toggleSection(key: 'trend' | 'decay' | 'rater' | 'cal') {
 }
 
 function handleSave() {
-  emit('save', { ...form })
-  isDirty.value = false
+  if (saving.value) return
+  saving.value = true
+  emit('save', { ...form }, (ok: boolean) => {
+    saving.value = false
+    // 仅成功时清 dirty; 失败保留供重试
+    if (ok) isDirty.value = false
+  })
 }
 </script>
 

@@ -46,6 +46,22 @@
           <div class="sp-rule-actions">
             <button
               class="sp-ic-s"
+              title="上移（提高优先级顺序）"
+              :disabled="idx === 0"
+              @click="moveRule(idx, -1)"
+            >
+              <component :is="iconMap.ArrowUp" class="crc-icon-sm" />
+            </button>
+            <button
+              class="sp-ic-s"
+              title="下移（降低优先级顺序）"
+              :disabled="idx === rules.length - 1"
+              @click="moveRule(idx, 1)"
+            >
+              <component :is="iconMap.ArrowDown" class="crc-icon-sm" />
+            </button>
+            <button
+              class="sp-ic-s"
               :title="rule.isEnabled ? '禁用' : '启用'"
               @click="toggleEnabled(rule)"
             >
@@ -58,7 +74,7 @@
             <button class="sp-ic-s" @click="startEdit(rule)">
               <component :is="iconMap.Pencil" class="crc-icon-sm" />
             </button>
-            <button class="sp-ic-s danger" @click="$emit('delete', rule.id)">
+            <button class="sp-ic-s danger" @click="confirmDelete(rule)">
               <component :is="iconMap.Trash2" class="crc-icon-sm" />
             </button>
           </div>
@@ -121,8 +137,8 @@
             </div>
             <div class="sp-modal-foot">
               <button class="sp-btn-ghost" @click="closeDialog">取消</button>
-              <button class="sp-btn-primary" @click="handleSubmit">
-                {{ editingRule ? '保存' : '添加' }}
+              <button class="sp-btn-primary" :disabled="submitting" @click="handleSubmit">
+                {{ submitting ? '保存中...' : (editingRule ? '保存' : '添加') }}
               </button>
             </div>
           </div>
@@ -135,26 +151,31 @@
 <script setup lang="ts">
 import type { LongId } from '@/types/common'
 import { ref } from 'vue'
-import { Pencil, Trash2, ToggleLeft, ToggleRight } from 'lucide-vue-next'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Pencil, Trash2, ToggleLeft, ToggleRight, ArrowUp, ArrowDown } from 'lucide-vue-next'
 import type { CalculationRule, CreateRuleRequest, UpdateRuleRequest, RuleType } from '@/types/insp/scoring'
 import { RuleTypeConfig } from '@/types/insp/scoring'
 import RuleConfigForm from './RuleConfigForm.vue'
 
-const iconMap = { Pencil, Trash2, ToggleLeft, ToggleRight }
+const iconMap = { Pencil, Trash2, ToggleLeft, ToggleRight, ArrowUp, ArrowDown }
 
 const props = defineProps<{
   rules: CalculationRule[]
   templateId?: LongId
 }>()
 
+// create 携带 onDone 回调: 失败保留弹窗; update 可选回调
 const emit = defineEmits<{
-  create: [data: CreateRuleRequest]
-  update: [id: LongId, data: UpdateRuleRequest]
+  create: [data: CreateRuleRequest, onDone: (ok: boolean) => void]
+  update: [id: LongId, data: UpdateRuleRequest, onDone?: (ok: boolean) => void]
   delete: [id: LongId]
 }>()
 
 const showAdd = ref(false)
 const editingRule = ref<CalculationRule | null>(null)
+const submitting = ref(false)
+
+const RULE_CODE_PATTERN = /^[a-z0-9_]+$/
 
 const form = ref({
   ruleCode: '',
@@ -240,27 +261,84 @@ function toggleEnabled(rule: CalculationRule) {
   })
 }
 
+function validateForm(): boolean {
+  if (!form.value.ruleName.trim()) {
+    ElMessage.warning('请填写规则名称')
+    return false
+  }
+  if (!editingRule.value) {
+    const code = form.value.ruleCode.trim()
+    if (!code) {
+      ElMessage.warning('请填写规则编码')
+      return false
+    }
+    if (!RULE_CODE_PATTERN.test(code)) {
+      ElMessage.warning('规则编码只能包含小写字母、数字和下划线')
+      return false
+    }
+    if (props.rules.some(r => r.ruleCode.trim().toLowerCase() === code.toLowerCase())) {
+      ElMessage.warning(`规则编码「${code}」已存在`)
+      return false
+    }
+  }
+  return true
+}
+
 function handleSubmit() {
+  if (submitting.value) return
+  if (!validateForm()) return
+  submitting.value = true
+  const onDone = (ok: boolean) => {
+    submitting.value = false
+    if (ok) closeDialog()  // 失败时保留弹窗
+  }
   if (editingRule.value) {
     emit('update', editingRule.value.id, {
-      ruleName: form.value.ruleName,
+      ruleName: form.value.ruleName.trim(),
       priority: form.value.priority,
       ruleType: form.value.ruleType,
       config: form.value.config,
       isEnabled: form.value.isEnabled,
-    })
+    }, onDone)
   } else {
     emit('create', {
-      ruleCode: form.value.ruleCode,
-      ruleName: form.value.ruleName,
+      ruleCode: form.value.ruleCode.trim(),
+      ruleName: form.value.ruleName.trim(),
       priority: form.value.priority,
       ruleType: form.value.ruleType,
       config: form.value.config,
       isEnabled: form.value.isEnabled,
       scopeType: 'GLOBAL',
-    })
+    }, onDone)
   }
-  closeDialog()
+}
+
+// ── 优先级上移/下移 (#14: 拖拽成本高, 用按钮替代) ──
+function moveRule(idx: number, dir: -1 | 1) {
+  const target = idx + dir
+  if (target < 0 || target >= props.rules.length) return
+  const a = props.rules[idx]
+  const b = props.rules[target]
+  // 交换两条规则的 priority
+  emit('update', a.id, {
+    ruleName: a.ruleName, priority: b.priority, ruleType: a.ruleType,
+    config: a.config, isEnabled: a.isEnabled,
+  })
+  emit('update', b.id, {
+    ruleName: b.ruleName, priority: a.priority, ruleType: b.ruleType,
+    config: b.config, isEnabled: b.isEnabled,
+  })
+}
+
+async function confirmDelete(rule: CalculationRule) {
+  try {
+    await ElMessageBox.confirm(
+      `确定删除规则「${rule.ruleName}」？`,
+      '删除规则',
+      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' },
+    )
+    emit('delete', rule.id)
+  } catch { /* 用户取消 */ }
 }
 </script>
 
@@ -313,6 +391,9 @@ function handleSubmit() {
 .sp-ic-s { background:none; border:none; padding:1px 3px; color:#b8c0cc; cursor:pointer; font-size:12px; border-radius:3px; display:inline-flex; align-items:center; }
 .sp-ic-s:hover { color:#1a6dff; }
 .sp-ic-s.danger:hover { color:#d93025; }
+.sp-ic-s:disabled { opacity:0.3; cursor:not-allowed; }
+.sp-ic-s:disabled:hover { color:#b8c0cc; }
+.sp-btn-primary:disabled { background:#b3d1ff; cursor:not-allowed; }
 
 /* Form fields */
 .sp-fld { display:flex; flex-direction:column; }

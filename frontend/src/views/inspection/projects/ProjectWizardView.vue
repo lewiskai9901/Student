@@ -19,6 +19,9 @@ const currentStep = ref(0)
 const submitting = ref(false)
 const loadingTemplates = ref(false)
 const loadingOrg = ref(false)
+// P0: 区分"加载失败"与"暂无数据" — 失败显式错误态 + 重试, 不伪装成空数据
+const templatesError = ref(false)
+const orgError = ref(false)
 const searchKeyword = ref('')
 const scopeSearchKeyword = ref('')
 
@@ -78,7 +81,10 @@ const dateRange = computed(() => {
 })
 
 const canProceedStep0 = computed(() => !!form.rootSectionId)
-const canProceedStep1 = computed(() => !!form.projectName.trim() && !!form.startDate)
+// P0: Step1 校验必须含 scopeIds, 否则可创建空范围项目
+const canProceedStep1 = computed(() =>
+  !!form.projectName.trim() && !!form.startDate && form.scopeIds.length > 0
+)
 
 function isPublished(section: TemplateSection): boolean {
   return section.status === 'PUBLISHED'
@@ -204,7 +210,11 @@ function nextStep() {
     return
   }
   if (currentStep.value === 1 && !canProceedStep1.value) {
-    ElMessage.warning('请填写项目名称和开始日期')
+    if (!form.projectName.trim() || !form.startDate) {
+      ElMessage.warning('请填写项目名称和开始日期')
+    } else {
+      ElMessage.warning('请至少选择一个检查范围目标')
+    }
     return
   }
   if (currentStep.value < 2) currentStep.value++
@@ -230,14 +240,29 @@ function selectSection(section: TemplateSection) {
 // ========== Step 2: 创建 ==========
 async function handleCreate() {
   submitting.value = true
+  // P0: 向导 3 步串行写无原子性. 一旦项目实体已建出来, 后续 scope/plan 失败
+  // 不能笼统报错丢弃 — 跳转到已建项目详情页, 让用户在那里补全, 避免重复空项目.
+  let createdProjectId: LongId | undefined
   try {
-    // Bug 2: create 时传 rootSectionId, 否则项目和模板脱钩
+    // Step A: create 时传 rootSectionId, 否则项目和模板脱钩
     const project = await inspProjectApi.create({
       projectName: form.projectName,
       rootSectionId: form.rootSectionId!,
       startDate: form.startDate,
     })
+    createdProjectId = project.id
 
+    // Step B: scope+date 总是 update, 否则向导 step2 选的范围会丢
+    const updateData: Record<string, any> = {
+      scopeType: form.scopeType,
+    }
+    if (form.endDate) updateData.endDate = form.endDate
+    if (form.scopeIds.length > 0) {
+      updateData.scopeConfig = JSON.stringify(form.scopeIds.map(String))
+    }
+    await updateProject(project.id, updateData)
+
+    // Step C: 默认计划
     if (form.rootSectionId) {
       await createPlan({
         projectId: project.id,
@@ -248,20 +273,17 @@ async function handleCreate() {
       })
     }
 
-    // Bug 2: scope+date 总是 update, 不依赖 hasExtra 兜底, 否则向导 step2 选的范围会丢
-    const updateData: Record<string, any> = {
-      scopeType: form.scopeType,
-    }
-    if (form.endDate) updateData.endDate = form.endDate
-    if (form.scopeIds.length > 0) {
-      updateData.scopeConfig = JSON.stringify(form.scopeIds.map(String))
-    }
-    await updateProject(project.id, updateData)
-
     ElMessage.success('项目已创建')
     router.push(`/inspection/projects/${project.id}`)
   } catch (e: any) {
-    ElMessage.error(e.message || '创建失败')
+    const msg = e?.message || '未知错误'
+    if (createdProjectId) {
+      // 项目实体已落库, 仅范围/计划未保存 — 跳详情页补全, 不要让用户重复建项目
+      ElMessage.error(`项目已创建, 但范围/计划未保存 (${msg})，请在详情页补全`)
+      router.push(`/inspection/projects/${createdProjectId}`)
+    } else {
+      ElMessage.error('创建失败: ' + msg)
+    }
   } finally {
     submitting.value = false
   }
@@ -270,11 +292,13 @@ async function handleCreate() {
 // ========== Init ==========
 async function loadTemplates() {
   loadingTemplates.value = true
+  templatesError.value = false
   try {
     const result = await inspTemplateApi.getList({ page: 1, size: 200 })
     rootSections.value = result.records
-  } catch (e) {
-    console.warn('Failed to load templates', e)
+  } catch (e: any) {
+    templatesError.value = true
+    ElMessage.error('加载模板列表失败: ' + (e?.message || '未知错误'))
   } finally {
     loadingTemplates.value = false
   }
@@ -293,12 +317,14 @@ function flattenTree(nodes: OrgUnitTreeNode[], depth = 0): Array<OrgUnit & { dep
 
 async function loadOrgUnits() {
   loadingOrg.value = true
+  orgError.value = false
   try {
     const tree = await getOrgUnitTree()
     orgTree.value = tree
     flatOrgUnits.value = flattenTree(tree) as any[]
-  } catch (e) {
-    console.warn('Failed to load org units', e)
+  } catch (e: any) {
+    orgError.value = true
+    ElMessage.error('加载组织单元失败: ' + (e?.message || '未知错误'))
   } finally {
     loadingOrg.value = false
   }
@@ -349,8 +375,10 @@ onMounted(() => {
       </button>
     </nav>
 
+    <div class="wz-steps">
+    <Transition name="wz-step" mode="out-in">
     <!-- ==================== Step 0: 选择模板 ==================== -->
-    <section v-show="currentStep === 0" class="wz-card">
+    <section v-if="currentStep === 0" key="step0" class="wz-card">
       <header class="wz-card__head">
         <span class="wz-card__title">选择检查模板</span>
         <div class="wz-card__search">
@@ -360,6 +388,10 @@ onMounted(() => {
       </header>
 
       <div v-if="loadingTemplates" class="wz-state">加载模板中…</div>
+      <div v-else-if="templatesError" class="wz-state wz-state--error">
+        <span>模板列表加载失败</span>
+        <button class="insp-btn insp-btn--sm" @click="loadTemplates">重试</button>
+      </div>
       <div v-else-if="rootSections.length === 0" class="wz-state">暂无模板, 请先在模板管理中创建</div>
       <div v-else-if="filteredSections.length === 0" class="wz-state">未找到匹配的模板</div>
 
@@ -396,7 +428,7 @@ onMounted(() => {
     </section>
 
     <!-- ==================== Step 1: 配置范围 ==================== -->
-    <section v-show="currentStep === 1" class="wz-card">
+    <section v-else-if="currentStep === 1" key="step1" class="wz-card">
       <header class="wz-card__head">
         <span class="wz-card__title">配置项目信息与检查范围</span>
       </header>
@@ -461,6 +493,10 @@ onMounted(() => {
           <!-- Tree -->
           <div class="scope-tree-wrap">
             <div v-if="loadingOrg" class="wz-state wz-state--small">加载中...</div>
+            <div v-else-if="orgError" class="wz-state wz-state--small wz-state--error">
+              <span>组织单元加载失败</span>
+              <button class="insp-btn insp-btn--sm" @click="loadOrgUnits">重试</button>
+            </div>
             <div v-else-if="treeData.length === 0" class="wz-state wz-state--small">暂无组织单元</div>
             <el-tree
               v-else
@@ -490,7 +526,7 @@ onMounted(() => {
     </section>
 
     <!-- ==================== Step 2: 确认创建 ==================== -->
-    <section v-show="currentStep === 2" class="wz-card">
+    <section v-else key="step2" class="wz-card">
       <header class="wz-card__head">
         <span class="wz-card__title">确认创建</span>
         <span class="wz-card__hint">检查信息无误后点击右下"创建项目"</span>
@@ -529,6 +565,8 @@ onMounted(() => {
         创建后将进入项目详情页, 可继续配置检查计划/评级维度/检查员; 发布后系统自动生成检查任务.
       </div>
     </section>
+    </Transition>
+    </div>
 
     <!-- Footer -->
     <footer class="wz-foot">
@@ -672,6 +710,9 @@ onMounted(() => {
   font-size: 9px;
 }
 
+/* ─ Steps container (transition anchor) ─────── */
+.wz-steps { position: relative; }
+
 /* ─ Card ─────── */
 .wz-card {
   background: var(--insp-bg-surface);
@@ -733,6 +774,23 @@ onMounted(() => {
   color: var(--insp-ink-tertiary);
 }
 .wz-state--small { padding: 20px; }
+.wz-state--error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--insp-fail);
+}
+
+/* ─ Step transition (P1 #9) ─────── */
+.wz-step-enter-active,
+.wz-step-leave-active {
+  transition: opacity var(--insp-t-medium) var(--insp-ease-out),
+              transform var(--insp-t-medium) var(--insp-ease-out);
+}
+.wz-step-enter-from { opacity: 0; transform: translateX(12px); }
+.wz-step-leave-to { opacity: 0; transform: translateX(-12px); }
+.wz-step-leave-active { position: absolute; width: 100%; }
 
 /* ─ Template list ─────── */
 .tpl-list {

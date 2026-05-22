@@ -24,11 +24,20 @@
       <InspSpinner />
     </div>
 
+    <!-- Load error (区分于"无配置") -->
+    <div v-else-if="loadError" class="sp-state">
+      <InspEmptyState title="加载评分配置失败" :description="loadError">
+        <template #action>
+          <InspButton variant="accent" @click="reload">重试</InspButton>
+        </template>
+      </InspEmptyState>
+    </div>
+
     <!-- No profile yet (fallback, normally auto-created) -->
     <div v-else-if="!profile" class="sp-state">
-      <InspEmptyState title="初始化配置失败" description="请检查分区配置或重试">
+      <InspEmptyState title="尚未初始化评分配置" description="点击下方按钮创建默认配置">
         <template #action>
-          <InspButton variant="accent" @click="initProfile">重试</InspButton>
+          <InspButton variant="accent" @click="initProfile">创建配置</InspButton>
         </template>
       </InspEmptyState>
     </div>
@@ -136,7 +145,8 @@
 <script setup lang="ts">
 import type { LongId } from '@/types/common'
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, ShieldCheck, CheckCircle2, AlertTriangle, XCircle } from 'lucide-vue-next'
 import { useInspScoringStore } from '@/stores/inspection/inspScoringStore'
 import type {
@@ -163,7 +173,12 @@ const store = useInspScoringStore()
 
 const loading = ref(true)
 const dirty = ref(false)
+const loadError = ref<string>('')
 const profile = ref<ScoringProfile | null>(null)
+
+function msg(e: unknown): string {
+  return (e as { message?: string })?.message || '请稍后重试'
+}
 
 const profileForm = reactive({
   maxScore: 100,
@@ -245,7 +260,9 @@ const healthChecks = computed<HealthCheck[]>(() => {
 
 // ==================== Lifecycle ====================
 
-onMounted(async () => {
+async function loadAll() {
+  loading.value = true
+  loadError.value = ''
   const id = route.params.id ? route.params.id as string : null
   const tid = route.query.templateId ? String(route.query.templateId) : null
 
@@ -272,8 +289,33 @@ onMounted(async () => {
     if (profile.value) {
       syncFormFromProfile(profile.value)
     }
+  } catch (e) {
+    // 加载失败与"未初始化配置"明确区分
+    loadError.value = msg(e)
+    profile.value = null
   } finally {
     loading.value = false
+  }
+}
+
+function reload() {
+  loadAll()
+}
+
+onMounted(loadAll)
+
+// 离开页面前确认未保存的基础设置
+onBeforeRouteLeave(async () => {
+  if (!dirty.value) return true
+  try {
+    await ElMessageBox.confirm('基础设置有未保存的修改，确定离开吗？', '未保存的修改', {
+      type: 'warning',
+      confirmButtonText: '离开',
+      cancelButtonText: '留下',
+    })
+    return true
+  } catch {
+    return false
   }
 })
 
@@ -294,74 +336,166 @@ function goBack() {
 
 async function initProfile() {
   const tid = templateId.value || (route.query.templateId ? String(route.query.templateId) : '')
-  if (!tid) return
-  const p = await store.createProfile(tid)
-  profile.value = p
-  syncFormFromProfile(p)
+  if (!tid) {
+    ElMessage.error('缺少分区信息，无法创建评分配置')
+    return
+  }
+  try {
+    const p = await store.createProfile(tid)
+    profile.value = p
+    syncFormFromProfile(p)
+    loadError.value = ''
+    ElMessage.success('评分配置已创建')
+  } catch (e) {
+    ElMessage.error('创建评分配置失败: ' + msg(e))
+  }
 }
 
 async function saveProfile() {
   if (!profile.value) return
-  await store.updateProfile(profile.value.id, {
-    maxScore: profileForm.maxScore,
-    minScore: profileForm.minScore,
-    precisionDigits: profileForm.precisionDigits,
-  })
-  dirty.value = false
+  try {
+    await store.updateProfile(profile.value.id, {
+      maxScore: profileForm.maxScore,
+      minScore: profileForm.minScore,
+      precisionDigits: profileForm.precisionDigits,
+    })
+    dirty.value = false
+    ElMessage.success('基础设置已保存')
+  } catch (e) {
+    // 保存失败时保留 dirty, 用户可重试
+    ElMessage.error('保存基础设置失败: ' + msg(e))
+  }
 }
 
 // GradeBand handlers
-async function handleCreateGradeBand(data: CreateGradeBandRequest) {
-  if (!profile.value) return
-  await store.createGradeBand(profile.value.id, data)
+async function handleCreateGradeBand(
+  data: CreateGradeBandRequest,
+  onDone: (ok: boolean) => void,
+) {
+  if (!profile.value) { onDone(false); return }
+  try {
+    await store.createGradeBand(profile.value.id, data)
+    ElMessage.success('等级已添加')
+    onDone(true)
+  } catch (e) {
+    ElMessage.error('添加等级失败: ' + msg(e))
+    onDone(false)
+  }
 }
-async function handleUpdateGradeBand(id: LongId, data: UpdateGradeBandRequest) {
-  if (!profile.value) return
-  await store.updateGradeBand(profile.value.id, id, data)
+async function handleUpdateGradeBand(
+  id: LongId,
+  data: UpdateGradeBandRequest,
+  onDone: (ok: boolean) => void,
+) {
+  if (!profile.value) { onDone(false); return }
+  try {
+    await store.updateGradeBand(profile.value.id, id, data)
+    ElMessage.success('等级已更新')
+    onDone(true)
+  } catch (e) {
+    ElMessage.error('更新等级失败: ' + msg(e))
+    onDone(false)
+  }
 }
 async function handleDeleteGradeBand(id: LongId) {
   if (!profile.value) return
-  await store.deleteGradeBand(profile.value.id, id)
+  try {
+    await store.deleteGradeBand(profile.value.id, id)
+    ElMessage.success('等级已删除')
+  } catch (e) {
+    ElMessage.error('删除等级失败: ' + msg(e))
+  }
 }
 
 // Grade band preset handler
 async function handleApplyPreset(bands: CreateGradeBandRequest[]) {
   if (!profile.value) return
-  const existingIds = store.gradeBands.map(b => b.id)
-  for (const id of existingIds) {
-    await store.deleteGradeBand(profile.value.id, id)
-  }
-  for (const band of bands) {
-    await store.createGradeBand(profile.value.id, band)
+  try {
+    const existingIds = store.gradeBands.map(b => b.id)
+    for (const id of existingIds) {
+      await store.deleteGradeBand(profile.value.id, id)
+    }
+    for (const band of bands) {
+      await store.createGradeBand(profile.value.id, band)
+    }
+    ElMessage.success('预设已应用')
+  } catch (e) {
+    ElMessage.error('应用预设失败: ' + msg(e))
   }
 }
 
 // Rule handlers
-async function handleCreateRule(data: CreateRuleRequest) {
-  if (!profile.value) return
-  await store.createRule(profile.value.id, data)
+async function handleCreateRule(
+  data: CreateRuleRequest,
+  onDone: (ok: boolean) => void,
+) {
+  if (!profile.value) { onDone(false); return }
+  try {
+    await store.createRule(profile.value.id, data)
+    ElMessage.success('规则已添加')
+    onDone(true)
+  } catch (e) {
+    ElMessage.error('添加规则失败: ' + msg(e))
+    onDone(false)
+  }
 }
-async function handleUpdateRule(id: LongId, data: UpdateRuleRequest) {
-  if (!profile.value) return
-  await store.updateRule(profile.value.id, id, data)
+async function handleUpdateRule(
+  id: LongId,
+  data: UpdateRuleRequest,
+  onDone?: (ok: boolean) => void,
+) {
+  if (!profile.value) { onDone?.(false); return }
+  try {
+    await store.updateRule(profile.value.id, id, data)
+    ElMessage.success('规则已更新')
+    onDone?.(true)
+  } catch (e) {
+    ElMessage.error('更新规则失败: ' + msg(e))
+    onDone?.(false)
+  }
 }
 async function handleDeleteRule(id: LongId) {
   if (!profile.value) return
-  await store.deleteRule(profile.value.id, id)
+  try {
+    await store.deleteRule(profile.value.id, id)
+    ElMessage.success('规则已删除')
+  } catch (e) {
+    ElMessage.error('删除规则失败: ' + msg(e))
+  }
 }
 
 // Advanced settings handler (1.9-1.12)
-async function handleSaveAdvancedSettings(data: UpdateAdvancedSettingsRequest) {
-  if (!profile.value) return
-  await store.updateAdvancedSettings(profile.value.id, data)
-  profile.value = store.currentProfile
+async function handleSaveAdvancedSettings(
+  data: UpdateAdvancedSettingsRequest,
+  onDone: (ok: boolean) => void,
+) {
+  if (!profile.value) { onDone(false); return }
+  try {
+    await store.updateAdvancedSettings(profile.value.id, data)
+    profile.value = store.currentProfile
+    ElMessage.success('高级设置已保存')
+    onDone(true)
+  } catch (e) {
+    ElMessage.error('保存高级设置失败: ' + msg(e))
+    onDone(false)
+  }
 }
 
 // Version handler (1.7)
-async function handlePublishVersion(changeSummary: string) {
-  if (!profile.value) return
-  await store.publishVersion(profile.value.id, { changeSummary })
-  profile.value = store.currentProfile
+async function handlePublishVersion(
+  changeSummary: string,
+  onDone: (ok: boolean) => void,
+) {
+  if (!profile.value) { onDone(false); return }
+  try {
+    await store.publishVersion(profile.value.id, { changeSummary })
+    profile.value = store.currentProfile
+    ElMessage.success('版本已发布')
+    onDone(true)
+  } catch (e) {
+    ElMessage.error('发布版本失败: ' + msg(e))
+    onDone(false)
+  }
 }
 </script>
 
@@ -446,6 +580,17 @@ async function handlePublishVersion(changeSummary: string) {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+}
+@media (max-width: 1280px) {
+  .sp-right { width: 300px; }
+}
+@media (max-width: 1024px) {
+  .sp-body { flex-direction: column; }
+  .sp-right {
+    width: auto;
+    border-left: none;
+    border-top: 1px solid var(--insp-border-default);
+  }
 }
 
 /* Card */

@@ -7,6 +7,8 @@ import { ArrowLeft, UserPlus, PlayCircle, Send, Check, X, AlertTriangle, Lock } 
 import { useInspCorrectiveStore } from '@/stores/inspection/inspCorrectiveStore'
 import { CaseStatusConfig, CasePriorityConfig, type CaseStatus, type CasePriority } from '@/types/insp/enums'
 import StatusTimeline from '@/views/inspection/shared/StatusTimeline.vue'
+import { getSimpleUserList } from '@/api/user'
+import type { SimpleUser } from '@/types/user'
 
 const route = useRoute()
 const router = useRouter()
@@ -23,8 +25,38 @@ const rejectDialogVisible = ref(false)
 
 const assignForm = ref({ assigneeId: undefined as LongId | undefined, assigneeName: '' })
 const correctionForm = ref({ correctionNote: '', evidenceIds: [] as LongId[] })
-const verifyForm = ref({ verifierName: '', note: '' })
-const rejectForm = ref({ verifierName: '', reason: '' })
+const verifyForm = ref({ verifierId: undefined as LongId | undefined, verifierName: '', note: '' })
+const rejectForm = ref({ verifierId: undefined as LongId | undefined, verifierName: '', reason: '' })
+
+// ── 人员选择器: 远程搜索 ──
+const userOptions = ref<SimpleUser[]>([])
+const userSearchLoading = ref(false)
+async function searchUsers(keyword: string) {
+  userSearchLoading.value = true
+  try {
+    userOptions.value = await getSimpleUserList(keyword || '')
+  } catch {
+    userOptions.value = []
+  } finally {
+    userSearchLoading.value = false
+  }
+}
+/** 选中用户后自动带出姓名 */
+function pickAssignee(id: LongId | undefined) {
+  const u = userOptions.value.find(o => String(o.id) === String(id))
+  assignForm.value.assigneeId = id
+  assignForm.value.assigneeName = u?.realName || ''
+}
+function pickVerifier(id: LongId | undefined) {
+  const u = userOptions.value.find(o => String(o.id) === String(id))
+  verifyForm.value.verifierId = id
+  verifyForm.value.verifierName = u?.realName || ''
+}
+function pickRejecter(id: LongId | undefined) {
+  const u = userOptions.value.find(o => String(o.id) === String(id))
+  rejectForm.value.verifierId = id
+  rejectForm.value.verifierName = u?.realName || ''
+}
 
 const currentCase = computed(() => store.currentCase)
 
@@ -124,6 +156,10 @@ async function handleSubmitCorrection() {
 }
 
 async function handleVerify() {
+  if (!verifyForm.value.verifierName) {
+    ElMessage.warning('请选择验证人')
+    return
+  }
   try {
     await store.verifyCase(caseId, verifyForm.value)
     ElMessage.success('验证通过')
@@ -135,6 +171,10 @@ async function handleVerify() {
 }
 
 async function handleReject() {
+  if (!rejectForm.value.verifierName) {
+    ElMessage.warning('请选择验证人')
+    return
+  }
   if (!rejectForm.value.reason) {
     ElMessage.warning('请填写驳回原因')
     return
@@ -260,7 +300,7 @@ onMounted(() => loadData())
       <!-- Action Buttons -->
       <div class="flex gap-2 mb-5">
         <el-button v-if="currentCase.status === 'OPEN' || currentCase.status === 'REJECTED'"
-                   type="primary" @click="assignDialogVisible = true">
+                   type="primary" @click="assignDialogVisible = true; searchUsers('')">
           <UserPlus class="w-4 h-4 mr-1" />分配责任人
         </el-button>
         <el-button v-if="currentCase.status === 'ASSIGNED'"
@@ -272,11 +312,11 @@ onMounted(() => loadData())
           <Send class="w-4 h-4 mr-1" />提交整改
         </el-button>
         <el-button v-if="currentCase.status === 'SUBMITTED'"
-                   type="success" @click="verifyDialogVisible = true">
+                   type="success" @click="verifyDialogVisible = true; searchUsers('')">
           <Check class="w-4 h-4 mr-1" />验证通过
         </el-button>
         <el-button v-if="currentCase.status === 'SUBMITTED'"
-                   type="danger" @click="rejectDialogVisible = true">
+                   type="danger" @click="rejectDialogVisible = true; searchUsers('')">
           <X class="w-4 h-4 mr-1" />驳回
         </el-button>
         <el-button v-if="currentCase.status === 'VERIFIED'"
@@ -362,13 +402,21 @@ onMounted(() => loadData())
     </template>
 
     <!-- Assign Dialog -->
-    <el-dialog v-model="assignDialogVisible" title="分配责任人" width="400px">
+    <el-dialog v-model="assignDialogVisible" title="分配责任人" width="440px">
       <el-form label-width="80px">
-        <el-form-item label="责任人ID">
-          <el-input-number v-model="assignForm.assigneeId" :min="1" class="w-full" />
-        </el-form-item>
-        <el-form-item label="姓名">
-          <el-input v-model="assignForm.assigneeName" placeholder="请输入责任人姓名" />
+        <el-form-item label="责任人">
+          <el-select
+            :model-value="assignForm.assigneeId"
+            filterable remote :remote-method="searchUsers" :loading="userSearchLoading"
+            placeholder="搜索并选择责任人" class="w-full"
+            @change="pickAssignee"
+          >
+            <el-option
+              v-for="u in userOptions" :key="u.id"
+              :label="`${u.realName}${u.orgUnitName ? ' · ' + u.orgUnitName : ''}`"
+              :value="u.id"
+            />
+          </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -392,10 +440,21 @@ onMounted(() => loadData())
     </el-dialog>
 
     <!-- Verify Dialog -->
-    <el-dialog v-model="verifyDialogVisible" title="验证通过" width="400px">
+    <el-dialog v-model="verifyDialogVisible" title="验证通过" width="440px">
       <el-form label-width="80px">
         <el-form-item label="验证人">
-          <el-input v-model="verifyForm.verifierName" placeholder="请输入验证人姓名" />
+          <el-select
+            :model-value="verifyForm.verifierId"
+            filterable remote :remote-method="searchUsers" :loading="userSearchLoading"
+            placeholder="搜索并选择验证人" class="w-full"
+            @change="pickVerifier"
+          >
+            <el-option
+              v-for="u in userOptions" :key="u.id"
+              :label="`${u.realName}${u.orgUnitName ? ' · ' + u.orgUnitName : ''}`"
+              :value="u.id"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="备注">
           <el-input v-model="verifyForm.note" type="textarea" :rows="3" placeholder="验证备注（可选）" />
@@ -408,10 +467,21 @@ onMounted(() => loadData())
     </el-dialog>
 
     <!-- Reject Dialog -->
-    <el-dialog v-model="rejectDialogVisible" title="驳回" width="400px">
+    <el-dialog v-model="rejectDialogVisible" title="驳回" width="440px">
       <el-form label-width="80px">
         <el-form-item label="验证人">
-          <el-input v-model="rejectForm.verifierName" placeholder="请输入验证人姓名" />
+          <el-select
+            :model-value="rejectForm.verifierId"
+            filterable remote :remote-method="searchUsers" :loading="userSearchLoading"
+            placeholder="搜索并选择验证人" class="w-full"
+            @change="pickRejecter"
+          >
+            <el-option
+              v-for="u in userOptions" :key="u.id"
+              :label="`${u.realName}${u.orgUnitName ? ' · ' + u.orgUnitName : ''}`"
+              :value="u.id"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="驳回原因">
           <el-input v-model="rejectForm.reason" type="textarea" :rows="3" placeholder="请填写驳回原因" />
@@ -426,7 +496,16 @@ onMounted(() => loadData())
 </template>
 
 <style scoped>
-.case-detail { padding: 12px 16px; }
+.case-detail {
+  padding: 32px 48px 64px;
+  max-width: 1500px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background: var(--insp-bg-page);
+}
+@media (max-width: 800px) {
+  .case-detail { padding: 20px 16px 48px; }
+}
 
 /* V110 引擎追溯 */
 .trace-card { border-color: #ddd6fe !important; }

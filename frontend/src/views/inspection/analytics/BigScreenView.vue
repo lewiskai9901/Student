@@ -99,13 +99,16 @@
 
 <script setup lang="ts">
 import type { LongId } from '@/types/common'
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import * as analyticsApi from '@/api/inspection/analytics'
 import { observationApi } from '@/api/observation'
 import { useInspExecutionStore } from '@/stores/inspection/inspExecutionStore'
 
 const executionStore = useInspExecutionStore()
-const projects = ref<{ id: LongId; projectName: string }[]>([])
+// 直接复用 store, 不再重复维护本地副本
+const projects = computed(() =>
+  (executionStore.projects || []).map((p: any) => ({ id: p.id as LongId, projectName: p.projectName as string }))
+)
 const projectId = ref<LongId | null>(null)
 
 const currentTime = ref('')
@@ -154,8 +157,8 @@ async function startTvMode() {
   // 进入全屏 (失败/拒绝不影响 TV 轮播逻辑)
   // 注意: 浏览器要求 requestFullscreen 必须由用户手势直接触发, 这里需 try/catch
   if (!document.fullscreenElement) {
+    // isFullscreen 由 fullscreenchange 事件同步, 此处不手动设
     document.documentElement.requestFullscreen()
-      .then(() => { isFullscreen.value = true })
       .catch(() => { /* 拒绝/不支持 — TV 模式仍生效, 只是没全屏 */ })
   }
   // 立即定位到第 0 个
@@ -189,19 +192,26 @@ function stopTvMode() {
   if (tvRotateTimer) { clearInterval(tvRotateTimer); tvRotateTimer = null }
   if (feedScrollTimer) { clearInterval(feedScrollTimer); feedScrollTimer = null }
   if (document.fullscreenElement) {
-    try { document.exitFullscreen() } catch { /* ignore */ }
-    isFullscreen.value = false
+    // isFullscreen 由 fullscreenchange 事件同步
+    document.exitFullscreen().catch(() => { /* ignore */ })
   }
 }
 
 function toggleFullscreen() {
   if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen()
-    isFullscreen.value = true
+    document.documentElement.requestFullscreen().catch((err) => {
+      console.warn('进入全屏失败', err)
+    })
   } else {
-    document.exitFullscreen()
-    isFullscreen.value = false
+    document.exitFullscreen().catch((err) => {
+      console.warn('退出全屏失败', err)
+    })
   }
+}
+
+// 监听全屏状态变化 (ESC 退出 / F11 等浏览器原生操作), 保持 isFullscreen 同步
+function onFullscreenChange() {
+  isFullscreen.value = !!document.fullscreenElement
 }
 
 function fmtDate(d: Date) {
@@ -210,7 +220,6 @@ function fmtDate(d: Date) {
 
 async function loadProjects() {
   await executionStore.loadProjects()
-  projects.value = (executionStore.projects || []).map((p: any) => ({ id: p.id, projectName: p.projectName }))
   if (projects.value.length && !projectId.value) {
     projectId.value = projects.value[0].id
   }
@@ -249,19 +258,24 @@ async function loadTrend() {
   } catch { trendData.value = [] }
 }
 
-/** 今日 daily-ranking, fallback 取最近一日 */
+/** 今日 daily-ranking, fallback 取最近一日.
+ *  并发拉 14 天 ranking 再取最近一个非空 (原串行最坏 14 次往返阻塞首屏).
+ *  注: 后端无"最近有数据日期"接口, 建议加 /analytics/latest-ranking?projectId 替代此扇出. */
 async function loadRanking() {
   if (!projectId.value) return
-  let date = fmtDate(new Date())
-  let rows: any[] = []
-  for (let i = 0; i < 14 && rows.length === 0; i++) {
+  const dates: string[] = []
+  for (let i = 0; i < 14; i++) {
     const d = new Date(); d.setDate(d.getDate() - i)
-    const ds = fmtDate(d)
-    try {
-      const r = await analyticsApi.getDailyRanking(projectId.value, ds) as any[]
-      if (r.length) { rows = r; date = ds; break }
-    } catch { /* ignore */ }
+    dates.push(fmtDate(d))
   }
+  const results = await Promise.all(
+    dates.map(ds => analyticsApi.getDailyRanking(projectId.value!, ds)
+      .then(r => ({ ds, rows: (r as any[]) || [] }))
+      .catch(() => ({ ds, rows: [] as any[] })))
+  )
+  // dates 已按日期降序 (今天 → 14 天前), 取首个非空
+  const hit = results.find(r => r.rows.length > 0)
+  const rows: any[] = hit?.rows ?? []
   metrics.value[0].value = rows.length // 今日检查目标数
   metrics.value[1].value = rows.reduce((a: number, x: any) => a + (x.inspectionCount || 0), 0)
   // Ranking top 5
@@ -326,6 +340,7 @@ async function loadObservations() {
 onMounted(async () => {
   updateTime()
   timer = setInterval(updateTime, 1000)
+  document.addEventListener('fullscreenchange', onFullscreenChange)
   await loadProjects()
   await loadAll()
   // 60 秒轮询
@@ -336,6 +351,7 @@ onUnmounted(() => {
   clearInterval(pollTimer)
   if (tvRotateTimer) clearInterval(tvRotateTimer)
   if (feedScrollTimer) clearInterval(feedScrollTimer)
+  document.removeEventListener('fullscreenchange', onFullscreenChange)
 })
 </script>
 

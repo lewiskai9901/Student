@@ -88,6 +88,8 @@ function isReviewable(t: InspTask): boolean {
 const today = new Date().toISOString().slice(0, 10)
 
 // ── Loaders ──
+// NOTE(#18 P1): getMyTasks / getAvailableTasks 全量返回, 无分页. 个人任务量通常有限可接受;
+// 若单用户任务量大需后端任务接口加分页参数后再接前端分页 + 虚拟滚动.
 async function loadAll() {
   loading.value = true
   try {
@@ -160,7 +162,7 @@ const grouped = computed((): DateBucket[] => {
   const tomorrow = new Date(todayD); tomorrow.setDate(tomorrow.getDate() + 1)
   const weekEnd = new Date(todayD); weekEnd.setDate(weekEnd.getDate() + 7)
 
-  for (const t of filtered.value) {
+  for (const t of filteredAfterSearch.value) {
     if (isOverdue(t)) { buckets.overdue.push(t); continue }
     if (!t.taskDate) { buckets.later.push(t); continue }
     const d = new Date(t.taskDate)
@@ -448,6 +450,11 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <span class="filter-tab__count">{{ counts.adhoc }}</span>
       </button>
       <div class="filter-spacer" />
+      <input
+        v-model="searchKeyword"
+        class="roster-search"
+        placeholder="搜索 编号 / 检查员 / 项目..."
+      />
       <div class="kbd-tray">
         <span class="kbd-pair"><kbd class="insp-kbd">J</kbd><kbd class="insp-kbd">K</kbd> 切换</span>
         <span class="kbd-pair"><kbd class="insp-kbd insp-kbd--inverted">Enter</kbd> 领取/继续</span>
@@ -507,12 +514,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         >
           <span class="row-date insp-num">
             {{ fmtDate(t.taskDate) }}
-            <span v-if="(t as any).extendedTo" class="row-date__ext">> {{ fmtDate((t as any).extendedTo) }}</span>
+            <span v-if="(t as any).extendedTo" class="row-date__ext">→ {{ fmtDate((t as any).extendedTo) }}</span>
           </span>
 
           <div class="row-meta">
             <div class="row-code-line">
-              <span class="row-code">{{ t.taskCode }}</span>
+              <span class="row-code" v-html="highlightHtml(t.taskCode, searchKeyword)"></span>
               <span class="insp-chip" :class="`insp-chip--${statusVariant(t.status)}`">
                 {{ TaskStatusConfig[t.status]?.label || t.status }}
               </span>
@@ -557,7 +564,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       <div v-if="!loading && grouped.length === 0" class="empty">
         <div class="insp-stamp">无任务</div>
         <p class="empty-hint">
-          {{ filter === 'overdue' ? '没有逾期任务' :
+          {{ searchKeyword.trim() ? `没有匹配「${searchKeyword}」的任务` :
+             filter === 'overdue' ? '没有逾期任务' :
              filter === 'available' ? '暂无可领取任务' :
              filter === 'toreview' ? '暂无待你审核的任务' :
              filter === 'inprogress' ? '没有进行中的任务' : '当前无检查任务' }}
@@ -616,7 +624,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
             </div>
           </div>
           <div class="my-popover__foot">
-            点击行 > {{ primaryAction(previewTarget).label }}
+            点击行 → {{ primaryAction(previewTarget).label }}
           </div>
         </div>
       </Transition>
@@ -709,6 +717,23 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 }
 
 .filter-spacer { flex: 1; }
+.roster-search {
+  width: 220px;
+  height: 28px;
+  padding: 0 10px;
+  margin-right: var(--insp-sp-3);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-sm);
+  font-size: var(--insp-text-sm);
+  font-family: inherit;
+  background: var(--insp-bg-surface);
+  color: var(--insp-ink-primary);
+}
+.roster-search:focus {
+  outline: none;
+  border-color: var(--insp-accent);
+  box-shadow: 0 0 0 3px var(--insp-accent-paler);
+}
 .kbd-tray {
   display: flex; align-items: center; gap: var(--insp-sp-3);
   padding-right: var(--insp-sp-3);

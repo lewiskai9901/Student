@@ -62,17 +62,15 @@ const showBounds = computed(() =>
 
 // ==================== Helpers ====================
 
-const inputCls = 'w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-400'
-const selectCls = 'w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-400 bg-white'
-
 function updateField<K extends keyof NormalizationConfig>(field: K, value: NormalizationConfig[K]) {
   emit('update:modelValue', { ...props.modelValue, [field]: value })
 }
 
 // ==================== Example Calculation ====================
 
-const exampleRawScore = ref(-15)
-const examplePopulation = ref(40)
+// 计算示例的初始演示值 — 用户可在面板中实时编辑, 仅作交互预览用途
+const exampleRawScore = ref(-10)
+const examplePopulation = ref(30)
 
 const exampleResult = computed(() => {
   const raw = exampleRawScore.value
@@ -143,33 +141,31 @@ const exampleSteps = computed(() => {
 </script>
 
 <template>
-  <div class="space-y-4">
-    <h3 class="text-sm font-medium text-gray-700">归一化配置</h3>
+  <div class="np-root">
+    <h3 class="np-title">归一化配置</h3>
 
     <!-- Mode selector -->
     <div>
-      <label class="mb-1 block text-xs text-gray-500">归一化模式</label>
-      <div class="space-y-1.5">
+      <label class="np-label">归一化模式</label>
+      <div class="np-mode-list">
         <label
           v-for="mode in MODES"
           :key="mode.value"
-          class="flex items-start gap-2 rounded-lg border p-2.5 cursor-pointer transition"
-          :class="config.mode === mode.value
-            ? 'border-blue-400 bg-blue-50/50'
-            : 'border-gray-200 hover:border-gray-300'"
+          class="np-mode"
+          :class="{ 'np-mode--active': config.mode === mode.value }"
         >
           <input
             type="radio"
             name="normalization-mode"
             :value="mode.value"
             :checked="config.mode === mode.value"
-            class="mt-0.5 accent-blue-500"
+            class="np-radio"
             @change="updateField('mode', mode.value)"
           />
-          <div class="flex-1 min-w-0">
-            <div class="text-sm font-medium text-gray-700">{{ mode.label }}</div>
-            <div class="text-xs text-gray-400">{{ mode.description }}</div>
-            <code class="text-[10px] text-gray-500 font-mono mt-0.5 block">{{ mode.formula }}</code>
+          <div class="np-mode-body">
+            <div class="np-mode-label">{{ mode.label }}</div>
+            <div class="np-mode-desc">{{ mode.description }}</div>
+            <code class="np-mode-formula">{{ mode.formula }}</code>
           </div>
         </label>
       </div>
@@ -177,10 +173,10 @@ const exampleSteps = computed(() => {
 
     <!-- Population source (for PER_CAPITA, SQRT_ADJUSTED) -->
     <div v-if="showPopulationSource">
-      <label class="mb-1 block text-xs text-gray-500">人口数据来源</label>
+      <label class="np-label">人口数据来源</label>
       <select
         :value="config.populationSource"
-        :class="selectCls"
+        class="np-select"
         @change="updateField('populationSource', ($event.target as HTMLSelectElement).value)"
       >
         <option v-for="src in POPULATION_SOURCES" :key="src.value" :value="src.value">
@@ -191,87 +187,193 @@ const exampleSteps = computed(() => {
 
     <!-- Divisor (for RATE_BASED, CUSTOM) -->
     <div v-if="showDivisor">
-      <label class="mb-1 block text-xs text-gray-500">
+      <label class="np-label">
         {{ config.mode === 'RATE_BASED' ? '基准值' : '自定义除数' }}
       </label>
       <input
         type="number"
         :value="config.divisor"
-        :class="inputCls"
-        class="!w-40"
+        class="np-input np-input--narrow"
         :min="1"
         placeholder="1"
         @input="updateField('divisor', Number(($event.target as HTMLInputElement).value) || null)"
       />
-      <p class="mt-0.5 text-[10px] text-gray-400">
+      <p class="np-hint">
         {{ config.mode === 'RATE_BASED' ? '原始分 / 基准值 * 100' : '原始分 / 自定义除数' }}
       </p>
     </div>
 
     <!-- Floor / Cap bounds -->
-    <div v-if="showBounds" class="grid grid-cols-2 gap-3">
+    <div v-if="showBounds" class="np-grid-2">
       <div>
-        <label class="mb-1 block text-xs text-gray-500">下限 (Floor)</label>
+        <label class="np-label">下限 (Floor)</label>
         <input
           type="number"
           :value="config.floorAt"
-          :class="inputCls"
+          class="np-input"
           placeholder="不限"
           @input="updateField('floorAt', ($event.target as HTMLInputElement).value ? Number(($event.target as HTMLInputElement).value) : null)"
         />
-        <p class="mt-0.5 text-[10px] text-gray-400">归一化后不低于此值</p>
+        <p class="np-hint">归一化后不低于此值</p>
       </div>
       <div>
-        <label class="mb-1 block text-xs text-gray-500">上限 (Cap)</label>
+        <label class="np-label">上限 (Cap)</label>
         <input
           type="number"
           :value="config.cappedAt"
-          :class="inputCls"
+          class="np-input"
           placeholder="不限"
           @input="updateField('cappedAt', ($event.target as HTMLInputElement).value ? Number(($event.target as HTMLInputElement).value) : null)"
         />
-        <p class="mt-0.5 text-[10px] text-gray-400">归一化后不超过此值</p>
+        <p class="np-hint">归一化后不超过此值</p>
       </div>
     </div>
 
     <!-- Example calculation -->
-    <div class="rounded-lg border border-blue-200 bg-blue-50/30 p-3 space-y-2">
-      <div class="flex items-center gap-1.5">
-        <Calculator :size="14" class="text-blue-500" />
-        <span class="text-xs font-medium text-blue-700">计算示例</span>
+    <div class="np-example">
+      <div class="np-example-head">
+        <Calculator :size="14" />
+        <span>计算示例</span>
       </div>
 
-      <div class="grid grid-cols-2 gap-2">
+      <div class="np-grid-2">
         <div>
-          <label class="mb-0.5 block text-[10px] text-blue-600">原始分</label>
-          <input
-            v-model.number="exampleRawScore"
-            type="number"
-            class="w-full rounded border border-blue-200 px-2 py-1 text-xs outline-none focus:border-blue-400"
-          />
+          <label class="np-example-label">原始分</label>
+          <input v-model.number="exampleRawScore" type="number" class="np-example-input" />
         </div>
         <div v-if="showPopulationSource">
-          <label class="mb-0.5 block text-[10px] text-blue-600">人数</label>
-          <input
-            v-model.number="examplePopulation"
-            type="number"
-            :min="1"
-            class="w-full rounded border border-blue-200 px-2 py-1 text-xs outline-none focus:border-blue-400"
-          />
+          <label class="np-example-label">人数</label>
+          <input v-model.number="examplePopulation" type="number" :min="1" class="np-example-input" />
         </div>
       </div>
 
-      <div class="space-y-0.5">
-        <div v-for="(step, idx) in exampleSteps" :key="idx" class="text-xs text-blue-700 font-mono">
+      <div class="np-example-steps">
+        <div v-for="(step, idx) in exampleSteps" :key="idx" class="np-example-step">
           {{ step }}
         </div>
       </div>
 
-      <div class="text-right">
-        <span class="text-sm font-bold text-blue-800">
-          = {{ exampleResult }}
-        </span>
+      <div class="np-example-result">
+        = {{ exampleResult }}
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.np-root { display: flex; flex-direction: column; gap: var(--insp-sp-4); }
+.np-title {
+  margin: 0;
+  font-size: var(--insp-text-sm);
+  font-weight: var(--insp-fw-medium);
+  color: var(--insp-ink-secondary);
+}
+.np-label {
+  display: block;
+  margin-bottom: var(--insp-sp-1);
+  font-size: var(--insp-text-xs);
+  color: var(--insp-ink-tertiary);
+}
+.np-hint {
+  margin: 2px 0 0;
+  font-size: 10px;
+  color: var(--insp-ink-quaternary);
+}
+
+/* Mode selector */
+.np-mode-list { display: flex; flex-direction: column; gap: 6px; }
+.np-mode {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--insp-sp-2);
+  padding: 10px;
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-md);
+  cursor: pointer;
+  transition: border-color var(--insp-t-fast), background var(--insp-t-fast);
+}
+.np-mode:hover { border-color: var(--insp-border-strong); }
+.np-mode--active {
+  border-color: var(--insp-accent);
+  background: var(--insp-accent-paler);
+}
+.np-radio { margin-top: 2px; accent-color: var(--insp-accent); }
+.np-mode-body { flex: 1; min-width: 0; }
+.np-mode-label {
+  font-size: var(--insp-text-sm);
+  font-weight: var(--insp-fw-medium);
+  color: var(--insp-ink-secondary);
+}
+.np-mode-desc { font-size: var(--insp-text-xs); color: var(--insp-ink-quaternary); }
+.np-mode-formula {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  font-family: var(--insp-font-mono);
+  color: var(--insp-ink-tertiary);
+}
+
+/* Inputs */
+.np-input, .np-select {
+  width: 100%;
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-md);
+  padding: 6px 12px;
+  font-size: var(--insp-text-sm);
+  color: var(--insp-ink-primary);
+  background: var(--insp-bg-surface);
+  outline: none;
+  transition: border-color var(--insp-t-fast);
+}
+.np-input:focus, .np-select:focus { border-color: var(--insp-accent); }
+.np-input--narrow { width: 160px; }
+.np-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--insp-sp-3); }
+
+/* Example box */
+.np-example {
+  display: flex;
+  flex-direction: column;
+  gap: var(--insp-sp-2);
+  padding: 12px;
+  border: 1px solid var(--insp-info-border);
+  background: var(--insp-info-pale);
+  border-radius: var(--insp-radius-md);
+}
+.np-example-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--insp-text-xs);
+  font-weight: var(--insp-fw-medium);
+  color: var(--insp-info);
+}
+.np-example-label {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 10px;
+  color: var(--insp-info);
+}
+.np-example-input {
+  width: 100%;
+  border: 1px solid var(--insp-info-border);
+  border-radius: var(--insp-radius-sm);
+  padding: 4px 8px;
+  font-size: var(--insp-text-xs);
+  outline: none;
+  background: var(--insp-bg-surface);
+  color: var(--insp-ink-primary);
+}
+.np-example-input:focus { border-color: var(--insp-accent); }
+.np-example-steps { display: flex; flex-direction: column; gap: 2px; }
+.np-example-step {
+  font-size: var(--insp-text-xs);
+  font-family: var(--insp-font-mono);
+  color: var(--insp-info);
+}
+.np-example-result {
+  text-align: right;
+  font-size: var(--insp-text-sm);
+  font-weight: var(--insp-fw-bold);
+  color: var(--insp-info);
+}
+</style>

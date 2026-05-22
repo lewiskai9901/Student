@@ -36,7 +36,7 @@
           <span class="sp-band-range">{{ band.minScore }}~{{ band.maxScore }}</span>
           <div class="sp-band-actions">
             <button class="sp-ic-s" @click="startEdit(band)">编辑</button>
-            <button class="sp-ic-s danger" @click="$emit('delete', band.id)">×</button>
+            <button class="sp-ic-s danger" @click="confirmDelete(band)">×</button>
           </div>
         </div>
       </div>
@@ -122,21 +122,24 @@
 <script setup lang="ts">
 import type { LongId } from '@/types/common'
 import { ref, computed } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import type { GradeBand, CreateGradeBandRequest, UpdateGradeBandRequest } from '@/types/insp/scoring'
 
 const props = defineProps<{
   gradeBands: GradeBand[]
 }>()
 
+// create/update 携带 onDone 回调: 保存失败时父组件回传 false, 保留弹窗供重试
 const emit = defineEmits<{
-  create: [data: CreateGradeBandRequest]
-  update: [id: LongId, data: UpdateGradeBandRequest]
+  create: [data: CreateGradeBandRequest, onDone: (ok: boolean) => void]
+  update: [id: LongId, data: UpdateGradeBandRequest, onDone: (ok: boolean) => void]
   delete: [id: LongId]
   applyPreset: [bands: CreateGradeBandRequest[]]
 }>()
 
 const showAdd = ref(false)
 const editingBand = ref<GradeBand | null>(null)
+const submitting = ref(false)
 
 const form = ref({
   gradeCode: '',
@@ -244,6 +247,17 @@ function confirmPreset() {
 
 // ==================== Helpers ====================
 
+async function confirmDelete(band: GradeBand) {
+  try {
+    await ElMessageBox.confirm(
+      `确定删除等级「${band.gradeName}」(${band.gradeCode})？`,
+      '删除等级',
+      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' },
+    )
+    emit('delete', band.id)
+  } catch { /* 用户取消 */ }
+}
+
 function startEdit(band: GradeBand) {
   editingBand.value = band
   form.value = {
@@ -260,22 +274,56 @@ function closeDialog() {
   form.value = { gradeCode: '', gradeName: '', minScore: 0, maxScore: 100 }
 }
 
+function validateForm(): boolean {
+  const code = form.value.gradeCode.trim()
+  const name = form.value.gradeName.trim()
+  if (!editingBand.value && !code) {
+    ElMessage.warning('请填写等级代码')
+    return false
+  }
+  if (!name) {
+    ElMessage.warning('请填写等级名称')
+    return false
+  }
+  if (!(form.value.minScore < form.value.maxScore)) {
+    ElMessage.warning('最低分必须小于最高分')
+    return false
+  }
+  // code 唯一性 (仅新建时校验, 编辑时 code 不可改)
+  if (!editingBand.value) {
+    const dup = props.gradeBands.some(
+      b => b.gradeCode.trim().toLowerCase() === code.toLowerCase(),
+    )
+    if (dup) {
+      ElMessage.warning(`等级代码「${code}」已存在`)
+      return false
+    }
+  }
+  return true
+}
+
 function handleSubmit() {
+  if (submitting.value) return
+  if (!validateForm()) return
+  submitting.value = true
+  const onDone = (ok: boolean) => {
+    submitting.value = false
+    if (ok) closeDialog()  // 失败时保留弹窗
+  }
   if (editingBand.value) {
     emit('update', editingBand.value.id, {
-      gradeName: form.value.gradeName,
+      gradeName: form.value.gradeName.trim(),
       minScore: form.value.minScore,
       maxScore: form.value.maxScore,
-    })
+    }, onDone)
   } else {
     emit('create', {
-      gradeCode: form.value.gradeCode,
-      gradeName: form.value.gradeName,
+      gradeCode: form.value.gradeCode.trim(),
+      gradeName: form.value.gradeName.trim(),
       minScore: form.value.minScore,
       maxScore: form.value.maxScore,
-    })
+    }, onDone)
   }
-  closeDialog()
 }
 </script>
 

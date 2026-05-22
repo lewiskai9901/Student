@@ -15,6 +15,8 @@ const resultsByDimension = ref<Map<LongId, RatingResult[]>>(new Map())
 const loadingProjects = ref(false)
 const loadingDimensions = ref(false)
 const loadingResults = ref<Set<LongId>>(new Set())
+// 记录加载失败的维度 — 与"真无数据"区分
+const failedDimensions = ref<Set<LongId>>(new Set())
 
 // ========== Load projects ==========
 async function loadProjects() {
@@ -52,6 +54,7 @@ async function loadDimensions() {
 // ========== Load results for all dimensions ==========
 async function loadAllResults() {
   const newMap = new Map<LongId, RatingResult[]>()
+  const failed = new Set<LongId>()
   const promises = dimensions.value.map(async (dim) => {
     loadingResults.value.add(dim.id)
     try {
@@ -59,12 +62,21 @@ async function loadAllResults() {
       newMap.set(dim.id, results)
     } catch {
       newMap.set(dim.id, [])
+      failed.add(dim.id)
     } finally {
       loadingResults.value.delete(dim.id)
     }
   })
   await Promise.all(promises)
   resultsByDimension.value = newMap
+  failedDimensions.value = failed
+  if (failed.size > 0) {
+    ElMessage.error(`${failed.size} 个评级维度的排名加载失败`)
+  }
+}
+
+function isDimensionFailed(dimId: LongId): boolean {
+  return failedDimensions.value.has(dimId)
 }
 
 // ========== Helpers ==========
@@ -176,7 +188,11 @@ onMounted(() => {
         </header>
 
         <div v-loading="isDimensionLoading(dim.id)" class="dim-body">
-          <div v-if="getDimensionResults(dim.id).length === 0 && !isDimensionLoading(dim.id)" class="dim-empty">
+          <div v-if="isDimensionFailed(dim.id) && !isDimensionLoading(dim.id)" class="dim-empty dim-empty--error">
+            <span class="insp-stamp">加载失败</span>
+            <el-button link type="primary" size="small" @click="loadAllResults">重试</el-button>
+          </div>
+          <div v-else-if="getDimensionResults(dim.id).length === 0 && !isDimensionLoading(dim.id)" class="dim-empty">
             <span class="insp-stamp">无数据</span>
           </div>
 
@@ -281,6 +297,10 @@ onMounted(() => {
 
 .dim-empty {
   padding: var(--insp-sp-8); text-align: center;
+}
+.dim-empty--error {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  color: var(--insp-fail);
 }
 
 /* ─ Rank rows ─────── */
