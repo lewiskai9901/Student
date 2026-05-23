@@ -655,8 +655,37 @@ public class InspProjectApplicationService {
     @Transactional
     public ProjectInspector addInspector(Long projectId, Long userId,
                                          String userName, InspectorRole role) {
+        // 幂等: 已存在 (project,user,role) 直接返回旧记录, 不报错也不重复写
+        Optional<ProjectInspector> existing = inspectorRepository.findOneByProjectUserRole(projectId, userId, role);
+        if (existing.isPresent()) return existing.get();
         ProjectInspector inspector = ProjectInspector.create(projectId, userId, userName, role);
         return inspectorRepository.save(inspector);
+    }
+
+    /**
+     * Phase B 角色矩阵 toggle - 给某人加一个角色 (该人可能已有其他角色, 多行多角色).
+     * 幂等. 如果该 user_id 不在项目里, 自动用 user_name 解析 (lookup) - 由 controller 提供.
+     */
+    @Transactional
+    public ProjectInspector addInspectorRole(Long projectId, Long userId, String userName, InspectorRole role) {
+        return addInspector(projectId, userId, userName, role);
+    }
+
+    /**
+     * Phase B 角色矩阵 toggle - 移除某人某角色 (单行删除).
+     * LEAD 不变量守护: 若移除的是 LEAD 且仅剩 1 LEAD, 抛 LastLeadRemovalException.
+     */
+    @Transactional
+    public void removeInspectorRole(Long projectId, Long userId, InspectorRole role) {
+        Optional<ProjectInspector> opt = inspectorRepository.findOneByProjectUserRole(projectId, userId, role);
+        if (opt.isEmpty()) return; // 幂等
+        if (role == InspectorRole.LEAD) {
+            int activeLeadCount = inspectorRepository.countActiveByProjectIdAndRole(projectId, InspectorRole.LEAD);
+            if (activeLeadCount <= 1) {
+                throw new com.school.management.domain.inspection.exception.LastLeadRemovalException(projectId);
+            }
+        }
+        inspectorRepository.deleteById(opt.get().getId());
     }
 
     @Transactional(readOnly = true)

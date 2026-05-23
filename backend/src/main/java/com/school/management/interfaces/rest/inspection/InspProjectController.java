@@ -2,7 +2,10 @@ package com.school.management.interfaces.rest.inspection;
 
 import com.school.management.application.inspection.InspProjectApplicationService;
 import com.school.management.application.inspection.InspProjectAuthorizationGuard;
+import com.school.management.application.inspection.InspTaskApplicationService;
+import com.school.management.application.inspection.PeopleWorkbenchQueryService;
 import com.school.management.application.inspection.dto.CloneProjectCommand;
+import com.school.management.application.inspection.dto.PeopleWorkbenchView;
 import com.school.management.application.inspection.dto.ProjectStatsSummary;
 import com.school.management.application.inspection.ScoreAggregationService;
 import com.school.management.application.inspection.TargetPopulationService;
@@ -36,6 +39,8 @@ public class InspProjectController {
     private final TargetPopulationService targetPopulationService;
     private final ScoreAggregationService scoreAggregationService;
     private final InspProjectAuthorizationGuard authGuard;
+    private final PeopleWorkbenchQueryService workbenchService;
+    private final InspTaskApplicationService taskService;
 
     // ========== Project CRUD ==========
 
@@ -238,6 +243,90 @@ public class InspProjectController {
         authGuard.assertCanEditSettings(projectId, userId);
         projectService.removeInspector(inspectorId);
         return Result.success();
+    }
+
+    // ========== Phase B: People Workbench + Role Matrix + Batch Assign ==========
+
+    /**
+     * Phase B - 人员工作台聚合接口.
+     * 一次返回 inspectors + per-person stats + 4 段任务分组 + 项目级 summary,
+     * 避免前端 N+1. 见 PeopleWorkbenchView.
+     */
+    @GetMapping("/{projectId}/people-workbench")
+    @CasbinAccess(resource = "insp:project", action = "view")
+    public Result<PeopleWorkbenchView> getPeopleWorkbench(@PathVariable Long projectId) {
+        return Result.success(workbenchService.getWorkbench(projectId));
+    }
+
+    /**
+     * Phase B - 角色矩阵: 给某人加一个角色 (允许多角色多行).
+     */
+    @PostMapping("/{projectId}/inspectors/{userId}/roles/{role}")
+    @CasbinAccess(resource = "insp:project", action = "edit")
+    public Result<ProjectInspector> addInspectorRole(@PathVariable Long projectId,
+                                                      @PathVariable Long userId,
+                                                      @PathVariable InspectorRole role,
+                                                      @RequestParam(required = false) String userName) {
+        Long currentUserId = SecurityUtils.requireCurrentUserId();
+        authGuard.assertCanEditSettings(projectId, currentUserId);
+        return Result.success(projectService.addInspectorRole(projectId, userId, userName, role));
+    }
+
+    /**
+     * Phase B - 角色矩阵: 移除某人某角色.
+     * LEAD 不变量守护: 若移除的是仅剩 1 LEAD 抛 409.
+     */
+    @DeleteMapping("/{projectId}/inspectors/{userId}/roles/{role}")
+    @CasbinAccess(resource = "insp:project", action = "edit")
+    public Result<Void> removeInspectorRole(@PathVariable Long projectId,
+                                             @PathVariable Long userId,
+                                             @PathVariable InspectorRole role) {
+        Long currentUserId = SecurityUtils.requireCurrentUserId();
+        authGuard.assertCanEditSettings(projectId, currentUserId);
+        projectService.removeInspectorRole(projectId, userId, role);
+        return Result.success();
+    }
+
+    /**
+     * Phase B - 批量指派: 把若干任务指派给同一个检查员.
+     * Per-task 独立事务以支持 partial-success (沿用 reassignDepartedInspector 模式).
+     */
+    @PostMapping("/{projectId}/inspectors/batch-assign")
+    @CasbinAccess(resource = "insp:project", action = "edit")
+    public Result<BatchAssignResponse> batchAssignTasks(@PathVariable Long projectId,
+                                                         @RequestBody @Valid BatchAssignRequest request) {
+        Long currentUserId = SecurityUtils.requireCurrentUserId();
+        authGuard.assertCanEditSettings(projectId, currentUserId);
+        int success = 0;
+        int failure = 0;
+        java.util.List<String> errors = new java.util.ArrayList<>();
+        for (Long taskId : request.getTaskIds()) {
+            try {
+                taskService.assignTask(taskId, request.getInspectorId(), request.getInspectorName());
+                success++;
+            } catch (Exception e) {
+                failure++;
+                errors.add("任务 " + taskId + ": " + e.getMessage());
+            }
+        }
+        return Result.success(new BatchAssignResponse(success, failure, errors));
+    }
+
+    @lombok.Data
+    public static class BatchAssignRequest {
+        @NotNull
+        private java.util.List<Long> taskIds;
+        @NotNull
+        private Long inspectorId;
+        private String inspectorName;
+    }
+
+    @lombok.Data
+    @lombok.AllArgsConstructor
+    public static class BatchAssignResponse {
+        private int successCount;
+        private int failureCount;
+        private java.util.List<String> errors;
     }
 
     // ========== Target Preview ==========
