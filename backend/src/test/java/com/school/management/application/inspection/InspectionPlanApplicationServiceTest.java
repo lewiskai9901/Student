@@ -73,7 +73,7 @@ class InspectionPlanApplicationServiceTest {
             ArgumentCaptor<InspectionPlan> cap = ArgumentCaptor.forClass(InspectionPlan.class);
             service().createPlan(9L, "调度组A", null, null, null,
                     "REGULAR", "DAILY", 1, null, null, false,
-                    null, 100L);
+                    null, null, 100L);
 
             org.mockito.Mockito.verify(planRepository).save(cap.capture());
             assertThat(cap.getValue().getRatersPerTarget()).isEqualTo(1);
@@ -90,7 +90,7 @@ class InspectionPlanApplicationServiceTest {
             service().createPlan(9L, "调度组A", null, null,
                     "[10,20,30]",  // 3 名检查员
                     "REGULAR", "DAILY", 1, null, null, false,
-                    3, 100L);
+                    3, null, 100L);
 
             org.mockito.Mockito.verify(planRepository).save(cap.capture());
             assertThat(cap.getValue().getRatersPerTarget()).isEqualTo(3);
@@ -105,7 +105,7 @@ class InspectionPlanApplicationServiceTest {
             assertThatThrownBy(() -> service().createPlan(9L, "调度组A", null, null,
                     "[10,20]",   // 仅 2 名检查员
                     "REGULAR", "DAILY", 1, null, null, false,
-                    5, 100L))
+                    5, null, 100L))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("超过调度组可用检查员数");
         }
@@ -117,7 +117,7 @@ class InspectionPlanApplicationServiceTest {
 
             assertThatThrownBy(() -> service().createPlan(9L, "调度组A", null, null, null,
                     "REGULAR", "DAILY", 1, null, null, false,
-                    0, 100L))
+                    0, null, 100L))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("ratersPerTarget");
         }
@@ -130,7 +130,7 @@ class InspectionPlanApplicationServiceTest {
 
             assertThatCode(() -> service().createPlan(9L, "调度组A", null, null, null,
                     "REGULAR", "DAILY", 1, null, null, false,
-                    5, 100L)).doesNotThrowAnyException();
+                    5, null, 100L)).doesNotThrowAnyException();
         }
     }
 }

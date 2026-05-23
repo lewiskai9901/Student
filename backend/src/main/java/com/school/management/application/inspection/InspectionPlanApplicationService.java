@@ -52,6 +52,23 @@ public class InspectionPlanApplicationService {
         }
     }
 
+    /** smell A: 解析 assignStrategy 字符串 + 默认推导. */
+    private com.school.management.domain.inspection.model.execution.AssignStrategy resolveAssignStrategy(
+            String str, java.util.List<Long> userIds) {
+        if (str != null && !str.isBlank()) {
+            try {
+                return com.school.management.domain.inspection.model.execution.AssignStrategy.valueOf(str);
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("无效的 assignStrategy: " + str
+                    + " (应为 SPECIFIC 或 OPEN_TO_ALL)");
+            }
+        }
+        // 缺省: 有 inspector → SPECIFIC; 无 inspector → OPEN_TO_ALL
+        return (userIds != null && !userIds.isEmpty())
+                ? com.school.management.domain.inspection.model.execution.AssignStrategy.SPECIFIC
+                : com.school.management.domain.inspection.model.execution.AssignStrategy.OPEN_TO_ALL;
+    }
+
     /** 解析 JSON 串到 List&lt;Long&gt; — 用 domain 自带的 parse 经由 setter 转一道. */
     private java.util.List<Long> parseInspectorIdsJson(String json) {
         if (json == null || json.isBlank()) return java.util.Collections.emptyList();
@@ -70,7 +87,7 @@ public class InspectionPlanApplicationService {
                                      String sectionIds, String inspectorIds,
                                      String scheduleMode, String cycleType, Integer frequency,
                                      String scheduleDays, String timeSlots, Boolean skipHolidays,
-                                     Integer ratersPerTarget,
+                                     Integer ratersPerTarget, String assignStrategyStr,
                                      Long createdBy) {
         // 校验项目存在且状态允许
         InspProject project = projectRepository.findById(projectId)
@@ -86,12 +103,17 @@ public class InspectionPlanApplicationService {
         java.util.List<Long> userIds = parseInspectorIdsJson(inspectorIds);
         validateInspectorsBelongToProject(projectId, userIds);
 
+        // smell A: 解析 assignStrategy; 缺省时从 inspectorIds 推导
+        com.school.management.domain.inspection.model.execution.AssignStrategy resolvedStrategy =
+                resolveAssignStrategy(assignStrategyStr, userIds);
+
         InspectionPlan plan = InspectionPlan.builder()
                 .projectId(projectId)
                 .planName(planName)
                 .rootSectionId(resolvedRootSectionId)
                 .sectionIds(sectionIds)
                 .inspectorIds(inspectorIds)
+                .assignStrategy(resolvedStrategy)
                 .scheduleMode(scheduleMode)
                 .cycleType(cycleType)
                 .frequency(frequency)
@@ -101,6 +123,10 @@ public class InspectionPlanApplicationService {
                 .ratersPerTarget(resolvedRaters)
                 .createdBy(createdBy)
                 .build();
+
+        // smell A + B: 创建前断言不变量 (assignStrategy 与 inspectorUserIds 一致 + scheduleMode 与其他字段一致)
+        plan.assertAssignStrategyInvariant();
+        plan.assertScheduleModeInvariant();
 
         InspectionPlan saved = planRepository.save(plan);
         log.info("创建检查计划: projectId={}, planName={}, rootSectionId={}, scheduleMode={}",
@@ -116,7 +142,7 @@ public class InspectionPlanApplicationService {
                                      String sectionIds, String inspectorIds,
                                      String scheduleMode, String cycleType, Integer frequency,
                                      String scheduleDays, String timeSlots, Boolean skipHolidays,
-                                     Integer ratersPerTarget) {
+                                     Integer ratersPerTarget, String assignStrategyStr) {
         InspectionPlan plan = planRepository.findById(planId)
                 .orElseThrow(() -> new IllegalArgumentException("检查计划不存在: " + planId));
 
@@ -134,10 +160,24 @@ public class InspectionPlanApplicationService {
             plan.updateInspectorIds(inspectorIds);
         }
 
+        // smell A: 显式指派策略 - 优先客户端传值, 否则按 inspectorUserIds 推导
+        if (assignStrategyStr != null && !assignStrategyStr.isBlank()) {
+            try {
+                plan.updateAssignStrategy(
+                    com.school.management.domain.inspection.model.execution.AssignStrategy.valueOf(assignStrategyStr));
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("无效的 assignStrategy: " + assignStrategyStr);
+            }
+        }
+
         // ratersPerTarget 为空时沿用现有值 (部分更新语义).
         int resolvedRaters = ratersPerTarget != null ? ratersPerTarget : plan.getRatersPerTarget();
         validateRatersPerTarget(resolvedRaters, plan.getInspectorIds());
         plan.updateRatersPerTarget(resolvedRaters);
+
+        // smell A + B: 更新后断言不变量
+        plan.assertAssignStrategyInvariant();
+        plan.assertScheduleModeInvariant();
 
         InspectionPlan saved = planRepository.save(plan);
         log.info("更新检查计划: planId={}, planName={}", planId, planName);

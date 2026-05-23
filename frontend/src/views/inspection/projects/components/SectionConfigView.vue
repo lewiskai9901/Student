@@ -27,11 +27,11 @@ const props = defineProps<{
   sectionTree?: SectionTreeNode[]
   rootSectionId?: LongId | string | null
   rootSectionName?: string
-  // P1 升级: 父组件传入项目任务列表用于计算调度组运营数据
+  // P1 升级: 父组件传入项目任务列表用于计算检查计划运营数据
   projectTasks?: Array<{ id: LongId | string; inspectionPlanId?: LongId | string | null; status?: string; taskDate?: string }>
 }>()
 
-// 调度组运营数据 (按 inspectionPlanId 聚合任务)
+// 检查计划运营数据 (按 inspectionPlanId 聚合任务)
 function planStats(planId: LongId | string) {
   const tasks = (props.projectTasks || []).filter(t => t.inspectionPlanId === planId)
   if (tasks.length === 0) return null
@@ -56,7 +56,7 @@ const indicators = ref<Indicator[]>([])
 const gradeSchemes = ref<GradeScheme[]>([])
 const targetCount = ref(0) // 检查目标数量
 
-// 调度组可用检查员数 — inspectorIds 为空表示项目全员 (此时不校验上限)
+// 检查计划可用检查员数 — inspectorIds 为空表示项目全员 (此时不校验上限)
 const scheduleAvailableRaters = computed(() => scheduleForm.value.inspectorIds.length)
 // 实时校验: 选了具体检查员时, 每目标评分人数不得超过可用检查员数
 const ratersExceedsAvailable = computed(() =>
@@ -235,7 +235,7 @@ function openEditSchedule(plan: InspectionPlan) {
 }
 
 async function handleSaveSchedule() {
-  if (!scheduleForm.value.planName.trim()) { ElMessage.warning('请输入调度组名称'); return }
+  if (!scheduleForm.value.planName.trim()) { ElMessage.warning('请输入检查计划名称'); return }
   // P1 #10: 按 freqMode 校验周/月选择非空, 否则会产生永不触发的空调度
   if (scheduleForm.value.freqMode === 'WEEKLY' && scheduleForm.value.weekDays.length === 0) {
     ElMessage.warning('按周检查需至少选择一个星期'); return
@@ -243,7 +243,7 @@ async function handleSaveSchedule() {
   if (scheduleForm.value.freqMode === 'MONTHLY' && scheduleForm.value.monthDays.length === 0) {
     ElMessage.warning('按月检查需至少选择一个日期'); return
   }
-  // 每目标评分人数不得超过调度组可用检查员数 (指定了检查员时)
+  // 每目标评分人数不得超过检查计划可用检查员数 (指定了检查员时)
   if (ratersExceedsAvailable.value) {
     ElMessage.warning('每目标评分人数不能超过已指定的检查员数量'); return
   }
@@ -328,18 +328,18 @@ defineExpose({ reload: loadAll })
       <div class="scv-head">
         <div class="scv-head-left">
           <Calendar class="w-4 h-4" style="color:var(--insp-accent)" />
-          <span class="scv-title">调度组</span>
+          <span class="scv-title">检查计划</span>
           <span v-if="plans.length" class="scv-count">{{ plans.length }}</span>
         </div>
         <button class="scv-add-btn" @click="openAddSchedule">
-          <Plus class="w-3.5 h-3.5" /> 添加调度组
+          <Plus class="w-3.5 h-3.5" /> 添加检查计划
         </button>
       </div>
 
       <!-- Empty -->
       <div v-if="!plans.length && !loading" class="scv-empty-inline">
         <AlertTriangle class="w-4 h-4" style="color:#d97706" />
-        <span>暂未配置检查调度，添加调度组来安排检查频率和分工</span>
+        <span>暂未配置检查调度，添加检查计划来安排检查频率和分工</span>
       </div>
 
       <!-- Plan cards -->
@@ -372,7 +372,7 @@ defineExpose({ reload: loadAll })
           <div class="sc-card-sections">
             {{ fmtSections(plan) }}
           </div>
-          <!-- P1 升级: 调度组运营数据 -->
+          <!-- P1 升级: 检查计划运营数据 -->
           <div v-if="planStats(plan.id)" class="sc-card-ops-data">
             <div class="sc-data-stat">
               <span class="sc-data-num">{{ planStats(plan.id)!.total }}</span>
@@ -408,12 +408,12 @@ defineExpose({ reload: loadAll })
     <!--  Dialog 1: Schedule Group                  -->
     <!-- ═══════════════════════════════════════════ -->
     <el-dialog v-model="scheduleDialogVisible"
-      :title="editingPlan ? '编辑调度组' : '添加调度组'"
+      :title="editingPlan ? '编辑检查计划' : '添加检查计划'"
       width="540px" :close-on-click-modal="false" class="scv-dlg">
       <div class="fd">
         <!-- Name -->
         <div class="fd-block">
-          <label class="fd-lbl">调度组名称 <b>*</b></label>
+          <label class="fd-lbl">检查计划名称 <b>*</b></label>
           <input v-model="scheduleForm.planName" class="fd-input" placeholder="如：每日常规巡查" />
         </div>
 

@@ -21,7 +21,11 @@ public class InspectionPlan extends AggregateRoot<Long> {
     private Long projectId;
     private String planName;
     private Long rootSectionId;        // V66: 该计划使用的模板（根分区ID），不可空
-    private String sectionIds;         // JSON: 关联的一级分区ID列表（为空则覆盖全部）
+    /**
+     * 分区列表 (V20260524_4: 旧 JSON String → List&lt;Long&gt; 由 insp_plan_sections 关系表持久化).
+     * 空集合 = 覆盖项目全部一级分区. getSectionIds() 返回 JSON 串供旧消费方兼容.
+     */
+    private List<Long> sectionIdList = new ArrayList<>();
     private String scheduleMode;       // REGULAR / ON_DEMAND
     private String cycleType;          // DAILY / WEEKLY / MONTHLY
     private Integer frequency;         // 每周期执行次数
@@ -33,6 +37,12 @@ public class InspectionPlan extends AggregateRoot<Long> {
      * 空集合 = 项目全员可领取; getInspectorIds() 仍返回 JSON 串供旧消费方兼容使用.
      */
     private List<Long> inspectorUserIds = new ArrayList<>();
+    /**
+     * 检查员指派策略 (V20260524_3, smell A 修复):
+     *   SPECIFIC = 限定到 inspectorUserIds 列出的人; OPEN_TO_ALL = 项目全员可领取.
+     * 默认 OPEN_TO_ALL (兼容旧建无显式策略的 plan).
+     */
+    private AssignStrategy assignStrategy = AssignStrategy.OPEN_TO_ALL;
     /**
      * 每个检查目标的检查员份数 (1=单人评分, >1=多人评分). 默认 1.
      * 多人评分的合并算法由所引用 ScoringProfile.multiRaterMode 决定（按分区查 ScoringProfile）.
@@ -53,7 +63,11 @@ public class InspectionPlan extends AggregateRoot<Long> {
         this.projectId = builder.projectId;
         this.planName = builder.planName;
         this.rootSectionId = builder.rootSectionId;
-        this.sectionIds = builder.sectionIds;
+        this.sectionIdList = builder.sectionIdList != null
+                ? new ArrayList<>(builder.sectionIdList)
+                : (builder.sectionIds != null
+                        ? parseInspectorIdsJson(builder.sectionIds) // 同样的数字解析规则
+                        : new ArrayList<>());
         this.scheduleMode = builder.scheduleMode != null ? builder.scheduleMode : "REGULAR";
         this.cycleType = builder.cycleType != null ? builder.cycleType : "DAILY";
         this.frequency = builder.frequency != null ? builder.frequency : 1;
@@ -65,6 +79,9 @@ public class InspectionPlan extends AggregateRoot<Long> {
                 : (builder.inspectorIds != null
                         ? parseInspectorIdsJson(builder.inspectorIds)
                         : new ArrayList<>());
+        this.assignStrategy = builder.assignStrategy != null
+                ? builder.assignStrategy
+                : (this.inspectorUserIds.isEmpty() ? AssignStrategy.OPEN_TO_ALL : AssignStrategy.SPECIFIC);
         this.ratersPerTarget = builder.ratersPerTarget != null ? builder.ratersPerTarget : 1;
         this.isEnabled = builder.isEnabled != null ? builder.isEnabled : true;
         this.sortOrder = builder.sortOrder != null ? builder.sortOrder : 0;
@@ -121,7 +138,7 @@ public class InspectionPlan extends AggregateRoot<Long> {
                        Integer sortOrder) {
         if (planName != null) this.planName = planName;
         if (rootSectionId != null) this.rootSectionId = rootSectionId;
-        if (sectionIds != null) this.sectionIds = sectionIds;
+        if (sectionIds != null) this.sectionIdList = parseInspectorIdsJson(sectionIds);
         if (scheduleMode != null) this.scheduleMode = scheduleMode;
         if (cycleType != null) this.cycleType = cycleType;
         if (frequency != null) this.frequency = frequency;
@@ -163,7 +180,21 @@ public class InspectionPlan extends AggregateRoot<Long> {
     public Long getProjectId() { return projectId; }
     public String getPlanName() { return planName; }
     public Long getRootSectionId() { return rootSectionId; }
-    public String getSectionIds() { return sectionIds; }
+    /** 旧接口兼容: 返回 JSON 串 ["101","102"] (Jackson Long-as-string). */
+    public String getSectionIds() {
+        if (sectionIdList == null || sectionIdList.isEmpty()) return null;
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < sectionIdList.size(); i++) {
+            if (i > 0) sb.append(',');
+            sb.append('"').append(sectionIdList.get(i)).append('"');
+        }
+        return sb.append("]").toString();
+    }
+
+    /** 主接口: 返回不可变 section_id 列表. */
+    public List<Long> getSectionIdList() {
+        return Collections.unmodifiableList(sectionIdList != null ? sectionIdList : new ArrayList<>());
+    }
     public String getScheduleMode() { return scheduleMode; }
     public String getCycleType() { return cycleType; }
     public Integer getFrequency() { return frequency; }
@@ -189,6 +220,59 @@ public class InspectionPlan extends AggregateRoot<Long> {
     public List<Long> getInspectorUserIds() {
         return Collections.unmodifiableList(inspectorUserIds != null ? inspectorUserIds : new ArrayList<>());
     }
+
+    public AssignStrategy getAssignStrategy() {
+        return assignStrategy != null ? assignStrategy : AssignStrategy.OPEN_TO_ALL;
+    }
+
+    /** smell A 修复: 显式切换指派策略, 同时校验 inspectorUserIds 与策略一致. */
+    public void updateAssignStrategy(AssignStrategy strategy) {
+        if (strategy == null) throw new IllegalArgumentException("assignStrategy 不能为空");
+        this.assignStrategy = strategy;
+        this.updatedAt = LocalDateTime.now();
+        assertAssignStrategyInvariant();
+    }
+
+    /**
+     * smell A: 不变量校验 — assignStrategy 与 inspectorUserIds 必须一致.
+     *   SPECIFIC 必须有 ≥1 人; OPEN_TO_ALL 必须无人.
+     */
+    public void assertAssignStrategyInvariant() {
+        AssignStrategy s = getAssignStrategy();
+        boolean hasInspectors = inspectorUserIds != null && !inspectorUserIds.isEmpty();
+        if (s == AssignStrategy.SPECIFIC && !hasInspectors) {
+            throw new com.school.management.domain.inspection.exception.InvalidPlanStateException(
+                "调度组指派策略=SPECIFIC 时必须指定至少 1 个检查员; 若要项目全员可领取请改成 OPEN_TO_ALL.");
+        }
+        if (s == AssignStrategy.OPEN_TO_ALL && hasInspectors) {
+            throw new com.school.management.domain.inspection.exception.InvalidPlanStateException(
+                "调度组指派策略=OPEN_TO_ALL 时不应指定具体检查员; 若要限定到名单请改成 SPECIFIC.");
+        }
+    }
+
+    /**
+     * smell B: 不变量校验 — scheduleMode 与其他调度字段必须一致.
+     *   ON_DEMAND 时 cycleType/frequency/scheduleDays/timeSlots 应为空 (设了被忽略, 提醒人工修正).
+     *   REGULAR 时 cycleType 必填.
+     */
+    public void assertScheduleModeInvariant() {
+        String mode = this.scheduleMode != null ? this.scheduleMode : "REGULAR";
+        if ("ON_DEMAND".equals(mode)) {
+            if (cycleType != null || frequency != null || scheduleDays != null || timeSlots != null) {
+                throw new com.school.management.domain.inspection.exception.InvalidPlanStateException(
+                    "ON_DEMAND 调度组不应设置 cycleType / frequency / scheduleDays / timeSlots; " +
+                    "若要按周期触发请改成 REGULAR.");
+            }
+        } else if ("REGULAR".equals(mode)) {
+            if (cycleType == null || cycleType.isBlank()) {
+                throw new com.school.management.domain.inspection.exception.InvalidPlanStateException(
+                    "REGULAR 调度组必须指定 cycleType (DAILY / WEEKLY / MONTHLY).");
+            }
+        } else {
+            throw new com.school.management.domain.inspection.exception.InvalidPlanStateException(
+                "未知 scheduleMode: " + mode + " (应为 REGULAR 或 ON_DEMAND)");
+        }
+    }
     public Integer getRatersPerTarget() { return ratersPerTarget == null ? 1 : ratersPerTarget; }
     public Boolean getIsEnabled() { return isEnabled; }
     public Integer getSortOrder() { return sortOrder; }
@@ -205,6 +289,7 @@ public class InspectionPlan extends AggregateRoot<Long> {
         private String planName;
         private Long rootSectionId;
         private String sectionIds;
+        private List<Long> sectionIdList;
         private String scheduleMode;
         private String cycleType;
         private Integer frequency;
@@ -213,6 +298,7 @@ public class InspectionPlan extends AggregateRoot<Long> {
         private Boolean skipHolidays;
         private String inspectorIds;
         private List<Long> inspectorUserIds;
+        private AssignStrategy assignStrategy;
         private Integer ratersPerTarget;
         private Boolean isEnabled;
         private Integer sortOrder;
@@ -226,6 +312,7 @@ public class InspectionPlan extends AggregateRoot<Long> {
         public Builder planName(String planName) { this.planName = planName; return this; }
         public Builder rootSectionId(Long rootSectionId) { this.rootSectionId = rootSectionId; return this; }
         public Builder sectionIds(String sectionIds) { this.sectionIds = sectionIds; return this; }
+        public Builder sectionIdList(List<Long> ids) { this.sectionIdList = ids; return this; }
         public Builder scheduleMode(String scheduleMode) { this.scheduleMode = scheduleMode; return this; }
         public Builder cycleType(String cycleType) { this.cycleType = cycleType; return this; }
         public Builder frequency(Integer frequency) { this.frequency = frequency; return this; }
@@ -234,6 +321,7 @@ public class InspectionPlan extends AggregateRoot<Long> {
         public Builder skipHolidays(Boolean skipHolidays) { this.skipHolidays = skipHolidays; return this; }
         public Builder inspectorIds(String inspectorIds) { this.inspectorIds = inspectorIds; return this; }
         public Builder inspectorUserIds(List<Long> userIds) { this.inspectorUserIds = userIds; return this; }
+        public Builder assignStrategy(AssignStrategy s) { this.assignStrategy = s; return this; }
         public Builder ratersPerTarget(Integer ratersPerTarget) { this.ratersPerTarget = ratersPerTarget; return this; }
         public Builder isEnabled(Boolean isEnabled) { this.isEnabled = isEnabled; return this; }
         public Builder sortOrder(Integer sortOrder) { this.sortOrder = sortOrder; return this; }

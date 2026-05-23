@@ -27,6 +27,10 @@ public class TemplateSectionApplicationService {
     private final TemplateSectionRepository sectionRepository;
     private final TemplateItemRepository itemRepository;
 
+    // V20260524_4 smell C: 级联清理 section 引用 (插件式注入, 测试可缺省)
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.school.management.infrastructure.persistence.inspection.execution.InspectionPlanSectionMapper planSectionMapper;
+
     // ========== 子分区 CRUD ==========
 
     @Transactional(readOnly = true)
@@ -118,6 +122,13 @@ public class TemplateSectionApplicationService {
 
         // 删除当前分区的检查项
         itemRepository.deleteBySectionId(id);
+        // V20260524_4 smell C: 级联清理所有调度组对该 section 的引用, 避免孤儿
+        if (planSectionMapper != null) {
+            int removed = planSectionMapper.cascadeRemoveBySectionId(id);
+            if (removed > 0) {
+                log.info("[Cascade] 删 section {} → 从 {} 个调度组的 sections 关系清理", id, removed);
+            }
+        }
         sectionRepository.deleteById(id);
 
         log.debug("删除分区: id={}", id);

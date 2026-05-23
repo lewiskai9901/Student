@@ -544,7 +544,7 @@ onMounted(() => {
     <section v-else-if="currentStep === 0 && mode === 'clone'" key="step0-clone" class="wz-card">
       <header class="wz-card__head">
         <span class="wz-card__title">克隆既有项目</span>
-        <div class="wz-card__hint">深拷贝项目设置 / 评分方案 / 调度组 / 指标 · 不拷贝执行数据 (任务/提交/分数)</div>
+        <div class="wz-card__hint">深拷贝项目设置 / 评分方案 / 检查计划 / 指标 · 不拷贝执行数据 (任务/提交/分数)</div>
       </header>
 
       <div class="wz-form">
@@ -631,7 +631,7 @@ onMounted(() => {
         <!-- Preview -->
         <div v-if="selectedSourceProject" class="wz-tip">
           <span class="wz-tip__icon">i</span>
-          将基于 <strong>{{ selectedSourceProject.projectName }}</strong> 创建新项目, 包含其全部评分方案 / 调度组 / 指标配置.
+          将基于 <strong>{{ selectedSourceProject.projectName }}</strong> 创建新项目, 包含其全部评分方案 / 检查计划 / 指标配置.
           新项目初始为 DRAFT 状态, 可在详情页继续微调.
         </div>
       </div>

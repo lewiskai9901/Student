@@ -1,5 +1,6 @@
 package com.school.management.infrastructure.persistence.inspection.execution;
 
+import com.school.management.domain.inspection.model.execution.AssignStrategy;
 import com.school.management.domain.inspection.model.execution.InspectionPlan;
 import com.school.management.domain.inspection.repository.InspectionPlanRepository;
 import org.springframework.stereotype.Repository;
@@ -18,11 +19,14 @@ public class InspectionPlanRepositoryImpl implements InspectionPlanRepository {
 
     private final InspectionPlanMapper mapper;
     private final InspectionPlanInspectorMapper inspectorMapper;
+    private final InspectionPlanSectionMapper sectionMapper;
 
     public InspectionPlanRepositoryImpl(InspectionPlanMapper mapper,
-                                         InspectionPlanInspectorMapper inspectorMapper) {
+                                         InspectionPlanInspectorMapper inspectorMapper,
+                                         InspectionPlanSectionMapper sectionMapper) {
         this.mapper = mapper;
         this.inspectorMapper = inspectorMapper;
+        this.sectionMapper = sectionMapper;
     }
 
     @Override
@@ -37,7 +41,28 @@ public class InspectionPlanRepositoryImpl implements InspectionPlanRepository {
         }
         // V20260524_2: 同步 insp_plan_inspectors 关系表 — 全删全插, 简单可靠.
         syncInspectorRelations(plan);
+        // V20260524_4 smell C: 同步 insp_plan_sections 关系表.
+        syncSectionRelations(plan);
         return plan;
+    }
+
+    private void syncSectionRelations(InspectionPlan plan) {
+        Long planId = plan.getId();
+        sectionMapper.hardDeleteByPlanId(planId);
+        List<Long> sectionIds = plan.getSectionIdList();
+        if (sectionIds == null || sectionIds.isEmpty()) return;
+        LinkedHashSet<Long> dedup = new LinkedHashSet<>(sectionIds);
+        LocalDateTime now = LocalDateTime.now();
+        for (Long sid : dedup) {
+            if (sid == null) continue;
+            InspectionPlanSectionPO row = new InspectionPlanSectionPO();
+            row.setPlanId(planId);
+            row.setSectionId(sid);
+            row.setTenantId(plan.getTenantId() != null ? plan.getTenantId() : 0L);
+            row.setCreatedAt(now);
+            row.setDeleted(0);
+            sectionMapper.insert(row);
+        }
     }
 
     private void syncInspectorRelations(InspectionPlan plan) {
@@ -83,7 +108,13 @@ public class InspectionPlanRepositoryImpl implements InspectionPlanRepository {
         for (InspectionPlanInspectorMapper.PlanInspectorRow row : inspectorMapper.findByPlanIds(planIds)) {
             inspectorsByPlan.computeIfAbsent(row.getPlanId(), k -> new ArrayList<>()).add(row.getUserId());
         }
-        return pos.stream().map(po -> toDomainWith(po, inspectorsByPlan.get(po.getId()))).collect(Collectors.toList());
+        java.util.Map<Long, List<Long>> sectionsByPlan = new java.util.HashMap<>();
+        for (InspectionPlanSectionMapper.PlanSectionRow row : sectionMapper.findByPlanIds(planIds)) {
+            sectionsByPlan.computeIfAbsent(row.getPlanId(), k -> new ArrayList<>()).add(row.getSectionId());
+        }
+        return pos.stream()
+                .map(po -> toDomainWith(po, inspectorsByPlan.get(po.getId()), sectionsByPlan.get(po.getId())))
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -91,6 +122,7 @@ public class InspectionPlanRepositoryImpl implements InspectionPlanRepository {
     public void deleteById(Long id) {
         mapper.deleteById(id);
         inspectorMapper.hardDeleteByPlanId(id);
+        sectionMapper.hardDeleteByPlanId(id);
     }
 
     @Override
@@ -108,7 +140,8 @@ public class InspectionPlanRepositoryImpl implements InspectionPlanRepository {
         po.setProjectId(d.getProjectId());
         po.setPlanName(d.getPlanName());
         po.setRootSectionId(d.getRootSectionId());
-        po.setSectionIds(d.getSectionIds());
+        // V20260524_4 smell C: 不再写 section_ids JSON 列 (关系移至 insp_plan_sections)
+        po.setSectionIds(null);
         po.setScheduleMode(d.getScheduleMode());
         po.setCycleType(d.getCycleType());
         po.setFrequency(d.getFrequency());
@@ -118,6 +151,7 @@ public class InspectionPlanRepositoryImpl implements InspectionPlanRepository {
         // V20260524_2: 不再写 inspector_ids JSON 列 (关系移至 insp_plan_inspectors).
         // 旧列暂保留 NULL, V20260524_3 future 整体 DROP.
         po.setInspectorIds(null);
+        po.setAssignStrategy(d.getAssignStrategy() != null ? d.getAssignStrategy().name() : AssignStrategy.OPEN_TO_ALL.name());
         po.setRatersPerTarget(d.getRatersPerTarget());
         po.setIsEnabled(d.getIsEnabled());
         po.setSortOrder(d.getSortOrder());
@@ -130,17 +164,18 @@ public class InspectionPlanRepositoryImpl implements InspectionPlanRepository {
     private InspectionPlan toDomain(InspectionPlanPO po) {
         // 单查路径: 主动加载关系
         List<Long> userIds = inspectorMapper.findUserIdsByPlanId(po.getId());
-        return toDomainWith(po, userIds);
+        List<Long> sectionIds = sectionMapper.findSectionIdsByPlanId(po.getId());
+        return toDomainWith(po, userIds, sectionIds);
     }
 
-    private InspectionPlan toDomainWith(InspectionPlanPO po, List<Long> userIds) {
+    private InspectionPlan toDomainWith(InspectionPlanPO po, List<Long> userIds, List<Long> sectionIds) {
         return InspectionPlan.reconstruct(InspectionPlan.builder()
                 .id(po.getId())
                 .tenantId(po.getTenantId())
                 .projectId(po.getProjectId())
                 .planName(po.getPlanName())
                 .rootSectionId(po.getRootSectionId())
-                .sectionIds(po.getSectionIds())
+                .sectionIdList(sectionIds != null ? sectionIds : new ArrayList<>())
                 .scheduleMode(po.getScheduleMode())
                 .cycleType(po.getCycleType())
                 .frequency(po.getFrequency())
@@ -148,6 +183,9 @@ public class InspectionPlanRepositoryImpl implements InspectionPlanRepository {
                 .timeSlots(po.getTimeSlots())
                 .skipHolidays(po.getSkipHolidays())
                 .inspectorUserIds(userIds != null ? userIds : new ArrayList<>())
+                .assignStrategy(po.getAssignStrategy() != null
+                        ? AssignStrategy.valueOf(po.getAssignStrategy())
+                        : null)
                 .ratersPerTarget(po.getRatersPerTarget())
                 .isEnabled(po.getIsEnabled())
                 .sortOrder(po.getSortOrder())

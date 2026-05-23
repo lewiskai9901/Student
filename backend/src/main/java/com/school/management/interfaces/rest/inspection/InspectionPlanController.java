@@ -38,7 +38,7 @@ public class InspectionPlanController {
                 request.sectionIds(), request.inspectorIds(),
                 request.scheduleMode(), request.cycleType(), request.frequency(),
                 request.scheduleDays(), request.timeSlots(), request.skipHolidays(),
-                request.ratersPerTarget(),
+                request.ratersPerTarget(), request.assignStrategy(),
                 userId));
     }
 
@@ -64,7 +64,7 @@ public class InspectionPlanController {
                 request.inspectorIds(),
                 request.scheduleMode(), request.cycleType(), request.frequency(),
                 request.scheduleDays(), request.timeSlots(), request.skipHolidays(),
-                request.ratersPerTarget()));
+                request.ratersPerTarget(), request.assignStrategy()));
     }
 
     @DeleteMapping("/{id}")
@@ -106,8 +106,12 @@ public class InspectionPlanController {
             String scheduleDays,
             String timeSlots,
             Boolean skipHolidays,
-            String inspectorIds,    // JSON: 指定检查员ID列表，空=项目全员
-            Integer ratersPerTarget // 每目标检查员份数 (空=1)
+            String inspectorIds,    // JSON: 限定的检查员ID列表 (assignStrategy=SPECIFIC 时必填)
+            Integer ratersPerTarget, // 每目标检查员份数 (空=1)
+            /** smell A V20260524_3: 显式指派策略, 替代"空=全员"falsy magic.
+             * SPECIFIC=限定到 inspectorIds, OPEN_TO_ALL=项目全员可领取.
+             * 缺省: inspectorIds 非空 → SPECIFIC; 空 → OPEN_TO_ALL. */
+            String assignStrategy
     ) {}
 
     public record UpdatePlanRequest(
@@ -121,6 +125,7 @@ public class InspectionPlanController {
             String timeSlots,
             Boolean skipHolidays,
             String inspectorIds,
-            Integer ratersPerTarget
+            Integer ratersPerTarget,
+            String assignStrategy
     ) {}
 }

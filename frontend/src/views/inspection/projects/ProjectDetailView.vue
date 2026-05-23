@@ -1141,7 +1141,7 @@ onMounted(async () => {
                   <li>检查范围 (受检组织 / 班级)</li>
                   <li>根分区 (绑定的模板)</li>
                   <!-- P1 #24: 旧文案"评分配置快照(满分/精度/多评模式)"已不准 — 评分配置下沉到调度组后, 锁定的只剩绑定关系 -->
-                  <li>评分方案绑定关系 (调度组分配 / 默认方案选择)</li>
+                  <li>评分方案绑定关系 (检查计划分配 / 默认方案选择)</li>
                   <li>开始日期</li>
                 </ul>
               </div>
@@ -1152,7 +1152,7 @@ onMounted(async () => {
                   <li>结束日期 (可延期)</li>
                   <li>分配模式 / 审核要求 / 自动发布</li>
                   <li>检查员名单 (添加 / 移除)</li>
-                  <li>调度组 / 检查计划</li>
+                  <li>检查计划</li>
                 </ul>
               </div>
             </div>
@@ -1179,7 +1179,7 @@ onMounted(async () => {
           <div class="cfg-field cfg-field--mt">
             <label class="cfg-label">检查模板</label>
             <div v-if="rootSectionName" class="cfg-readonly-text">{{ rootSectionName }}</div>
-            <div v-else class="cfg-readonly-text">多模板项目 (按调度组分别绑定)</div>
+            <div v-else class="cfg-readonly-text">多模板项目 (按检查计划分别绑定)</div>
           </div>
         </div>
 

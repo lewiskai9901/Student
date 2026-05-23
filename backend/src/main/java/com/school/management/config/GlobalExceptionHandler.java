@@ -103,6 +103,19 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 调度组状态不变量违反 (smell A+B 修复 V20260524_3):
+     *   assignStrategy 与 inspectorUserIds 不一致, 或 scheduleMode 与 cycle/freq 冲突.
+     */
+    @ExceptionHandler(com.school.management.domain.inspection.exception.InvalidPlanStateException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Result<Void> handleInvalidPlanStateException(
+            com.school.management.domain.inspection.exception.InvalidPlanStateException e,
+            HttpServletRequest request) {
+        log.warn("调度组状态不变量冲突: {}", e.getMessage());
+        return Result.error(ResultCode.VALIDATION_ERROR.getCode(), e.getMessage());
+    }
+
+    /**
      * 参数验证异常处理 - @Valid注解
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
