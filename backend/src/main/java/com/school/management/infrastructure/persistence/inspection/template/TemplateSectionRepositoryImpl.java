@@ -100,16 +100,19 @@ public class TemplateSectionRepositoryImpl implements TemplateSectionRepository 
         if (rootSectionId == null) {
             return new ArrayList<>();
         }
-        // 一次性取出该 section 所属 template 的全部 section, 内存建树消除 N+1.
+        // 2026-05-24 修: 原实现依赖 root.templateId 但 root 的 templateId 一直是 NULL
+        // (见 TemplateSection.createRoot 不设 templateId), 导致永远返回空集合.
+        // 改成纯按 parentSectionId BFS, 不再依赖 templateId 字段.
         TemplateSectionPO root = mapper.selectById(rootSectionId);
-        if (root == null || root.getTemplateId() == null) {
+        if (root == null) {
             return new ArrayList<>();
         }
+        // 全表扫描 (templateId 字段在数据上不可靠) — 内存按 parentSectionId 建索引 BFS.
+        // 单 tenant 模板数级别 (~千) 可接受; 后续如有性能需要可加 ancestor_path 列.
         LambdaQueryWrapper<TemplateSectionPO> qw = new LambdaQueryWrapper<>();
-        qw.eq(TemplateSectionPO::getTemplateId, root.getTemplateId())
+        qw.isNotNull(TemplateSectionPO::getParentSectionId)
           .orderByAsc(TemplateSectionPO::getSortOrder);
         Map<Long, List<TemplateSectionPO>> childrenByParent = mapper.selectList(qw).stream()
-                .filter(po -> po.getParentSectionId() != null)
                 .collect(Collectors.groupingBy(TemplateSectionPO::getParentSectionId));
 
         List<TemplateSection> result = new ArrayList<>();
