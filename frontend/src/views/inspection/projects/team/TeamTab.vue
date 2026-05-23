@@ -26,6 +26,12 @@ const props = defineProps<{
   isDraft?: boolean
 }>()
 
+// 人员/角色变更冒泡给父组件 — 父组件需要同步刷新 inspectors ref
+// (用于 SectionConfigView 调度组等 prop 消费方, 否则添加后调度组看不到新人).
+const emit = defineEmits<{
+  (e: 'change'): void
+}>()
+
 type ViewMode = 'people' | 'tasks' | 'matrix'
 const activeView = ref<ViewMode>('people')
 const tasksDefaultTab = ref<'pendingAssign' | 'pendingReview' | 'inProgress' | 'overdue'>('pendingAssign')
@@ -84,9 +90,16 @@ async function handleAddMember(userId: LongId) {
     addQuery.value = ''
     addResults.value = []
     await wb.reload()
+    emit('change') // 通知父组件同步刷新 inspectors (调度组等消费方依赖)
   } catch (e: any) {
     ElMessage.error(e?.response?.data?.message || '添加失败')
   }
+}
+
+// reload + 同步通知父组件 — 任何子视图的变更都触发父组件 inspectors ref 刷新
+async function reloadAndEmit() {
+  await wb.reload()
+  emit('change')
 }
 
 // 暴露 reload, 让上层可以在外部触发刷新 (审核/分配后)
@@ -171,18 +184,18 @@ defineExpose({ reload: wb.reload })
                   :people="wb.people.value"
                   :pending-assign-tasks="wb.pendingAssignTasks.value"
                   :is-draft="isDraft"
-                  @reload="wb.reload" />
+                  @reload="reloadAndEmit" />
       <TasksView v-else-if="activeView === 'tasks'"
                  :project-id="projectId"
                  :people="wb.people.value"
                  :pending-assign-tasks="wb.pendingAssignTasks.value"
                  :default-tab="tasksDefaultTab"
-                 @reload="wb.reload" />
+                 @reload="reloadAndEmit" />
       <RoleMatrixView v-else-if="activeView === 'matrix'"
                       :project-id="projectId"
                       :people="wb.people.value"
                       :total-leads="wb.summary.value?.totalLeads ?? 0"
-                      @reload="wb.reload" />
+                      @reload="reloadAndEmit" />
     </div>
   </div>
 </template>

@@ -684,6 +684,16 @@ function goCreateProfile() {
     query: { templateId: String(tid), projectId: String(projectId) },
   })
 }
+// 2026-05-24 修: TeamTab 内人员/角色变更后, 同步刷新 inspectors ref —
+// 否则 SectionConfigView 调度组对话框依赖的 :inspectors prop 是 stale 值, 看不到新加的人.
+async function onTeamChange() {
+  try {
+    inspectors.value = await store.loadInspectors(projectId)
+  } catch (e) {
+    console.warn('TeamTab change → 刷新 inspectors 失败', e)
+  }
+}
+
 // 进入本项目评分方案完整列表 (主菜单已隐藏, 通过此入口可达)
 function goProfileList() {
   router.push({ path: '/inspection/scoring-profiles', query: { projectId: String(projectId) } })
@@ -1107,7 +1117,9 @@ onMounted(async () => {
            旧 3 卡片 (待审核 + 待分配 + 检查员管理) 替换为 TeamTab 工作台,
            3 视图切换 (按人/按任务/角色矩阵) + 顶部状态条; 详见 docs/plans/2026-05-23-inspection-team-tab-redesign.md -->
       <div v-if="activeTab === 'team'" class="cfg-section">
-        <TeamTab :project-id="projectId" :is-draft="isDraft" />
+        <!-- @change: TeamTab 内添加/删除/改角色时, 同步刷新 inspectors ref,
+             否则 SectionConfigView 调度组对话框依赖的 :inspectors prop 是 stale 旧值 -->
+        <TeamTab :project-id="projectId" :is-draft="isDraft" @change="onTeamChange" />
       </div>
 
 
