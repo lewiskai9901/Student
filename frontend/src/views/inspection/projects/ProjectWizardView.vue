@@ -476,26 +476,16 @@ onMounted(() => {
       </button>
     </nav>
 
-    <!-- ==================== Step 0: 模式切换 (Phase 4 新增) ==================== -->
-    <div v-if="currentStep === 0" class="wz-mode-switch">
-      <button
-        class="wz-mode-btn"
-        :class="{ 'is-active': mode === 'template' }"
-        @click="switchMode('template')"
-      >
-        <FileText :size="14" />
-        <span class="wz-mode-btn__label">用模板新建</span>
-        <span class="wz-mode-btn__sub">从已发布的检查模板开始</span>
-      </button>
-      <button
-        class="wz-mode-btn"
-        :class="{ 'is-active': mode === 'clone' }"
-        @click="switchMode('clone')"
-      >
-        <Copy :size="14" />
-        <span class="wz-mode-btn__label">克隆既有项目</span>
-        <span class="wz-mode-btn__sub">深拷贝项目设置 + 评分方案 + 调度组</span>
-      </button>
+    <!-- ==================== Step 0: 次级模式切换 ==================== -->
+    <!-- IA 修正: 默认走"用模板新建"主路径, 克隆作为次级入口 (右上小链接),
+         避免让所有新用户进门先选择,降低认知负担. -->
+    <div v-if="currentStep === 0" class="wz-mode-link">
+      <a v-if="mode === 'template'" class="wz-mode-link-a" @click.prevent="switchMode('clone')">
+        <Copy :size="12" /> 或从已有项目克隆 →
+      </a>
+      <a v-else class="wz-mode-link-a" @click.prevent="switchMode('template')">
+        <FileText :size="12" /> ← 返回用模板新建
+      </a>
     </div>
 
     <div class="wz-steps">
@@ -1350,52 +1340,30 @@ onMounted(() => {
 .wz-foot__spacer { flex: 1; }
 
 /* ─ Mode switch (Phase 4: 模板新建 vs 克隆既有) ─────── */
-.wz-mode-switch {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+/* IA 修正后的次级模式入口 — 不对等 segmented, 默认走模板新建主路径 */
+.wz-mode-link {
+  display: flex;
+  justify-content: flex-end;
   margin-bottom: 10px;
 }
-.wz-mode-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+.wz-mode-link-a {
+  display: inline-flex;
+  align-items: center;
   gap: 4px;
-  padding: 12px 16px;
-  background: var(--insp-bg-surface);
-  border: 1px solid var(--insp-border-default);
-  border-radius: var(--insp-radius-lg);
+  font-size: 12px;
+  color: var(--insp-ink-tertiary);
   cursor: pointer;
-  font-family: inherit;
-  text-align: left;
+  padding: 4px 8px;
+  border-radius: 4px;
   transition: all var(--insp-t-fast);
 }
-.wz-mode-btn:hover {
-  border-color: var(--insp-accent);
-  background: var(--insp-bg-subtle);
-}
-.wz-mode-btn.is-active {
-  border-color: var(--insp-accent);
-  background: var(--insp-accent-paler);
-  box-shadow: 0 0 0 3px var(--insp-accent-paler);
-}
-.wz-mode-btn__label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--insp-ink-primary);
-  margin-top: 4px;
-}
-.wz-mode-btn.is-active .wz-mode-btn__label {
+.wz-mode-link-a:hover {
   color: var(--insp-accent);
-}
-.wz-mode-btn__sub {
-  font-size: 11px;
-  color: var(--insp-ink-tertiary);
+  background: var(--insp-bg-subtle);
 }
 
 @media (max-width: 720px) {
   .wz-rail__label { display: none; }
   .wz-row { grid-template-columns: 1fr; }
-  .wz-mode-switch { grid-template-columns: 1fr; }
 }
 </style>

@@ -915,13 +915,14 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- ====== Pill Tabs (顺序: 总览 > 检查配置 > 人员与任务 > 成绩统计 > 设置) ====== -->
+    <!-- ====== Pill Tabs (顺序: 总览 > 检查计划 > 人员与任务 > 成绩统计 > 设置) ====== -->
+    <!-- 命名约定: "检查计划"=分区评价+调度组 (如何执行) / "设置"=项目元数据+策略+评分方案 -->
     <div class="pdv-tabs">
       <button :class="['pdv-tab', activeTab === 'overview' && 'active']" @click="activeTab = 'overview'">
         <LayoutDashboard class="w-3.5 h-3.5" />总览
       </button>
       <button :class="['pdv-tab', activeTab === 'config' && 'active']" @click="activeTab = 'config'">
-        <ListTree class="w-3.5 h-3.5" />检查配置
+        <ListTree class="w-3.5 h-3.5" />检查计划
       </button>
       <button :class="['pdv-tab', activeTab === 'team' && 'active']" @click="activeTab = 'team'">
         <Users class="w-3.5 h-3.5" />人员与任务
@@ -1355,26 +1356,6 @@ onMounted(async () => {
             <label class="cfg-label">检查模板</label>
             <div class="cfg-readonly-text">{{ rootSectionName }}</div>
           </div>
-          <div class="cfg-field cfg-field--mt">
-            <label class="cfg-label">默认评分方案</label>
-            <el-select
-              v-model="cf.defaultScoringProfileId"
-              placeholder="未设置"
-              clearable
-              filterable
-              size="small"
-              class="w-full"
-              :disabled="isArchived || !isDraft"
-            >
-              <el-option
-                v-for="p in scoringProfileOptions"
-                :key="p.id"
-                :label="p.label"
-                :value="p.id"
-              />
-            </el-select>
-            <div class="cfg-hint">用于临时抽查/自查任务，以及新建调度组时的默认值。计划任务以调度组自身的评分方案为准。</div>
-          </div>
         </div>
 
         <!-- 评分方案 (项目-owned) -->
@@ -1396,6 +1377,26 @@ onMounted(async () => {
           <div class="cfg-desc">
             本项目专属的评分方案 — 与项目同生命周期, 不与其他项目共享.
             <span v-if="!isDraft">已发布项目只读, 如需修改请新建草稿项目或克隆.</span>
+          </div>
+          <div class="cfg-field cfg-field--mt">
+            <label class="cfg-label">默认评分方案</label>
+            <el-select
+              v-model="cf.defaultScoringProfileId"
+              placeholder="未设置"
+              clearable
+              filterable
+              size="small"
+              class="w-full"
+              :disabled="isArchived || !isDraft"
+            >
+              <el-option
+                v-for="p in scoringProfileOptions"
+                :key="p.id"
+                :label="p.label"
+                :value="p.id"
+              />
+            </el-select>
+            <div class="cfg-hint">用于临时抽查/自查任务，以及新建调度组时的默认值。计划任务以调度组自身的评分方案为准。</div>
           </div>
           <div v-if="scoringProfiles.length === 0" class="cfg-empty" style="padding: 16px">
             <SlidersHorizontal class="w-5 h-5 text-gray-300" style="margin: 0 auto 6px" />
@@ -1684,22 +1685,7 @@ onMounted(async () => {
           </details>
         </div>
 
-        <!-- 操作区 -->
-        <div class="cfg-card">
-          <div class="cfg-card-title cfg-card-title--mb">项目操作</div>
-          <div class="cfg-ops-row">
-            <el-button v-if="project?.status === 'PUBLISHED'" type="warning" size="small" plain @click="handlePause" round>
-              <Pause class="w-3.5 h-3.5 mr-1" />暂停项目
-            </el-button>
-            <el-button v-if="project?.status === 'PAUSED'" type="success" size="small" plain @click="handleResume" round>
-              <Play class="w-3.5 h-3.5 mr-1" />恢复项目
-            </el-button>
-            <el-button v-if="['PUBLISHED','PAUSED'].includes(project?.status || '')" size="small" plain @click="handleComplete" round>
-              <CheckCircle class="w-3.5 h-3.5 mr-1" />完结项目
-            </el-button>
-            <el-button v-if="project?.status === 'COMPLETED'" type="info" size="small" plain @click="handleArchive" round>归档项目</el-button>
-          </div>
-        </div>
+        <!-- 项目操作 (暂停/恢复/完结/归档) 已上提到页面 header (line 879+), 此处不再重复展示 -->
 
       </div>
     </div>
