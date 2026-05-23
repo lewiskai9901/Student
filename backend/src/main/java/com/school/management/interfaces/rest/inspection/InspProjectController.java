@@ -1,6 +1,7 @@
 package com.school.management.interfaces.rest.inspection;
 
 import com.school.management.application.inspection.InspProjectApplicationService;
+import com.school.management.application.inspection.dto.CloneProjectCommand;
 import com.school.management.application.inspection.dto.ProjectStatsSummary;
 import com.school.management.application.inspection.ScoreAggregationService;
 import com.school.management.application.inspection.ScoringProfileApplicationService;
@@ -111,6 +112,25 @@ public class InspProjectController {
     public Result<Void> deleteProject(@PathVariable Long id) {
         projectService.deleteProject(id);
         return Result.success();
+    }
+
+    /**
+     * 项目克隆 — 深拷贝源项目设置 + owned ScoringProfile + plans + indicators 到新 DRAFT 项目.
+     * 不拷贝执行数据 (tasks/submissions/scores/audit/corrective/appeals).
+     * inspectors 默认不拷 (cloneInspectors=true 显式启用).
+     */
+    @PostMapping("/{id}/clone")
+    @CasbinAccess(resource = "insp:project", action = "create")
+    public Result<InspProject> cloneProject(@PathVariable Long id,
+                                             @RequestBody @Valid CloneProjectRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
+        CloneProjectCommand command = new CloneProjectCommand(
+                request.getProjectName(),
+                request.getOrgUnitId(),
+                request.getStartDate(),
+                request.getEndDate(),
+                request.getCloneInspectors());
+        return Result.success(projectService.cloneProject(id, command, userId));
     }
 
     // ========== Lifecycle ==========
@@ -310,6 +330,19 @@ public class InspProjectController {
     @lombok.Data
     public static class PublishProjectRequest {
         private Long templateVersionId;
+    }
+
+    @lombok.Data
+    public static class CloneProjectRequest {
+        @NotBlank
+        private String projectName;
+        @NotNull
+        private Long orgUnitId;
+        @NotNull
+        private LocalDate startDate;
+        private LocalDate endDate;
+        /** 默认 false: 检查员各项目独立配置, 不复制. true 时原样复制源项目检查员名单 + 调度组 inspectorIds. */
+        private Boolean cloneInspectors;
     }
 
     @lombok.Data

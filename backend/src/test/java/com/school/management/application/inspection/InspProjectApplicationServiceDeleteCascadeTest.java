@@ -6,8 +6,10 @@ import com.school.management.domain.inspection.model.execution.ProjectStatus;
 import com.school.management.domain.inspection.model.scoring.ScoringProfile;
 import com.school.management.domain.inspection.repository.CalculationRuleRepository;
 import com.school.management.domain.inspection.repository.GradeBandRepository;
+import com.school.management.domain.inspection.repository.IndicatorRepository;
 import com.school.management.domain.inspection.repository.InspProjectRepository;
 import com.school.management.domain.inspection.repository.InspTaskRepository;
+import com.school.management.domain.inspection.repository.InspectionPlanRepository;
 import com.school.management.domain.inspection.repository.ProjectInspectorRepository;
 import com.school.management.domain.inspection.repository.ProjectScoreRepository;
 import com.school.management.domain.inspection.repository.ScoreDimensionRepository;
@@ -50,6 +52,9 @@ class InspProjectApplicationServiceDeleteCascadeTest {
     @Mock TemplateVersionRepository templateVersionRepository;
     @Mock InspectionAuditLogger auditLogger;
     @Mock InspTaskRepository taskRepository;
+    @Mock InspectionPlanRepository inspectionPlanRepository;
+    @Mock IndicatorRepository indicatorRepository;
+    @Mock ScoringProfileApplicationService scoringProfileService;
 
     InspProjectApplicationService service;
 
@@ -61,7 +66,8 @@ class InspProjectApplicationServiceDeleteCascadeTest {
                 scoreDimensionRepository, gradeBandRepository, calculationRuleRepository,
                 targetPopulationService, new ObjectMapper(),
                 templateSectionRepository, templateVersionRepository,
-                auditLogger, taskRepository);
+                auditLogger, taskRepository,
+                inspectionPlanRepository, indicatorRepository, scoringProfileService);
     }
 
     @Test

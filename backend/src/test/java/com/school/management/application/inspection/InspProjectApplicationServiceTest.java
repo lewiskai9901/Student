@@ -58,6 +58,9 @@ class InspProjectApplicationServiceTest {
     @Mock TemplateVersionRepository templateVersionRepository;
     @Mock InspectionAuditLogger auditLogger;
     @Mock InspTaskRepository taskRepository;
+    @Mock InspectionPlanRepository inspectionPlanRepository;
+    @Mock IndicatorRepository indicatorRepository;
+    @Mock ScoringProfileApplicationService scoringProfileService;
 
     ObjectMapper objectMapper = new ObjectMapper();
 
@@ -71,7 +74,8 @@ class InspProjectApplicationServiceTest {
                 scoreDimensionRepository, gradeBandRepository, calculationRuleRepository,
                 targetPopulationService,
                 objectMapper, templateSectionRepository, templateVersionRepository,
-                auditLogger, taskRepository);
+                auditLogger, taskRepository,
+                inspectionPlanRepository, indicatorRepository, scoringProfileService);
     }
 
     private InspProject draft(Long id) {
