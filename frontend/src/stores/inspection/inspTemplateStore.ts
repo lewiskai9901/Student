@@ -119,9 +119,20 @@ export const useInspTemplateStore = defineStore('inspTemplate', () => {
   }
 
   async function loadResponseSets(): Promise<ResponseSet[]> {
-    const result = await getResponseSets({ page: 1, size: 1000 })
-    responseSets.value = result.records
-    return result.records
+    // 后端 @Max(200): 单次请求最大 200; 分页拉取直到取完, 避免 >200 选项集时只能加载前 200.
+    // 2026-05-23 修: 原硬编码 size=1000 触发后端 422 → 前端 400 "选项集加载失败".
+    const PAGE_SIZE = 200
+    const all: ResponseSet[] = []
+    let page = 1
+    while (true) {
+      const result = await getResponseSets({ page, size: PAGE_SIZE })
+      all.push(...result.records)
+      if (result.records.length < PAGE_SIZE) break
+      page++
+      if (page > 50) break // 防御性硬上限 10000 条, 单 tenant 不该达到
+    }
+    responseSets.value = all
+    return all
   }
 
   return {
