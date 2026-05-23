@@ -7,10 +7,13 @@ import com.school.management.domain.inspection.model.execution.*;
 import com.school.management.domain.inspection.model.scoring.ScoringProfile;
 import com.school.management.domain.inspection.model.template.TemplateSection;
 import com.school.management.domain.inspection.model.template.TemplateVersion;
+import com.school.management.domain.inspection.repository.CalculationRuleRepository;
+import com.school.management.domain.inspection.repository.GradeBandRepository;
 import com.school.management.domain.inspection.repository.InspProjectRepository;
 import com.school.management.domain.inspection.repository.InspTaskRepository;
 import com.school.management.domain.inspection.repository.ProjectInspectorRepository;
 import com.school.management.domain.inspection.repository.ProjectScoreRepository;
+import com.school.management.domain.inspection.repository.ScoreDimensionRepository;
 import com.school.management.domain.inspection.repository.ScoringProfileRepository;
 import com.school.management.domain.inspection.repository.TemplateSectionRepository;
 import com.school.management.domain.inspection.repository.TemplateVersionRepository;
@@ -37,6 +40,9 @@ public class InspProjectApplicationService {
     private final ProjectScoreRepository scoreRepository;
     private final SpringDomainEventPublisher eventPublisher;
     private final ScoringProfileRepository scoringProfileRepository;
+    private final ScoreDimensionRepository scoreDimensionRepository;
+    private final GradeBandRepository gradeBandRepository;
+    private final CalculationRuleRepository calculationRuleRepository;
     private final TargetPopulationService targetPopulationService;
     private final ObjectMapper objectMapper;
     private final TemplateSectionRepository templateSectionRepository;
@@ -49,6 +55,9 @@ public class InspProjectApplicationService {
                                           ProjectScoreRepository scoreRepository,
                                           SpringDomainEventPublisher eventPublisher,
                                           ScoringProfileRepository scoringProfileRepository,
+                                          ScoreDimensionRepository scoreDimensionRepository,
+                                          GradeBandRepository gradeBandRepository,
+                                          CalculationRuleRepository calculationRuleRepository,
                                           TargetPopulationService targetPopulationService,
                                           ObjectMapper objectMapper,
                                           TemplateSectionRepository templateSectionRepository,
@@ -60,6 +69,9 @@ public class InspProjectApplicationService {
         this.scoreRepository = scoreRepository;
         this.eventPublisher = eventPublisher;
         this.scoringProfileRepository = scoringProfileRepository;
+        this.scoreDimensionRepository = scoreDimensionRepository;
+        this.gradeBandRepository = gradeBandRepository;
+        this.calculationRuleRepository = calculationRuleRepository;
         this.targetPopulationService = targetPopulationService;
         this.objectMapper = objectMapper;
         this.templateSectionRepository = templateSectionRepository;
@@ -173,7 +185,30 @@ public class InspProjectApplicationService {
         }
         scoreRepository.deleteByProjectId(id);
         inspectorRepository.deleteByProjectId(id);
+        // 评分配置项目-owned 重构 (2026-05-23): 删除项目同时清理 owned ScoringProfile
+        // 与关联子实体 (dimensions/rules/bands). 顺序: 子 → profile → project,
+        // 避免删 profile 后留下孤儿 dimensions/rules/bands.
+        cascadeDeleteScoringProfiles(id);
         projectRepository.deleteById(id);
+    }
+
+    /**
+     * 级联清理项目 owned 的 ScoringProfile 及其关联实体.
+     * 顺序: dimensions → rules → grade_bands → profile (反依赖顺序).
+     */
+    private void cascadeDeleteScoringProfiles(Long projectId) {
+        List<com.school.management.domain.inspection.model.scoring.ScoringProfile> profiles =
+                scoringProfileRepository.findByProjectId(projectId);
+        for (var p : profiles) {
+            Long pid = p.getId();
+            scoreDimensionRepository.deleteByScoringProfileId(pid);
+            calculationRuleRepository.deleteByScoringProfileId(pid);
+            gradeBandRepository.deleteByScoringProfileId(pid);
+        }
+        int n = scoringProfileRepository.deleteByProjectId(projectId);
+        if (n > 0) {
+            log.info("项目 {} 删除级联清理 owned ScoringProfile: {} 套", projectId, n);
+        }
     }
 
     // ========== Project Lifecycle ==========

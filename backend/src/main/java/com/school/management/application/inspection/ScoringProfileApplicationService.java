@@ -14,9 +14,19 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
+/**
+ * 评分配置应用服务.
+ *
+ * <p>2026-05-23 重构: ScoringProfile 改为项目-owned, 同 sectionId 在不同
+ * 项目下各自一套 profile, 不再跨项目共享. 所有 create / list 操作必须
+ * 指定 projectId; 跨项目共享通过 {@link #cloneForProject(Long, Long, Long)}
+ * 显式克隆.
+ */
 @Slf4j
 @RequiredArgsConstructor
 @Service
@@ -34,23 +44,31 @@ public class ScoringProfileApplicationService {
 
     // ===== ScoringProfile =====
 
+    /**
+     * 项目-owned 创建评分方案. projectId 必传 — 同 sectionId 在不同项目下
+     * 各自一套 profile, 调用前需先选定项目.
+     */
     @Transactional
     @CacheEvict(value = "ratingConfig", allEntries = true)
-    public ScoringProfile createProfile(Long sectionId, Long createdBy) {
-        // 如果已存在则直接返回，不报错（支持幂等调用）
-        Optional<ScoringProfile> existing = profileRepository.findBySectionId(sectionId);
+    public ScoringProfile createProfile(Long projectId, Long sectionId, Long createdBy) {
+        if (projectId == null) {
+            throw new IllegalArgumentException("projectId 必传 — 评分方案归属项目, 不再跨项目共享");
+        }
+        // 项目-owned: (project, section) 范围内幂等
+        Optional<ScoringProfile> existing = profileRepository.findByProjectIdAndSectionId(projectId, sectionId);
         if (existing.isPresent()) {
             return existing.get();
         }
-        ScoringProfile profile = ScoringProfile.create(sectionId, createdBy);
+        ScoringProfile profile = ScoringProfile.create(sectionId, projectId, createdBy);
         try {
             return profileRepository.save(profile);
         } catch (org.springframework.dao.DuplicateKeyException dup) {
-            // 真并发场景: 检查通过后另一线程已 INSERT, 此处再 find 返回它创建的
-            log.warn("[ScoringProfile] race detected on sectionId={}, fallback to refind", sectionId);
-            return profileRepository.findBySectionId(sectionId)
+            log.warn("[ScoringProfile] race detected on projectId={} sectionId={}, fallback to refind",
+                    projectId, sectionId);
+            return profileRepository.findByProjectIdAndSectionId(projectId, sectionId)
                     .orElseThrow(() -> new IllegalStateException(
-                            "评分配置创建失败 (并发竞争且复查未命中, sectionId=" + sectionId + ")", dup));
+                            "评分配置创建失败 (并发竞争且复查未命中, projectId=" + projectId
+                                    + " sectionId=" + sectionId + ")", dup));
         }
     }
 
@@ -61,16 +79,23 @@ public class ScoringProfileApplicationService {
         return profileRepository.findById(id);
     }
 
+    /** 按 (项目, 分区) 唯一定位 — 替代旧"按 sectionId 全局查"语义. */
     @Transactional(readOnly = true)
-    @Cacheable(value = "ratingConfig", key = "'scoringProfile:section:' + #sectionId", unless = "#result == null")
-    public Optional<ScoringProfile> getProfileBySectionId(Long sectionId) {
-        return profileRepository.findBySectionId(sectionId);
+    @Cacheable(value = "ratingConfig",
+               key = "'scoringProfile:project:' + #projectId + ':section:' + #sectionId",
+               unless = "#result == null")
+    public Optional<ScoringProfile> getProfileByProjectIdAndSectionId(Long projectId, Long sectionId) {
+        return profileRepository.findByProjectIdAndSectionId(projectId, sectionId);
     }
 
+    /** 列出某项目下所有评分方案. */
     @Transactional(readOnly = true)
-    @Cacheable(value = "ratingConfig", key = "'scoringProfiles:all'")
-    public List<ScoringProfile> listProfiles() {
-        return profileRepository.findAll();
+    @Cacheable(value = "ratingConfig", key = "'scoringProfiles:project:' + #projectId")
+    public List<ScoringProfile> listByProjectId(Long projectId) {
+        if (projectId == null) {
+            throw new IllegalArgumentException("projectId 必传");
+        }
+        return profileRepository.findByProjectId(projectId);
     }
 
     @Transactional
@@ -84,9 +109,16 @@ public class ScoringProfileApplicationService {
         return profileRepository.save(profile);
     }
 
+    /**
+     * 更新评分方案高级参数. 项目-owned 模式下要求调用方传入预期项目 id 做归属校验,
+     * 防止误用 profileId 跨项目改写他项目的评分规则.
+     *
+     * @param expectedProjectId 预期归属项目 id, null 表示跳过校验 (仅供超管运维路径).
+     */
     @Transactional
     @CacheEvict(value = "ratingConfig", allEntries = true)
     public ScoringProfile updateAdvancedSettings(Long id,
+            Long expectedProjectId,
             Boolean trendFactorEnabled, Integer trendLookbackDays,
             BigDecimal trendBonusPerPercent, BigDecimal trendPenaltyPerPercent,
             BigDecimal trendMaxAdjustment,
@@ -99,6 +131,12 @@ public class ScoringProfileApplicationService {
             Long updatedBy) {
         ScoringProfile profile = profileRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("评分配置不存在: " + id));
+        if (expectedProjectId != null && profile.getProjectId() != null
+                && !expectedProjectId.equals(profile.getProjectId())) {
+            throw new IllegalArgumentException(
+                    "评分方案 " + id + " 不属于项目 " + expectedProjectId
+                            + " (实际归属 " + profile.getProjectId() + "), 禁止跨项目修改");
+        }
         profile.updateAdvancedSettings(trendFactorEnabled, trendLookbackDays,
                 trendBonusPerPercent, trendPenaltyPerPercent, trendMaxAdjustment,
                 decayEnabled, decayMode, decayRatePerDay, decayFloor,
@@ -115,6 +153,126 @@ public class ScoringProfileApplicationService {
         gradeBandRepository.deleteByScoringProfileId(id);
         dimensionRepository.deleteByScoringProfileId(id);
         profileRepository.deleteById(id);
+    }
+
+    /**
+     * 深拷贝 profile 到目标项目, 同步复制关联的 GradeBand / CalculationRule / ScoreDimension.
+     * 所有新实体的 id 由仓储层 (MyBatis-Plus IdWorker) 在 insert 时生成,
+     * 复制过程不携带源 id, 不带 createdAt/updatedAt (走默认填充).
+     *
+     * <p>用于 Phase 2 一次性数据迁移以及 Phase 3 项目克隆功能.
+     *
+     * <p>注意:
+     * <ul>
+     *   <li>EscalationPolicy 与 ScoringProfileVersion 不复制 — 前者属于运营级策略,
+     *       后者是历史版本快照, 克隆新项目应从空白开始.</li>
+     *   <li>GradeBand 中的 dimensionId 会按新 dimension id 重映射, 否则会指向源项目维度.</li>
+     * </ul>
+     *
+     * @return 新 profile (含已分配的 id)
+     */
+    @Transactional
+    @CacheEvict(value = "ratingConfig", allEntries = true)
+    public ScoringProfile cloneForProject(Long sourceProfileId, Long newProjectId, Long createdBy) {
+        if (newProjectId == null) {
+            throw new IllegalArgumentException("newProjectId 必传");
+        }
+        ScoringProfile source = profileRepository.findById(sourceProfileId)
+                .orElseThrow(() -> new IllegalArgumentException("源评分方案不存在: " + sourceProfileId));
+
+        // 1. 复制 profile 自身 — id 留空让 IdWorker 生成, projectId 改为目标项目
+        ScoringProfile copy = ScoringProfile.reconstruct(ScoringProfile.builder()
+                .tenantId(source.getTenantId())
+                .sectionId(source.getSectionId())
+                .projectId(newProjectId)
+                .maxScore(source.getMaxScore())
+                .minScore(source.getMinScore())
+                .precisionDigits(source.getPrecisionDigits())
+                .currentVersion(0)  // 新版本从 0 开始, 不继承源版本号
+                .trendFactorEnabled(source.getTrendFactorEnabled())
+                .trendLookbackDays(source.getTrendLookbackDays())
+                .trendBonusPerPercent(source.getTrendBonusPerPercent())
+                .trendPenaltyPerPercent(source.getTrendPenaltyPerPercent())
+                .trendMaxAdjustment(source.getTrendMaxAdjustment())
+                .decayEnabled(source.getDecayEnabled())
+                .decayMode(source.getDecayMode())
+                .decayRatePerDay(source.getDecayRatePerDay())
+                .decayFloor(source.getDecayFloor())
+                .multiRaterMode(source.getMultiRaterMode())
+                .raterWeightBy(source.getRaterWeightBy())
+                .consensusThreshold(source.getConsensusThreshold())
+                .calibrationEnabled(source.getCalibrationEnabled())
+                .calibrationMethod(source.getCalibrationMethod())
+                .calibrationPeriodDays(source.getCalibrationPeriodDays())
+                .calibrationMinSamples(source.getCalibrationMinSamples())
+                .createdBy(createdBy != null ? createdBy : source.getCreatedBy()));
+        ScoringProfile savedCopy = profileRepository.save(copy);
+        Long newProfileId = savedCopy.getId();
+
+        // 2. 复制 ScoreDimension, 建立 旧 id → 新 id 映射
+        Map<Long, Long> dimensionIdMap = new HashMap<>();
+        List<ScoreDimension> srcDims = dimensionRepository.findByScoringProfileId(sourceProfileId);
+        for (ScoreDimension srcDim : srcDims) {
+            ScoreDimension dimCopy = ScoreDimension.reconstruct(ScoreDimension.builder()
+                    .tenantId(srcDim.getTenantId())
+                    .scoringProfileId(newProfileId)
+                    .dimensionCode(srcDim.getDimensionCode())
+                    .dimensionName(srcDim.getDimensionName())
+                    .weight(srcDim.getWeight())
+                    .baseScore(srcDim.getBaseScore())
+                    .passThreshold(srcDim.getPassThreshold())
+                    .sourceType(srcDim.getSourceType())
+                    .moduleTemplateId(srcDim.getModuleTemplateId())
+                    .sortOrder(srcDim.getSortOrder()));
+            ScoreDimension savedDim = dimensionRepository.save(dimCopy);
+            dimensionIdMap.put(srcDim.getId(), savedDim.getId());
+        }
+
+        // 3. 复制 GradeBand, dimensionId 按映射重写
+        List<GradeBand> srcBands = gradeBandRepository.findByScoringProfileId(sourceProfileId);
+        for (GradeBand srcBand : srcBands) {
+            Long mappedDimId = srcBand.getDimensionId() != null
+                    ? dimensionIdMap.get(srcBand.getDimensionId()) : null;
+            GradeBand bandCopy = GradeBand.reconstruct(GradeBand.builder()
+                    .tenantId(srcBand.getTenantId())
+                    .scoringProfileId(newProfileId)
+                    .dimensionId(mappedDimId)
+                    .gradeCode(srcBand.getGradeCode())
+                    .gradeName(srcBand.getGradeName())
+                    .minScore(srcBand.getMinScore())
+                    .maxScore(srcBand.getMaxScore())
+                    .color(srcBand.getColor())
+                    .icon(srcBand.getIcon())
+                    .sortOrder(srcBand.getSortOrder()));
+            gradeBandRepository.save(bandCopy);
+        }
+
+        // 4. 复制 CalculationRule
+        List<CalculationRule> srcRules = ruleRepository.findByScoringProfileIdOrderByPriority(sourceProfileId);
+        for (CalculationRule srcRule : srcRules) {
+            CalculationRule ruleCopy = CalculationRule.reconstruct(CalculationRule.builder()
+                    .tenantId(srcRule.getTenantId())
+                    .scoringProfileId(newProfileId)
+                    .ruleCode(srcRule.getRuleCode())
+                    .ruleName(srcRule.getRuleName())
+                    .priority(srcRule.getPriority())
+                    .ruleType(srcRule.getRuleType())
+                    .config(srcRule.getConfig())
+                    .isEnabled(srcRule.getIsEnabled())
+                    .scopeType(srcRule.getScopeType())
+                    .targetDimensionIds(srcRule.getTargetDimensionIds())
+                    .activationCondition(srcRule.getActivationCondition())
+                    .appliesTo(srcRule.getAppliesTo())
+                    .effectiveFrom(srcRule.getEffectiveFrom())
+                    .effectiveUntil(srcRule.getEffectiveUntil())
+                    .exclusionGroup(srcRule.getExclusionGroup()));
+            ruleRepository.save(ruleCopy);
+        }
+
+        log.info("Cloned ScoringProfile {} -> {} (project {} -> {}): dims={} bands={} rules={}",
+                sourceProfileId, newProfileId, source.getProjectId(), newProjectId,
+                srcDims.size(), srcBands.size(), srcRules.size());
+        return savedCopy;
     }
 
     // ===== ScoreDimension =====

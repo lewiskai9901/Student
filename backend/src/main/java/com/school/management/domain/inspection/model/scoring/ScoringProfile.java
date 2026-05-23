@@ -12,6 +12,11 @@ public class ScoringProfile extends AggregateRoot<Long> {
 
     private Long tenantId;
     private Long sectionId;
+    /**
+     * 项目-owned (2026-05-23): 评分方案归属项目, 不再跨项目共享.
+     * Phase 2 阶段允许 null (旧数据迁移中); Phase 5 加 NOT NULL 约束.
+     */
+    private Long projectId;
     private BigDecimal maxScore;
     private BigDecimal minScore;
     private Integer precisionDigits;
@@ -53,6 +58,7 @@ public class ScoringProfile extends AggregateRoot<Long> {
         this.id = builder.id;
         this.tenantId = builder.tenantId != null ? builder.tenantId : 0L;
         this.sectionId = builder.sectionId;
+        this.projectId = builder.projectId;
         this.maxScore = builder.maxScore != null ? builder.maxScore : new BigDecimal("100");
         this.minScore = builder.minScore != null ? builder.minScore : BigDecimal.ZERO;
         this.precisionDigits = builder.precisionDigits != null ? builder.precisionDigits : 2;
@@ -84,6 +90,19 @@ public class ScoringProfile extends AggregateRoot<Long> {
         this.updatedAt = builder.updatedAt;
     }
 
+    public static ScoringProfile create(Long sectionId, Long projectId, Long createdBy) {
+        return builder()
+                .sectionId(sectionId)
+                .projectId(projectId)
+                .createdBy(createdBy)
+                .build();
+    }
+
+    /**
+     * 兼容旧调用 (无 projectId), 仅供尚未迁移的测试与遗留路径使用.
+     * @deprecated Use {@link #create(Long, Long, Long)} with projectId.
+     */
+    @Deprecated
     public static ScoringProfile create(Long sectionId, Long createdBy) {
         return builder()
                 .sectionId(sectionId)
@@ -148,6 +167,7 @@ public class ScoringProfile extends AggregateRoot<Long> {
     // Getters
     public Long getTenantId() { return tenantId; }
     public Long getSectionId() { return sectionId; }
+    public Long getProjectId() { return projectId; }
     public BigDecimal getMaxScore() { return maxScore; }
     public BigDecimal getMinScore() { return minScore; }
     public Integer getPrecisionDigits() { return precisionDigits; }
@@ -186,6 +206,7 @@ public class ScoringProfile extends AggregateRoot<Long> {
         private Long id;
         private Long tenantId;
         private Long sectionId;
+        private Long projectId;
         private BigDecimal maxScore;
         private BigDecimal minScore;
         private Integer precisionDigits;
@@ -214,6 +235,7 @@ public class ScoringProfile extends AggregateRoot<Long> {
         public Builder id(Long id) { this.id = id; return this; }
         public Builder tenantId(Long tenantId) { this.tenantId = tenantId; return this; }
         public Builder sectionId(Long sectionId) { this.sectionId = sectionId; return this; }
+        public Builder projectId(Long projectId) { this.projectId = projectId; return this; }
         public Builder maxScore(BigDecimal maxScore) { this.maxScore = maxScore; return this; }
         public Builder minScore(BigDecimal minScore) { this.minScore = minScore; return this; }
         public Builder precisionDigits(Integer precisionDigits) { this.precisionDigits = precisionDigits; return this; }

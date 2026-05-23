@@ -15,6 +15,8 @@ public class ScoringProfilePO {
 
     private Long tenantId;
     private Long sectionId;
+    /** 项目-owned (2026-05-23): profile 归属项目, Phase 2 可空, Phase 5 加 NOT NULL. */
+    private Long projectId;
     private BigDecimal maxScore;
     private BigDecimal minScore;
     private Integer precisionDigits;

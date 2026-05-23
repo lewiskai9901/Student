@@ -50,6 +50,9 @@ class InspProjectApplicationServiceTest {
     @Mock ProjectScoreRepository scoreRepository;
     @Mock SpringDomainEventPublisher eventPublisher;
     @Mock ScoringProfileRepository scoringProfileRepository;
+    @Mock ScoreDimensionRepository scoreDimensionRepository;
+    @Mock GradeBandRepository gradeBandRepository;
+    @Mock CalculationRuleRepository calculationRuleRepository;
     @Mock TargetPopulationService targetPopulationService;
     @Mock TemplateSectionRepository templateSectionRepository;
     @Mock TemplateVersionRepository templateVersionRepository;
@@ -64,7 +67,9 @@ class InspProjectApplicationServiceTest {
     void setUp() {
         service = new InspProjectApplicationService(
                 projectRepository, inspectorRepository, scoreRepository,
-                eventPublisher, scoringProfileRepository, targetPopulationService,
+                eventPublisher, scoringProfileRepository,
+                scoreDimensionRepository, gradeBandRepository, calculationRuleRepository,
+                targetPopulationService,
                 objectMapper, templateSectionRepository, templateVersionRepository,
                 auditLogger, taskRepository);
     }

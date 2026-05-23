@@ -28,13 +28,17 @@ public class ScoringProfileController {
     @CasbinAccess(resource = "insp:scoring-profile", action = "create")
     public Result<ScoringProfile> createProfile(@RequestBody @Valid CreateProfileRequest request) {
         Long userId = SecurityUtils.requireCurrentUserId();
-        return Result.success(scoringService.createProfile(request.getSectionId(), userId));
+        return Result.success(scoringService.createProfile(
+                request.getProjectId(), request.getSectionId(), userId));
     }
 
+    /**
+     * 列出某项目下所有评分方案. 项目-owned 重构后, profile 必须按项目过滤.
+     */
     @GetMapping
     @CasbinAccess(resource = "insp:scoring-profile", action = "view")
-    public Result<List<ScoringProfile>> listProfiles() {
-        return Result.success(scoringService.listProfiles());
+    public Result<List<ScoringProfile>> listProfiles(@RequestParam("projectId") Long projectId) {
+        return Result.success(scoringService.listByProjectId(projectId));
     }
 
     @GetMapping("/{id}")
@@ -44,17 +48,16 @@ public class ScoringProfileController {
                 .orElseThrow(() -> new IllegalArgumentException("评分配置不存在: " + id)));
     }
 
-    @GetMapping("/by-section/{sectionId}")
+    /**
+     * 按 (项目, 分区) 唯一定位评分方案.
+     */
+    @GetMapping("/by-project-section")
     @CasbinAccess(resource = "insp:scoring-profile", action = "view")
-    public Result<ScoringProfile> getProfileBySection(@PathVariable Long sectionId) {
-        return Result.success(scoringService.getProfileBySectionId(sectionId).orElse(null));
-    }
-
-    /** @deprecated Use /by-section/{sectionId} instead */
-    @GetMapping("/by-template/{templateId}")
-    @CasbinAccess(resource = "insp:scoring-profile", action = "view")
-    public Result<ScoringProfile> getProfileByTemplateLegacy(@PathVariable Long templateId) {
-        return Result.success(scoringService.getProfileBySectionId(templateId).orElse(null));
+    public Result<ScoringProfile> getProfileByProjectAndSection(
+            @RequestParam("projectId") Long projectId,
+            @RequestParam("sectionId") Long sectionId) {
+        return Result.success(scoringService.getProfileByProjectIdAndSectionId(projectId, sectionId)
+                .orElse(null));
     }
 
     @PutMapping("/{id}")
@@ -72,7 +75,9 @@ public class ScoringProfileController {
     public Result<ScoringProfile> updateAdvancedSettings(@PathVariable Long id,
                                                           @RequestBody @Valid UpdateAdvancedSettingsRequest request) {
         Long userId = SecurityUtils.requireCurrentUserId();
+        // 项目-owned: 必须带 projectId 校验归属, 防止跨项目写入
         return Result.success(scoringService.updateAdvancedSettings(id,
+                request.getProjectId(),
                 request.getTrendFactorEnabled(), request.getTrendLookbackDays(),
                 request.getTrendBonusPerPercent(), request.getTrendPenaltyPerPercent(),
                 request.getTrendMaxAdjustment(),
@@ -275,6 +280,9 @@ public class ScoringProfileController {
 
     @lombok.Data
     public static class CreateProfileRequest {
+        @NotNull(message = "projectId 必传")
+        private Long projectId;
+        @NotNull(message = "sectionId 必传")
         private Long sectionId;
     }
 
@@ -390,6 +398,8 @@ public class ScoringProfileController {
 
     @lombok.Data
     public static class UpdateAdvancedSettingsRequest {
+        /** 项目-owned 校验: 期望归属的项目 id, 防止跨项目误改. */
+        private Long projectId;
         // 1.9 趋势因子
         private Boolean trendFactorEnabled;
         private Integer trendLookbackDays;

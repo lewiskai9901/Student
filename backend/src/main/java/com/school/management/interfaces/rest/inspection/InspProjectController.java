@@ -221,6 +221,8 @@ public class InspProjectController {
         }
         return Result.success(scoringService.updateAdvancedSettings(
                 project.getDefaultScoringProfileId(),
+                // 项目-owned 校验: 期望归属即本项目 id
+                project.getId(),
                 request.getTrendFactorEnabled(), request.getTrendLookbackDays(),
                 request.getTrendBonusPerPercent(), request.getTrendPenaltyPerPercent(),
                 request.getTrendMaxAdjustment(),

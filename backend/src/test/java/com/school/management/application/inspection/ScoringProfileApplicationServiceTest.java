@@ -79,7 +79,12 @@ class ScoringProfileApplicationServiceTest {
 
     private ScoringProfile profile(Long id, Long sectionId) {
         return ScoringProfile.reconstruct(ScoringProfile.builder()
-                .id(id).sectionId(sectionId).createdBy(1L));
+                .id(id).sectionId(sectionId).projectId(700L).createdBy(1L));
+    }
+
+    private ScoringProfile profile(Long id, Long sectionId, Long projectId) {
+        return ScoringProfile.reconstruct(ScoringProfile.builder()
+                .id(id).sectionId(sectionId).projectId(projectId).createdBy(1L));
     }
 
     private ScoreDimension dimension(Long id, Long profileId, String code) {
@@ -126,45 +131,56 @@ class ScoringProfileApplicationServiceTest {
 
     // ============================================================
     @Nested
-    @DisplayName("createProfile — 幂等创建")
+    @DisplayName("createProfile — 项目-owned 幂等创建")
     class CreateProfileTests {
         @Test
-        @DisplayName("已存在: 直接返回现有, 不再 save")
+        @DisplayName("(project, section) 已存在: 直接返回现有, 不再 save")
         void shouldReturnExisting() {
-            ScoringProfile existing = profile(500L, 100L);
-            when(profileRepository.findBySectionId(100L)).thenReturn(Optional.of(existing));
+            ScoringProfile existing = profile(500L, 100L, 700L);
+            when(profileRepository.findByProjectIdAndSectionId(700L, 100L))
+                    .thenReturn(Optional.of(existing));
 
-            ScoringProfile result = service.createProfile(100L, 1L);
+            ScoringProfile result = service.createProfile(700L, 100L, 1L);
 
             assertThat(result).isSameAs(existing);
             verify(profileRepository, never()).save(any(ScoringProfile.class));
         }
 
         @Test
-        @DisplayName("不存在: 创建并保存新 profile")
+        @DisplayName("不存在: 创建并保存新 profile, projectId 已写入")
         void shouldCreateNew() {
-            when(profileRepository.findBySectionId(100L)).thenReturn(Optional.empty());
+            when(profileRepository.findByProjectIdAndSectionId(700L, 100L))
+                    .thenReturn(Optional.empty());
             when(profileRepository.save(any(ScoringProfile.class)))
                     .thenAnswer(inv -> inv.getArgument(0));
 
-            ScoringProfile result = service.createProfile(100L, 9L);
+            ScoringProfile result = service.createProfile(700L, 100L, 9L);
 
             assertThat(result.getSectionId()).isEqualTo(100L);
+            assertThat(result.getProjectId()).isEqualTo(700L);
             assertThat(result.getCreatedBy()).isEqualTo(9L);
             verify(profileRepository).save(any(ScoringProfile.class));
         }
 
         @Test
+        @DisplayName("projectId 为空: 拒绝创建")
+        void shouldRejectNullProjectId() {
+            assertThatThrownBy(() -> service.createProfile(null, 100L, 1L))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("projectId 必传");
+        }
+
+        @Test
         @DisplayName("并发 DuplicateKeyException: 复查命中, 返回他人创建的")
         void shouldFallbackOnRaceWhenRefindHits() {
-            ScoringProfile other = profile(501L, 100L);
-            when(profileRepository.findBySectionId(100L))
+            ScoringProfile other = profile(501L, 100L, 700L);
+            when(profileRepository.findByProjectIdAndSectionId(700L, 100L))
                     .thenReturn(Optional.empty())
                     .thenReturn(Optional.of(other));
             when(profileRepository.save(any(ScoringProfile.class)))
                     .thenThrow(new DuplicateKeyException("dup"));
 
-            ScoringProfile result = service.createProfile(100L, 1L);
+            ScoringProfile result = service.createProfile(700L, 100L, 1L);
 
             assertThat(result).isSameAs(other);
         }
@@ -172,13 +188,13 @@ class ScoringProfileApplicationServiceTest {
         @Test
         @DisplayName("并发 DuplicateKeyException 但复查未命中: 抛 IllegalStateException")
         void shouldThrowWhenRaceAndRefindMisses() {
-            when(profileRepository.findBySectionId(100L))
+            when(profileRepository.findByProjectIdAndSectionId(700L, 100L))
                     .thenReturn(Optional.empty())
                     .thenReturn(Optional.empty());
             when(profileRepository.save(any(ScoringProfile.class)))
                     .thenThrow(new DuplicateKeyException("dup"));
 
-            assertThatThrownBy(() -> service.createProfile(100L, 1L))
+            assertThatThrownBy(() -> service.createProfile(700L, 100L, 1L))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("并发竞争");
         }
@@ -186,7 +202,7 @@ class ScoringProfileApplicationServiceTest {
 
     // ============================================================
     @Nested
-    @DisplayName("getProfile / getProfileBySectionId / listProfiles — 查询")
+    @DisplayName("getProfile / getProfileByProjectIdAndSectionId / listByProjectId — 查询")
     class GetProfileTests {
         @Test
         @DisplayName("getProfile: 透传 findById")
@@ -203,18 +219,26 @@ class ScoringProfileApplicationServiceTest {
         }
 
         @Test
-        @DisplayName("getProfileBySectionId: 透传 findBySectionId")
-        void shouldGetBySection() {
-            when(profileRepository.findBySectionId(100L))
-                    .thenReturn(Optional.of(profile(500L, 100L)));
-            assertThat(service.getProfileBySectionId(100L)).isPresent();
+        @DisplayName("getProfileByProjectIdAndSectionId: 透传 findByProjectIdAndSectionId")
+        void shouldGetByProjectAndSection() {
+            when(profileRepository.findByProjectIdAndSectionId(700L, 100L))
+                    .thenReturn(Optional.of(profile(500L, 100L, 700L)));
+            assertThat(service.getProfileByProjectIdAndSectionId(700L, 100L)).isPresent();
         }
 
         @Test
-        @DisplayName("listProfiles: 透传 findAll")
-        void shouldListAll() {
-            when(profileRepository.findAll()).thenReturn(List.of(profile(1L, 1L), profile(2L, 2L)));
-            assertThat(service.listProfiles()).hasSize(2);
+        @DisplayName("listByProjectId: 透传 findByProjectId")
+        void shouldListByProject() {
+            when(profileRepository.findByProjectId(700L)).thenReturn(
+                    List.of(profile(1L, 1L, 700L), profile(2L, 2L, 700L)));
+            assertThat(service.listByProjectId(700L)).hasSize(2);
+        }
+
+        @Test
+        @DisplayName("listByProjectId: projectId 为空抛异常")
+        void shouldRejectNullProjectIdOnList() {
+            assertThatThrownBy(() -> service.listByProjectId(null))
+                    .isInstanceOf(IllegalArgumentException.class);
         }
     }
 
@@ -262,12 +286,12 @@ class ScoringProfileApplicationServiceTest {
         @Test
         @DisplayName("updateAdvancedSettings: 写入趋势/衰减/多评审员/校准字段")
         void shouldUpdateAdvanced() {
-            ScoringProfile p = profile(500L, 100L);
+            ScoringProfile p = profile(500L, 100L, 700L);
             when(profileRepository.findById(500L)).thenReturn(Optional.of(p));
             when(profileRepository.save(any(ScoringProfile.class)))
                     .thenAnswer(inv -> inv.getArgument(0));
 
-            ScoringProfile result = service.updateAdvancedSettings(500L,
+            ScoringProfile result = service.updateAdvancedSettings(500L, 700L,
                     true, 14, new BigDecimal("0.5"), new BigDecimal("0.3"), new BigDecimal("5"),
                     true, "LINEAR", new BigDecimal("0.1"), new BigDecimal("60"),
                     "AVERAGE", "EQUAL", new BigDecimal("0.8"),
@@ -284,9 +308,82 @@ class ScoringProfileApplicationServiceTest {
         @DisplayName("updateAdvancedSettings: profile 不存在抛异常")
         void shouldRejectAdvancedMissing() {
             when(profileRepository.findById(9L)).thenReturn(Optional.empty());
-            assertThatThrownBy(() -> service.updateAdvancedSettings(9L,
+            assertThatThrownBy(() -> service.updateAdvancedSettings(9L, null,
                     false, 7, null, null, null, false, null, null, null,
                     null, null, null, false, null, null, null, 1L))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        @DisplayName("updateAdvancedSettings: expectedProjectId 与归属不符抛异常")
+        void shouldRejectAdvancedWrongProject() {
+            ScoringProfile p = profile(500L, 100L, 700L);
+            when(profileRepository.findById(500L)).thenReturn(Optional.of(p));
+            assertThatThrownBy(() -> service.updateAdvancedSettings(500L, 999L,
+                    false, 7, null, null, null, false, null, null, null,
+                    null, null, null, false, null, null, null, 1L))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("禁止跨项目修改");
+        }
+    }
+
+    // ============================================================
+    @Nested
+    @DisplayName("cloneForProject — 深拷贝到目标项目")
+    class CloneForProjectTests {
+        @Test
+        @DisplayName("拷贝 profile + dimensions + bands + rules, projectId 改为目标")
+        void shouldDeepCopy() {
+            ScoringProfile src = profile(500L, 100L, 700L);
+            when(profileRepository.findById(500L)).thenReturn(Optional.of(src));
+            when(profileRepository.save(any(ScoringProfile.class)))
+                    .thenAnswer(inv -> {
+                        ScoringProfile p = inv.getArgument(0);
+                        if (p.getId() == null) p.setId(999L);
+                        return p;
+                    });
+            ScoreDimension srcDim = dimension(20L, 500L, "D1");
+            when(dimensionRepository.findByScoringProfileId(500L)).thenReturn(List.of(srcDim));
+            when(dimensionRepository.save(any(ScoreDimension.class)))
+                    .thenAnswer(inv -> {
+                        ScoreDimension d = inv.getArgument(0);
+                        if (d.getId() == null) d.setId(2000L);
+                        return d;
+                    });
+            GradeBand srcBand = GradeBand.reconstruct(GradeBand.builder()
+                    .id(30L).scoringProfileId(500L).dimensionId(20L)
+                    .gradeCode("A").gradeName("优"));
+            when(gradeBandRepository.findByScoringProfileId(500L)).thenReturn(List.of(srcBand));
+            when(gradeBandRepository.save(any(GradeBand.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
+            CalculationRule srcRule = rule(40L, 500L);
+            when(ruleRepository.findByScoringProfileIdOrderByPriority(500L))
+                    .thenReturn(List.of(srcRule));
+            when(ruleRepository.save(any(CalculationRule.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
+
+            ScoringProfile clone = service.cloneForProject(500L, 888L, 9L);
+
+            assertThat(clone.getProjectId()).isEqualTo(888L);
+            assertThat(clone.getSectionId()).isEqualTo(100L);
+            // 应当 save 1 个 profile + 1 个 dim + 1 个 band + 1 个 rule
+            verify(dimensionRepository, times(1)).save(any(ScoreDimension.class));
+            verify(gradeBandRepository, times(1)).save(any(GradeBand.class));
+            verify(ruleRepository, times(1)).save(any(CalculationRule.class));
+        }
+
+        @Test
+        @DisplayName("newProjectId 为空抛异常")
+        void shouldRejectNullTargetProject() {
+            assertThatThrownBy(() -> service.cloneForProject(500L, null, 1L))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        @DisplayName("源 profile 不存在抛异常")
+        void shouldRejectMissingSource() {
+            when(profileRepository.findById(9L)).thenReturn(Optional.empty());
+            assertThatThrownBy(() -> service.cloneForProject(9L, 888L, 1L))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }

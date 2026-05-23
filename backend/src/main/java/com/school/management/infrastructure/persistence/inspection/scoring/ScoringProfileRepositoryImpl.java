@@ -36,8 +36,22 @@ public class ScoringProfileRepositoryImpl implements ScoringProfileRepository {
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     public Optional<ScoringProfile> findBySectionId(Long sectionId) {
         ScoringProfilePO po = mapper.findBySectionId(sectionId);
+        return Optional.ofNullable(po).map(this::toDomain);
+    }
+
+    @Override
+    public List<ScoringProfile> findByProjectId(Long projectId) {
+        return mapper.findByProjectId(projectId).stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Optional<ScoringProfile> findByProjectIdAndSectionId(Long projectId, Long sectionId) {
+        ScoringProfilePO po = mapper.findByProjectIdAndSectionId(projectId, sectionId);
         return Optional.ofNullable(po).map(this::toDomain);
     }
 
@@ -53,11 +67,17 @@ public class ScoringProfileRepositoryImpl implements ScoringProfileRepository {
         mapper.deleteById(id);
     }
 
+    @Override
+    public int deleteByProjectId(Long projectId) {
+        return mapper.deleteByProjectId(projectId);
+    }
+
     private ScoringProfilePO toPO(ScoringProfile d) {
         ScoringProfilePO po = new ScoringProfilePO();
         po.setId(d.getId());
         po.setTenantId(d.getTenantId() != null ? d.getTenantId() : 0L);
         po.setSectionId(d.getSectionId());
+        po.setProjectId(d.getProjectId());
         po.setMaxScore(d.getMaxScore());
         po.setMinScore(d.getMinScore());
         po.setPrecisionDigits(d.getPrecisionDigits());
@@ -95,6 +115,7 @@ public class ScoringProfileRepositoryImpl implements ScoringProfileRepository {
                 .id(po.getId())
                 .tenantId(po.getTenantId())
                 .sectionId(po.getSectionId())
+                .projectId(po.getProjectId())
                 .maxScore(po.getMaxScore())
                 .minScore(po.getMinScore())
                 .precisionDigits(po.getPrecisionDigits())
