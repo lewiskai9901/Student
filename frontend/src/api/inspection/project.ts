@@ -149,6 +149,109 @@ export function removeInspector(projectId: LongId, inspectorId: LongId): Promise
   return http.delete(`${BASE}/${projectId}/inspectors/${inspectorId}`)
 }
 
+// ==================== Phase B: 人员工作台 + 角色矩阵 + 批量指派 ====================
+
+/** 人员工作台聚合视图 — 「按人」/「按任务」/「角色矩阵」三视图共用主数据源. */
+export interface PeopleWorkbenchView {
+  projectId: LongId
+  projectCode: string
+  projectName: string
+  summary: WorkbenchSummary
+  people: PersonRow[]
+  pendingAssignTasks: WorkbenchTaskRow[]
+}
+
+export interface WorkbenchSummary {
+  totalPeople: number
+  totalInspectors: number
+  totalReviewers: number
+  totalLeads: number
+  pendingAssignCount: number
+  pendingReviewCount: number
+  inProgressCount: number
+  overdueCount: number
+  leadName: string | null
+}
+
+export interface PersonRow {
+  userId: LongId
+  userName: string
+  orgUnitName: string | null
+  roles: ('INSPECTOR' | 'REVIEWER' | 'LEAD')[]
+  isActive: boolean
+  isCreator: boolean
+  stats: PersonStats
+  tasks: PersonTasks
+}
+
+export interface PersonStats {
+  weekAssigned: number
+  weekCompleted: number
+  pendingAssignCandidates: number
+  inProgress: number
+  pendingReview: number
+  overdue: number
+  totalAssigned: number
+  totalCompleted: number
+}
+
+export interface PersonTasks {
+  inProgress: WorkbenchTaskRow[]
+  pendingReview: WorkbenchTaskRow[]
+  overdue: WorkbenchTaskRow[]
+}
+
+export interface WorkbenchTaskRow {
+  taskId: LongId
+  taskCode: string
+  taskDate: string
+  status: string
+  inspectorId: LongId | null
+  inspectorName: string | null
+  reviewerId: LongId | null
+  reviewerName: string | null
+  totalTargets: number | null
+  completedTargets: number | null
+  submittedAt: string | null
+  daysOverdue: number
+}
+
+export function getPeopleWorkbench(projectId: LongId): Promise<PeopleWorkbenchView> {
+  return http.get<PeopleWorkbenchView>(`${BASE}/${projectId}/people-workbench`)
+}
+
+/** 角色矩阵 - 给某人加一个角色 (允许多角色多行) */
+export function addInspectorRole(projectId: LongId, userId: LongId,
+                                  role: 'INSPECTOR' | 'REVIEWER' | 'LEAD',
+                                  userName?: string): Promise<ProjectInspector> {
+  return http.post<ProjectInspector>(
+    `${BASE}/${projectId}/inspectors/${userId}/roles/${role}`,
+    null,
+    { params: userName ? { userName } : {} }
+  )
+}
+
+/** 角色矩阵 - 移除某人某角色; LEAD 仅剩 1 时返回 409 */
+export function removeInspectorRole(projectId: LongId, userId: LongId,
+                                     role: 'INSPECTOR' | 'REVIEWER' | 'LEAD'): Promise<void> {
+  return http.delete(`${BASE}/${projectId}/inspectors/${userId}/roles/${role}`)
+}
+
+/** 批量指派任务 - per-task 独立事务支持 partial-success */
+export interface BatchAssignRequest {
+  taskIds: LongId[]
+  inspectorId: LongId
+  inspectorName?: string
+}
+export interface BatchAssignResponse {
+  successCount: number
+  failureCount: number
+  errors: string[]
+}
+export function batchAssignTasks(projectId: LongId, data: BatchAssignRequest): Promise<BatchAssignResponse> {
+  return http.post<BatchAssignResponse>(`${BASE}/${projectId}/inspectors/batch-assign`, data)
+}
+
 // ==================== 运营配置 ====================
 
 export function updateOperationalConfig(id: LongId, data: {

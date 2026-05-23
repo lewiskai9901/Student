@@ -36,6 +36,8 @@ import EvaluationResultsView from './components/EvaluationResultsView.vue'
 import InspButton from '../shared/InspButton.vue'
 import InspChip from '../shared/InspChip.vue'
 import InspSpinner from '../shared/InspSpinner.vue'
+// 2026-05-23: 人员与任务 Tab 重构 — 旧的 3 张卡片 (待审核/待分配/检查员管理) 替换为以人为中心的工作台
+import TeamTab from './team/TeamTab.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -1101,151 +1103,13 @@ onMounted(async () => {
         </template>
       </div>
 
-      <!-- ===== 人员与任务 Tab =====
-           P1 #20: 卡片顺序 "待审核 → 待分配 → 检查员管理" (紧急优先) -->
+      <!-- ===== 人员与任务 Tab (2026-05-23 重构) =====
+           旧 3 卡片 (待审核 + 待分配 + 检查员管理) 替换为 TeamTab 工作台,
+           3 视图切换 (按人/按任务/角色矩阵) + 顶部状态条; 详见 docs/plans/2026-05-23-inspection-team-tab-redesign.md -->
       <div v-if="activeTab === 'team'" class="cfg-section">
-
-        <!-- 1. 待审核任务 (最紧急, 阻塞业务) -->
-        <div v-if="pendingReviewCount > 0" class="cfg-card">
-          <div class="cfg-card-title cfg-card-title--with-icon cfg-card-title--mb">
-            <ClipboardCheck class="w-4 h-4" style="color:#1a6dff" />待审核任务
-            <span class="pdv-badge-red">{{ pendingReviewCount }}</span>
-          </div>
-          <div class="cfg-review-list">
-            <div v-for="task in pendingReviewTasks" :key="task.id" class="cfg-review-item">
-              <div class="cfg-review-info">
-                <div class="cfg-insp-name">{{ task.taskCode }}</div>
-                <div class="cfg-hint">检查员: {{ task.inspectorName || '-' }} · {{ task.updatedAt?.substring(0, 16) || '-' }}</div>
-              </div>
-              <div class="cfg-review-actions">
-                <el-tag type="warning" size="small" round>待审核</el-tag>
-                <el-button type="success" size="small" @click="handleApproveTask(task)"><Check class="w-3.5 h-3.5 mr-0.5" />通过</el-button>
-                <el-button type="danger" size="small" plain @click="handleRejectTask(task)"><X class="w-3.5 h-3.5 mr-0.5" />驳回</el-button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 2. 待分配任务 -->
-        <div v-if="pendingAssignTasks.length > 0" class="cfg-card">
-          <div class="cfg-card-title cfg-card-title--with-icon cfg-card-title--mb">
-            <ClipboardList class="w-4 h-4" style="color:#f59e0b" />待分配任务
-            <span class="pdv-badge-orange">{{ pendingAssignTasks.length }}</span>
-          </div>
-          <div class="pdv-assign-list">
-            <div v-for="task in pendingAssignTasks" :key="task.id" class="pdv-assign-row">
-              <span class="text-xs font-medium">{{ task.taskCode }}</span>
-              <span class="text-xs text-gray-500">{{ task.taskDate }}</span>
-              <span class="text-xs text-gray-400">{{ task.totalTargets }}个目标</span>
-              <!-- P0 #14: :key 含 assignSelectKey, 取消确认后 bump 让 select 重建清空 -->
-              <el-select
-                :key="`assign-${task.id}-${assignSelectKey}`"
-                :model-value="null"
-                placeholder="指派检查员"
-                size="small"
-                style="width: 160px"
-                :loading="assigningTaskId === task.id"
-                @change="(val: any) => {
-                  const insp = inspectors.find((i: ProjectInspector) => String(i.userId) === String(val))
-                  if (insp) handleAssignTask(task, insp)
-                }"
-              >
-                <el-option v-for="insp in inspectors" :key="insp.userId" :label="insp.userName" :value="insp.userId" />
-              </el-select>
-            </div>
-          </div>
-        </div>
-
-        <!-- 检查员管理 -->
-        <div class="cfg-card">
-          <div class="cfg-card-header cfg-card-header--mb">
-            <div class="cfg-card-title cfg-card-title--with-icon">
-              <Users class="w-4 h-4" style="color:#1a6dff" />检查员管理
-              <span v-if="inspectors.length" class="cfg-count">({{ inspectors.length }} 人)</span>
-            </div>
-          </div>
-
-          <!-- 添加 -->
-          <div class="cfg-add-insp">
-            <div class="cfg-hint cfg-hint--mb">添加检查员</div>
-            <div class="cfg-add-insp-row">
-              <div class="cfg-add-insp-search">
-                <el-select v-model="addQuery" filterable remote reserve-keyword :remote-method="searchUsers" :loading="addLoading" placeholder="输入姓名搜索..." class="w-full" size="default" @change="handleAddInspector" clearable>
-                  <el-option v-for="u in addResults" :key="u.id" :label="(u.realName||u.username) + (u.orgUnitName ? ` (${u.orgUnitName})` : '')" :value="u.id">
-                    <div class="cfg-user-option"><span class="cfg-user-name">{{ u.realName || u.username }}</span><span class="cfg-hint">{{ u.orgUnitName || u.username }}</span></div>
-                  </el-option>
-                </el-select>
-              </div>
-              <div class="cfg-add-insp-role">
-                <!-- P1 #19: 角色下拉补 label -->
-                <label class="cfg-label">角色</label>
-                <el-select v-model="addRole">
-                  <el-option v-for="(v,k) in InspectorRoleConfig" :key="k" :label="v.label" :value="k" />
-                </el-select>
-              </div>
-            </div>
-          </div>
-
-          <!-- 检查员搜索 -->
-          <div v-if="inspectors.length > 4" class="cfg-add-insp" style="padding-top: 8px">
-            <input v-model="inspectorFilter" placeholder="按姓名筛选检查员…"
-                   class="pdv-insp-search" />
-          </div>
-
-          <!-- 列表 (升级版: 含负载饱和度 + 进行中 + 逾期) -->
-          <div v-if="inspectors.length === 0" class="cfg-empty">暂无检查员</div>
-          <div v-else class="pdv-insp-list">
-            <div v-for="insp in filteredInspectors" :key="insp.id"
-                 class="pdv-insp-row"
-                 :class="{ 'pdv-insp-row--overdue': (inspectorStatsById.get(String(insp.userId))?.overdue ?? 0) > 0 }">
-              <div class="pdv-insp-avatar">{{ (insp.userName || '?')[0] }}</div>
-              <div class="pdv-insp-meta">
-                <div class="pdv-insp-name-line">
-                  <span class="pdv-insp-name">{{ insp.userName }}</span>
-                  <span class="pdv-insp-role">{{ InspectorRoleConfig[insp.role as InspectorRole]?.label }}</span>
-                </div>
-                <div class="pdv-insp-stats" v-if="!isDraft">
-                  <template v-if="inspectorStatsById.get(String(insp.userId))">
-                    <span class="pdv-stat">
-                      分配 <b>{{ inspectorStatsById.get(String(insp.userId))!.assigned }}</b>
-                    </span>
-                    <span class="pdv-stat">
-                      完成 <b style="color: var(--insp-pass)">{{ inspectorStatsById.get(String(insp.userId))!.completed }}</b>
-                    </span>
-                    <span class="pdv-stat" v-if="inspectorStatsById.get(String(insp.userId))!.active > 0">
-                      进行中 <b style="color: var(--insp-info)">{{ inspectorStatsById.get(String(insp.userId))!.active }}</b>
-                    </span>
-                    <span class="pdv-stat pdv-stat--alert" v-if="inspectorStatsById.get(String(insp.userId))!.overdue > 0">
-                      逾期 <b>{{ inspectorStatsById.get(String(insp.userId))!.overdue }}</b>
-                    </span>
-                  </template>
-                  <span v-else class="pdv-stat-empty">暂无任务</span>
-                </div>
-                <!-- 负载饱和度条 -->
-                <div v-if="!isDraft && inspectorStatsById.get(String(insp.userId))" class="pdv-insp-bar">
-                  <div class="pdv-insp-bar-bg">
-                    <div class="pdv-insp-bar-done"
-                         :style="{ width: ((inspectorStatsById.get(String(insp.userId))!.completed / Math.max(inspectorStatsById.get(String(insp.userId))!.assigned, 1)) * 100) + '%' }" />
-                  </div>
-                </div>
-              </div>
-              <el-tag :type="insp.isActive ? 'success' : 'info'" size="small" round effect="plain">{{ insp.isActive ? '启用' : '禁用' }}</el-tag>
-              <el-button link type="danger" size="small" @click="handleRemoveInspector(insp)"><Trash2 class="w-3.5 h-3.5" /></el-button>
-            </div>
-            <div v-if="inspectorFilter && filteredInspectors.length === 0" class="cfg-empty cfg-empty--card">
-              没有匹配 "{{ inspectorFilter }}" 的检查员
-            </div>
-          </div>
-        </div>
-
-        <!-- 无待办时 -->
-        <div v-if="pendingAssignTasks.length === 0 && pendingReviewCount === 0 && inspectors.length > 0" class="cfg-card">
-          <div class="cfg-empty pdv-empty-allgood">
-            <CheckCircle class="w-5 h-5 text-green-400" />
-            <div>所有任务已分配，无待审核项目</div>
-          </div>
-        </div>
+        <TeamTab :project-id="projectId" :is-draft="isDraft" />
       </div>
+
 
       <div v-if="activeTab === 'settings'" class="cfg-section">
 
