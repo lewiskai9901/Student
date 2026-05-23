@@ -7,7 +7,9 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.*;
 
 /**
- * InspectionPlan 调度组聚合根测试 — 评分配置下沉 (2026-05-23).
+ * InspectionPlan 调度组聚合根测试 — 评级引擎完美架构 (2026-05-23).
+ *
+ * <p>scoringProfileId 已撤销, 只剩 ratersPerTarget.
  */
 @DisplayName("InspectionPlan 调度组聚合根测试")
 class InspectionPlanTest {
@@ -21,11 +23,10 @@ class InspectionPlanTest {
     class CreateTests {
 
         @Test
-        @DisplayName("新建调度组 ratersPerTarget 默认 1, scoringProfileId 默认 null")
+        @DisplayName("新建调度组 ratersPerTarget 默认 1")
         void shouldDefaultRatersToOne() {
             InspectionPlan plan = newPlan();
             assertThat(plan.getRatersPerTarget()).isEqualTo(1);
-            assertThat(plan.getScoringProfileId()).isNull();
             assertThat(plan.getIsEnabled()).isTrue();
         }
 
@@ -40,36 +41,26 @@ class InspectionPlanTest {
     }
 
     @Nested
-    @DisplayName("updateScoringConfig — 评分配置下沉")
-    class UpdateScoringConfigTests {
+    @DisplayName("updateRatersPerTarget")
+    class UpdateRatersTests {
 
         @Test
-        @DisplayName("正常更新 scoringProfileId + ratersPerTarget")
-        void shouldUpdateScoringConfig() {
+        @DisplayName("正常更新 ratersPerTarget")
+        void shouldUpdateRaters() {
             InspectionPlan plan = newPlan();
-            plan.updateScoringConfig(777L, 3);
-            assertThat(plan.getScoringProfileId()).isEqualTo(777L);
+            plan.updateRatersPerTarget(3);
             assertThat(plan.getRatersPerTarget()).isEqualTo(3);
             assertThat(plan.getUpdatedAt()).isNotNull();
-        }
-
-        @Test
-        @DisplayName("scoringProfileId 允许置空 (回退项目默认评分方案)")
-        void shouldAllowNullScoringProfileId() {
-            InspectionPlan plan = newPlan();
-            plan.updateScoringConfig(777L, 1);
-            plan.updateScoringConfig(null, 1);
-            assertThat(plan.getScoringProfileId()).isNull();
         }
 
         @Test
         @DisplayName("ratersPerTarget < 1 抛 IllegalArgumentException")
         void shouldRejectRatersBelowOne() {
             InspectionPlan plan = newPlan();
-            assertThatThrownBy(() -> plan.updateScoringConfig(1L, 0))
+            assertThatThrownBy(() -> plan.updateRatersPerTarget(0))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("ratersPerTarget");
-            assertThatThrownBy(() -> plan.updateScoringConfig(1L, -2))
+            assertThatThrownBy(() -> plan.updateRatersPerTarget(-2))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -77,22 +68,21 @@ class InspectionPlanTest {
         @DisplayName("ratersPerTarget = 1 (单人评分) 合法")
         void shouldAcceptRatersEqualsOne() {
             InspectionPlan plan = newPlan();
-            plan.updateScoringConfig(1L, 1);
+            plan.updateRatersPerTarget(1);
             assertThat(plan.getRatersPerTarget()).isEqualTo(1);
         }
     }
 
     @Nested
-    @DisplayName("持久化往返 — builder 携带评分字段")
+    @DisplayName("持久化往返 — builder 携带 ratersPerTarget")
     class ReconstructTests {
 
         @Test
-        @DisplayName("reconstruct 还原 scoringProfileId / ratersPerTarget")
-        void shouldReconstructScoringFields() {
+        @DisplayName("reconstruct 还原 ratersPerTarget")
+        void shouldReconstruct() {
             InspectionPlan plan = InspectionPlan.reconstruct(
                     InspectionPlan.builder().id(9L).projectId(1L).planName("P")
-                            .scoringProfileId(555L).ratersPerTarget(4));
-            assertThat(plan.getScoringProfileId()).isEqualTo(555L);
+                            .ratersPerTarget(4));
             assertThat(plan.getRatersPerTarget()).isEqualTo(4);
         }
     }

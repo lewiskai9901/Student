@@ -153,14 +153,13 @@ public class InspProjectApplicationService {
 
     @Transactional
     public InspProject updateProject(Long id, String projectName, Long rootSectionId,
-                                     Long defaultScoringProfileId, ScopeType scopeType,
-                                     String scopeConfig,
+                                     ScopeType scopeType, String scopeConfig,
                                      LocalDate startDate, LocalDate endDate,
                                      AssignmentMode assignmentMode, Boolean reviewRequired,
                                      Boolean autoPublish, Long updatedBy) {
         InspProject project = projectRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("项目不存在: " + id));
-        project.updateInfo(projectName, rootSectionId, defaultScoringProfileId,
+        project.updateInfo(projectName, rootSectionId,
                 scopeType, scopeConfig, startDate, endDate,
                 assignmentMode, reviewRequired, autoPublish, updatedBy);
         return projectRepository.save(project);
@@ -521,11 +520,9 @@ public class InspProjectApplicationService {
         Long newProjectId = savedProject.getId();
 
         // 2. 复制运行参数 — 通过既有 updateInfo + updatePolicyConfig 走聚合根校验路径.
-        //    defaultScoringProfileId 在第 4 步映射后再设, 此处先填 null.
         savedProject.updateInfo(
                 /* projectName */ null, // 已通过 create 设置
                 /* rootSectionId */ null,
-                /* defaultScoringProfileId */ null,
                 source.getScopeType(),
                 source.getScopeConfig(),
                 /* startDate */ null,
@@ -541,39 +538,18 @@ public class InspProjectApplicationService {
                 userId);
         savedProject = projectRepository.save(savedProject);
 
-        // 3. 深拷贝 owned ScoringProfile (含 dimensions/bands/rules), 维护 旧 id → 新 id 映射
-        Map<Long, Long> profileIdMap = new HashMap<>();
+        // 3. 深拷贝 owned ScoringProfile (含 dimensions/bands/rules).
         List<ScoringProfile> sourceProfiles =
                 scoringProfileRepository.findByProjectId(sourceId);
         for (ScoringProfile sp : sourceProfiles) {
-            ScoringProfile cloned = scoringProfileService.cloneForProject(
-                    sp.getId(), newProjectId, userId);
-            profileIdMap.put(sp.getId(), cloned.getId());
+            scoringProfileService.cloneForProject(sp.getId(), newProjectId, userId);
         }
 
-        // 4. 设置 defaultScoringProfileId — 通过映射查到新 profile id;
-        //    源项目无默认 profile 时, 新项目也 null.
-        Long mappedDefault = source.getDefaultScoringProfileId() != null
-                ? profileIdMap.get(source.getDefaultScoringProfileId())
-                : null;
-        if (mappedDefault != null) {
-            savedProject.updateInfo(null, null, mappedDefault, null, null, null, null, null, null, null, userId);
-            savedProject = projectRepository.save(savedProject);
-        }
-
-        // 5. 深拷贝 InspectionPlans (排期组). scoringProfileId 经映射重写;
+        // 4. 深拷贝 InspectionPlans (排期组). 不再保留 scoringProfileId — 评级引擎完美架构.
         //    inspectorIds 默认清空 (检查员名单各项目独立配, cloneInspectors=true 时原样复制).
         boolean cloneInspectors = command.isCloneInspectors();
         List<InspectionPlan> sourcePlans = inspectionPlanRepository.findByProjectId(sourceId);
         for (InspectionPlan oldPlan : sourcePlans) {
-            Long newPlanScoringProfileId = null;
-            if (oldPlan.getScoringProfileId() != null) {
-                newPlanScoringProfileId = profileIdMap.get(oldPlan.getScoringProfileId());
-                if (newPlanScoringProfileId == null) {
-                    log.warn("克隆项目 {}: 调度组 {} 引用的 scoringProfileId={} 不在源项目 owned profile 列表中, 已置 null",
-                            sourceId, oldPlan.getPlanName(), oldPlan.getScoringProfileId());
-                }
-            }
             InspectionPlan newPlan = InspectionPlan.reconstruct(InspectionPlan.builder()
                     .tenantId(oldPlan.getTenantId())
                     .projectId(newProjectId)
@@ -587,7 +563,6 @@ public class InspProjectApplicationService {
                     .timeSlots(oldPlan.getTimeSlots())
                     .skipHolidays(oldPlan.getSkipHolidays())
                     .inspectorIds(cloneInspectors ? oldPlan.getInspectorIds() : null)
-                    .scoringProfileId(newPlanScoringProfileId)
                     .ratersPerTarget(oldPlan.getRatersPerTarget())
                     .isEnabled(oldPlan.getIsEnabled())
                     .sortOrder(oldPlan.getSortOrder())
@@ -595,7 +570,7 @@ public class InspProjectApplicationService {
             inspectionPlanRepository.save(newPlan);
         }
 
-        // 6. 深拷贝 Indicators (项目-owned 指标树). sectionId 保持不变 — 分区共享模板侧.
+        // 5. 深拷贝 Indicators (项目-owned 指标树). sectionId 保持不变 — 分区共享模板侧.
         //    第一遍建副本并维护 旧→新 id 映射; 第二遍设 parentIndicatorId.
         List<Indicator> sourceIndicators = indicatorRepository.findByProjectId(sourceId);
         Map<Long, Long> indicatorIdMap = new HashMap<>();
@@ -609,11 +584,18 @@ public class InspProjectApplicationService {
                     .name(oldInd.getName())
                     .indicatorType(oldInd.getIndicatorType())
                     .sourceSectionId(oldInd.getSourceSectionId())
+                    .sourceSectionIds(oldInd.getSourceSectionIds())
                     .sourceAggregation(oldInd.getSourceAggregation())
                     .compositeAggregation(oldInd.getCompositeAggregation())
                     .missingPolicy(oldInd.getMissingPolicy())
                     .normalization(oldInd.getNormalization())
                     .normalizationConfig(oldInd.getNormalizationConfig())
+                    .triggerMode(oldInd.getTriggerMode())
+                    .countThreshold(oldInd.getCountThreshold())
+                    .weightsBySection(oldInd.getWeightsBySection())
+                    .rankDirection(oldInd.getRankDirection())
+                    .latePolicy(oldInd.getLatePolicy())
+                    .submissionDateField(oldInd.getSubmissionDateField())
                     .evaluationPeriod(oldInd.getEvaluationPeriod())
                     .gradeSchemeId(oldInd.getGradeSchemeId())
                     .evaluationMethod(oldInd.getEvaluationMethod())

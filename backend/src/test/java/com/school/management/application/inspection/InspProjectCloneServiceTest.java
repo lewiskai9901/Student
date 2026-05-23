@@ -87,7 +87,6 @@ class InspProjectCloneServiceTest {
                 .projectName("源项目")
                 .rootSectionId(100L)
                 .orgUnitId(10L)
-                .defaultScoringProfileId(500L)
                 .scopeType(ScopeType.ORG)
                 .scopeConfig("[1,2]")
                 .startDate(LocalDate.of(2026, 1, 1))
@@ -153,8 +152,7 @@ class InspProjectCloneServiceTest {
         assertThat(cloned.getMaxRejectCount()).isEqualTo(5);
         assertThat(cloned.getMaxEscalationLevel()).isEqualTo(4);
         assertThat(cloned.getAppealWindowDays()).isEqualTo(14);
-        // 默认 profile 因源无 owned profile 实际无映射可设 → null
-        assertThat(cloned.getDefaultScoringProfileId()).isNull();
+        // 评级引擎完美架构: 项目不再持有 defaultScoringProfileId
 
         // 审计 + 不克隆执行数据
         verify(auditLogger).log(eq("InspProject"), anyLong(), any(), eq("PROJECT_CLONED"), any(), any());
@@ -163,49 +161,42 @@ class InspProjectCloneServiceTest {
     }
 
     @Test
-    @DisplayName("profileIdMap 正确建立: defaultScoringProfileId 经映射重写")
-    void shouldRemapDefaultScoringProfileId() {
+    @DisplayName("源 owned ScoringProfile 全部克隆到新项目")
+    void shouldCloneAllOwnedScoringProfiles() {
         InspProject src = sourceProject(1L, ProjectStatus.PUBLISHED);
         when(projectRepository.findById(1L)).thenReturn(Optional.of(src));
         mockProjectSaveAssignsId(2L);
 
-        ScoringProfile sp1 = profile(500L, 1L, 100L); // src default
+        ScoringProfile sp1 = profile(500L, 1L, 100L);
         ScoringProfile sp2 = profile(501L, 1L, 200L);
         when(scoringProfileRepository.findByProjectId(1L)).thenReturn(List.of(sp1, sp2));
-
-        // cloneForProject 返回新 profile (映射 500→600, 501→601)
-        ScoringProfile cloned1 = profile(600L, 2L, 100L);
-        ScoringProfile cloned2 = profile(601L, 2L, 200L);
-        when(scoringProfileService.cloneForProject(eq(500L), eq(2L), eq(999L))).thenReturn(cloned1);
-        when(scoringProfileService.cloneForProject(eq(501L), eq(2L), eq(999L))).thenReturn(cloned2);
+        when(scoringProfileService.cloneForProject(eq(500L), eq(2L), eq(999L)))
+                .thenReturn(profile(600L, 2L, 100L));
+        when(scoringProfileService.cloneForProject(eq(501L), eq(2L), eq(999L)))
+                .thenReturn(profile(601L, 2L, 200L));
 
         when(inspectionPlanRepository.findByProjectId(1L)).thenReturn(List.of());
         when(indicatorRepository.findByProjectId(1L)).thenReturn(List.of());
 
-        InspProject cloned = service.cloneProject(1L,
+        service.cloneProject(1L,
                 req("克隆", 20L, LocalDate.of(2026, 6, 1), null, false), 999L);
-
-        assertThat(cloned.getDefaultScoringProfileId()).isEqualTo(600L); // 经映射
 
         verify(scoringProfileService).cloneForProject(500L, 2L, 999L);
         verify(scoringProfileService).cloneForProject(501L, 2L, 999L);
     }
 
     @Test
-    @DisplayName("Plans: scoringProfileId 经映射重写, inspectorIds 默认清空")
-    void shouldClonePlansWithRemappedScoringProfile() {
+    @DisplayName("Plans: 拷贝调度参数, ratersPerTarget 保留, inspectorIds 默认清空")
+    void shouldClonePlanScheduleConfig() {
         InspProject src = sourceProject(1L, ProjectStatus.PUBLISHED);
         when(projectRepository.findById(1L)).thenReturn(Optional.of(src));
         mockProjectSaveAssignsId(2L);
 
-        ScoringProfile sp1 = profile(500L, 1L, 100L);
-        when(scoringProfileRepository.findByProjectId(1L)).thenReturn(List.of(sp1));
-        when(scoringProfileService.cloneForProject(eq(500L), eq(2L), eq(999L)))
-                .thenReturn(profile(600L, 2L, 100L));
+        when(scoringProfileRepository.findByProjectId(1L)).thenReturn(List.of());
 
         InspectionPlan oldPlan = InspectionPlan.reconstruct(InspectionPlan.builder()
                 .id(700L).projectId(1L).planName("A 组")
-                .rootSectionId(100L).scoringProfileId(500L)
+                .rootSectionId(100L)
                 .ratersPerTarget(2).inspectorIds("[10,11]").isEnabled(true));
         when(inspectionPlanRepository.findByProjectId(1L)).thenReturn(List.of(oldPlan));
         when(indicatorRepository.findByProjectId(1L)).thenReturn(List.of());
@@ -218,31 +209,8 @@ class InspProjectCloneServiceTest {
         InspectionPlan saved = captor.getValue();
         assertThat(saved.getProjectId()).isEqualTo(2L);
         assertThat(saved.getPlanName()).isEqualTo("A 组");
-        assertThat(saved.getScoringProfileId()).isEqualTo(600L); // 经映射
         assertThat(saved.getRatersPerTarget()).isEqualTo(2);
         assertThat(saved.getInspectorIds()).isNull(); // cloneInspectors=false → 清空
-    }
-
-    @Test
-    @DisplayName("Plans: oldPlan.scoringProfileId 不在 profileIdMap 时, 新 plan 置 null + warn (防御)")
-    void shouldNullScoringProfileWhenNotInMap() {
-        InspProject src = sourceProject(1L, ProjectStatus.PUBLISHED);
-        when(projectRepository.findById(1L)).thenReturn(Optional.of(src));
-        mockProjectSaveAssignsId(2L);
-
-        when(scoringProfileRepository.findByProjectId(1L)).thenReturn(List.of());
-        InspectionPlan oldPlan = InspectionPlan.reconstruct(InspectionPlan.builder()
-                .id(700L).projectId(1L).planName("孤儿引用")
-                .scoringProfileId(9999L)); // 不在 owned 列表里
-        when(inspectionPlanRepository.findByProjectId(1L)).thenReturn(List.of(oldPlan));
-        when(indicatorRepository.findByProjectId(1L)).thenReturn(List.of());
-        when(inspectionPlanRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        service.cloneProject(1L, req("克隆", 20L, LocalDate.of(2026, 6, 1), null, false), 999L);
-
-        ArgumentCaptor<InspectionPlan> captor = ArgumentCaptor.forClass(InspectionPlan.class);
-        verify(inspectionPlanRepository).save(captor.capture());
-        assertThat(captor.getValue().getScoringProfileId()).isNull();
     }
 
     @Test

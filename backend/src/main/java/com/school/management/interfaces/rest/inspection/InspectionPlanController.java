@@ -18,6 +18,8 @@ import java.util.List;
 /**
  * 检查计划控制器
  * 管理项目下的检查计划（排期），支持定期调度和手动触发。
+ *
+ * <p>评级引擎完美架构 (2026-05-23): DTO 撤销 scoringProfileId — 调度组不再绑定评分配置.
  */
 @Slf4j
 @RestController
@@ -36,7 +38,7 @@ public class InspectionPlanController {
                 request.sectionIds(), request.inspectorIds(),
                 request.scheduleMode(), request.cycleType(), request.frequency(),
                 request.scheduleDays(), request.timeSlots(), request.skipHolidays(),
-                request.scoringProfileId(), request.ratersPerTarget(),
+                request.ratersPerTarget(),
                 userId));
     }
 
@@ -62,7 +64,7 @@ public class InspectionPlanController {
                 request.inspectorIds(),
                 request.scheduleMode(), request.cycleType(), request.frequency(),
                 request.scheduleDays(), request.timeSlots(), request.skipHolidays(),
-                request.scoringProfileId(), request.ratersPerTarget()));
+                request.ratersPerTarget()));
     }
 
     @DeleteMapping("/{id}")
@@ -105,8 +107,7 @@ public class InspectionPlanController {
             String timeSlots,
             Boolean skipHolidays,
             String inspectorIds,    // JSON: 指定检查员ID列表，空=项目全员
-            Long scoringProfileId,  // 评分配置下沉: 调度组评分方案 (空=回退项目默认)
-            Integer ratersPerTarget // 评分配置下沉: 每目标检查员份数 (空=1)
+            Integer ratersPerTarget // 每目标检查员份数 (空=1)
     ) {}
 
     public record UpdatePlanRequest(
@@ -120,7 +121,6 @@ public class InspectionPlanController {
             String timeSlots,
             Boolean skipHolidays,
             String inspectorIds,
-            Long scoringProfileId,
             Integer ratersPerTarget
     ) {}
 }

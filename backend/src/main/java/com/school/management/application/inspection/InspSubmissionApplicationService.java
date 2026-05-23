@@ -151,8 +151,9 @@ public class InspSubmissionApplicationService {
             String subjectType = submission.getTargetType() != null
                     ? (submission.getTargetType() == TargetType.ORG ? "ORG_UNIT"
                        : submission.getTargetType().name()) : null;
-            // 评分配置下沉: 按任务来源 (调度组 / 项目默认) 解析评分方案.
-            Long profileId = scoreAggregationService.resolveScoringProfileId(task, project);
+            // 评级引擎完美架构: 按 (project, section) 解析评分方案.
+            Long profileId = scoreAggregationService.resolveScoringProfileId(
+                    project.getId(), submission.getSectionId());
             ScoreAggregationService.ScoreFields fields =
                     scoreAggregationService.computeScoreFields(profileId, details, submission.getSectionId(),
                             subjectType, submission.getTargetId());

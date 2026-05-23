@@ -5,6 +5,7 @@ import com.school.management.infrastructure.access.UserContextHolder;
 import com.school.management.infrastructure.metrics.InspectionMetrics;
 import com.school.management.infrastructure.persistence.inspection.corrective.CorrectiveCaseMapper;
 import com.school.management.infrastructure.persistence.inspection.execution.*;
+import com.school.management.infrastructure.persistence.inspection.scoring.IndicatorMapper;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.apache.ibatis.reflection.MetaObject;
@@ -33,6 +34,7 @@ class InspectionDataPermissionFillerTest {
     private InspSubmissionMapper submissionMapper;
     private InspTaskMapper taskMapper;
     private CorrectiveCaseMapper caseMapper;
+    private IndicatorMapper indicatorMapper;
     private InspectionUpstreamRouter router;
     private MeterRegistry meterRegistry;
     private InspectionMetrics metrics;
@@ -44,7 +46,8 @@ class InspectionDataPermissionFillerTest {
         submissionMapper = mock(InspSubmissionMapper.class);
         taskMapper = mock(InspTaskMapper.class);
         caseMapper = mock(CorrectiveCaseMapper.class);
-        router = new InspectionUpstreamRouter(projectMapper, submissionMapper, taskMapper, caseMapper);
+        indicatorMapper = mock(IndicatorMapper.class);
+        router = new InspectionUpstreamRouter(projectMapper, submissionMapper, taskMapper, caseMapper, indicatorMapper);
         meterRegistry = new SimpleMeterRegistry();
         metrics = new InspectionMetrics(meterRegistry);
         metrics.init();  // @PostConstruct 手动触发 (单测无 Spring 上下文)

@@ -15,8 +15,10 @@ import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * 检查计划应用服务
- * 管理项目下的检查计划（排期），支持定期调度和手动触发。
+ * 检查计划应用服务.
+ *
+ * <p>评级引擎完美架构 (2026-05-23): 调度组不再持有 scoringProfileId; 评分配置
+ * 由 ScoringProfile 按 (project, section) 自动定位, 不再由调度组持有.
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -30,27 +32,14 @@ public class InspectionPlanApplicationService {
     // ========== Plan CRUD ==========
 
     /**
-     * 创建检查计划
-     *
-     * @param projectId     关联项目ID
-     * @param planName      计划名称
-     * @param rootSectionId 该计划使用的模板根分区ID（可选；若传 null 则从项目继承）
-     * @param sectionIds    关联的一级分区ID列表（JSON，空则覆盖全部）
-     * @param scheduleMode  调度模式: REGULAR / ON_DEMAND
-     * @param cycleType     周期类型: DAILY / WEEKLY / MONTHLY
-     * @param frequency     每周期执行次数
-     * @param scheduleDays  调度日（JSON: [1,3,5] 表示周几）
-     * @param timeSlots     时间段（JSON: ["07:00-08:00"]）
-     * @param skipHolidays  是否跳过节假日
-     * @param createdBy     创建人ID
-     * @return 创建的检查计划
+     * 创建检查计划.
      */
     @Transactional
     public InspectionPlan createPlan(Long projectId, String planName, Long rootSectionId,
                                      String sectionIds, String inspectorIds,
                                      String scheduleMode, String cycleType, Integer frequency,
                                      String scheduleDays, String timeSlots, Boolean skipHolidays,
-                                     Long scoringProfileId, Integer ratersPerTarget,
+                                     Integer ratersPerTarget,
                                      Long createdBy) {
         // 校验项目存在且状态允许
         InspProject project = projectRepository.findById(projectId)
@@ -59,9 +48,6 @@ public class InspectionPlanApplicationService {
 
         // 若未指定模板，从项目的 rootSectionId 继承
         Long resolvedRootSectionId = rootSectionId != null ? rootSectionId : project.getRootSectionId();
-        // 评分配置下沉: 调度组若未指定评分方案, 预填项目默认评分方案
-        Long resolvedScoringProfileId = scoringProfileId != null
-                ? scoringProfileId : project.getDefaultScoringProfileId();
         int resolvedRaters = ratersPerTarget != null ? ratersPerTarget : 1;
         validateRatersPerTarget(resolvedRaters, inspectorIds);
 
@@ -77,7 +63,6 @@ public class InspectionPlanApplicationService {
                 .scheduleDays(scheduleDays)
                 .timeSlots(timeSlots)
                 .skipHolidays(skipHolidays)
-                .scoringProfileId(resolvedScoringProfileId)
                 .ratersPerTarget(resolvedRaters)
                 .createdBy(createdBy)
                 .build();
@@ -89,14 +74,14 @@ public class InspectionPlanApplicationService {
     }
 
     /**
-     * 更新检查计划
+     * 更新检查计划.
      */
     @Transactional
     public InspectionPlan updatePlan(Long planId, String planName, Long rootSectionId,
                                      String sectionIds, String inspectorIds,
                                      String scheduleMode, String cycleType, Integer frequency,
                                      String scheduleDays, String timeSlots, Boolean skipHolidays,
-                                     Long scoringProfileId, Integer ratersPerTarget) {
+                                     Integer ratersPerTarget) {
         InspectionPlan plan = planRepository.findById(planId)
                 .orElseThrow(() -> new IllegalArgumentException("检查计划不存在: " + planId));
 
@@ -109,11 +94,10 @@ public class InspectionPlanApplicationService {
                 scheduleDays, timeSlots, skipHolidays, null, null);
         if (inspectorIds != null) plan.updateInspectorIds(inspectorIds);
 
-        // 评分配置下沉: ratersPerTarget 为空时沿用现有值 (部分更新语义).
-        // 用更新后的 inspectorIds 做检查员数校验.
+        // ratersPerTarget 为空时沿用现有值 (部分更新语义).
         int resolvedRaters = ratersPerTarget != null ? ratersPerTarget : plan.getRatersPerTarget();
         validateRatersPerTarget(resolvedRaters, plan.getInspectorIds());
-        plan.updateScoringConfig(scoringProfileId, resolvedRaters);
+        plan.updateRatersPerTarget(resolvedRaters);
 
         InspectionPlan saved = planRepository.save(plan);
         log.info("更新检查计划: planId={}, planName={}", planId, planName);
@@ -184,10 +168,6 @@ public class InspectionPlanApplicationService {
 
     /**
      * 手动触发 ON_DEMAND 类型的检查计划，创建一个任务
-     *
-     * @param planId     计划ID
-     * @param operatorId 操作人ID
-     * @return 创建的任务
      */
     @Transactional
     public InspTask triggerOnDemandPlan(Long planId, Long operatorId) {
@@ -211,7 +191,6 @@ public class InspectionPlanApplicationService {
         String taskCode = generateTaskCode();
         InspTask task = InspTask.create(taskCode, plan.getProjectId(), LocalDate.now());
 
-        // 如果计划指定了检查员，自动取第一个进行指派（轮转逻辑后续可扩展）
         Long assignedInspectorId = null;
         String assignedInspectorName = null;
         if (plan.getInspectorIds() != null && !plan.getInspectorIds().isBlank()) {
@@ -220,7 +199,6 @@ public class InspectionPlanApplicationService {
                         .readValue(plan.getInspectorIds(), Long[].class);
                 if (ids.length > 0) {
                     assignedInspectorId = ids[0];
-                    // 简单使用 ID 作为名字占位，实际应查询用户表
                     assignedInspectorName = String.valueOf(ids[0]);
                 }
             } catch (Exception e) {
@@ -228,7 +206,6 @@ public class InspectionPlanApplicationService {
             }
         }
 
-        // 通过 reconstruct 设置 inspectionPlanId 和 assignedSectionIds
         var builder = InspTask.builder()
                 .taskCode(task.getTaskCode())
                 .projectId(task.getProjectId())
@@ -253,23 +230,7 @@ public class InspectionPlanApplicationService {
     // ========== Internal ==========
 
     /**
-     * 校验项目状态是否允许修改计划
-     * 只有 DRAFT 和 PUBLISHED 状态的项目可以修改计划
-     */
-    /**
-     * 评分配置下沉 (2026-05-23): 校验 ratersPerTarget.
-     *
-     * <p>规则:
-     * <ul>
-     *   <li>ratersPerTarget 必须 >= 1 (由 {@link InspectionPlan#updateScoringConfig} 兜底, 这里提前给友好报错)</li>
-     *   <li>多人评分 (ratersPerTarget > 1) 时, 不得超过调度组指定的可用检查员数 —
-     *       inspectorIds 为空表示"项目全员可领取", 此时不在调度组层硬校验人数</li>
-     * </ul>
-     *
-     * <p>说明: 当前任务生成仍是每目标 1 份 submission (InspSubmission 无 raterId 维度,
-     * 单任务只挂一名 inspector). ratersPerTarget > 1 的实际 N 份 submission 生成与
-     * 多人合并由所引用 ScoringProfile.multiRaterMode 处理 — 若下游 N-rater 任务扇出
-     * 与合并逻辑尚未实现, 此处只落库配置 + 校验人数, 不产生 N 份。
+     * 校验 ratersPerTarget. 调度组若未指定检查员名单 (全员可领取) 不做硬校验.
      */
     private void validateRatersPerTarget(int ratersPerTarget, String inspectorIdsJson) {
         if (ratersPerTarget < 1) {
@@ -277,7 +238,6 @@ public class InspectionPlanApplicationService {
         }
         if (ratersPerTarget == 1) return;
         if (inspectorIdsJson == null || inspectorIdsJson.isBlank()) {
-            // 未指定检查员名单 = 项目全员可领取, 调度组层不硬校验人数
             return;
         }
         int available;

@@ -1,9 +1,6 @@
 package com.school.management.application.inspection;
 
-import com.school.management.domain.inspection.model.execution.InspProject;
-import com.school.management.domain.inspection.model.execution.InspTask;
-import com.school.management.domain.inspection.model.execution.InspectionPlan;
-import com.school.management.domain.inspection.model.execution.TaskStatus;
+import com.school.management.domain.inspection.model.scoring.ScoringProfile;
 import com.school.management.domain.inspection.repository.*;
 import com.school.management.domain.inspection.service.ScoreCalculationDomainService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,12 +16,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
 /**
- * 评分配置解析规则测试 (评分配置下沉 2026-05-23).
+ * 评分配置解析规则测试 — 评级引擎完美架构 (2026-05-23).
  *
- * <p>解析规则: task.planId 非空 → 调度组 scoringProfileId; 否则/调度组未配 → 项目 defaultScoringProfileId。
+ * <p>新解析规则: 按 (projectId, sectionId) 在 ScoringProfileRepository 查找,
+ * 调度组与项目不再持有 scoringProfileId 指针.
  */
 @ExtendWith(MockitoExtension.class)
-@DisplayName("ScoreAggregationService.resolveScoringProfileId — 评分配置解析规则")
+@DisplayName("ScoreAggregationService.resolveScoringProfileId — (project, section) 解析")
 class ScoreAggregationServiceResolveTest {
 
     @Mock InspSubmissionRepository submissionRepository;
@@ -50,63 +48,40 @@ class ScoreAggregationServiceResolveTest {
                 observationRepository, scoreCalculationService, new ObjectMapper());
     }
 
-    private InspProject project(Long defaultProfileId) {
-        return InspProject.reconstruct(InspProject.builder()
-                .id(9L).projectCode("P").projectName("P")
-                .defaultScoringProfileId(defaultProfileId));
-    }
-
-    private InspTask taskWithPlan(Long planId) {
-        return InspTask.reconstruct(InspTask.builder()
-                .id(7L).taskCode("TSK").projectId(9L).status(TaskStatus.PENDING)
-                .inspectionPlanId(planId));
-    }
-
-    private InspectionPlan plan(Long scoringProfileId) {
-        return InspectionPlan.reconstruct(InspectionPlan.builder()
-                .id(3L).projectId(9L).planName("调度组A")
-                .scoringProfileId(scoringProfileId).ratersPerTarget(1));
+    private ScoringProfile profile(Long id, Long projectId, Long sectionId) {
+        return ScoringProfile.reconstruct(ScoringProfile.builder()
+                .id(id).projectId(projectId).sectionId(sectionId));
     }
 
     @Test
-    @DisplayName("分支1: 任务有 planId 且调度组配了评分方案 → 用调度组 scoringProfileId")
-    void shouldUsePlanScoringProfileWhenPlanIdPresent() {
-        when(planRepository.findById(3L)).thenReturn(Optional.of(plan(888L)));
+    @DisplayName("(project, section) 命中 ScoringProfile → 返回 profile.id")
+    void shouldReturnMatchedProfileId() {
+        when(scoringProfileRepository.findByProjectIdAndSectionId(9L, 100L))
+                .thenReturn(Optional.of(profile(555L, 9L, 100L)));
 
-        Long resolved = service().resolveScoringProfileId(taskWithPlan(3L), project(111L));
-
-        assertThat(resolved).isEqualTo(888L);
-        verify(planRepository).findById(3L);
+        assertThat(service().resolveScoringProfileId(9L, 100L)).isEqualTo(555L);
     }
 
     @Test
-    @DisplayName("分支2: 任务无 planId → 回退项目 defaultScoringProfileId")
-    void shouldFallbackToProjectDefaultWhenNoPlanId() {
-        Long resolved = service().resolveScoringProfileId(taskWithPlan(null), project(111L));
+    @DisplayName("无匹配 → 返回 null")
+    void shouldReturnNullWhenNoMatch() {
+        when(scoringProfileRepository.findByProjectIdAndSectionId(9L, 100L))
+                .thenReturn(Optional.empty());
 
-        assertThat(resolved).isEqualTo(111L);
-        verifyNoInteractions(planRepository);
+        assertThat(service().resolveScoringProfileId(9L, 100L)).isNull();
     }
 
     @Test
-    @DisplayName("分支2b: 任务有 planId 但调度组未配评分方案 → 回退项目默认")
-    void shouldFallbackToProjectDefaultWhenPlanHasNoProfile() {
-        when(planRepository.findById(3L)).thenReturn(Optional.of(plan(null)));
-
-        Long resolved = service().resolveScoringProfileId(taskWithPlan(3L), project(111L));
-
-        assertThat(resolved).isEqualTo(111L);
+    @DisplayName("projectId 为空 → 直接 null, 不查仓库")
+    void shouldReturnNullWhenProjectIdMissing() {
+        assertThat(service().resolveScoringProfileId(null, 100L)).isNull();
+        verifyNoInteractions(scoringProfileRepository);
     }
 
     @Test
-    @DisplayName("task 为 null → 直接回退项目默认")
-    void shouldFallbackToProjectDefaultWhenTaskNull() {
-        assertThat(service().resolveScoringProfileId(null, project(111L))).isEqualTo(111L);
-    }
-
-    @Test
-    @DisplayName("调度组与项目都未配评分方案 → 返回 null (走简单汇总路径)")
-    void shouldReturnNullWhenNothingConfigured() {
-        assertThat(service().resolveScoringProfileId(taskWithPlan(null), project(null))).isNull();
+    @DisplayName("sectionId 为空 → 直接 null, 不查仓库")
+    void shouldReturnNullWhenSectionIdMissing() {
+        assertThat(service().resolveScoringProfileId(9L, null)).isNull();
+        verifyNoInteractions(scoringProfileRepository);
     }
 }

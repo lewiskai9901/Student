@@ -210,8 +210,10 @@ public class IndicatorScoreService {
             if (childScore != null && childScore.getScore() != null) {
                 childScores.add(new WeightedScore(childScore.getScore(), 1));
             } else {
-                // Handle missing
-                String policy = composite.getMissingPolicy();
+                // Handle missing — 评级引擎完美架构后, missingPolicy 是 enum;
+                // 历史 'CARRY_FORWARD' / 'MARK_INCOMPLETE' 字符串语义保留: 在 enum 化时 CARRY_FORWARD 已废弃,
+                // 这里查保留的旧字段名 (老 String 接口) 兼容. enum 中 IGNORE 即旧 SKIP, 跳过 == 默认.
+                String policy = composite.getMissingPolicy() != null ? composite.getMissingPolicy().name() : null;
                 if ("CARRY_FORWARD".equals(policy)) {
                     // Use most recent score for this child+target
                     List<IndicatorScore> history = scoreRepository.findByIndicatorId(child.getId());

@@ -4,7 +4,6 @@ import com.school.management.application.inspection.InspProjectApplicationServic
 import com.school.management.application.inspection.dto.CloneProjectCommand;
 import com.school.management.application.inspection.dto.ProjectStatsSummary;
 import com.school.management.application.inspection.ScoreAggregationService;
-import com.school.management.application.inspection.ScoringProfileApplicationService;
 import com.school.management.application.inspection.TargetPopulationService;
 import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
@@ -17,17 +16,22 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * 检查项目控制器.
+ *
+ * <p>评级引擎完美架构 (2026-05-23): DTO 撤销 defaultScoringProfileId — 评分方案
+ * 不再由项目层兜底, 而是按 (project, section) 自动定位. /advanced-scoring 端点
+ * 同步移除 — 项目层无法再单点指向一个 profile.
+ */
 @RestController
 @RequestMapping("/inspection/projects")
 @RequiredArgsConstructor
 public class InspProjectController {
 
     private final InspProjectApplicationService projectService;
-    private final ScoringProfileApplicationService scoringService;
     private final TargetPopulationService targetPopulationService;
     private final ScoreAggregationService scoreAggregationService;
 
@@ -43,8 +47,6 @@ public class InspProjectController {
         return Result.success(project);
     }
 
-    // TODO: insp_projects 通常为中低基数表 (项目数有限), 暂保留全量返回.
-    //       若项目数显著增长, 改为分页 (优先用 /with-stats 聚合视图).
     @GetMapping
     @CasbinAccess(resource = "insp:project", action = "view")
     public Result<List<InspProject>> listProjects(
@@ -60,9 +62,6 @@ public class InspProjectController {
         return Result.success(projectService.listProjects());
     }
 
-    /**
-     * 列表页聚合视图 (消除 N+1) — 项目 + 任务统计 + 检查员人数.
-     */
     @GetMapping("/with-stats")
     @CasbinAccess(resource = "insp:project", action = "view")
     public Result<List<ProjectStatsSummary>> listProjectsWithStats(
@@ -89,8 +88,7 @@ public class InspProjectController {
         Long userId = SecurityUtils.requireCurrentUserId();
         InspProject project = projectService.updateProject(id,
                 request.getProjectName(), request.getRootSectionId(),
-                request.getDefaultScoringProfileId(), request.getScopeType(),
-                request.getScopeConfig(),
+                request.getScopeType(), request.getScopeConfig(),
                 request.getStartDate(), request.getEndDate(),
                 request.getAssignmentMode(), request.getReviewRequired(),
                 request.getAutoPublish(), userId);
@@ -114,11 +112,6 @@ public class InspProjectController {
         return Result.success();
     }
 
-    /**
-     * 项目克隆 — 深拷贝源项目设置 + owned ScoringProfile + plans + indicators 到新 DRAFT 项目.
-     * 不拷贝执行数据 (tasks/submissions/scores/audit/corrective/appeals).
-     * inspectors 默认不拷 (cloneInspectors=true 显式启用).
-     */
     @PostMapping("/{id}/clone")
     @CasbinAccess(resource = "insp:project", action = "create")
     public Result<InspProject> cloneProject(@PathVariable Long id,
@@ -142,24 +135,18 @@ public class InspProjectController {
         return Result.success(projectService.publishProject(id, request.getTemplateVersionId()));
     }
 
-    /**
-     * P1#7 follow-up: 已发布项目升级模板版本至最新.
-     * 用于解决模板被改后 publish 导致的快照漂移.
-     */
     @PostMapping("/{id}/upgrade-template-version")
     @CasbinAccess(resource = "insp:project", action = "publish")
     public Result<InspProject> upgradeTemplateVersion(@PathVariable Long id) {
         return Result.success(projectService.upgradeTemplateVersion(id));
     }
 
-    /** review #12: 查询项目模板版本状态 — 让前端显示当前锁定 vs 模板最新, 并明示是否漂移 */
     @GetMapping("/{id}/template-version-status")
     @CasbinAccess(resource = "insp:project", action = "view")
     public Result<java.util.Map<String, Object>> getTemplateVersionStatus(@PathVariable Long id) {
         return Result.success(projectService.getTemplateVersionStatus(id));
     }
 
-    /** review #7: 更新项目级业务策略 (驳回/升级上限 + 申诉时效) */
     @PutMapping("/{id}/policy")
     @CasbinAccess(resource = "insp:project", action = "edit")
     public Result<InspProject> updatePolicyConfig(@PathVariable Long id,
@@ -218,43 +205,6 @@ public class InspProjectController {
         return Result.success(scoreAggregationService.gradeProjectScore(id, cycleDate));
     }
 
-    // ========== Advanced Scoring Settings (project-level) ==========
-
-    @GetMapping("/{id}/advanced-scoring")
-    @CasbinAccess(resource = "insp:project", action = "view")
-    public Result<?> getAdvancedScoring(@PathVariable Long id) {
-        InspProject project = projectService.getProject(id)
-                .orElseThrow(() -> new IllegalArgumentException("项目不存在: " + id));
-        if (project.getDefaultScoringProfileId() == null) return Result.success(null);
-        return Result.success(scoringService.getProfile(project.getDefaultScoringProfileId()).orElse(null));
-    }
-
-    @PatchMapping("/{id}/advanced-scoring")
-    @CasbinAccess(resource = "insp:project", action = "edit")
-    public Result<?> updateAdvancedScoring(@PathVariable Long id,
-                                            @RequestBody @Valid AdvancedScoringRequest request) {
-        Long userId = SecurityUtils.requireCurrentUserId();
-        InspProject project = projectService.getProject(id)
-                .orElseThrow(() -> new IllegalArgumentException("项目不存在: " + id));
-        if (project.getDefaultScoringProfileId() == null) {
-            throw new IllegalArgumentException("项目未关联默认评分配置");
-        }
-        return Result.success(scoringService.updateAdvancedSettings(
-                project.getDefaultScoringProfileId(),
-                // 项目-owned 校验: 期望归属即本项目 id
-                project.getId(),
-                request.getTrendFactorEnabled(), request.getTrendLookbackDays(),
-                request.getTrendBonusPerPercent(), request.getTrendPenaltyPerPercent(),
-                request.getTrendMaxAdjustment(),
-                request.getDecayEnabled(), request.getDecayMode(),
-                request.getDecayRatePerDay(), request.getDecayFloor(),
-                request.getMultiRaterMode(), request.getRaterWeightBy(),
-                request.getConsensusThreshold(),
-                request.getCalibrationEnabled(), request.getCalibrationMethod(),
-                request.getCalibrationPeriodDays(), request.getCalibrationMinSamples(),
-                userId));
-    }
-
     // ========== Inspector Pool ==========
 
     @GetMapping("/{projectId}/inspectors")
@@ -289,8 +239,6 @@ public class InspProjectController {
         return Result.success(targets.size());
     }
 
-    // ========== Target Persons (for PERSON_SCORE field type) ==========
-
     @GetMapping("/targets/persons")
     @CasbinAccess(resource = "insp:project", action = "view")
     public Result<List<TargetPopulationService.PersonInfo>> getTargetPersons(
@@ -314,10 +262,8 @@ public class InspProjectController {
     @lombok.Data
     public static class UpdateProjectRequest {
         // 部分更新 DTO — 字段均可选, 仅非 null 字段被应用 (见 InspProject.updateInfo).
-        // 不可加 @NotBlank/@NotNull: 向导分步保存合法地只发部分字段.
         private String projectName;
         private Long rootSectionId;
-        private Long defaultScoringProfileId;
         private ScopeType scopeType;
         private String scopeConfig;
         private LocalDate startDate;
@@ -341,7 +287,6 @@ public class InspProjectController {
         @NotNull
         private LocalDate startDate;
         private LocalDate endDate;
-        /** 默认 false: 检查员各项目独立配置, 不复制. true 时原样复制源项目检查员名单 + 调度组 inspectorIds. */
         private Boolean cloneInspectors;
     }
 
@@ -369,25 +314,5 @@ public class InspProjectController {
         private AssignmentMode assignmentMode;
         private Boolean reviewRequired;
         private Boolean autoPublish;
-    }
-
-    @lombok.Data
-    public static class AdvancedScoringRequest {
-        private Boolean trendFactorEnabled;
-        private Integer trendLookbackDays;
-        private BigDecimal trendBonusPerPercent;
-        private BigDecimal trendPenaltyPerPercent;
-        private BigDecimal trendMaxAdjustment;
-        private Boolean decayEnabled;
-        private String decayMode;
-        private BigDecimal decayRatePerDay;
-        private BigDecimal decayFloor;
-        private String multiRaterMode;
-        private String raterWeightBy;
-        private BigDecimal consensusThreshold;
-        private Boolean calibrationEnabled;
-        private String calibrationMethod;
-        private Integer calibrationPeriodDays;
-        private Integer calibrationMinSamples;
     }
 }

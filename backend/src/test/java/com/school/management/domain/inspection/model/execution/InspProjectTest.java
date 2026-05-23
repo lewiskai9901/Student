@@ -238,7 +238,7 @@ class InspProjectTest {
         void testUpdateInfo_DraftAllowed() {
             InspProject project = createDraftProject();
 
-            project.updateInfo("新项目名称", 200L, 10L,
+            project.updateInfo("新项目名称", 200L,
                     ScopeType.ORG, null,
                     LocalDate.of(2026, 4, 1), LocalDate.of(2026, 6, 30),
                     AssignmentMode.ASSIGNED, false, true, 2L);
@@ -253,7 +253,7 @@ class InspProjectTest {
         void testUpdateInfo_NonDraftThrows() {
             InspProject project = createPublishedProject();
 
-            assertThatThrownBy(() -> project.updateInfo("新名称", 200L, 10L,
+            assertThatThrownBy(() -> project.updateInfo("新名称", 200L,
                     ScopeType.ORG, null,
                     LocalDate.now(), null,
                     AssignmentMode.ASSIGNED, true, false, 2L))

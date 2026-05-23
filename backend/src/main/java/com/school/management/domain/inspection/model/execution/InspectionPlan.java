@@ -5,11 +5,10 @@ import com.school.management.domain.shared.AggregateRoot;
 import java.time.LocalDateTime;
 
 /**
- * 检查计划 — 排期从项目层管理
- * 一个项目可有多个检查计划，每个计划关联一个模板（rootSectionId）。
+ * 检查计划 — 排期从项目层管理.
  *
- * V66 多模板支持：每个计划通过 rootSectionId 绑定自己的模板（根分区）。
- * sectionIds 用于在该模板下进一步指定检查哪些一级分区（为空则覆盖全部）。
+ * <p>评级引擎完美架构 (2026-05-23): 撤销 scoringProfileId — 评分配置与调度组解耦,
+ * 调度组只负责"何时/谁/哪些分区"; ratersPerTarget 仍保留 (那是真调度问题).
  */
 public class InspectionPlan extends AggregateRoot<Long> {
 
@@ -26,13 +25,8 @@ public class InspectionPlan extends AggregateRoot<Long> {
     private Boolean skipHolidays;
     private String inspectorIds;       // JSON: 指定检查员ID列表，空=项目全员可领取
     /**
-     * 评分配置下沉 (2026-05-23): 该调度组使用的评分方案ID (可空).
-     * 调度组生成的任务以此为评分配置权威; 为空则回退项目 defaultScoringProfileId。
-     */
-    private Long scoringProfileId;
-    /**
      * 每个检查目标的检查员份数 (1=单人评分, >1=多人评分). 默认 1.
-     * 多人评分的合并算法由所引用 ScoringProfile.multiRaterMode 决定。
+     * 多人评分的合并算法由所引用 ScoringProfile.multiRaterMode 决定（按分区查 ScoringProfile）.
      */
     private Integer ratersPerTarget;
     private Boolean isEnabled;
@@ -58,7 +52,6 @@ public class InspectionPlan extends AggregateRoot<Long> {
         this.timeSlots = builder.timeSlots;
         this.skipHolidays = builder.skipHolidays != null ? builder.skipHolidays : false;
         this.inspectorIds = builder.inspectorIds;
-        this.scoringProfileId = builder.scoringProfileId;
         this.ratersPerTarget = builder.ratersPerTarget != null ? builder.ratersPerTarget : 1;
         this.isEnabled = builder.isEnabled != null ? builder.isEnabled : true;
         this.sortOrder = builder.sortOrder != null ? builder.sortOrder : 0;
@@ -110,16 +103,12 @@ public class InspectionPlan extends AggregateRoot<Long> {
     }
 
     /**
-     * 评分配置下沉 (2026-05-23): 更新调度组的评分配置.
-     *
-     * @param scoringProfileId 评分方案ID (可空, null 表示回退项目默认评分方案)
-     * @param ratersPerTarget  每目标检查员份数, 必须 >= 1
+     * 评级引擎完美架构 (2026-05-23): 撤销 scoringProfileId — 仅保留 raters 维度.
      */
-    public void updateScoringConfig(Long scoringProfileId, int ratersPerTarget) {
+    public void updateRatersPerTarget(int ratersPerTarget) {
         if (ratersPerTarget < 1) {
             throw new IllegalArgumentException("ratersPerTarget 必须 >= 1, 当前值: " + ratersPerTarget);
         }
-        this.scoringProfileId = scoringProfileId;
         this.ratersPerTarget = ratersPerTarget;
         this.updatedAt = LocalDateTime.now();
     }
@@ -151,7 +140,6 @@ public class InspectionPlan extends AggregateRoot<Long> {
     public String getTimeSlots() { return timeSlots; }
     public Boolean getSkipHolidays() { return skipHolidays; }
     public String getInspectorIds() { return inspectorIds; }
-    public Long getScoringProfileId() { return scoringProfileId; }
     public Integer getRatersPerTarget() { return ratersPerTarget == null ? 1 : ratersPerTarget; }
     public Boolean getIsEnabled() { return isEnabled; }
     public Integer getSortOrder() { return sortOrder; }
@@ -175,7 +163,6 @@ public class InspectionPlan extends AggregateRoot<Long> {
         private String timeSlots;
         private Boolean skipHolidays;
         private String inspectorIds;
-        private Long scoringProfileId;
         private Integer ratersPerTarget;
         private Boolean isEnabled;
         private Integer sortOrder;
@@ -196,7 +183,6 @@ public class InspectionPlan extends AggregateRoot<Long> {
         public Builder timeSlots(String timeSlots) { this.timeSlots = timeSlots; return this; }
         public Builder skipHolidays(Boolean skipHolidays) { this.skipHolidays = skipHolidays; return this; }
         public Builder inspectorIds(String inspectorIds) { this.inspectorIds = inspectorIds; return this; }
-        public Builder scoringProfileId(Long scoringProfileId) { this.scoringProfileId = scoringProfileId; return this; }
         public Builder ratersPerTarget(Integer ratersPerTarget) { this.ratersPerTarget = ratersPerTarget; return this; }
         public Builder isEnabled(Boolean isEnabled) { this.isEnabled = isEnabled; return this; }
         public Builder sortOrder(Integer sortOrder) { this.sortOrder = sortOrder; return this; }

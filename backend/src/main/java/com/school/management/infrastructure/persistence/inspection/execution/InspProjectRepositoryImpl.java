@@ -82,7 +82,6 @@ public class InspProjectRepositoryImpl implements InspProjectRepository {
         po.setOrgUnitId(d.getOrgUnitId());
         po.setTemplateId(d.getRootSectionId());    // domain rootSectionId → PO templateId
         po.setTemplateVersionId(d.getTemplateVersionId());
-        po.setDefaultScoringProfileId(d.getDefaultScoringProfileId());
         po.setScopeType(d.getScopeType() != null ? d.getScopeType().name() : null);
         po.setScopeConfig(d.getScopeConfig());
         po.setStartDate(d.getStartDate());
@@ -111,7 +110,6 @@ public class InspProjectRepositoryImpl implements InspProjectRepository {
                 .orgUnitId(po.getOrgUnitId())
                 .rootSectionId(po.getTemplateId())    // PO templateId → domain rootSectionId
                 .templateVersionId(po.getTemplateVersionId())
-                .defaultScoringProfileId(po.getDefaultScoringProfileId())
                 .scopeType(po.getScopeType() != null ? ScopeType.valueOf(po.getScopeType()) : null)
                 .scopeConfig(po.getScopeConfig())
                 .startDate(po.getStartDate())

@@ -20,7 +20,7 @@ public class InspProjectPO {
     private Long orgUnitId;           // 数据权限过滤列 (项目覆盖范围的 org root)
     private Long templateId;          // maps to rootSectionId in domain
     private Long templateVersionId;
-    private Long defaultScoringProfileId;   // 评分配置下沉 (2026-05-23): 非计划任务兜底评分方案
+    // defaultScoringProfileId 已撤销 (评级引擎完美架构 2026-05-23, V20260523_4 DROP 列)
     private String scopeType;
     private String scopeConfig;
     private LocalDate startDate;

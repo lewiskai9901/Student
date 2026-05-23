@@ -10,19 +10,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * 检查项目聚合根（V62 统一分区版）
- * 不再有 parentProjectId/targetType/cycleType/cycleConfig（排期移到 InspectionPlan）
- * templateId 改为 rootSectionId（关联根分区而非模板）
+ * 检查项目聚合根（V62 统一分区版）.
  *
- * V66 多模板支持：rootSectionId 改为可空，保留作向后兼容。
- * 新项目通过 InspectionPlan.rootSectionId 关联模板（每个计划绑定一个模板）。
+ * <p>评级引擎完美架构 (2026-05-23): 撤销 {@code defaultScoringProfileId} —
+ * 评分配置由 ScoringProfile 按 (project, section) 自动定位, 项目层不再保有评分兜底字段.
+ * 评级则由 Indicator 跨分区聚合, 与项目本身解耦.
  *
- * 评分配置下沉 (2026-05-23): 评分"怎么算"的唯一权威是 ScoringProfile;
- * 调度组 (InspectionPlan) 通过 scoringProfileId 引用规则并自带 ratersPerTarget;
- * 项目仅保留 defaultScoringProfileId 作为非计划任务 (临时抽查/自查/触发) 的兜底。
- * 已删除项目级 evaluationMode / multiRaterMode / trend / decay / calibration / splitStrategy 等评分字段。
- *
- * 状态机: DRAFT → PUBLISHED → PAUSED → COMPLETED → ARCHIVED
+ * <p>状态机: DRAFT → PUBLISHED → PAUSED → COMPLETED → ARCHIVED
  */
 public class InspProject extends AggregateRoot<Long> {
 
@@ -32,20 +26,13 @@ public class InspProject extends AggregateRoot<Long> {
     /**
      * 数据权限边界: 项目覆盖到哪个组织单元 (被检对象的 org root, 非创建者归属).
      * 强制非空 — DataPermissionInterceptor 注入的 org_unit_id 过滤依赖该列.
-     * 集团审计某分公司项目, 这里就传分公司 ID; 多组织覆盖, 传最近公共祖先.
      */
     private Long orgUnitId;
     /**
      * 向后兼容保留。V66 起新项目可为 null，模板通过 InspectionPlan.rootSectionId 关联。
-     * 旧项目此字段仍有值，可作为"主模板"快速访问。
      */
     private Long rootSectionId;          // 关联的根分区ID（替代 templateId），可空
     private Long templateVersionId;      // 锁定的版本快照
-    /**
-     * 默认评分方案: 用于非调度组任务 (临时抽查/自查/触发任务, task.planId 为空) 的兜底,
-     * 以及新建调度组时的预填值。调度组任务的评分以 InspectionPlan.scoringProfileId 为准。
-     */
-    private Long defaultScoringProfileId;
     private ScopeType scopeType;
     private String scopeConfig;          // JSON: 范围配置
     private LocalDate startDate;
@@ -75,7 +62,6 @@ public class InspProject extends AggregateRoot<Long> {
         this.orgUnitId = builder.orgUnitId;
         this.rootSectionId = builder.rootSectionId;
         this.templateVersionId = builder.templateVersionId;
-        this.defaultScoringProfileId = builder.defaultScoringProfileId;
         this.scopeType = builder.scopeType != null ? builder.scopeType : ScopeType.ORG;
         this.scopeConfig = builder.scopeConfig;
         this.startDate = builder.startDate;
@@ -96,13 +82,6 @@ public class InspProject extends AggregateRoot<Long> {
 
     /**
      * 创建新项目。rootSectionId 可为 null（多模板项目通过 InspectionPlan 关联模板）。
-     * orgUnitId 是数据权限边界(被检对象的 org root, 非创建者归属). 可空 —
-     * 不传时由 InspectionDataPermissionFiller (MetaObjectHandler) 在持久化阶段
-     * 自动从 SecurityContext.currentUser.orgUnitId 注入(默认 = 创建者所在组织).
-     * 显式传值用于"集团 admin 审计某分公司项目"这类跨组织场景.
-     *
-     * 这一字段对齐 tenant_id / created_at / deleted 的横切关注点定位 —
-     * 业务模型不强校验, 由基础设施层填充并由 ArchUnit 守护覆盖.
      */
     public static InspProject create(String projectCode, String projectName,
                                      Long rootSectionId, LocalDate startDate,
@@ -110,7 +89,7 @@ public class InspProject extends AggregateRoot<Long> {
         return builder()
                 .projectCode(projectCode)
                 .projectName(projectName)
-                .rootSectionId(rootSectionId)   // nullable: null 表示通过计划关联模板
+                .rootSectionId(rootSectionId)
                 .orgUnitId(orgUnitId)
                 .startDate(startDate)
                 .status(ProjectStatus.DRAFT)
@@ -122,15 +101,6 @@ public class InspProject extends AggregateRoot<Long> {
         return new InspProject(builder);
     }
 
-    /**
-     * 发布项目.
-     *
-     * <p>P1#6: templateVersionId 允许为 null — 这是 V66 多模板设计的有意行为:
-     * 多模板项目不在项目级锁单一模板版本, 而是每个 {@link InspectionPlan} 各自
-     * 绑定 rootSectionId + 模板版本. 单模板项目则在此锁版本快照.
-     * (对比 {@link #relockTemplateVersion} 拒绝 null — 那是"升级到指定新版本"语义,
-     * 目标版本必须明确; 而 publish 的 null 表示"无项目级模板, 走计划级".)
-     */
     public void publish(Long templateVersionId) {
         if (this.status != ProjectStatus.DRAFT) {
             throw new IllegalStateException("只有草稿项目才能发布");
@@ -177,18 +147,11 @@ public class InspProject extends AggregateRoot<Long> {
         this.updatedAt = LocalDateTime.now();
     }
 
-    /**
-     * 锁定评分配置快照（发布时调用）
-     */
     public void lockScoringConfig(String snapshot) {
         this.scoringConfigSnapshot = snapshot;
         this.updatedAt = LocalDateTime.now();
     }
 
-    /**
-     * review #7: 更新项目级业务策略 (review/E 加的字段). 任何状态都允许调整 (ARCHIVED 除外),
-     * 因为这些是运行时策略, 不影响数据结构. NULL 表示沿用系统默认.
-     */
     public void updatePolicyConfig(Integer maxRejectCount, Integer maxEscalationLevel,
                                     Integer appealWindowDays, Long updatedBy) {
         if (this.status == ProjectStatus.ARCHIVED) {
@@ -210,10 +173,6 @@ public class InspProject extends AggregateRoot<Long> {
         this.updatedAt = LocalDateTime.now();
     }
 
-    /**
-     * P1#7 follow-up: 已发布项目升级到新的模板版本快照.
-     * 仅 PUBLISHED / PAUSED 状态允许. 不改其他字段, 仅推 templateVersionId 至新值.
-     */
     public void relockTemplateVersion(Long newTemplateVersionId) {
         if (this.status != ProjectStatus.PUBLISHED && this.status != ProjectStatus.PAUSED) {
             throw new IllegalStateException("只有已发布或已暂停的项目才能升级模板版本");
@@ -225,7 +184,10 @@ public class InspProject extends AggregateRoot<Long> {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public void updateInfo(String projectName, Long rootSectionId, Long defaultScoringProfileId,
+    /**
+     * 评级引擎完美架构 (2026-05-23): updateInfo 撤销 defaultScoringProfileId 参数.
+     */
+    public void updateInfo(String projectName, Long rootSectionId,
                            ScopeType scopeType, String scopeConfig,
                            LocalDate startDate, LocalDate endDate,
                            AssignmentMode assignmentMode, Boolean reviewRequired,
@@ -233,14 +195,11 @@ public class InspProject extends AggregateRoot<Long> {
         if (this.status != ProjectStatus.DRAFT) {
             throw new IllegalStateException("只有草稿状态的项目才能修改");
         }
-        // 部分更新语义: 仅覆盖非 null 字段 (与 updateOperationalConfig 一致).
-        // 向导分步保存只发部分载荷 — 全量替换会把未传字段清空, 造成静默数据损坏.
         Boolean effectiveAutoPublish = autoPublish != null ? autoPublish : this.autoPublish;
         Boolean effectiveReviewRequired = reviewRequired != null ? reviewRequired : this.reviewRequired;
         validateAutoPublishReviewConflict(effectiveAutoPublish, effectiveReviewRequired);
         if (projectName != null) this.projectName = projectName;
         if (rootSectionId != null) this.rootSectionId = rootSectionId;
-        if (defaultScoringProfileId != null) this.defaultScoringProfileId = defaultScoringProfileId;
         if (scopeType != null) this.scopeType = scopeType;
         if (scopeConfig != null) this.scopeConfig = scopeConfig;
         if (startDate != null) this.startDate = startDate;
@@ -257,7 +216,6 @@ public class InspProject extends AggregateRoot<Long> {
         if (this.status == ProjectStatus.ARCHIVED) {
             throw new IllegalStateException("已归档的项目不能修改");
         }
-        // 合并现有值与传入值，再校验冲突
         Boolean effectiveAutoPublish = autoPublish != null ? autoPublish : this.autoPublish;
         Boolean effectiveReviewRequired = reviewRequired != null ? reviewRequired : this.reviewRequired;
         validateAutoPublishReviewConflict(effectiveAutoPublish, effectiveReviewRequired);
@@ -269,9 +227,6 @@ public class InspProject extends AggregateRoot<Long> {
         this.updatedAt = LocalDateTime.now();
     }
 
-    /**
-     * 校验 autoPublish 和 reviewRequired 互斥
-     */
     private static void validateAutoPublishReviewConflict(Boolean autoPublish, Boolean reviewRequired) {
         if (Boolean.TRUE.equals(autoPublish) && Boolean.TRUE.equals(reviewRequired)) {
             throw new IllegalStateException("自动发布和必须审核不能同时启用");
@@ -285,7 +240,6 @@ public class InspProject extends AggregateRoot<Long> {
     public Long getOrgUnitId() { return orgUnitId; }
     public Long getRootSectionId() { return rootSectionId; }
     public Long getTemplateVersionId() { return templateVersionId; }
-    public Long getDefaultScoringProfileId() { return defaultScoringProfileId; }
     public ScopeType getScopeType() { return scopeType; }
     public String getScopeConfig() { return scopeConfig; }
     public LocalDate getStartDate() { return startDate; }
@@ -317,7 +271,6 @@ public class InspProject extends AggregateRoot<Long> {
         private Long orgUnitId;
         private Long rootSectionId;
         private Long templateVersionId;
-        private Long defaultScoringProfileId;
         private ScopeType scopeType;
         private String scopeConfig;
         private LocalDate startDate;
@@ -342,7 +295,6 @@ public class InspProject extends AggregateRoot<Long> {
         public Builder orgUnitId(Long orgUnitId) { this.orgUnitId = orgUnitId; return this; }
         public Builder rootSectionId(Long rootSectionId) { this.rootSectionId = rootSectionId; return this; }
         public Builder templateVersionId(Long templateVersionId) { this.templateVersionId = templateVersionId; return this; }
-        public Builder defaultScoringProfileId(Long defaultScoringProfileId) { this.defaultScoringProfileId = defaultScoringProfileId; return this; }
         public Builder scopeType(ScopeType scopeType) { this.scopeType = scopeType; return this; }
         public Builder scopeConfig(String scopeConfig) { this.scopeConfig = scopeConfig; return this; }
         public Builder startDate(LocalDate startDate) { this.startDate = startDate; return this; }

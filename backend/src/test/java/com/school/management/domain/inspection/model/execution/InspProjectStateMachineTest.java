@@ -239,7 +239,7 @@ class InspProjectStateMachineTest {
         @DisplayName("DRAFT → updateInfo 成功")
         void shouldUpdateDraft() {
             InspProject p = newDraft();
-            p.updateInfo("新名", 200L, 300L, ScopeType.ORG, "[1,2]",
+            p.updateInfo("新名", 200L, ScopeType.ORG, "[1,2]",
                     LocalDate.of(2026, 5, 1), LocalDate.of(2026, 6, 1),
                     AssignmentMode.FREE, true, false, 999L);
             assertThat(p.getProjectName()).isEqualTo("新名");
@@ -251,7 +251,7 @@ class InspProjectStateMachineTest {
         @DisplayName("PUBLISHED → updateInfo 抛 (已发布不可全量修改)")
         void shouldRejectUpdateInfoOnPublished() {
             InspProject p = inState(ProjectStatus.PUBLISHED);
-            assertThatThrownBy(() -> p.updateInfo("X", 1L, null, null, null,
+            assertThatThrownBy(() -> p.updateInfo("X", 1L, null, null,
                     null, null, null, true, false, 1L))
                     .isInstanceOf(IllegalStateException.class);
         }
@@ -260,7 +260,7 @@ class InspProjectStateMachineTest {
         @DisplayName("updateInfo 中 autoPublish + reviewRequired 同时启用时抛")
         void shouldRejectAutoPublishConflict() {
             InspProject p = newDraft();
-            assertThatThrownBy(() -> p.updateInfo("X", 1L, null, ScopeType.ORG, null,
+            assertThatThrownBy(() -> p.updateInfo("X", 1L, ScopeType.ORG, null,
                     null, null, AssignmentMode.FREE, true, true, 999L))
                     .isInstanceOf(IllegalStateException.class);
         }

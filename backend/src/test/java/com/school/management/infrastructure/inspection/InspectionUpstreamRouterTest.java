@@ -6,6 +6,7 @@ import com.school.management.infrastructure.persistence.inspection.corrective.Co
 import com.school.management.infrastructure.persistence.inspection.corrective.CorrectiveCasePO;
 import com.school.management.infrastructure.persistence.inspection.corrective.CorrectiveSubtaskPO;
 import com.school.management.infrastructure.persistence.inspection.execution.*;
+import com.school.management.infrastructure.persistence.inspection.scoring.IndicatorMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,6 +31,7 @@ class InspectionUpstreamRouterTest {
     private InspSubmissionMapper submissionMapper;
     private InspTaskMapper taskMapper;
     private CorrectiveCaseMapper caseMapper;
+    private IndicatorMapper indicatorMapper;
 
     private InspectionUpstreamRouter router;
 
@@ -39,8 +41,9 @@ class InspectionUpstreamRouterTest {
         submissionMapper = mock(InspSubmissionMapper.class);
         taskMapper = mock(InspTaskMapper.class);
         caseMapper = mock(CorrectiveCaseMapper.class);
+        indicatorMapper = mock(IndicatorMapper.class);
 
-        router = new InspectionUpstreamRouter(projectMapper, submissionMapper, taskMapper, caseMapper);
+        router = new InspectionUpstreamRouter(projectMapper, submissionMapper, taskMapper, caseMapper, indicatorMapper);
     }
 
     @Test

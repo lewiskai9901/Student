@@ -1,6 +1,11 @@
 package com.school.management.application.inspection;
 
 import com.school.management.domain.inspection.model.scoring.Indicator;
+import com.school.management.domain.inspection.model.scoring.LatePolicy;
+import com.school.management.domain.inspection.model.scoring.MissingPolicy;
+import com.school.management.domain.inspection.model.scoring.RankDirection;
+import com.school.management.domain.inspection.model.scoring.SubmissionDateField;
+import com.school.management.domain.inspection.model.scoring.TriggerMode;
 import com.school.management.domain.inspection.repository.IndicatorRepository;
 import com.school.management.domain.inspection.repository.IndicatorScoreRepository;
 import lombok.RequiredArgsConstructor;
@@ -8,7 +13,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -37,6 +45,28 @@ public class IndicatorApplicationService {
                                          String normalizationConfig,
                                          String evaluationMethod, String gradeThresholds,
                                          Integer sortOrder) {
+        return createLeafIndicator(projectId, parentIndicatorId, name,
+                singletonList(sourceSectionId), sourceAggregation,
+                null, null, null, null,
+                null, null, null,
+                evaluationPeriod, gradeSchemeId, normalization, normalizationConfig,
+                evaluationMethod, gradeThresholds, sortOrder);
+    }
+
+    /** 重载 — 接收 sourceSectionIds 多分区 + 评级引擎完美架构新字段. */
+    @Transactional
+    public Indicator createLeafIndicator(Long projectId, Long parentIndicatorId, String name,
+                                         List<Long> sourceSectionIds, String sourceAggregation,
+                                         TriggerMode triggerMode, Integer countThreshold,
+                                         Map<Long, BigDecimal> weightsBySection,
+                                         RankDirection rankDirection,
+                                         MissingPolicy missingPolicy, LatePolicy latePolicy,
+                                         SubmissionDateField submissionDateField,
+                                         String evaluationPeriod,
+                                         Long gradeSchemeId, String normalization,
+                                         String normalizationConfig,
+                                         String evaluationMethod, String gradeThresholds,
+                                         Integer sortOrder) {
         if (parentIndicatorId != null) {
             Indicator parent = indicatorRepository.findById(parentIndicatorId)
                     .orElseThrow(() -> new IllegalArgumentException("父指标不存在: " + parentIndicatorId));
@@ -44,14 +74,26 @@ public class IndicatorApplicationService {
                 throw new IllegalArgumentException("父指标不属于该项目");
             }
         }
+        if (sourceSectionIds == null || sourceSectionIds.isEmpty()) {
+            throw new IllegalArgumentException("sourceSectionIds 至少 1 个");
+        }
+        Indicator.validateEvaluationConfig(sourceSectionIds, triggerMode, countThreshold, weightsBySection);
 
         Indicator indicator = Indicator.reconstruct(Indicator.builder()
                 .projectId(projectId)
                 .parentIndicatorId(parentIndicatorId)
                 .name(name)
                 .indicatorType("LEAF")
-                .sourceSectionId(sourceSectionId)
+                .sourceSectionId(sourceSectionIds.get(0))
+                .sourceSectionIds(new ArrayList<>(sourceSectionIds))
                 .sourceAggregation(sourceAggregation != null ? sourceAggregation : "AVG")
+                .triggerMode(triggerMode != null ? triggerMode : TriggerMode.TIME_WINDOW)
+                .countThreshold(countThreshold)
+                .weightsBySection(weightsBySection)
+                .rankDirection(rankDirection)
+                .missingPolicy(missingPolicy != null ? missingPolicy : MissingPolicy.IGNORE)
+                .latePolicy(latePolicy != null ? latePolicy : LatePolicy.REVISE_ORIGINAL)
+                .submissionDateField(submissionDateField != null ? submissionDateField : SubmissionDateField.taskDate)
                 .normalization(normalization)
                 .normalizationConfig(normalizationConfig)
                 .evaluationPeriod(evaluationPeriod != null ? evaluationPeriod : "PER_TASK")
@@ -84,7 +126,7 @@ public class IndicatorApplicationService {
                 .name(name)
                 .indicatorType("COMPOSITE")
                 .compositeAggregation(compositeAggregation != null ? compositeAggregation : "WEIGHTED_AVG")
-                .missingPolicy(missingPolicy != null ? missingPolicy : "SKIP")
+                .missingPolicy(MissingPolicy.fromString(missingPolicy))
                 .normalization(normalization)
                 .normalizationConfig(normalizationConfig)
                 .evaluationPeriod(evaluationPeriod != null ? evaluationPeriod : "WEEKLY")
@@ -111,6 +153,27 @@ public class IndicatorApplicationService {
         return indicatorRepository.save(indicator);
     }
 
+    /** 评级引擎完美架构: 更新评级配置 (多分区组合 / 触发模式 / 政策). */
+    @Transactional
+    public Indicator updateEvaluationConfig(Long id,
+                                            List<Long> sourceSectionIds,
+                                            TriggerMode triggerMode,
+                                            Integer countThreshold,
+                                            Map<Long, BigDecimal> weightsBySection,
+                                            RankDirection rankDirection,
+                                            MissingPolicy missingPolicy,
+                                            LatePolicy latePolicy,
+                                            SubmissionDateField submissionDateField,
+                                            Long gradeSchemeId,
+                                            String evaluationPeriod) {
+        Indicator indicator = indicatorRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("指标不存在: " + id));
+        indicator.updateEvaluationConfig(sourceSectionIds, triggerMode, countThreshold,
+                weightsBySection, rankDirection, missingPolicy, latePolicy,
+                submissionDateField, gradeSchemeId, evaluationPeriod);
+        return indicatorRepository.save(indicator);
+    }
+
     @Transactional
     public void deleteIndicator(Long id) {
         // Recursively delete children first
@@ -123,4 +186,9 @@ public class IndicatorApplicationService {
         indicatorRepository.deleteById(id);
     }
 
+    private static List<Long> singletonList(Long id) {
+        List<Long> l = new ArrayList<>();
+        if (id != null) l.add(id);
+        return l;
+    }
 }

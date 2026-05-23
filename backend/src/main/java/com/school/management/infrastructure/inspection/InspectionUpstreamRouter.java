@@ -11,7 +11,10 @@ import com.school.management.infrastructure.persistence.inspection.appeal.InspAp
 import com.school.management.infrastructure.persistence.inspection.corrective.CorrectiveCaseMapper;
 import com.school.management.infrastructure.persistence.inspection.corrective.CorrectiveCasePO;
 import com.school.management.infrastructure.persistence.inspection.corrective.CorrectiveSubtaskPO;
+import com.school.management.infrastructure.persistence.inspection.evaluation.IndicatorResultPO;
 import com.school.management.infrastructure.persistence.inspection.execution.*;
+import com.school.management.infrastructure.persistence.inspection.scoring.IndicatorMapper;
+import com.school.management.infrastructure.persistence.inspection.scoring.IndicatorPO;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
@@ -49,7 +52,8 @@ public class InspectionUpstreamRouter {
     public InspectionUpstreamRouter(@Lazy InspProjectMapper projectMapper,
                                     @Lazy InspSubmissionMapper submissionMapper,
                                     @Lazy InspTaskMapper taskMapper,
-                                    @Lazy CorrectiveCaseMapper caseMapper) {
+                                    @Lazy CorrectiveCaseMapper caseMapper,
+                                    @Lazy IndicatorMapper indicatorMapper) {
         // 源头: 项目无上游, 由 SecurityContext 兜底 (handler 内处理)
         register(InspProjectPO.class, po -> null);
 
@@ -147,6 +151,15 @@ public class InspectionUpstreamRouter {
             Long viaSubmission = resolveSubmissionOrgUnit(submissionMapper, a.getSubmissionId());
             return viaSubmission != null ? viaSubmission
                     : resolveProjectOrgUnit(projectMapper, a.getProjectId());
+        });
+
+        // 评级引擎完美架构 (2026-05-23): IndicatorResult 反查 indicator.project.orgUnitId
+        register(IndicatorResultPO.class, po -> {
+            IndicatorResultPO r = (IndicatorResultPO) po;
+            if (r.getIndicatorId() == null) return null;
+            IndicatorPO ind = indicatorMapper.selectById(r.getIndicatorId());
+            if (ind == null) return null;
+            return resolveProjectOrgUnit(projectMapper, ind.getProjectId());
         });
     }
 
