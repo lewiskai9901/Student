@@ -104,7 +104,12 @@ class InspProjectApplicationServiceTest {
         @Test
         @DisplayName("生成 projectCode 并保存为 DRAFT")
         void shouldCreateAndSave() {
-            when(projectRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            // markCreated 要求 id 已分配, 模拟 save 后 id 被填充
+            when(projectRepository.save(any())).thenAnswer(inv -> {
+                InspProject arg = inv.getArgument(0);
+                arg.setId(42L);
+                return arg;
+            });
             InspProject p = service.createProject("项目A", 100L, LocalDate.of(2026, 5, 1), 50L, 999L);
             assertThat(p.getProjectName()).isEqualTo("项目A");
             assertThat(p.getStatus()).isEqualTo(ProjectStatus.DRAFT);

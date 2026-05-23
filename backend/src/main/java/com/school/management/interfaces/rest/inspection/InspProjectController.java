@@ -1,6 +1,7 @@
 package com.school.management.interfaces.rest.inspection;
 
 import com.school.management.application.inspection.InspProjectApplicationService;
+import com.school.management.application.inspection.InspProjectAuthorizationGuard;
 import com.school.management.application.inspection.dto.CloneProjectCommand;
 import com.school.management.application.inspection.dto.ProjectStatsSummary;
 import com.school.management.application.inspection.ScoreAggregationService;
@@ -34,6 +35,7 @@ public class InspProjectController {
     private final InspProjectApplicationService projectService;
     private final TargetPopulationService targetPopulationService;
     private final ScoreAggregationService scoreAggregationService;
+    private final InspProjectAuthorizationGuard authGuard;
 
     // ========== Project CRUD ==========
 
@@ -86,6 +88,7 @@ public class InspProjectController {
     public Result<InspProject> updateProject(@PathVariable Long id,
                                               @RequestBody @Valid UpdateProjectRequest request) {
         Long userId = SecurityUtils.requireCurrentUserId();
+        authGuard.assertCanEditSettings(id, userId);
         InspProject project = projectService.updateProject(id,
                 request.getProjectName(), request.getRootSectionId(),
                 request.getScopeType(), request.getScopeConfig(),
@@ -100,6 +103,7 @@ public class InspProjectController {
     public Result<InspProject> updateOperationalConfig(@PathVariable Long id,
                                                         @RequestBody @Valid OperationalConfigRequest request) {
         Long userId = SecurityUtils.requireCurrentUserId();
+        authGuard.assertCanEditSettings(id, userId);
         return Result.success(projectService.updateOperationalConfig(id,
                 request.getAssignmentMode(), request.getReviewRequired(),
                 request.getAutoPublish(), request.getProjectName(), userId));
@@ -108,6 +112,8 @@ public class InspProjectController {
     @DeleteMapping("/{id}")
     @CasbinAccess(resource = "insp:project", action = "delete")
     public Result<Void> deleteProject(@PathVariable Long id) {
+        Long userId = SecurityUtils.requireCurrentUserId();
+        authGuard.assertCanEditSettings(id, userId);
         projectService.deleteProject(id);
         return Result.success();
     }
@@ -152,6 +158,7 @@ public class InspProjectController {
     public Result<InspProject> updatePolicyConfig(@PathVariable Long id,
                                                     @RequestBody @Valid UpdatePolicyConfigRequest request) {
         Long userId = com.school.management.common.util.SecurityUtils.requireCurrentUserId();
+        authGuard.assertCanEditSettings(id, userId);
         return Result.success(projectService.updatePolicyConfig(id,
                 request.getMaxRejectCount(),
                 request.getMaxEscalationLevel(),
@@ -217,6 +224,8 @@ public class InspProjectController {
     @CasbinAccess(resource = "insp:project", action = "edit")
     public Result<ProjectInspector> addInspector(@PathVariable Long projectId,
                                                   @RequestBody @Valid AddInspectorRequest request) {
+        Long userId = SecurityUtils.requireCurrentUserId();
+        authGuard.assertCanEditSettings(projectId, userId);
         return Result.success(projectService.addInspector(projectId,
                 request.getUserId(), request.getUserName(), request.getRole()));
     }
@@ -225,6 +234,8 @@ public class InspProjectController {
     @CasbinAccess(resource = "insp:project", action = "edit")
     public Result<Void> removeInspector(@PathVariable Long projectId,
                                          @PathVariable Long inspectorId) {
+        Long userId = SecurityUtils.requireCurrentUserId();
+        authGuard.assertCanEditSettings(projectId, userId);
         projectService.removeInspector(inspectorId);
         return Result.success();
     }

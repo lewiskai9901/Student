@@ -64,6 +64,7 @@ class InspTaskApplicationServiceTest {
     @Mock InspectionScopeHelper scopeHelper;
     @Mock InspTaskQueryService queryService;
     @Mock TriggerService triggerService;
+    @Mock InspProjectAuthorizationGuard authGuard;
 
     ObjectMapper objectMapper = new ObjectMapper();
 
@@ -76,7 +77,7 @@ class InspTaskApplicationServiceTest {
                 sectionRepository, itemRepository, scoreRepository, planRepository,
                 targetPopulationService, scoreAggregationService, eventPublisher, objectMapper,
                 templateVersionRepository, auditLogger, transactionTemplate, jdbcTemplate,
-                metrics, scopeHelper, queryService);
+                metrics, scopeHelper, queryService, authGuard);
     }
 
     // ---- helpers ----

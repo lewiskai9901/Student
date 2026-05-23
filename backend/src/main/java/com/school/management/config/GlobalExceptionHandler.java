@@ -77,6 +77,32 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 检查项目授权异常 — InspProjectAuthorizationGuard 抛出.
+     * 2026-05-23: 非 LEAD/REVIEWER/admin 试图修改设置或审核时返回 403.
+     */
+    @ExceptionHandler(com.school.management.application.inspection.InspProjectAuthorizationGuard.InspProjectAuthorizationException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public Result<Void> handleInspProjectAuthException(
+            com.school.management.application.inspection.InspProjectAuthorizationGuard.InspProjectAuthorizationException e,
+            HttpServletRequest request) {
+        log.warn("检查项目授权异常: {}", e.getMessage());
+        return Result.error(ResultCode.FORBIDDEN.getCode(), e.getMessage());
+    }
+
+    /**
+     * 移除最后一个负责人异常 — 项目至少 1 LEAD 不变量.
+     * 2026-05-23: 返回 409 Conflict (业务规则冲突).
+     */
+    @ExceptionHandler(com.school.management.domain.inspection.exception.LastLeadRemovalException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public Result<Void> handleLastLeadRemovalException(
+            com.school.management.domain.inspection.exception.LastLeadRemovalException e,
+            HttpServletRequest request) {
+        log.warn("LEAD 不变量冲突: {}", e.getMessage());
+        return Result.error(ResultCode.VALIDATION_ERROR.getCode(), e.getMessage());
+    }
+
+    /**
      * 参数验证异常处理 - @Valid注解
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)

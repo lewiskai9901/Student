@@ -74,6 +74,17 @@ public class ProjectInspectorRepositoryImpl implements ProjectInspectorRepositor
         return map;
     }
 
+    @Override
+    public Optional<ProjectInspector> findOneByProjectUserRole(Long projectId, Long userId, InspectorRole role) {
+        ProjectInspectorPO po = mapper.findOneByProjectUserRole(projectId, userId, role.name());
+        return Optional.ofNullable(po).map(this::toDomain);
+    }
+
+    @Override
+    public int countActiveByProjectIdAndRole(Long projectId, InspectorRole role) {
+        return mapper.countActiveByProjectIdAndRole(projectId, role.name());
+    }
+
     private ProjectInspectorPO toPO(ProjectInspector d) {
         ProjectInspectorPO po = new ProjectInspectorPO();
         po.setId(d.getId());

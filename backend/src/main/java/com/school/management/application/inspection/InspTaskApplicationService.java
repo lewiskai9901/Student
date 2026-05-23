@@ -54,6 +54,7 @@ public class InspTaskApplicationService {
     private final com.school.management.infrastructure.metrics.InspectionMetrics metrics;
     private final com.school.management.infrastructure.inspection.InspectionScopeHelper scopeHelper;
     private final InspTaskQueryService queryService;   // I6: governance KPI / mode CRUD 委托
+    private final InspProjectAuthorizationGuard authGuard; // 2026-05-23: 审核任务 REVIEWER 授权检查
 
     @Autowired(required = false)
     private TriggerService triggerService;
@@ -558,6 +559,9 @@ public class InspTaskApplicationService {
     public InspTask startReview(Long id, Long reviewerId, String reviewerName) {
         InspTask task = taskRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("任务不存在: " + id));
+        // 2026-05-23: REVIEWER 真授权 — reviewerId 必须在 project_inspector 表里且 role∈{REVIEWER,LEAD};
+        // admin 直通. 解决之前 "REVIEWER 标签装饰性" 的真问题.
+        authGuard.assertCanReview(task.getProjectId(), reviewerId);
         task.startReview(reviewerId, reviewerName);
         return taskRepository.save(task);
     }

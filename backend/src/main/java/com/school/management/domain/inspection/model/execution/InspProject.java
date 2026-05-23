@@ -1,6 +1,7 @@
 package com.school.management.domain.inspection.model.execution;
 
 import com.school.management.domain.inspection.event.ProjectCompletedEvent;
+import com.school.management.domain.inspection.event.ProjectCreatedEvent;
 import com.school.management.domain.inspection.event.ProjectPausedEvent;
 import com.school.management.domain.inspection.event.ProjectPublishedEvent;
 import com.school.management.domain.inspection.event.ProjectResumedEvent;
@@ -95,6 +96,23 @@ public class InspProject extends AggregateRoot<Long> {
                 .status(ProjectStatus.DRAFT)
                 .createdBy(createdBy)
                 .build();
+    }
+
+    /**
+     * 2026-05-23: 标记项目"创建完成"并注册 ProjectCreatedEvent.
+     *
+     * <p>必须由应用层在 {@code projectRepository.save()} 之后调用 — 此时 id 已由 DB 填充,
+     * 事件携带正确的 projectId. 然后再次 save (或直接 publishAll) 让事件落地分发.
+     *
+     * <p>AutoEnrollCreatorAsLeadHandler 监听 AFTER_COMMIT 自动把 createdBy 写入
+     * project_inspector, role=LEAD, 让创建者立即成为项目负责人.
+     */
+    public void markCreated() {
+        if (this.id == null) {
+            throw new IllegalStateException("InspProject.markCreated() 必须在 save 之后调用 (id 已分配)");
+        }
+        registerEvent(new ProjectCreatedEvent(this.id, this.projectCode, this.projectName,
+                this.createdBy, this.orgUnitId));
     }
 
     public static InspProject reconstruct(Builder builder) {

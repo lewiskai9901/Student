@@ -25,4 +25,14 @@ public interface ProjectInspectorRepository {
 
     /** 列表页 N+1 消除: projectId -> 检查员人数. */
     Map<Long, Integer> countByProjectIds(List<Long> projectIds);
+
+    /**
+     * 精确查 (project, user, role) — LEAD 自动绑定幂等性 + 角色矩阵 toggle.
+     */
+    Optional<ProjectInspector> findOneByProjectUserRole(Long projectId, Long userId, InspectorRole role);
+
+    /**
+     * 统计某项目某角色的活跃人数 — LEAD 不变量校验用 (≥1).
+     */
+    int countActiveByProjectIdAndRole(Long projectId, InspectorRole role);
 }

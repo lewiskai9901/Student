@@ -105,7 +105,12 @@ public class InspProjectApplicationService {
         String projectCode = generateProjectCode();
         // rootSectionId 可空：null 表示项目使用多模板，模板通过计划关联
         InspProject project = InspProject.create(projectCode, projectName, rootSectionId, startDate, orgUnitId, createdBy);
-        return projectRepository.save(project);
+        InspProject saved = projectRepository.save(project);
+        // 2026-05-23: 注册 ProjectCreatedEvent (id 已被 save 填充) → AutoEnrollCreatorAsLeadHandler
+        // 监听 AFTER_COMMIT 写入 project_inspector role=LEAD, 让 createdBy 自动成为项目负责人.
+        saved.markCreated();
+        eventPublisher.publishAll(saved.getDomainEvents());
+        return saved;
     }
 
     @Transactional(readOnly = true)
@@ -661,6 +666,18 @@ public class InspProjectApplicationService {
 
     @Transactional
     public void removeInspector(Long inspectorId) {
+        // 2026-05-23 LEAD 不变量: 移除前校验, 如果该行是 LEAD 且为该项目仅剩 LEAD, 拒绝.
+        Optional<ProjectInspector> opt = inspectorRepository.findById(inspectorId);
+        if (opt.isEmpty()) return; // 幂等: 已不存在就不报错
+        ProjectInspector target = opt.get();
+        if (target.getRole() == InspectorRole.LEAD) {
+            int activeLeadCount = inspectorRepository.countActiveByProjectIdAndRole(
+                    target.getProjectId(), InspectorRole.LEAD);
+            if (activeLeadCount <= 1) {
+                throw new com.school.management.domain.inspection.exception.LastLeadRemovalException(
+                        target.getProjectId());
+            }
+        }
         inspectorRepository.deleteById(inspectorId);
     }
 

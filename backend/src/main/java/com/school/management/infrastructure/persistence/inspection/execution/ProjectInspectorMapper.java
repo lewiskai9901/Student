@@ -43,4 +43,23 @@ public interface ProjectInspectorMapper extends BaseMapper<ProjectInspectorPO> {
             + " GROUP BY project_id"
             + "</script>")
     List<ProjectInspectorCountRow> countByProjectIds(@Param("projectIds") List<Long> projectIds);
+
+    /**
+     * 精确查 (project, user, role) — LEAD 自动绑定的幂等性检查 + 角色矩阵 toggle 用.
+     * <p>注意: 不加 @DataPermission — 系统级幂等校验, 写路径不应被读权限过滤.
+     */
+    @Select("SELECT * FROM insp_project_inspectors "
+            + "WHERE project_id = #{projectId} AND user_id = #{userId} AND role = #{role} AND deleted = 0 "
+            + "LIMIT 1")
+    ProjectInspectorPO findOneByProjectUserRole(@Param("projectId") Long projectId,
+                                                @Param("userId") Long userId,
+                                                @Param("role") String role);
+
+    /**
+     * 统计某项目某角色的人数 (非 0 即真) — LastLeadRemovalException 守护用.
+     * <p>不加 @DataPermission — 系统级不变量校验.
+     */
+    @Select("SELECT COUNT(*) FROM insp_project_inspectors "
+            + "WHERE project_id = #{projectId} AND role = #{role} AND is_active = 1 AND deleted = 0")
+    int countActiveByProjectIdAndRole(@Param("projectId") Long projectId, @Param("role") String role);
 }
