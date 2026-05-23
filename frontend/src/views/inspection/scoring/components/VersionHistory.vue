@@ -33,10 +33,6 @@
             <span class="vh-snap-val">{{ snapshotPreview.dimensionCount }} 个</span>
           </div>
           <div class="vh-snap-row">
-            <span class="vh-snap-label">等级</span>
-            <span class="vh-snap-val">{{ snapshotPreview.gradeBandCount }} 个</span>
-          </div>
-          <div class="vh-snap-row">
             <span class="vh-snap-label">规则</span>
             <span class="vh-snap-val">{{ snapshotPreview.ruleCount }} 条</span>
           </div>
@@ -100,7 +96,6 @@ const publishing = ref(false)
 const expandedVersion = ref<number | null>(null)
 const snapshotPreview = ref<{
   dimensionCount: number
-  gradeBandCount: number
   ruleCount: number
 } | null>(null)
 
@@ -125,7 +120,6 @@ function toggleExpand(ver: ScoringProfileVersion) {
     const snap = JSON.parse(ver.snapshot)
     snapshotPreview.value = {
       dimensionCount: (snap.dimensions || []).length,
-      gradeBandCount: (snap.gradeBands || []).length,
       ruleCount: (snap.rules || []).length,
     }
   } catch {

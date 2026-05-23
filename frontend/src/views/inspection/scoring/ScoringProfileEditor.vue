@@ -71,15 +71,9 @@
           <DimensionTable :dimensions="store.dimensions" />
         </section>
 
-        <section class="sp-card">
-          <GradeBandEditor
-            :grade-bands="store.gradeBands"
-            @create="handleCreateGradeBand"
-            @update="handleUpdateGradeBand"
-            @delete="handleDeleteGradeBand"
-            @apply-preset="handleApplyPreset"
-          />
-        </section>
+        <!-- GradeBand 编辑区已移除 (评级引擎完美架构 Phase 5).
+             评级 (等级映射) 改由项目「评级」Tab 的 Indicator + GradeScheme 模型管理.
+             本编辑器仅保留 "评分" 范畴 (维度权重 / 计算规则 / 多评融合 / 趋势 / 衰减 / 校准). -->
 
         <section class="sp-card">
           <CalcRuleChain
@@ -133,7 +127,6 @@
           v-if="profile"
           :profile="profile"
           :dimensions="store.dimensions"
-          :grade-bands="store.gradeBands"
           :rules="store.rules"
           :template-id="profile.sectionId"
         />
@@ -151,14 +144,11 @@ import { ArrowLeft, ShieldCheck, CheckCircle2, AlertTriangle, XCircle } from 'lu
 import { useInspScoringStore } from '@/stores/inspection/inspScoringStore'
 import type {
   ScoringProfile,
-  CreateGradeBandRequest,
-  UpdateGradeBandRequest,
   CreateRuleRequest,
   UpdateRuleRequest,
   UpdateAdvancedSettingsRequest,
 } from '@/types/insp/scoring'
 import DimensionTable from './components/DimensionTable.vue'
-import GradeBandEditor from './components/GradeBandEditor.vue'
 import CalcRuleChain from './components/CalcRuleChain.vue'
 import ScoreSimulator from './components/ScoreSimulator.vue'
 import VersionHistory from './components/VersionHistory.vue'
@@ -217,34 +207,7 @@ const healthChecks = computed<HealthCheck[]>(() => {
     })
   }
 
-  // 3. Grade bands exist
-  const bandCount = store.gradeBands.length
-  checks.push({
-    key: 'grades',
-    label: bandCount > 0 ? `${bandCount} 个等级区间` : '未配置等级映射',
-    status: bandCount > 0 ? 'ok' : 'warn',
-  })
-
-  // 4. Grade bands coverage (check for gaps)
-  if (bandCount > 0) {
-    const globalBands = store.gradeBands
-      .filter(b => !b.dimensionId)
-      .sort((a, b) => a.minScore - b.minScore)
-    let hasGap = false
-    for (let i = 0; i < globalBands.length - 1; i++) {
-      if (globalBands[i + 1].minScore - globalBands[i].maxScore > 0.01) {
-        hasGap = true
-        break
-      }
-    }
-    if (globalBands.length > 0) {
-      checks.push({
-        key: 'coverage',
-        label: hasGap ? '等级区间存在间隙' : '等级区间覆盖完整',
-        status: hasGap ? 'warn' : 'ok',
-      })
-    }
-  }
+  // (评级 GradeBand 相关 health check 已移除 — 评级改由「评级」Tab 的 Indicator + GradeScheme 管理)
 
   // 5. Rules
   const ruleCount = store.rules.length
@@ -374,63 +337,6 @@ async function saveProfile() {
   } catch (e) {
     // 保存失败时保留 dirty, 用户可重试
     ElMessage.error('保存基础设置失败: ' + msg(e))
-  }
-}
-
-// GradeBand handlers
-async function handleCreateGradeBand(
-  data: CreateGradeBandRequest,
-  onDone: (ok: boolean) => void,
-) {
-  if (!profile.value) { onDone(false); return }
-  try {
-    await store.createGradeBand(profile.value.id, data)
-    ElMessage.success('等级已添加')
-    onDone(true)
-  } catch (e) {
-    ElMessage.error('添加等级失败: ' + msg(e))
-    onDone(false)
-  }
-}
-async function handleUpdateGradeBand(
-  id: LongId,
-  data: UpdateGradeBandRequest,
-  onDone: (ok: boolean) => void,
-) {
-  if (!profile.value) { onDone(false); return }
-  try {
-    await store.updateGradeBand(profile.value.id, id, data)
-    ElMessage.success('等级已更新')
-    onDone(true)
-  } catch (e) {
-    ElMessage.error('更新等级失败: ' + msg(e))
-    onDone(false)
-  }
-}
-async function handleDeleteGradeBand(id: LongId) {
-  if (!profile.value) return
-  try {
-    await store.deleteGradeBand(profile.value.id, id)
-    ElMessage.success('等级已删除')
-  } catch (e) {
-    ElMessage.error('删除等级失败: ' + msg(e))
-  }
-}
-
-// Grade band preset handler
-async function handleApplyPreset(bands: CreateGradeBandRequest[]) {
-  if (!profile.value) return
-  try {
-    const existingIds = store.gradeBands.map(b => b.id)
-    for (const id of existingIds) {
-      await store.deleteGradeBand(profile.value.id, id)
-    }
-    for (const band of bands) {
-      await store.createGradeBand(profile.value.id, band)
-    }
-    ElMessage.success('预设已应用')
-  } catch (e) {
-    ElMessage.error('应用预设失败: ' + msg(e))
   }
 }
 

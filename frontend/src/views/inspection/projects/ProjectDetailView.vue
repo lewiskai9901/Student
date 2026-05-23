@@ -31,6 +31,8 @@ import { getRootSection } from '@/api/inspection/template'
 import SectionConfigView from './components/SectionConfigView.vue'
 import { buildSectionTree, type SectionTreeNode } from '@/utils/sectionTree'
 import IndicatorScoreView from './components/IndicatorScoreView.vue'
+import EvaluationConfigView from './components/EvaluationConfigView.vue'
+import EvaluationResultsView from './components/EvaluationResultsView.vue'
 import InspButton from '../shared/InspButton.vue'
 import InspChip from '../shared/InspChip.vue'
 import InspSpinner from '../shared/InspSpinner.vue'
@@ -59,17 +61,8 @@ const submissionsLoadFailedCount = ref(0)
 const sectionNameMap = ref<Map<LongId, { name: string; targetType?: string }>>(new Map())
 const sectionTree = ref<SectionTreeNode[]>([])
 const sectionList = computed(() => [...sectionNameMap.value.entries()].map(([id, info]) => ({ id, sectionName: info.name, targetType: info.targetType })))
-// 评分方案列表 — 供"默认评分方案"下拉使用
+// 评分方案列表 — 仅供"评分方案"卡片显示用 (默认评分方案下拉已删除, Phase 1 评级引擎重构)
 const scoringProfiles = ref<ScoringProfile[]>([])
-const scoringProfileOptions = computed(() =>
-  scoringProfiles.value.map(p => {
-    const secName = sectionNameMap.value.get(p.sectionId)?.name
-    return {
-      id: p.id,
-      label: secName ? `${secName} (方案 #${p.id})` : `方案 #${p.id} · 分区 #${p.sectionId}`,
-    }
-  }),
-)
 const creatorName = ref('')
 const rootSectionName = ref('')
 const scopeOrgNames = ref<string[]>([])
@@ -77,6 +70,14 @@ const orgTree = ref<OrgUnitTreeNode[]>([])
 const loadingOrgTree = ref(false)
 // Tabs
 const activeTab = ref('overview')
+// 评级 Tab 的子页 (config / results)
+const evalSubTab = ref<'config' | 'results'>('config')
+// EvaluationConfigView 行内点"查看结果"会把 indicatorId 传到 results 子页预选
+const focusedIndicatorId = ref<LongId | null>(null)
+function handleViewResults(indicatorId: LongId) {
+  focusedIndicatorId.value = indicatorId
+  evalSubTab.value = 'results'
+}
 
 // ========== 日期范围筛选 ==========
 const dateRangeType = ref('all')
@@ -131,7 +132,7 @@ const configDirty = ref(false)
 const saving = ref(false)
 
 // 配置表单
-const cf = ref({ scopeType: 'ORG', scopeIds: [] as string[], startDate: '', endDate: '', assignmentMode: 'FREE', reviewRequired: true, autoPublish: false, projectName: '', defaultScoringProfileId: null as LongId | null,
+const cf = ref({ scopeType: 'ORG', scopeIds: [] as string[], startDate: '', endDate: '', assignmentMode: 'FREE', reviewRequired: true, autoPublish: false, projectName: '',
   // V108: 检查模式
   inspectionMode: 'PLANNED' as 'PLANNED'|'HYBRID'|'SPOT_CHECK'|'SELF_AUDIT'|'EMERGENCY',
   // V110: 整改判定策略
@@ -478,7 +479,7 @@ function syncForm() {
   if (!project.value) return; const p = project.value
   let rawIds: (number | string)[] = []; try { rawIds = p.scopeConfig ? JSON.parse(p.scopeConfig) : [] } catch (e: any) { console.warn('解析 scopeConfig 失败', e) }
   const ids: string[] = rawIds.map(String)
-  cf.value = { ...cf.value, scopeType: (p.scopeType as string) || 'ORG', scopeIds: ids, startDate: p.startDate || '', endDate: p.endDate || '', assignmentMode: (p.assignmentMode as string) || 'FREE', reviewRequired: p.reviewRequired ?? true, autoPublish: p.autoPublish ?? false, projectName: p.projectName, defaultScoringProfileId: p.defaultScoringProfileId ?? null,
+  cf.value = { ...cf.value, scopeType: (p.scopeType as string) || 'ORG', scopeIds: ids, startDate: p.startDate || '', endDate: p.endDate || '', assignmentMode: (p.assignmentMode as string) || 'FREE', reviewRequired: p.reviewRequired ?? true, autoPublish: p.autoPublish ?? false, projectName: p.projectName,
     // V108
     inspectionMode: ((p as any).inspectionMode || 'PLANNED') as any,
     allowAdHoc: !!((p as any).allowAdHoc),
@@ -533,7 +534,7 @@ async function saveConfig() {
   if (!project.value) return; saving.value = true
   try {
     if (isDraft.value) {
-      await inspProjectApi.update(projectId, { projectName: cf.value.projectName, rootSectionId: project.value.rootSectionId, defaultScoringProfileId: cf.value.defaultScoringProfileId, scopeType: cf.value.scopeType as ScopeType, scopeConfig: cf.value.scopeIds.length > 0 ? JSON.stringify(cf.value.scopeIds) : undefined, startDate: cf.value.startDate || undefined, endDate: cf.value.endDate || undefined, assignmentMode: cf.value.assignmentMode as AssignmentMode, reviewRequired: cf.value.reviewRequired, autoPublish: cf.value.autoPublish })
+      await inspProjectApi.update(projectId, { projectName: cf.value.projectName, rootSectionId: project.value.rootSectionId, scopeType: cf.value.scopeType as ScopeType, scopeConfig: cf.value.scopeIds.length > 0 ? JSON.stringify(cf.value.scopeIds) : undefined, startDate: cf.value.startDate || undefined, endDate: cf.value.endDate || undefined, assignmentMode: cf.value.assignmentMode as AssignmentMode, reviewRequired: cf.value.reviewRequired, autoPublish: cf.value.autoPublish })
     } else {
       await updateOperationalConfig(projectId, { projectName: cf.value.projectName, assignmentMode: cf.value.assignmentMode, reviewRequired: cf.value.reviewRequired, autoPublish: cf.value.autoPublish })
     }
@@ -836,6 +837,9 @@ onMounted(async () => {
       <button :class="['pdv-tab', activeTab === 'scores' && 'active']" @click="activeTab = 'scores'">
         <BarChart3 class="w-3.5 h-3.5" />成绩统计
       </button>
+      <button :class="['pdv-tab', activeTab === 'evaluation' && 'active']" @click="activeTab = 'evaluation'">
+        <ListTree class="w-3.5 h-3.5" />评级
+      </button>
       <button :class="['pdv-tab', activeTab === 'settings' && 'active']" @click="activeTab = 'settings'">
         <Settings class="w-3.5 h-3.5" />设置
         <span v-if="configDirty" class="pdv-tab-dot" />
@@ -1065,6 +1069,36 @@ onMounted(async () => {
       <!-- ===== 检查配置 Tab ===== -->
       <div v-if="activeTab === 'config'">
         <SectionConfigView :project-id="projectId" :sections="sectionList" :section-tree="sectionTree" :root-section-id="project?.rootSectionId" :root-section-name="rootSectionName" :inspectors="inspectors" :project-tasks="allTasks" />
+      </div>
+
+      <!-- ===== 评级 Tab (Phase 5 评级引擎完美架构) =====
+           内部两段: 评级配置 (Indicator CRUD) + 评级结果 (IndicatorResult 三态机 + 修订链 + 手动评估) -->
+      <div v-if="activeTab === 'evaluation'">
+        <div v-if="isDraft" class="py-20 text-center">
+          <ClipboardList class="w-10 h-10 text-gray-300 mx-auto mb-3" />
+          <div class="text-sm text-gray-400">项目发布后可配置评级指标</div>
+        </div>
+        <template v-else>
+          <div class="pdv-eval-sub-tabs">
+            <button :class="['pdv-eval-sub-tab', evalSubTab === 'config' && 'active']" @click="evalSubTab = 'config'">
+              评级配置
+            </button>
+            <button :class="['pdv-eval-sub-tab', evalSubTab === 'results' && 'active']" @click="evalSubTab = 'results'">
+              评级结果
+            </button>
+          </div>
+          <EvaluationConfigView
+            v-if="evalSubTab === 'config'"
+            :project-id="projectId"
+            :sections="sectionList"
+            @view-results="handleViewResults"
+          />
+          <EvaluationResultsView
+            v-else-if="evalSubTab === 'results'"
+            :project-id="projectId"
+            :initial-indicator-id="focusedIndicatorId"
+          />
+        </template>
       </div>
 
       <!-- ===== 人员与任务 Tab =====
@@ -1478,27 +1512,10 @@ onMounted(async () => {
             <!-- P1 #23: 旧文案"或克隆"无入口, 现在有按钮了 -->
             <span v-if="!isDraft">已发布项目只读, 如需修改请点"克隆为新项目"复制一份草稿.</span>
           </div>
-          <div class="cfg-field cfg-field--mt">
-            <label class="cfg-label">默认评分方案</label>
-            <el-select
-              v-model="cf.defaultScoringProfileId"
-              placeholder="未设置"
-              clearable
-              filterable
-              size="small"
-              class="w-full"
-              :disabled="isArchived || !isDraft"
-            >
-              <el-option
-                v-for="p in scoringProfileOptions"
-                :key="p.id"
-                :label="p.label"
-                :value="p.id"
-              />
-            </el-select>
-            <div class="cfg-hint">用于临时抽查/自查任务，以及新建调度组时的默认值。计划任务以调度组自身的评分方案为准。</div>
-          </div>
+          <!-- 默认评分方案选择已移除 (评级引擎完美架构 Phase 1 — 删 default_scoring_profile_id);
+               评级配置改用「评级」Tab 的 Indicator 模型 (含 gradeScheme + triggerMode 等). -->
           <!-- P2 #31: padding 16px 移到 CSS .cfg-empty--card; P1 #28 同步去图标 -->
+
           <div v-if="scoringProfiles.length === 0" class="cfg-empty cfg-empty--card">
             暂无评分方案 ·
             <el-link v-if="isDraft && !isArchived" type="primary" :underline="false" @click="goCreateProfile">立即新建</el-link>
@@ -1693,5 +1710,28 @@ onMounted(async () => {
   font-weight: 600;
   background: var(--insp-accent-paler, #eff6ff);
   color: var(--insp-accent, #1a6dff);
+}
+
+/* ===== 评级 Tab 子页切换 (Phase 5) ===== */
+.pdv-eval-sub-tabs {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px;
+  background: var(--insp-bg-subtle, #f4f6f9);
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+.pdv-eval-sub-tab {
+  padding: 4px 14px; border-radius: 6px;
+  background: transparent; border: none;
+  color: var(--insp-ink-tertiary, #6b7280);
+  font-size: 12px; cursor: pointer;
+  transition: all 0.15s;
+}
+.pdv-eval-sub-tab:hover { color: var(--insp-ink-primary, #111827); }
+.pdv-eval-sub-tab.active {
+  background: var(--insp-bg-surface, #fff);
+  color: var(--insp-accent, #1a6dff);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 </style>

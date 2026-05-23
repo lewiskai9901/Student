@@ -120,12 +120,11 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { Calculator, RotateCcw, AlertTriangle } from 'lucide-vue-next'
 import { inspTemplateApi } from '@/api/inspection/template'
 import type { TemplateItem } from '@/types/insp/template'
-import type { ScoringProfile, ScoreDimension, GradeBand, CalculationRule } from '@/types/insp/scoring'
+import type { ScoringProfile, ScoreDimension, CalculationRule } from '@/types/insp/scoring'
 
 const props = defineProps<{
   profile: ScoringProfile
   dimensions: ScoreDimension[]
-  gradeBands: GradeBand[]
   rules: CalculationRule[]
   templateId: LongId
 }>()
@@ -451,25 +450,11 @@ function recalculate() {
   const finalScore = Number(total.toFixed(precision.value))
   displayTotal.value = finalScore.toFixed(precision.value)
 
-  // Step 7: Grade mapping
-  const grade = mapGrade(finalScore)
-  displayGrade.value = grade?.name || ''
-  displayGradeColor.value = grade?.color || '#909399'
+  // Step 7: Grade mapping — 已移除 (评级引擎重构, 评级走「评级」Tab 的 Indicator + GradeScheme)
+  displayGrade.value = ''
+  displayGradeColor.value = '#909399'
 
   calcSteps.value = steps
-}
-
-function mapGrade(score: number): { name: string; color: string } | null {
-  if (!props.gradeBands || props.gradeBands.length === 0) return null
-  const sorted = [...props.gradeBands]
-    .filter(b => b.dimensionId === null || b.dimensionId === undefined)
-    .sort((a, b) => b.minScore - a.minScore)
-  for (const band of sorted) {
-    if (score >= band.minScore && score <= band.maxScore) {
-      return { name: band.gradeName, color: band.color || '#909399' }
-    }
-  }
-  return sorted.length > 0 ? { name: sorted[sorted.length - 1].gradeName, color: sorted[sorted.length - 1].color || '#909399' } : null
 }
 
 function modeLabel(mode: string): string {
@@ -491,7 +476,7 @@ function resetAll() {
 
 // ==================== Watchers ====================
 
-watch(() => [props.dimensions, props.gradeBands, props.rules], () => {
+watch(() => [props.dimensions, props.rules], () => {
   recalculate()
 }, { deep: true })
 

@@ -338,8 +338,6 @@ export interface InspectionPlan {
   timeSlots: string | null
   skipHolidays: boolean
   inspectorIds: string | null  // JSON: 指定检查员ID列表，空=全员
-  /** 该调度组使用的评分方案 — 评分"怎么算"的唯一权威引用 */
-  scoringProfileId?: LongId | null
   /** 每个检查目标的评分人数 (1=单人 >1=多人), 须 ≤ 调度组可用检查员数 */
   ratersPerTarget?: number
   isEnabled: boolean
@@ -360,7 +358,6 @@ export interface CreatePlanRequest {
   scheduleDays?: string
   timeSlots?: string
   skipHolidays?: boolean
-  scoringProfileId?: LongId | null
   ratersPerTarget?: number
 }
 
@@ -375,7 +372,6 @@ export interface UpdatePlanRequest {
   scheduleDays?: string
   timeSlots?: string
   skipHolidays?: boolean
-  scoringProfileId?: LongId | null
   ratersPerTarget?: number
 }
 

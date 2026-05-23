@@ -26,8 +26,6 @@ export interface InspProject {
   projectName: string
   rootSectionId: LongId
   templateVersionId: LongId | null
-  /** 默认评分方案 — 用于临时抽查/自查任务 + 新建调度组的预填默认值 */
-  defaultScoringProfileId: LongId | null
   scopeType: ScopeType | null
   scopeConfig: string | null
   /** 目标类型(STUDENT/CLASS/...) — 决定每个 scope 节点展开成多少个检查目标 */
@@ -55,7 +53,6 @@ export interface CreateProjectRequest {
 export interface UpdateProjectRequest {
   projectName?: string
   rootSectionId?: LongId
-  defaultScoringProfileId?: LongId | null
   scopeType?: ScopeType
   scopeConfig?: string
   startDate?: string

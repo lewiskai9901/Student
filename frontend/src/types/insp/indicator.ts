@@ -2,7 +2,19 @@ import type { LongId } from '@/types/common'
 
 /**
  * 检查平台 - 评价指标类型定义
+ *
+ * Phase 4 评级引擎完美架构 (2026-05-23) 新增字段:
+ *   sourceSectionIds[] / triggerMode / countThreshold / weightsBySection /
+ *   rankDirection / missingPolicy(枚举化) / latePolicy / submissionDateField
+ * 评级结果聚合根 IndicatorResult (DRAFT/PUBLISHED/SUPERSEDED 三态机) 类型也在此.
  */
+
+export type TriggerMode = 'TIME_WINDOW' | 'COUNT' | 'MANUAL'
+export type RankDirection = 'ASC' | 'DESC' | 'NONE'
+export type MissingPolicyEnum = 'IGNORE' | 'ZERO' | 'MAX' | 'WAIT'
+export type LatePolicy = 'REVISE_ORIGINAL' | 'CARRY_FORWARD' | 'EXCLUDE'
+export type SubmissionDateField = 'TASK_DATE' | 'COMPLETED_AT'
+export type ResultStatus = 'DRAFT' | 'PUBLISHED' | 'SUPERSEDED'
 
 export interface Indicator {
   id: LongId
@@ -11,8 +23,10 @@ export interface Indicator {
   parentIndicatorId: LongId | null
   name: string
   indicatorType: 'LEAF' | 'COMPOSITE'
-  // LEAF fields
+  // LEAF fields — 旧单值 (向后兼容, sourceSectionIds 优先)
   sourceSectionId: LongId | null
+  /** Phase 4 多分区: 一个 LEAF 可跨多个分区. */
+  sourceSectionIds?: LongId[]
   sourceAggregation: string | null
   // COMPOSITE fields
   compositeAggregation: string | null
@@ -26,6 +40,13 @@ export interface Indicator {
   evaluationMethod: string | null
   gradeThresholds: string | null
   sortOrder: number
+  // ── Phase 4 评级引擎新字段 ──
+  triggerMode?: TriggerMode | null
+  countThreshold?: number | null
+  weightsBySection?: Record<string, number> | null
+  rankDirection?: RankDirection | null
+  latePolicy?: LatePolicy | null
+  submissionDateField?: SubmissionDateField | null
   createdAt: string
   updatedAt: string | null
   // Client-side tree
@@ -48,13 +69,56 @@ export interface IndicatorScore {
   detail: string | null
 }
 
+/** Phase 4 评级结果聚合根 — 版本化快照 + 三态机. */
+export interface IndicatorResult {
+  id: LongId
+  tenantId: LongId
+  indicatorId: LongId
+  targetId: LongId
+  targetName?: string | null
+  targetType?: string | null
+  periodKey: string
+  periodStart?: string | null
+  periodEnd?: string | null
+  /** 同 (indicator,target,period) 修订版本号 — 0=首版, 后续递增. */
+  revision: number
+  status: ResultStatus
+  value: number | null
+  rankPosition: number | null
+  totalRanked: number | null
+  gradeCode?: string | null
+  gradeName?: string | null
+  gradeColor?: string | null
+  sourceCount?: number | null
+  /** 该版本的算分上下文快照 (JSON). */
+  snapshot?: string | null
+  /** 替代前一版本时, 该字段记录前一 result id; 首版为 null. */
+  supersedesId?: LongId | null
+  computedAt: string
+  publishedAt?: string | null
+  createdAt?: string
+  updatedAt?: string | null
+}
+
 export interface CreateLeafIndicatorRequest {
   projectId: LongId
   parentIndicatorId: LongId | null
   name: string
-  sourceSectionId: LongId | null
+  /** 单值 (向后兼容). 优先用 sourceSectionIds. */
+  sourceSectionId?: LongId | null
+  /** Phase 4 多分区 — 至少 1 个. */
+  sourceSectionIds?: LongId[]
   sourceAggregation: string
   evaluationPeriod: string
+  // ── Phase 4 评级引擎新字段 ──
+  triggerMode?: TriggerMode
+  countThreshold?: number
+  weightsBySection?: Record<string, number>
+  rankDirection?: RankDirection
+  missingPolicy?: MissingPolicyEnum
+  latePolicy?: LatePolicy
+  submissionDateField?: SubmissionDateField
+  // 等级 / 归一
   gradeSchemeId?: LongId | null
   normalization?: string
   normalizationConfig?: string
@@ -84,6 +148,8 @@ export interface UpdateIndicatorRequest {
   evaluationPeriod?: string
   gradeSchemeId?: LongId | null
   sourceSectionId?: LongId | null
+  /** Phase 4 多分区. */
+  sourceSectionIds?: LongId[]
   sourceAggregation?: string
   compositeAggregation?: string
   missingPolicy?: string
@@ -92,6 +158,20 @@ export interface UpdateIndicatorRequest {
   evaluationMethod?: string
   gradeThresholds?: string
   sortOrder?: number
+  // ── Phase 4 评级引擎新字段 ──
+  triggerMode?: TriggerMode
+  countThreshold?: number
+  weightsBySection?: Record<string, number>
+  rankDirection?: RankDirection
+  latePolicy?: LatePolicy
+  submissionDateField?: SubmissionDateField
+}
+
+export interface ManualEvaluateRequest {
+  indicatorId: LongId
+  /** ISO date YYYY-MM-DD. */
+  startDate: string
+  endDate: string
 }
 
 export const SOURCE_AGG_OPTIONS = [
@@ -135,4 +215,42 @@ export const NORMALIZATION_OPTIONS = [
   { value: 'RELATION_COUNT', label: '按关联数量', description: '除以目标关联的实体数量（如成员人数）', icon: 'users' },
   { value: 'FIXED_VALUE', label: '固定除数', description: '除以一个固定的数值', icon: 'hash' },
   { value: 'PERCENTAGE', label: '转百分比', description: '转换为百分比（分数÷满分×100）', icon: 'percent' },
+]
+
+// ==================== Phase 4 新枚举选项 ====================
+
+export const TRIGGER_MODE_OPTIONS: { value: TriggerMode; label: string; description: string }[] = [
+  { value: 'TIME_WINDOW', label: '时间窗口', description: '按 评估周期 自动滚动评估 (每天/每周/每月)' },
+  { value: 'COUNT', label: '次数', description: '同目标累计达到 N 次提交后触发一次评估' },
+  { value: 'MANUAL', label: '手动', description: '管理员在 评级结果 页主动触发' },
+]
+
+export const RANK_DIRECTION_OPTIONS: { value: RankDirection; label: string }[] = [
+  { value: 'DESC', label: '越大越好 (高分在前)' },
+  { value: 'ASC', label: '越小越好 (低分在前)' },
+  { value: 'NONE', label: '不排名' },
+]
+
+export const MISSING_POLICY_ENUM_OPTIONS: { value: MissingPolicyEnum; label: string; description: string }[] = [
+  { value: 'IGNORE', label: '忽略', description: '该目标本期无数据则跳过, 不生成结果' },
+  { value: 'ZERO', label: '记零分', description: '无数据时按 0 分入榜' },
+  { value: 'MAX', label: '记满分', description: '无数据时按上限计入 (适合"未违规即满分"场景)' },
+  { value: 'WAIT', label: '等待', description: '本期不评, 等下次数据补齐再发布' },
+]
+
+export const LATE_POLICY_OPTIONS: { value: LatePolicy; label: string; description: string }[] = [
+  { value: 'REVISE_ORIGINAL', label: '修订原版', description: '迟到提交触发当期重算, 旧版置 SUPERSEDED' },
+  { value: 'CARRY_FORWARD', label: '顺延下期', description: '迟到数据并入下一评估期' },
+  { value: 'EXCLUDE', label: '排除', description: '迟到提交永久不进入评级' },
+]
+
+export const SUBMISSION_DATE_FIELD_OPTIONS: { value: SubmissionDateField; label: string }[] = [
+  { value: 'TASK_DATE', label: '按任务日期' },
+  { value: 'COMPLETED_AT', label: '按完成时间' },
+]
+
+export const RESULT_STATUS_OPTIONS: { value: ResultStatus; label: string; tone: string }[] = [
+  { value: 'DRAFT', label: '草稿', tone: 'warn' },
+  { value: 'PUBLISHED', label: '已发布', tone: 'pass' },
+  { value: 'SUPERSEDED', label: '已被替代', tone: 'pending' },
 ]

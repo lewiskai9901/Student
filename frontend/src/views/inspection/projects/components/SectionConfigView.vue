@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Plus, Trash2, Pencil, Calendar, Users, Clock, X, Zap, Play,
@@ -13,9 +12,6 @@ import {
   updateIndicator, deleteIndicator,
 } from '@/api/inspection/indicator'
 import { getGradeSchemes } from '@/api/inspection/gradeScheme'
-import { getProfiles } from '@/api/inspection/scoring'
-import type { ScoringProfile } from '@/types/insp/scoring'
-
 import { entityTypeApi } from '@/api/entityType'
 import type { InspectionPlan, CreatePlanRequest } from '@/types/insp/template'
 import type { Indicator } from '@/types/insp/indicator'
@@ -61,26 +57,11 @@ function planStats(planId: LongId | string) {
 //  State
 // ══════════════════════════════════════════════
 
-const router = useRouter()
-
 const loading = ref(false)
 const plans = ref<InspectionPlan[]>([])
 const indicators = ref<Indicator[]>([])
 const gradeSchemes = ref<GradeScheme[]>([])
-const scoringProfiles = ref<ScoringProfile[]>([])
-const projectDefaultScoringProfileId = ref<LongId | null>(null)
 const targetCount = ref(0) // 检查目标数量
-
-// 评分方案下拉选项 — 优先用分区名做标签
-const scoringProfileOptions = computed(() =>
-  scoringProfiles.value.map(p => {
-    const secName = props.sections.find(s => s.id === p.sectionId)?.sectionName
-    return {
-      id: p.id,
-      label: secName ? `${secName} (方案 #${p.id})` : `方案 #${p.id} · 分区 #${p.sectionId}`,
-    }
-  }),
-)
 
 // 调度组可用检查员数 — inspectorIds 为空表示项目全员 (此时不校验上限)
 const scheduleAvailableRaters = computed(() => scheduleForm.value.inspectorIds.length)
@@ -113,7 +94,6 @@ const scheduleForm = ref({
   timeSlots: [] as Array<{ start: string; end: string }>,
   skipHolidays: false,
   inspectorIds: [] as LongId[],
-  scoringProfileId: null as LongId | null,
   ratersPerTarget: 1,
 })
 
@@ -401,18 +381,15 @@ function selectedSchemeGrades(schemeId: LongId | null): GradeScheme['grades'] {
 async function loadAll() {
   loading.value = true
   try {
-    const [p, ind, gs, proj, sp] = await Promise.all([
+    const [p, ind, gs, proj] = await Promise.all([
       inspPlanApi.list(props.projectId),
       getIndicators(props.projectId),
       getGradeSchemes(),
       getProject(props.projectId),
-      getProfiles(props.projectId),
     ])
     plans.value = p
     indicators.value = ind
     gradeSchemes.value = gs
-    scoringProfiles.value = sp
-    projectDefaultScoringProfileId.value = proj.defaultScoringProfileId ?? null
     // 从项目 scopeConfig 获取目标数量
     if (proj.scopeConfig) {
       try { targetCount.value = JSON.parse(proj.scopeConfig).length } catch { targetCount.value = 0 }
@@ -437,7 +414,6 @@ function openAddSchedule() {
     planName: '', sectionIds: [], freqMode: 'DAILY', frequency: 1,
     weekDays: [], monthDays: [], timeSlots: [],
     skipHolidays: false, inspectorIds: [],
-    scoringProfileId: projectDefaultScoringProfileId.value,
     ratersPerTarget: 1,
   }
   scheduleDialogVisible.value = true
@@ -466,7 +442,6 @@ function openEditSchedule(plan: InspectionPlan) {
   scheduleForm.value = {
     planName: plan.planName, sectionIds, freqMode, frequency: plan.frequency || 1,
     weekDays, monthDays, timeSlots, skipHolidays: plan.skipHolidays, inspectorIds,
-    scoringProfileId: plan.scoringProfileId ?? null,
     ratersPerTarget: plan.ratersPerTarget ?? 1,
   }
   scheduleDialogVisible.value = true
@@ -499,7 +474,6 @@ async function handleSaveSchedule() {
       timeSlots: scheduleForm.value.timeSlots.length ? JSON.stringify(scheduleForm.value.timeSlots) : undefined,
       skipHolidays: scheduleForm.value.skipHolidays,
       inspectorIds: scheduleForm.value.inspectorIds.length ? JSON.stringify(scheduleForm.value.inspectorIds) : undefined,
-      scoringProfileId: scheduleForm.value.scoringProfileId,
       ratersPerTarget: scheduleForm.value.ratersPerTarget,
     }
     if (editingPlan.value) {
@@ -513,13 +487,6 @@ async function handleSaveSchedule() {
     await loadAll()
   } catch (e: any) { ElMessage.error(e.message || '保存失败') }
   finally { scheduleSaving.value = false }
-}
-
-// 跳转到评分方案编辑器 (选中方案则进编辑, 否则进本项目方案列表)
-function goEditScoringProfile() {
-  const id = scheduleForm.value.scoringProfileId
-  if (id) router.push(`/inspection/scoring/${id}`)
-  else router.push({ path: '/inspection/scoring-profiles', query: { projectId: String(props.projectId) } })
 }
 
 async function handleDeleteSchedule(plan: InspectionPlan) {
@@ -1197,19 +1164,8 @@ defineExpose({ reload: loadAll })
           </div>
         </div>
 
-        <!-- Scoring Profile -->
-        <div class="fd-block">
-          <label class="fd-lbl">
-            评分方案
-            <button class="fd-link" type="button" @click="goEditScoringProfile">
-              <ExternalLink class="w-3 h-3" /> 去编辑方案
-            </button>
-          </label>
-          <el-select v-model="scheduleForm.scoringProfileId"
-            placeholder="未设置 (将用项目默认)" clearable filterable size="small" style="width: 100%">
-            <el-option v-for="p in scoringProfileOptions" :key="p.id" :label="p.label" :value="p.id" />
-          </el-select>
-        </div>
+        <!-- 评分方案下拉已移除 (评级引擎完美架构 Phase 1 删 inspection_plans.scoring_profile_id);
+             评级配置改用项目「评级」Tab 的 Indicator 模型. -->
 
         <!-- Raters per target -->
         <div class="fd-block">
