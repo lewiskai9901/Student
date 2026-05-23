@@ -453,23 +453,20 @@
   font-size: 12px;
   color: #d1d5db;
 }
-
-/* ========== Section Score List ========== */
-.pdv-score-list { display: flex; flex-direction: column; gap: 8px; }
-.pdv-score-item { display: flex; align-items: center; gap: 8px; }
-.pdv-score-name {
-  font-size: 12px;
-  color: #4b5563;
-  width: 110px;
-  flex-shrink: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* IA 收敛 (2026-05-23): 卡片标题右侧的"查看详情/分配"跳转链接 */
+.pdv-card-link {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--insp-accent, #1a6dff);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity 0.15s;
 }
-.pdv-score-bar-wrap { display: flex; align-items: center; gap: 6px; flex: 1; }
-.pdv-score-bar-track { flex: 1; height: 6px; background: #f3f4f6; border-radius: 3px; overflow: hidden; }
-.pdv-score-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s ease; }
-.pdv-score-val { font-size: 12px; font-weight: 600; width: 36px; text-align: right; flex-shrink: 0; }
+.pdv-card-link:hover { opacity: 0.75; text-decoration: underline; }
+/* IA 收敛 (2026-05-23): 总览不再展示"目标得分分布", 详细排名已下沉到 IndicatorScoreView; 旧 .pdv-score-* CSS 已删 */
 
 /* ========== Recent Tasks ========== */
 .pdv-recent-list { display: flex; flex-direction: column; gap: 8px; }
@@ -597,10 +594,62 @@
   transition: border-color 0.2s;
 }
 .cfg-card:hover { border-color: #d1d5db; }
+/* 锁定卡片视觉强化 (2026-05-23):
+   1) 背景调暗到比 hover 更明显的浅灰 (--insp-bg-subtle)
+   2) 虚框 + 1.5px (草稿态卡片为 1px 实线, 锁定态更醒目)
+   3) 整卡 cursor: not-allowed (hover 反馈"锁了")
+   4) 输入控件灰度加重, 用户不必再去顶部对照清单 */
 .cfg-card.cfg-locked {
-  background: #fafafa;
+  background: var(--insp-bg-subtle, #f5f6f8);
   border-style: dashed;
+  border-width: 1.5px;
+  border-color: #d4d8de;
+  position: relative;
 }
+.cfg-card.cfg-locked:hover {
+  cursor: not-allowed;
+  border-color: #b9bfc7;
+}
+.cfg-card.cfg-locked .cfg-card-title {
+  color: var(--insp-ink-tertiary, #6b7280);
+}
+.cfg-card.cfg-locked .cfg-input:disabled,
+.cfg-card.cfg-locked .cfg-select:disabled,
+.cfg-card.cfg-locked .cfg-readonly-text,
+.cfg-card.cfg-locked .cfg-org-readonly {
+  background: #eef0f3;
+  color: #9ca3af;
+  border-color: #dde1e6;
+}
+.cfg-card.cfg-locked .cfg-scope-tag {
+  background: #e8eaee;
+  color: #6b7280;
+}
+.cfg-card.cfg-locked .cfg-lock-icon {
+  color: #b45309;
+  opacity: 0.7;
+}
+/* hover 时小气泡 hint — 仅鼠标停留 1s+ 显示, 不污染常态视觉 */
+.cfg-card.cfg-locked::after {
+  content: '已锁定 — 仅草稿态可改';
+  position: absolute;
+  top: 8px;
+  right: 14px;
+  font-size: 10px;
+  color: #b45309;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  padding: 2px 8px;
+  border-radius: 10px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s 0.4s;
+  white-space: nowrap;
+}
+.cfg-card.cfg-locked:hover::after { opacity: 1; }
+/* 当卡片自己已经有 Lock 图标占位 (cfg-card-header 内), 避免气泡和图标重叠:
+   header 的 Lock 一直显示, 气泡仅 hover 时浮现于右上, 二者位置相同时取气泡 */
+.cfg-card.cfg-locked:hover .cfg-card-header .cfg-lock-icon { opacity: 0; }
 .cfg-card-header {
   display: flex;
   align-items: center;
@@ -970,6 +1019,46 @@
   font-size: 11px;
   color: #b45309;
   margin-top: 2px;
+}
+/* 2026-05-23: 顶部锁定清单视觉权重降级 — 每张卡现在已自表达锁定状态, 清单只是兜底参考 */
+.pdv-lock-notice--compact {
+  display: block;
+  padding: 0;
+  background: #fafbfc;
+  border: 1px solid #e5e7eb;
+}
+.pdv-lock-notice--compact .pdv-lock-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  font-size: 11.5px;
+}
+.pdv-lock-notice--compact .pdv-lock-summary::-webkit-details-marker { display: none; }
+.pdv-lock-notice--compact .pdv-lock-summary::after {
+  content: '▾';
+  margin-left: auto;
+  color: #9ca3af;
+  font-size: 10px;
+  transition: transform 0.15s;
+}
+.pdv-lock-notice--compact[open] .pdv-lock-summary::after { transform: rotate(180deg); }
+.pdv-lock-notice--compact .cfg-lock-title {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #6b7280;
+}
+.pdv-lock-notice--compact .pdv-lock-hint {
+  font-size: 11px;
+  color: #9ca3af;
+  font-weight: 400;
+}
+.pdv-lock-notice--compact .pdv-lock-body {
+  padding: 4px 14px 12px;
+  border-top: 1px solid #f1f3f5;
 }
 
 /* ========== Scores tab: top rank highlight ========== */

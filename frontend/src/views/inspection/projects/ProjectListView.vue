@@ -54,7 +54,31 @@ type ViewMode = 'list' | 'kanban' | 'timeline'
 type PeriodFilter = 'all' | 'this-week' | 'this-month' | 'overdue'
 type SortKey = 'urgency' | 'name' | 'period' | 'progress'
 
-const view = ref<ViewMode>((route.query.view as ViewMode) || 'list')
+// 视图模式持久化 (2026-05-23):
+// 优先级 URL query > localStorage > 'list' (列表为主视图)
+// — URL 共享/收藏总是最权威; 否则用上次用户选择; 都没有就回默认列表.
+const VIEW_STORAGE_KEY = 'inspProjectListView'
+function loadPersistedView(): ViewMode {
+  try {
+    const v = localStorage.getItem(VIEW_STORAGE_KEY)
+    if (v === 'kanban' || v === 'timeline' || v === 'list') return v
+  } catch { /* localStorage 不可用时 silently fall through */ }
+  return 'list'
+}
+const view = ref<ViewMode>((route.query.view as ViewMode) || loadPersistedView())
+
+// view 切换时同步 localStorage (URL 同步由下方 watch 统一处理)
+watch(view, (v) => {
+  try { localStorage.setItem(VIEW_STORAGE_KEY, v) } catch { /* ignore */ }
+})
+
+// 视图模式 hover hint 控制 — "更多视图"下拉菜单
+const moreViewMenuOpen = ref(false)
+const VIEW_HINTS: Record<ViewMode, string> = {
+  list: '列表 — 按字段排序/筛选 (默认)',
+  kanban: '看板 — 按状态分组, 快速看分布',
+  timeline: '时间轴 — 起止日期可视化, 排冲突',
+}
 const searchQuery = ref('')
 const statusFilter = ref<ProjectStatus | 'all'>((route.query.status as any) || 'all')
 const periodFilter = ref<PeriodFilter>((route.query.period as PeriodFilter) || 'all')
@@ -556,11 +580,42 @@ onMounted(async () => {
     </header>
 
     <!-- ── Toolbar ─────────── -->
+    <!-- 视图模式 IA (2026-05-23): 列表是主视图 (固定显示, 高视觉权重),
+         看板/时间轴作为次级视图收纳到"更多视图 ▼"下拉. 当前视图名 + 描述同时显示. -->
     <div class="prj-toolbar">
-      <div class="view-tabs">
-        <button class="view-tab" :class="{ 'is-active': view === 'list' }" @click="view = 'list'">列表</button>
-        <button class="view-tab" :class="{ 'is-active': view === 'kanban' }" @click="view = 'kanban'">看板</button>
-        <button class="view-tab" :class="{ 'is-active': view === 'timeline' }" @click="view = 'timeline'">时间轴</button>
+      <div class="view-switcher">
+        <button class="view-primary" :class="{ 'is-active': view === 'list' }"
+                @click="view = 'list'"
+                :title="VIEW_HINTS.list">
+          列表
+        </button>
+        <div class="view-more" @mouseenter="moreViewMenuOpen = true" @mouseleave="moreViewMenuOpen = false">
+          <button class="view-more__btn" :class="{ 'is-active': view !== 'list' }"
+                  :title="view === 'list' ? '查看其他视图' : VIEW_HINTS[view]">
+            <span v-if="view !== 'list'" class="view-more__current">
+              {{ view === 'kanban' ? '看板' : '时间轴' }}
+            </span>
+            <span v-else>更多视图</span>
+            <span class="view-more__caret">▾</span>
+          </button>
+          <div v-if="moreViewMenuOpen" class="view-more__menu">
+            <button class="view-more__item" :class="{ 'is-active': view === 'kanban' }"
+                    @click="view = 'kanban'; moreViewMenuOpen = false">
+              <span class="view-more__item-name">看板</span>
+              <span class="view-more__item-desc">按状态分组, 快速看分布</span>
+            </button>
+            <button class="view-more__item" :class="{ 'is-active': view === 'timeline' }"
+                    @click="view = 'timeline'; moreViewMenuOpen = false">
+              <span class="view-more__item-name">时间轴</span>
+              <span class="view-more__item-desc">起止日期可视化, 排冲突</span>
+            </button>
+            <button v-if="view !== 'list'" class="view-more__item view-more__item--reset"
+                    @click="view = 'list'; moreViewMenuOpen = false">
+              <span class="view-more__item-name">回到列表</span>
+              <span class="view-more__item-desc">默认视图</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="filter-chips">
@@ -929,15 +984,76 @@ onMounted(async () => {
   border-radius: var(--insp-radius-lg);
   padding: 6px 8px 6px 12px; margin-bottom: 10px;
 }
-.view-tabs { display: flex; gap: 2px; padding: 2px; background: var(--insp-bg-subtle); border-radius: var(--insp-radius-sm); }
-.view-tab {
-  height: 24px; padding: 0 12px;
-  background: transparent; border: 0; border-radius: 3px;
+/* 视图切换器 (2026-05-23 IA 重构):
+   列表 = 主按钮 (高视觉权重), 看板/时间轴 = "更多视图 ▼" 次级下拉. */
+.view-switcher { display: inline-flex; align-items: center; gap: 6px; }
+.view-primary {
+  height: 26px; padding: 0 14px;
+  background: var(--insp-bg-surface); border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-sm);
   font-family: inherit; font-size: 12px; font-weight: 500;
-  color: var(--insp-ink-tertiary); cursor: pointer; transition: all var(--insp-t-fast);
+  color: var(--insp-ink-tertiary); cursor: pointer;
+  transition: all var(--insp-t-fast);
 }
-.view-tab:hover { color: var(--insp-ink-primary); }
-.view-tab.is-active { background: var(--insp-bg-surface); color: var(--insp-ink-primary); box-shadow: var(--insp-shadow-xs); font-weight: 600; }
+.view-primary:hover { color: var(--insp-ink-primary); border-color: var(--insp-border-strong); }
+.view-primary.is-active {
+  background: var(--insp-accent); border-color: var(--insp-accent);
+  color: white; font-weight: 600;
+  box-shadow: var(--insp-shadow-xs);
+}
+.view-more { position: relative; }
+.view-more__btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 26px; padding: 0 10px;
+  background: transparent; border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-sm);
+  font-family: inherit; font-size: 11.5px; font-weight: 500;
+  color: var(--insp-ink-tertiary); cursor: pointer;
+  transition: all var(--insp-t-fast);
+}
+.view-more__btn:hover { color: var(--insp-ink-primary); border-color: var(--insp-border-strong); }
+.view-more__btn.is-active {
+  background: var(--insp-bg-subtle); color: var(--insp-ink-primary);
+  border-color: var(--insp-border-strong); font-weight: 600;
+}
+.view-more__current { font-weight: 600; }
+.view-more__caret { font-size: 9px; color: var(--insp-ink-quaternary); }
+.view-more__menu {
+  position: absolute; top: calc(100% + 4px); left: 0;
+  min-width: 200px;
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-sm);
+  box-shadow: var(--insp-shadow-md);
+  padding: 4px;
+  display: flex; flex-direction: column; gap: 1px;
+  z-index: 50;
+}
+.view-more__item {
+  display: flex; flex-direction: column; align-items: flex-start;
+  gap: 1px;
+  padding: 6px 10px;
+  background: transparent; border: 0; border-radius: 3px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background var(--insp-t-fast);
+  text-align: left;
+}
+.view-more__item:hover { background: var(--insp-bg-subtle); }
+.view-more__item.is-active { background: var(--insp-accent-paler, #eff6ff); }
+.view-more__item--reset {
+  border-top: 1px solid var(--insp-border-subtle, #eef0f3);
+  margin-top: 2px; padding-top: 7px;
+}
+.view-more__item-name {
+  font-size: 12px; font-weight: 500;
+  color: var(--insp-ink-primary);
+}
+.view-more__item.is-active .view-more__item-name { color: var(--insp-accent); }
+.view-more__item-desc {
+  font-size: 10.5px;
+  color: var(--insp-ink-tertiary);
+}
 .filter-chips { display: flex; gap: 4px; }
 .chip {
   height: 24px; padding: 0 10px;

@@ -327,22 +327,8 @@ const resultStats = computed(() => {
 })
 
 // ========== 总览 Tab 数据 ==========
-// 分区得分 - 从分析维度/submissions派生
-const sectionScores = computed(() => {
-  const subs = filteredSubmissions.value.filter(s => s.status === 'COMPLETED' && s.finalScore != null)
-  if (subs.length === 0) return []
-  // Group by targetName as a proxy for section
-  const map = new Map<string, { name: string; scores: number[] }>()
-  for (const s of subs) {
-    const key = s.targetName || '未知目标'
-    if (!map.has(key)) map.set(key, { name: key, scores: [] })
-    map.get(key)!.scores.push(s.finalScore!)
-  }
-  return [...map.values()]
-    .map(g => ({ name: g.name, avg: g.scores.reduce((a, b) => a + b, 0) / g.scores.length }))
-    .sort((a, b) => b.avg - a.avg)
-    .slice(0, 10)
-})
+// IA 收敛 (2026-05-23): 详细排名/分区得分分布下沉到「成绩统计」Tab (IndicatorScoreView),
+// 总览只保留"最近活动 + 待办跳转". sectionScores/getSectionScoreColor 已移除.
 
 // 最近5条任务
 const recentTasks = computed(() => {
@@ -352,14 +338,6 @@ const recentTasks = computed(() => {
     .slice(0, 5)
 })
 
-// 待整改数 = 未通过的submissions
-const pendingCorrectiveCount = computed(() => filteredSubmissions.value.filter(s => s.passed === false).length)
-
-function getSectionScoreColor(score: number): string {
-  if (score >= 85) return '#10b981'
-  if (score >= 60) return '#f59e0b'
-  return '#ef4444'
-}
 
 // 按日期合并任务
 interface DayTask { date: string; subTasks: { task: InspTask; projectName: string }[]; totalTargets: number; completedTargets: number; inspectorName: string; allDone: boolean }
@@ -1047,37 +1025,18 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- 两列布局: 分区得分 + 最近检查 -->
+          <!-- IA 收敛: 总览只保留"最近活动 + 待办跳转",
+               详细排名/维度对比/目标得分分布全部下沉到「成绩统计」Tab (IndicatorScoreView) -->
           <div class="pdv-two-col">
-
-            <!-- 分区得分 -->
-            <div class="pdv-card">
-              <div class="pdv-card-title">
-                <BarChart3 class="w-4 h-4 text-[#1a6dff]" />目标得分分布
-              </div>
-              <div v-if="sectionScores.length === 0" class="pdv-card-empty">暂无得分数据</div>
-              <div v-else class="pdv-score-list">
-                <div v-for="item in sectionScores" :key="item.name" class="pdv-score-item">
-                  <div class="pdv-score-name" :title="item.name">{{ item.name }}</div>
-                  <div class="pdv-score-bar-wrap">
-                    <div class="pdv-score-bar-track">
-                      <div
-                        class="pdv-score-bar-fill"
-                        :style="{ width: item.avg + '%', background: getSectionScoreColor(item.avg) }"
-                      />
-                    </div>
-                    <span class="pdv-score-val" :style="{ color: getSectionScoreColor(item.avg) }">
-                      {{ item.avg.toFixed(1) }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
 
             <!-- 最近检查 -->
             <div class="pdv-card">
               <div class="pdv-card-title">
                 <ClipboardList class="w-4 h-4 text-[#1a6dff]" />最近检查
+                <button v-if="recentTasks.length > 0" class="pdv-card-link" @click="activeTab = 'scores'"
+                        title="到「成绩统计」查看详细排名/维度对比">
+                  查看详情 →
+                </button>
               </div>
               <div v-if="recentTasks.length === 0" class="pdv-card-empty">暂无已完成任务</div>
               <div v-else class="pdv-recent-list">
@@ -1107,11 +1066,15 @@ onMounted(async () => {
               </div>
             </div>
 
-            <!-- 待分配任务 -->
+            <!-- 待分配任务 (快速操作快捷按钮 - 保留) -->
             <div v-if="pendingAssignTasks.length > 0" class="pdv-card">
               <div class="pdv-card-title">
                 <Users class="w-4 h-4 text-orange-500" />待分配任务
                 <span class="pdv-badge-orange ml-1.5">{{ pendingAssignTasks.length }}</span>
+                <button class="pdv-card-link" @click="activeTab = 'team'"
+                        title="到「人员与任务」批量分配">
+                  全部分配 →
+                </button>
               </div>
               <div class="pdv-assign-list">
                 <div v-for="task in pendingAssignTasks.slice(0, 8)" :key="task.id" class="pdv-assign-row">
@@ -1310,11 +1273,15 @@ onMounted(async () => {
 
       <div v-if="activeTab === 'settings'" class="cfg-section">
 
-        <!-- 锁定提示 (P1 升级: 显式列出锁定/可改字段) -->
-        <div v-if="!isDraft" class="pdv-lock-notice">
-          <Lock class="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+        <!-- 锁定提示 (P1 升级: 显式列出锁定/可改字段)
+             2026-05-23 IA 收敛: 每张卡片自带 .cfg-locked 视觉, 顶部清单视觉权重降级为收纳式 details. -->
+        <details v-if="!isDraft" class="pdv-lock-notice pdv-lock-notice--compact">
+          <summary class="pdv-lock-summary">
+            <Lock class="w-3.5 h-3.5 cfg-lock-icon" />
+            <span class="cfg-lock-title">部分配置已锁定 ({{ project?.status === 'PUBLISHED' ? '已发布' : project?.status === 'PAUSED' ? '已暂停' : '运行中' }})</span>
+            <span class="pdv-lock-hint">— 锁定的卡片以虚框标识 · 展开查看全部清单</span>
+          </summary>
           <div class="pdv-lock-body">
-            <div class="cfg-lock-title">部分配置已锁定 ({{ project?.status === 'PUBLISHED' ? '已发布' : project?.status === 'PAUSED' ? '已暂停' : '运行中' }})</div>
             <div class="pdv-lock-grid">
               <div class="pdv-lock-col">
                 <span class="pdv-lock-col__label"> 已锁定</span>
@@ -1337,11 +1304,14 @@ onMounted(async () => {
               </div>
             </div>
           </div>
-        </div>
+        </details>
 
         <!-- 基本信息 -->
-        <div class="cfg-card">
-          <div class="cfg-card-title">基本信息</div>
+        <div class="cfg-card" :class="{ 'cfg-locked': isArchived }">
+          <div class="cfg-card-header">
+            <div class="cfg-card-title">基本信息</div>
+            <Lock v-if="isArchived" class="w-3.5 h-3.5 cfg-lock-icon" />
+          </div>
           <div class="cfg-field">
             <label class="cfg-label">项目名称</label>
             <input
@@ -1518,8 +1488,11 @@ onMounted(async () => {
         </div>
 
         <!-- 运营配置 -->
-        <div class="cfg-card">
-          <div class="cfg-card-title">运营配置</div>
+        <div class="cfg-card" :class="{ 'cfg-locked': isArchived }">
+          <div class="cfg-card-header">
+            <div class="cfg-card-title">运营配置</div>
+            <Lock v-if="isArchived" class="w-3.5 h-3.5 cfg-lock-icon" />
+          </div>
           <div class="cfg-desc">以下配置可随时调整，不影响已生成的任务结构。</div>
           <div class="cfg-row3">
             <div class="cfg-field">
@@ -1547,8 +1520,11 @@ onMounted(async () => {
         </div>
 
         <!-- V108: 检查模式配置 -->
-        <div class="cfg-card">
-          <div class="cfg-card-title">检查模式</div>
+        <div class="cfg-card" :class="{ 'cfg-locked': isArchived }">
+          <div class="cfg-card-header">
+            <div class="cfg-card-title">检查模式</div>
+            <Lock v-if="isArchived" class="w-3.5 h-3.5 cfg-lock-icon" />
+          </div>
           <div class="cfg-desc">控制本项目允许哪些检查行为 — 计划任务/临时抽查/自查 等.</div>
           <div class="cfg-row2">
             <div class="cfg-field">
@@ -1597,8 +1573,11 @@ onMounted(async () => {
         </div>
 
         <!-- V110: 整改判定策略 -->
-        <div class="cfg-card">
-          <div class="cfg-card-title">整改判定策略</div>
+        <div class="cfg-card" :class="{ 'cfg-locked': isArchived }">
+          <div class="cfg-card-header">
+            <div class="cfg-card-title">整改判定策略</div>
+            <Lock v-if="isArchived" class="w-3.5 h-3.5 cfg-lock-icon" />
+          </div>
           <div class="cfg-desc">
             控制系统如何识别"需要整改的检查项". 99% 项目选预设即可,
             高级用户可自定义阈值与 deadline.
