@@ -57,8 +57,8 @@ export const useInspScoringStore = defineStore('inspScoring', () => {
 
   // ===== Profile Actions =====
 
-  async function loadProfiles() {
-    profiles.value = await getProfiles()
+  async function loadProfiles(projectId: LongId) {
+    profiles.value = await getProfiles(projectId)
   }
 
   async function loadProfile(id: LongId) {
@@ -76,8 +76,8 @@ export const useInspScoringStore = defineStore('inspScoring', () => {
     return loadProfileBySection(sectionId)
   }
 
-  async function createProfile(sectionId: LongId) {
-    const profile = await createProfileApi({ sectionId })
+  async function createProfile(sectionId: LongId, projectId: LongId) {
+    const profile = await createProfileApi({ sectionId, projectId })
     currentProfile.value = profile
     return profile
   }

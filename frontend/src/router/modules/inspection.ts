@@ -78,6 +78,18 @@ const inspectionRoutes: RouteRecordRaw[] = [
           permission: 'insp:scoring-profile:edit'
         }
       },
+      // 评分方案创建入口 — 通过 ?templateId + ?projectId query 创建项目-owned 评分方案
+      {
+        path: '/inspection/scoring-profiles/create',
+        name: 'ScoringProfileCreate',
+        component: () => import('@/views/inspection/scoring/ScoringProfileEditor.vue'),
+        meta: {
+          title: '新建评分方案',
+          hidden: true,
+          requiresAuth: true,
+          permission: 'insp:scoring-profile:edit'
+        }
+      },
       // 等级方案管理
       {
         path: '/inspection/grade-schemes',

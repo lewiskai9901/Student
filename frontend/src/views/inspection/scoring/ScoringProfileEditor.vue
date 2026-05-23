@@ -265,6 +265,7 @@ async function loadAll() {
   loadError.value = ''
   const id = route.params.id ? route.params.id as string : null
   const tid = route.query.templateId ? String(route.query.templateId) : null
+  const pid = route.query.projectId ? String(route.query.projectId) : null
 
   try {
     if (id) {
@@ -274,8 +275,12 @@ async function loadAll() {
       templateId.value = tid
       let p = await store.loadProfileBySection(tid)
       if (!p) {
+        if (!pid) {
+          loadError.value = '缺少 projectId 参数 — 评分方案现为项目-owned, 请从项目内进入'
+          return
+        }
         // 自动创建默认配置，无需手动点击
-        p = await store.createProfile(tid)
+        p = await store.createProfile(tid, pid)
       }
       if (p) {
         profile.value = p
@@ -336,12 +341,17 @@ function goBack() {
 
 async function initProfile() {
   const tid = templateId.value || (route.query.templateId ? String(route.query.templateId) : '')
+  const pid = route.query.projectId ? String(route.query.projectId) : ''
   if (!tid) {
     ElMessage.error('缺少分区信息，无法创建评分配置')
     return
   }
+  if (!pid) {
+    ElMessage.error('缺少 projectId — 评分方案现为项目-owned, 请从项目内进入')
+    return
+  }
   try {
-    const p = await store.createProfile(tid)
+    const p = await store.createProfile(tid, pid)
     profile.value = p
     syncFormFromProfile(p)
     loadError.value = ''

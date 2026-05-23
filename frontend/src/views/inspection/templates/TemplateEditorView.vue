@@ -310,10 +310,9 @@ async function loadScoringForSection(sectionId: LongId) {
   scoringProfile.value = null
   scoringError.value = null
   try {
-    let p = await scoringStore.loadProfileBySection(sectionId)
-    if (!p) {
-      try { p = await scoringStore.createProfile(sectionId) } catch { /* already exists race */ p = await scoringStore.loadProfileBySection(sectionId) }
-    }
+    // 评分方案已下沉到项目-owned, 模板编辑器只读相关 section 的方案 (若该 section 在某项目下有方案则展示首个).
+    // 不再在模板编辑器创建评分方案 — 创建入口移至项目详情页.
+    const p = await scoringStore.loadProfileBySection(sectionId)
     if (p) {
       scoringProfile.value = p
       await scoringStore.syncDimensions(p.id)

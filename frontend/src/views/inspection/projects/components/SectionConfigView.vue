@@ -406,7 +406,7 @@ async function loadAll() {
       getIndicators(props.projectId),
       getGradeSchemes(),
       getProject(props.projectId),
-      getProfiles(),
+      getProfiles(props.projectId),
     ])
     plans.value = p
     indicators.value = ind
@@ -515,11 +515,11 @@ async function handleSaveSchedule() {
   finally { scheduleSaving.value = false }
 }
 
-// 跳转到评分方案编辑器 (选中方案则进编辑, 否则进方案列表)
+// 跳转到评分方案编辑器 (选中方案则进编辑, 否则进本项目方案列表)
 function goEditScoringProfile() {
   const id = scheduleForm.value.scoringProfileId
   if (id) router.push(`/inspection/scoring/${id}`)
-  else router.push('/inspection/scoring-profiles')
+  else router.push({ path: '/inspection/scoring-profiles', query: { projectId: String(props.projectId) } })
 }
 
 async function handleDeleteSchedule(plan: InspectionPlan) {

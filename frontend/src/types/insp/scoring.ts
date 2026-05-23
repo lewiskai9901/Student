@@ -58,6 +58,8 @@ export interface ScoringProfile {
 
 export interface CreateProfileRequest {
   sectionId: LongId
+  /** 项目-owned: 创建时必传, 评分方案与项目同生命周期. */
+  projectId: LongId
 }
 
 export interface UpdateProfileRequest {

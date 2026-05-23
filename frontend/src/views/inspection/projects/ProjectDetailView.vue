@@ -5,7 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   ArrowLeft, Play, Pause, CheckCircle, Send, Trash2, Save, Users, Settings, BarChart3, ClipboardList, Lock,
-  ClipboardCheck, Check, X, ListTree, LayoutDashboard,
+  ClipboardCheck, Check, X, ListTree, LayoutDashboard, Pencil, Plus, SlidersHorizontal,
 } from 'lucide-vue-next'
 import { useInspExecutionStore } from '@/stores/inspection/inspExecutionStore'
 import { useAuthStore } from '@/stores/auth'
@@ -557,7 +557,7 @@ async function loadProject() {
   try {
     project.value = await store.loadProject(projectId)
     inspectors.value = await store.loadInspectors(projectId)
-    try { scoringProfiles.value = await getProfiles() } catch (e) { console.warn('加载评分方案列表失败', e) }
+    try { scoringProfiles.value = await getProfiles(projectId) } catch (e) { console.warn('加载评分方案列表失败', e) }
     if (isDraft.value) activeTab.value = 'settings'
     syncForm()
     if (project.value.createdBy) { try { const u = await getUser(project.value.createdBy); creatorName.value = u.realName || u.username } catch (e: any) { console.warn('加载创建者信息失败', e) } }
@@ -767,6 +767,28 @@ async function handleRemoveInspector(insp: ProjectInspector) { try { await ElMes
 
 function goBack() { router.push('/inspection/projects') }
 function goExecuteTask(taskId: LongId) { router.push(`/inspection/tasks/${taskId}/execute`) }
+
+// ============ 评分方案 (项目-owned) ============
+// 进入指定评分方案编辑器
+function goEditProfile(profileId: LongId) {
+  router.push(`/inspection/scoring/${profileId}`)
+}
+// 新建评分方案: 跳转编辑器并附带 projectId + templateId (= rootSectionId), 编辑器内自动创建.
+function goCreateProfile() {
+  const tid = project.value?.rootSectionId
+  if (!tid) {
+    ElMessage.warning('项目暂无根分区 (单模板项目才能直接新建方案, 多模板请到模板内的分区入口)')
+    return
+  }
+  router.push({
+    path: '/inspection/scoring-profiles/create',
+    query: { templateId: String(tid), projectId: String(projectId) },
+  })
+}
+// 进入本项目评分方案完整列表 (主菜单已隐藏, 通过此入口可达)
+function goProfileList() {
+  router.push({ path: '/inspection/scoring-profiles', query: { projectId: String(projectId) } })
+}
 
 // review #12: 模板版本状态 (drifted / 当前 / 最新)
 const templateVersionStatus = ref<{
@@ -1355,6 +1377,65 @@ onMounted(async () => {
           </div>
         </div>
 
+        <!-- 评分方案 (项目-owned) -->
+        <div class="cfg-card">
+          <div class="cfg-card-header">
+            <div class="cfg-card-title cfg-card-title--with-icon">
+              <SlidersHorizontal class="w-4 h-4" style="color:#1a6dff" />评分方案
+              <span v-if="scoringProfiles.length" class="cfg-count">({{ scoringProfiles.length }})</span>
+            </div>
+            <div class="cfg-card-ops">
+              <el-button v-if="isDraft && !isArchived" size="small" type="primary" plain @click="goCreateProfile" round>
+                <Plus class="w-3.5 h-3.5 mr-1" />新建评分方案
+              </el-button>
+              <el-button size="small" plain @click="goProfileList" round>
+                查看全部
+              </el-button>
+            </div>
+          </div>
+          <div class="cfg-desc">
+            本项目专属的评分方案 — 与项目同生命周期, 不与其他项目共享.
+            <span v-if="!isDraft">已发布项目只读, 如需修改请新建草稿项目或克隆.</span>
+          </div>
+          <div v-if="scoringProfiles.length === 0" class="cfg-empty" style="padding: 16px">
+            <SlidersHorizontal class="w-5 h-5 text-gray-300" style="margin: 0 auto 6px" />
+            暂无评分方案 ·
+            <el-link v-if="isDraft && !isArchived" type="primary" :underline="false" @click="goCreateProfile">立即新建</el-link>
+            <span v-else>已发布项目无法新建</span>
+          </div>
+          <div v-else class="pdv-profile-list">
+            <div v-for="p in scoringProfiles" :key="p.id" class="pdv-profile-row">
+              <div class="pdv-profile-meta">
+                <div class="pdv-profile-name">
+                  <span v-if="sectionNameMap.get(p.sectionId)" class="pdv-profile-section">
+                    {{ sectionNameMap.get(p.sectionId)?.name }}
+                  </span>
+                  <span v-else class="pdv-profile-section pdv-profile-section--orphan">
+                    未关联分区
+                  </span>
+                  <span class="pdv-profile-id">#{{ p.id }}</span>
+                </div>
+                <div class="pdv-profile-stats">
+                  <span>{{ p.minScore }}–{{ p.maxScore }} 分</span>
+                  <span class="pdv-profile-sep">·</span>
+                  <span>{{ p.precisionDigits }} 位精度</span>
+                  <span v-if="p.multiRaterMode" class="pdv-profile-sep">·</span>
+                  <span v-if="p.multiRaterMode">{{ p.multiRaterMode }}</span>
+                  <template v-if="p.calibrationEnabled || p.trendFactorEnabled || p.decayEnabled">
+                    <span class="pdv-profile-sep">·</span>
+                    <span v-if="p.calibrationEnabled" class="pdv-profile-feat">校准</span>
+                    <span v-if="p.trendFactorEnabled" class="pdv-profile-feat">趋势</span>
+                    <span v-if="p.decayEnabled" class="pdv-profile-feat">衰减</span>
+                  </template>
+                </div>
+              </div>
+              <el-button size="small" link type="primary" @click="goEditProfile(p.id)">
+                <Pencil class="w-3.5 h-3.5 mr-0.5" />{{ isDraft && !isArchived ? '编辑' : '查看' }}
+              </el-button>
+            </div>
+          </div>
+        </div>
+
         <!-- 检查范围 -->
         <div class="cfg-card" :class="{ 'cfg-locked': !isDraft }">
           <div class="cfg-card-header">
@@ -1626,3 +1707,73 @@ onMounted(async () => {
 </template>
 
 <style scoped src="./ProjectDetailView.css"></style>
+
+<style scoped>
+/* ===== 评分方案卡片 (Phase 4: 评分方案下沉项目-owned) ===== */
+.cfg-card-ops {
+  display: inline-flex;
+  gap: 8px;
+  margin-left: auto;
+}
+.pdv-profile-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--insp-border-subtle, #e5e7eb);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.pdv-profile-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--insp-border-subtle, #f1f3f5);
+  background: var(--insp-bg-surface, #fff);
+  transition: background 0.15s;
+}
+.pdv-profile-row:last-child { border-bottom: 0; }
+.pdv-profile-row:hover { background: var(--insp-bg-subtle, #fafbfc); }
+.pdv-profile-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.pdv-profile-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--insp-ink-primary, #111827);
+}
+.pdv-profile-section { color: var(--insp-ink-primary, #111827); }
+.pdv-profile-section--orphan {
+  color: var(--insp-ink-quaternary, #9ca3af);
+  font-style: italic;
+  font-weight: 500;
+}
+.pdv-profile-id {
+  font-family: var(--insp-font-mono, monospace);
+  font-size: 11px;
+  color: var(--insp-ink-tertiary, #6b7280);
+  font-weight: 500;
+}
+.pdv-profile-stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--insp-ink-tertiary, #6b7280);
+}
+.pdv-profile-sep { color: var(--insp-ink-quaternary, #d1d5db); }
+.pdv-profile-feat {
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--insp-accent-paler, #eff6ff);
+  color: var(--insp-accent, #1a6dff);
+}
+</style>

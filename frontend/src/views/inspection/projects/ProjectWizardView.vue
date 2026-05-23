@@ -3,14 +3,15 @@ import type { LongId } from '@/types/common'
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { inspProjectApi, updateProject, createPlan } from '@/api/inspection/project'
+import { inspProjectApi, updateProject, createPlan, cloneProject } from '@/api/inspection/project'
 import { inspTemplateApi } from '@/api/inspection/template'
 import { getOrgUnitTree } from '@/api/organization'
 import type { OrgUnitTreeNode } from '@/types'
 import type { OrgUnit } from '@/types'
 import type { TemplateSection } from '@/types/insp/template'
+import type { InspProject } from '@/types/insp/project'
 import { ScopeTypeConfig, TargetTypeConfig, type ScopeType, type TargetType } from '@/types/insp/enums'
-import { ArrowLeft, Check } from 'lucide-vue-next'
+import { ArrowLeft, Check, Copy, FileText } from 'lucide-vue-next'
 
 const router = useRouter()
 
@@ -37,6 +38,102 @@ const form = reactive({
   startDate: '',
   endDate: '',
 })
+
+// ========== Mode (Phase 4 新增) ==========
+// 'template' = 现有模板新建流程 (3 步向导); 'clone' = 克隆既有项目 (单步表单)
+type WizardMode = 'template' | 'clone'
+const mode = ref<WizardMode>('template')
+
+// ========== Clone Mode State ==========
+const loadingProjects = ref(false)
+const projectsError = ref(false)
+const allProjects = ref<InspProject[]>([])
+const projectSearchKeyword = ref('')
+const cloning = ref(false)
+
+const cloneForm = reactive({
+  sourceProjectId: undefined as LongId | undefined,
+  projectName: '',
+  orgUnitId: undefined as LongId | undefined,
+  startDate: '',
+  endDate: '',
+  cloneInspectors: false,
+})
+
+// 可克隆项目: 排除已归档
+const cloneableProjects = computed(() => {
+  const list = allProjects.value.filter(p => p.status !== 'ARCHIVED')
+  const kw = projectSearchKeyword.value.trim().toLowerCase()
+  if (!kw) return list
+  return list.filter(p =>
+    p.projectName.toLowerCase().includes(kw) ||
+    (p.projectCode || '').toLowerCase().includes(kw),
+  )
+})
+
+const selectedSourceProject = computed(() =>
+  allProjects.value.find(p => String(p.id) === String(cloneForm.sourceProjectId)),
+)
+
+const canClone = computed(() =>
+  !!cloneForm.sourceProjectId &&
+  !!cloneForm.projectName.trim() &&
+  !!cloneForm.orgUnitId &&
+  !!cloneForm.startDate,
+)
+
+async function loadProjectsForClone() {
+  loadingProjects.value = true
+  projectsError.value = false
+  try {
+    allProjects.value = await inspProjectApi.getList()
+  } catch (e: any) {
+    projectsError.value = true
+    ElMessage.error('加载项目列表失败: ' + (e?.message || '未知错误'))
+  } finally {
+    loadingProjects.value = false
+  }
+}
+
+function selectSourceProject(p: InspProject) {
+  cloneForm.sourceProjectId = p.id
+  if (!cloneForm.projectName) {
+    cloneForm.projectName = p.projectName + ' (副本)'
+  }
+}
+
+async function handleClone() {
+  if (!canClone.value || !cloneForm.sourceProjectId) {
+    ElMessage.warning('请先选择源项目并填写完整信息')
+    return
+  }
+  cloning.value = true
+  try {
+    const created = await cloneProject(cloneForm.sourceProjectId, {
+      projectName: cloneForm.projectName,
+      orgUnitId: cloneForm.orgUnitId!,
+      startDate: cloneForm.startDate,
+      endDate: cloneForm.endDate || undefined,
+      cloneInspectors: cloneForm.cloneInspectors,
+    })
+    ElMessage.success(`已克隆为新项目 ${created.projectName}`)
+    router.push(`/inspection/projects/${created.id}`)
+  } catch (e: any) {
+    ElMessage.error('克隆失败: ' + (e?.message || '未知错误'))
+  } finally {
+    cloning.value = false
+  }
+}
+
+// 切换模式时清理另一边的状态, 避免提交时混淆
+function switchMode(m: WizardMode) {
+  if (m === mode.value) return
+  mode.value = m
+  // 切到 clone 时按需加载项目列表
+  if (m === 'clone' && allProjects.value.length === 0 && !loadingProjects.value) {
+    loadProjectsForClone()
+  }
+}
 
 // ========== Template Info ==========
 const selectedSection = computed(() =>
@@ -351,12 +448,13 @@ onMounted(() => {
         <h1 class="wz-title">创建检查项目</h1>
       </div>
       <div class="wz-head__hint">
-        共 3 步 · 当前 <strong class="insp-num">{{ currentStep + 1 }}</strong> / 3
+        <template v-if="mode === 'template'">共 3 步 · 当前 <strong class="insp-num">{{ currentStep + 1 }}</strong> / 3</template>
+        <template v-else>克隆模式 · 单步表单</template>
       </div>
     </header>
 
-    <!-- Step indicator -->
-    <nav class="wz-rail">
+    <!-- Step indicator (仅模板新建模式; 克隆模式单步无需向导) -->
+    <nav v-if="mode === 'template'" class="wz-rail">
       <button
         v-for="(label, idx) in ['选择模板', '配置范围', '确认创建']" :key="idx"
         class="wz-rail__step"
@@ -378,10 +476,32 @@ onMounted(() => {
       </button>
     </nav>
 
+    <!-- ==================== Step 0: 模式切换 (Phase 4 新增) ==================== -->
+    <div v-if="currentStep === 0" class="wz-mode-switch">
+      <button
+        class="wz-mode-btn"
+        :class="{ 'is-active': mode === 'template' }"
+        @click="switchMode('template')"
+      >
+        <FileText :size="14" />
+        <span class="wz-mode-btn__label">用模板新建</span>
+        <span class="wz-mode-btn__sub">从已发布的检查模板开始</span>
+      </button>
+      <button
+        class="wz-mode-btn"
+        :class="{ 'is-active': mode === 'clone' }"
+        @click="switchMode('clone')"
+      >
+        <Copy :size="14" />
+        <span class="wz-mode-btn__label">克隆既有项目</span>
+        <span class="wz-mode-btn__sub">深拷贝项目设置 + 评分方案 + 调度组</span>
+      </button>
+    </div>
+
     <div class="wz-steps">
     <Transition name="wz-step" mode="out-in">
-    <!-- ==================== Step 0: 选择模板 ==================== -->
-    <section v-if="currentStep === 0" key="step0" class="wz-card">
+    <!-- ==================== Step 0 · Mode A: 选择模板 ==================== -->
+    <section v-if="currentStep === 0 && mode === 'template'" key="step0-template" class="wz-card">
       <header class="wz-card__head">
         <span class="wz-card__title">选择检查模板</span>
         <div class="wz-card__search">
@@ -428,6 +548,103 @@ onMounted(() => {
           </div>
         </li>
       </ul>
+    </section>
+
+    <!-- ==================== Step 0 · Mode B: 克隆既有项目 ==================== -->
+    <section v-else-if="currentStep === 0 && mode === 'clone'" key="step0-clone" class="wz-card">
+      <header class="wz-card__head">
+        <span class="wz-card__title">克隆既有项目</span>
+        <div class="wz-card__hint">深拷贝项目设置 / 评分方案 / 调度组 / 指标 · 不拷贝执行数据 (任务/提交/分数)</div>
+      </header>
+
+      <div class="wz-form">
+        <!-- Source project picker -->
+        <div class="wz-fld">
+          <span class="wz-fld__label">源项目 <span class="wz-req">*</span></span>
+          <div class="wz-card__search" style="margin-bottom: 8px">
+            <input v-model="projectSearchKeyword" type="text" placeholder="搜索源项目名称 / Code..." />
+            <button v-if="projectSearchKeyword" class="wz-card__clear" @click="projectSearchKeyword = ''" title="清除">×</button>
+          </div>
+          <div v-if="loadingProjects" class="wz-state wz-state--small">加载项目列表…</div>
+          <div v-else-if="projectsError" class="wz-state wz-state--small wz-state--error">
+            <span>项目列表加载失败</span>
+            <button class="insp-btn insp-btn--sm" @click="loadProjectsForClone">重试</button>
+          </div>
+          <div v-else-if="cloneableProjects.length === 0" class="wz-state wz-state--small">
+            {{ projectSearchKeyword ? '未找到匹配项目' : '暂无可克隆项目 (已排除归档)' }}
+          </div>
+          <ul v-else class="tpl-list" style="max-height: 320px; overflow-y: auto">
+            <li
+              v-for="p in cloneableProjects" :key="p.id"
+              class="tpl-row"
+              :class="{ 'is-selected': String(cloneForm.sourceProjectId) === String(p.id) }"
+              @click="selectSourceProject(p)"
+            >
+              <div class="tpl-radio">
+                <span class="tpl-radio__dot" :class="{ 'is-on': String(cloneForm.sourceProjectId) === String(p.id) }" />
+              </div>
+              <div class="tpl-main">
+                <div class="tpl-line1">
+                  <span class="tpl-name">{{ p.projectName }}</span>
+                  <span v-if="p.projectCode" class="tpl-version insp-num">{{ p.projectCode }}</span>
+                  <span class="insp-chip insp-chip--info">{{ p.status }}</span>
+                </div>
+                <div v-if="p.startDate" class="tpl-desc">
+                  {{ p.startDate }}<template v-if="p.endDate"> ~ {{ p.endDate }}</template>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- New project name -->
+        <label class="wz-fld">
+          <span class="wz-fld__label">新项目名称 <span class="wz-req">*</span></span>
+          <input v-model="cloneForm.projectName" type="text" class="wz-input" placeholder="输入新项目名称" maxlength="100" />
+        </label>
+
+        <!-- Org unit + dates -->
+        <div class="wz-row">
+          <label class="wz-fld">
+            <span class="wz-fld__label">所属组织 <span class="wz-req">*</span></span>
+            <el-tree-select
+              v-model="cloneForm.orgUnitId"
+              :data="orgTree"
+              :props="{ value: 'id', label: 'unitName', children: 'children' }"
+              :render-after-expand="false"
+              check-strictly
+              filterable
+              placeholder="选择新项目所属组织"
+              class="wz-input"
+              style="width: 100%"
+            />
+          </label>
+        </div>
+        <div class="wz-row">
+          <label class="wz-fld">
+            <span class="wz-fld__label">开始日期 <span class="wz-req">*</span></span>
+            <input v-model="cloneForm.startDate" type="date" class="wz-input" />
+          </label>
+          <label class="wz-fld">
+            <span class="wz-fld__label">结束日期 · 可选</span>
+            <input v-model="cloneForm.endDate" type="date" class="wz-input" />
+          </label>
+        </div>
+
+        <!-- Inspectors toggle -->
+        <label class="wz-fld" style="flex-direction: row; align-items: center; gap: 8px">
+          <input v-model="cloneForm.cloneInspectors" type="checkbox" style="margin: 0" />
+          <span class="wz-fld__label" style="margin: 0">同时克隆检查员名单</span>
+          <span class="wz-fld__hint" style="margin-left: auto">默认不克隆 — 每项目通常需重新指定检查员</span>
+        </label>
+
+        <!-- Preview -->
+        <div v-if="selectedSourceProject" class="wz-tip">
+          <span class="wz-tip__icon">i</span>
+          将基于 <strong>{{ selectedSourceProject.projectName }}</strong> 创建新项目, 包含其全部评分方案 / 调度组 / 指标配置.
+          新项目初始为 DRAFT 状态, 可在详情页继续微调.
+        </div>
+      </div>
     </section>
 
     <!-- ==================== Step 1: 配置范围 ==================== -->
@@ -573,27 +790,41 @@ onMounted(() => {
 
     <!-- Footer -->
     <footer class="wz-foot">
-      <button v-if="currentStep > 0" class="insp-btn" @click="prevStep">
-        &lt; 上一步
-      </button>
-      <span v-else />
-      <div class="wz-foot__spacer" />
-      <button
-        v-if="currentStep < 2"
-        class="insp-btn insp-btn--accent"
-        :disabled="currentStep === 0 ? !canProceedStep0 : !canProceedStep1"
-        @click="nextStep"
-      >
-        下一步 >
-      </button>
-      <button
-        v-if="currentStep === 2"
-        class="insp-btn insp-btn--accent"
-        :disabled="submitting"
-        @click="handleCreate"
-      >
-        {{ submitting ? '创建中…' : '创建项目' }}
-      </button>
+      <template v-if="mode === 'template'">
+        <button v-if="currentStep > 0" class="insp-btn" @click="prevStep">
+          &lt; 上一步
+        </button>
+        <span v-else />
+        <div class="wz-foot__spacer" />
+        <button
+          v-if="currentStep < 2"
+          class="insp-btn insp-btn--accent"
+          :disabled="currentStep === 0 ? !canProceedStep0 : !canProceedStep1"
+          @click="nextStep"
+        >
+          下一步 >
+        </button>
+        <button
+          v-if="currentStep === 2"
+          class="insp-btn insp-btn--accent"
+          :disabled="submitting"
+          @click="handleCreate"
+        >
+          {{ submitting ? '创建中…' : '创建项目' }}
+        </button>
+      </template>
+      <template v-else>
+        <span />
+        <div class="wz-foot__spacer" />
+        <button
+          class="insp-btn insp-btn--accent"
+          :disabled="!canClone || cloning"
+          @click="handleClone"
+        >
+          <Copy :size="13" />
+          {{ cloning ? '克隆中…' : '克隆创建' }}
+        </button>
+      </template>
     </footer>
   </div>
 </template>
@@ -1118,8 +1349,53 @@ onMounted(() => {
 }
 .wz-foot__spacer { flex: 1; }
 
+/* ─ Mode switch (Phase 4: 模板新建 vs 克隆既有) ─────── */
+.wz-mode-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.wz-mode-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px 16px;
+  background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default);
+  border-radius: var(--insp-radius-lg);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: all var(--insp-t-fast);
+}
+.wz-mode-btn:hover {
+  border-color: var(--insp-accent);
+  background: var(--insp-bg-subtle);
+}
+.wz-mode-btn.is-active {
+  border-color: var(--insp-accent);
+  background: var(--insp-accent-paler);
+  box-shadow: 0 0 0 3px var(--insp-accent-paler);
+}
+.wz-mode-btn__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--insp-ink-primary);
+  margin-top: 4px;
+}
+.wz-mode-btn.is-active .wz-mode-btn__label {
+  color: var(--insp-accent);
+}
+.wz-mode-btn__sub {
+  font-size: 11px;
+  color: var(--insp-ink-tertiary);
+}
+
 @media (max-width: 720px) {
   .wz-rail__label { display: none; }
   .wz-row { grid-template-columns: 1fr; }
+  .wz-mode-switch { grid-template-columns: 1fr; }
 }
 </style>

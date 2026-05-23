@@ -25,8 +25,9 @@ const BASE = '/inspection/scoring-profiles'
 
 // ==================== 评分配置 ====================
 
-export function getProfiles(): Promise<ScoringProfile[]> {
-  return http.get<ScoringProfile[]>(BASE)
+/** 获取项目-owned 的评分方案列表. projectId 必传 — 后端不再支持全局列表. */
+export function getProfiles(projectId: LongId): Promise<ScoringProfile[]> {
+  return http.get<ScoringProfile[]>(BASE, { params: { projectId } })
 }
 
 export function getProfile(id: LongId): Promise<ScoringProfile> {

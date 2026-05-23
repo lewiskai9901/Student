@@ -61,6 +61,20 @@ export function deleteProject(id: LongId): Promise<void> {
   return http.delete(`${BASE}/${id}`)
 }
 
+/** 项目深拷贝克隆请求 — 拷贝项目配置 + 评分方案 + 调度组 + 指标, 不拷贝执行数据 (任务/提交/分数/检查员). */
+export interface CloneProjectRequest {
+  projectName: string
+  orgUnitId: LongId
+  startDate: string
+  endDate?: string
+  cloneInspectors?: boolean
+}
+
+/** 从既有项目克隆出一个新项目 (DRAFT 状态). */
+export function cloneProject(sourceId: LongId, data: CloneProjectRequest): Promise<InspProject> {
+  return http.post<InspProject>(`${BASE}/${sourceId}/clone`, data)
+}
+
 // ==================== 项目生命周期 ====================
 
 export function publishProject(id: LongId, data: PublishProjectRequest): Promise<InspProject> {
@@ -252,6 +266,7 @@ export const inspProjectApi = {
   update: updateProject,
   delete: deleteProject,
   publish: publishProject,
+  clone: cloneProject,
   upgradeTemplateVersion,
   getTemplateVersionStatus,
   pause: pauseProject,

@@ -7,7 +7,7 @@
  */
 import type { LongId } from '@/types/common'
 import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search, ExternalLink, Keyboard } from 'lucide-vue-next'
 import { getProfiles } from '@/api/inspection/scoring'
@@ -16,9 +16,17 @@ import { useKbdHint } from '@/composables/useKbdHint'
 import type { ScoringProfile } from '@/types/insp/scoring'
 
 const router = useRouter()
+const route = useRoute()
 const loading = ref(false)
 const profiles = ref<ScoringProfile[]>([])
 const keyword = ref('')
+
+// 评分方案现为项目-owned, 列表必须按 projectId 过滤. 主菜单已隐藏, 仅供项目内跳转.
+const projectIdQuery = computed<LongId | null>(() => {
+  const q = route.query.projectId
+  if (!q) return null
+  return Array.isArray(q) ? (q[0] as LongId) : (q as LongId)
+})
 
 const filtered = computed(() => {
   const kw = keyword.value.trim().toLowerCase()
@@ -37,9 +45,14 @@ const stats = computed(() => ({
 }))
 
 async function load() {
+  if (!projectIdQuery.value) {
+    profiles.value = []
+    ElMessage.warning('请通过项目详情页进入评分方案列表 (URL 需带 ?projectId=)')
+    return
+  }
   loading.value = true
   try {
-    profiles.value = await getProfiles()
+    profiles.value = await getProfiles(projectIdQuery.value)
   } catch (e: any) {
     ElMessage.error(e.message || '加载评分方案失败')
   } finally {
