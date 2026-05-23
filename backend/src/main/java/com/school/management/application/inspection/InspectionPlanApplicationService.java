@@ -28,6 +28,37 @@ public class InspectionPlanApplicationService {
     private final InspectionPlanRepository planRepository;
     private final InspProjectRepository projectRepository;
     private final InspTaskRepository taskRepository;
+    private final ProjectInspectorRepository projectInspectorRepository;
+    private final com.school.management.infrastructure.persistence.inspection.execution.InspectionPlanInspectorMapper planInspectorMapper;
+
+    /**
+     * 2026-05-24: 校验调度组的 inspectorIds 必须全部在项目 inspector 池.
+     * 空列表 (=全员可领取) 跳过校验.
+     *
+     * @throws IllegalArgumentException 若有 user_id 不在 project_inspector
+     */
+    private void validateInspectorsBelongToProject(Long projectId, java.util.List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) return;
+        java.util.Set<Long> projectUserIds = projectInspectorRepository.findByProjectId(projectId).stream()
+                .filter(pi -> Boolean.TRUE.equals(pi.getIsActive()))
+                .map(pi -> pi.getUserId())
+                .collect(java.util.stream.Collectors.toSet());
+        java.util.List<Long> orphans = userIds.stream()
+                .filter(uid -> !projectUserIds.contains(uid))
+                .toList();
+        if (!orphans.isEmpty()) {
+            throw new IllegalArgumentException(
+                "以下检查员不在项目检查员池中, 请先在「人员与任务」添加: " + orphans);
+        }
+    }
+
+    /** 解析 JSON 串到 List&lt;Long&gt; — 用 domain 自带的 parse 经由 setter 转一道. */
+    private java.util.List<Long> parseInspectorIdsJson(String json) {
+        if (json == null || json.isBlank()) return java.util.Collections.emptyList();
+        InspectionPlan tmp = InspectionPlan.builder().planName("__tmp").projectId(0L).build();
+        tmp.updateInspectorIds(json);
+        return tmp.getInspectorUserIds();
+    }
 
     // ========== Plan CRUD ==========
 
@@ -50,6 +81,10 @@ public class InspectionPlanApplicationService {
         Long resolvedRootSectionId = rootSectionId != null ? rootSectionId : project.getRootSectionId();
         int resolvedRaters = ratersPerTarget != null ? ratersPerTarget : 1;
         validateRatersPerTarget(resolvedRaters, inspectorIds);
+
+        // 2026-05-24: 校验所有 inspectorIds 必须属于项目 inspector 池.
+        java.util.List<Long> userIds = parseInspectorIdsJson(inspectorIds);
+        validateInspectorsBelongToProject(projectId, userIds);
 
         InspectionPlan plan = InspectionPlan.builder()
                 .projectId(projectId)
@@ -92,7 +127,12 @@ public class InspectionPlanApplicationService {
 
         plan.update(planName, rootSectionId, sectionIds, scheduleMode, cycleType, frequency,
                 scheduleDays, timeSlots, skipHolidays, null, null);
-        if (inspectorIds != null) plan.updateInspectorIds(inspectorIds);
+        if (inspectorIds != null) {
+            // 2026-05-24: 更新前校验 inspectorIds 全在项目 inspector 池.
+            java.util.List<Long> userIds = parseInspectorIdsJson(inspectorIds);
+            validateInspectorsBelongToProject(plan.getProjectId(), userIds);
+            plan.updateInspectorIds(inspectorIds);
+        }
 
         // ratersPerTarget 为空时沿用现有值 (部分更新语义).
         int resolvedRaters = ratersPerTarget != null ? ratersPerTarget : plan.getRatersPerTarget();

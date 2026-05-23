@@ -32,15 +32,32 @@ class InspectionPlanApplicationServiceTest {
     @Mock InspectionPlanRepository planRepository;
     @Mock InspProjectRepository projectRepository;
     @Mock InspTaskRepository taskRepository;
+    @Mock com.school.management.domain.inspection.repository.ProjectInspectorRepository projectInspectorRepository;
+    @Mock com.school.management.infrastructure.persistence.inspection.execution.InspectionPlanInspectorMapper planInspectorMapper;
 
     private InspectionPlanApplicationService service() {
-        return new InspectionPlanApplicationService(planRepository, projectRepository, taskRepository);
+        return new InspectionPlanApplicationService(planRepository, projectRepository, taskRepository,
+                projectInspectorRepository, planInspectorMapper);
     }
 
     private InspProject publishedProject() {
         return InspProject.reconstruct(InspProject.builder()
                 .id(9L).projectCode("P").projectName("P")
                 .status(ProjectStatus.PUBLISHED));
+    }
+
+    /** Stub project_inspector pool to include the given user IDs (active INSPECTOR role). */
+    private void stubProjectInspectors(Long projectId, Long... userIds) {
+        java.util.List<com.school.management.domain.inspection.model.execution.ProjectInspector> list =
+                new java.util.ArrayList<>();
+        for (Long uid : userIds) {
+            list.add(com.school.management.domain.inspection.model.execution.ProjectInspector.reconstruct(
+                    com.school.management.domain.inspection.model.execution.ProjectInspector.builder()
+                            .id(uid).projectId(projectId).userId(uid).userName("U" + uid)
+                            .role(com.school.management.domain.inspection.model.execution.InspectorRole.INSPECTOR)
+                            .isActive(true)));
+        }
+        when(projectInspectorRepository.findByProjectId(projectId)).thenReturn(list);
     }
 
     @Nested
@@ -66,6 +83,7 @@ class InspectionPlanApplicationServiceTest {
         @DisplayName("显式 ratersPerTarget 被采用")
         void shouldUseExplicitRaters() {
             when(projectRepository.findById(9L)).thenReturn(Optional.of(publishedProject()));
+            stubProjectInspectors(9L, 10L, 20L, 30L);
             when(planRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
             ArgumentCaptor<InspectionPlan> cap = ArgumentCaptor.forClass(InspectionPlan.class);
@@ -82,6 +100,7 @@ class InspectionPlanApplicationServiceTest {
         @DisplayName("ratersPerTarget 超过调度组检查员数 → 抛 BusinessException")
         void shouldRejectRatersExceedingInspectorCount() {
             when(projectRepository.findById(9L)).thenReturn(Optional.of(publishedProject()));
+            // 注: rater 数量检查在 inspector pool 校验之前触发, 不需要 stub projectInspectorRepository
 
             assertThatThrownBy(() -> service().createPlan(9L, "调度组A", null, null,
                     "[10,20]",   // 仅 2 名检查员

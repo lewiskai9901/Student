@@ -56,6 +56,9 @@ public class InspProjectApplicationService {
     private final InspectionPlanRepository inspectionPlanRepository;
     private final IndicatorRepository indicatorRepository;
     private final ScoringProfileApplicationService scoringProfileService;
+    // 2026-05-24: 移除 inspector 时级联清理 insp_plan_inspectors 关系表
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.school.management.infrastructure.persistence.inspection.execution.InspectionPlanInspectorMapper planInspectorMapper;
 
     public InspProjectApplicationService(InspProjectRepository projectRepository,
                                           ProjectInspectorRepository inspectorRepository,
@@ -686,6 +689,7 @@ public class InspProjectApplicationService {
             }
         }
         inspectorRepository.deleteById(opt.get().getId());
+        cascadeRemoveFromPlansIfFullyRemoved(projectId, userId);
     }
 
     @Transactional(readOnly = true)
@@ -708,6 +712,23 @@ public class InspProjectApplicationService {
             }
         }
         inspectorRepository.deleteById(inspectorId);
+        cascadeRemoveFromPlansIfFullyRemoved(target.getProjectId(), target.getUserId());
+    }
+
+    /**
+     * 2026-05-24: 移除 inspector 的某个角色后, 若该 user 在项目里已无任何 active 角色,
+     * 级联从所有调度组的 inspector 列表里清掉 — 否则调度组会持有"已不属于项目"的 user_id 孤儿.
+     */
+    private void cascadeRemoveFromPlansIfFullyRemoved(Long projectId, Long userId) {
+        if (planInspectorMapper == null) return; // 测试 / 旧装配场景兜底
+        boolean stillHasRole = inspectorRepository.findByProjectId(projectId).stream()
+                .anyMatch(pi -> userId.equals(pi.getUserId()) && Boolean.TRUE.equals(pi.getIsActive()));
+        if (stillHasRole) return;
+        int removed = planInspectorMapper.cascadeRemoveByProjectUser(projectId, userId);
+        if (removed > 0) {
+            log.info("[Cascade] 项目 {} 移除 user {} → 同步从 {} 个调度组清理 inspector 关系",
+                    projectId, userId, removed);
+        }
     }
 
     // ========== Scores ==========

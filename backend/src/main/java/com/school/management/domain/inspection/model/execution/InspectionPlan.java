@@ -3,6 +3,11 @@ package com.school.management.domain.inspection.model.execution;
 import com.school.management.domain.shared.AggregateRoot;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * 检查计划 — 排期从项目层管理.
@@ -23,7 +28,11 @@ public class InspectionPlan extends AggregateRoot<Long> {
     private String scheduleDays;       // JSON: [1,3,5] 周几
     private String timeSlots;          // JSON: ["07:00-08:00"]
     private Boolean skipHolidays;
-    private String inspectorIds;       // JSON: 指定检查员ID列表，空=项目全员可领取
+    /**
+     * 检查员列表 (V20260524_2 重构: 原 JSON String → List&lt;Long&gt; 由 insp_plan_inspectors 关系表持久化).
+     * 空集合 = 项目全员可领取; getInspectorIds() 仍返回 JSON 串供旧消费方兼容使用.
+     */
+    private List<Long> inspectorUserIds = new ArrayList<>();
     /**
      * 每个检查目标的检查员份数 (1=单人评分, >1=多人评分). 默认 1.
      * 多人评分的合并算法由所引用 ScoringProfile.multiRaterMode 决定（按分区查 ScoringProfile）.
@@ -51,7 +60,11 @@ public class InspectionPlan extends AggregateRoot<Long> {
         this.scheduleDays = builder.scheduleDays;
         this.timeSlots = builder.timeSlots;
         this.skipHolidays = builder.skipHolidays != null ? builder.skipHolidays : false;
-        this.inspectorIds = builder.inspectorIds;
+        this.inspectorUserIds = builder.inspectorUserIds != null
+                ? new ArrayList<>(builder.inspectorUserIds)
+                : (builder.inspectorIds != null
+                        ? parseInspectorIdsJson(builder.inspectorIds)
+                        : new ArrayList<>());
         this.ratersPerTarget = builder.ratersPerTarget != null ? builder.ratersPerTarget : 1;
         this.isEnabled = builder.isEnabled != null ? builder.isEnabled : true;
         this.sortOrder = builder.sortOrder != null ? builder.sortOrder : 0;
@@ -79,9 +92,27 @@ public class InspectionPlan extends AggregateRoot<Long> {
         return new InspectionPlan(builder);
     }
 
+    /** 旧接口: 接受 JSON 字符串 (向后兼容). */
     public void updateInspectorIds(String inspectorIds) {
-        this.inspectorIds = inspectorIds;
+        this.inspectorUserIds = parseInspectorIdsJson(inspectorIds);
         this.updatedAt = LocalDateTime.now();
+    }
+
+    /** 新接口: 直接更新 user_id 列表. 空集合表示"项目全员可领取". */
+    public void updateInspectorUserIds(List<Long> userIds) {
+        this.inspectorUserIds = userIds != null ? new ArrayList<>(userIds) : new ArrayList<>();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    /** 简易 JSON 数组解析 [1,2,3] → [1L,2L,3L]. 容错: 解析失败或空返回空列表. */
+    private static List<Long> parseInspectorIdsJson(String json) {
+        if (json == null || json.isBlank()) return new ArrayList<>();
+        List<Long> result = new ArrayList<>();
+        Matcher m = Pattern.compile("\\d+").matcher(json);
+        while (m.find()) {
+            try { result.add(Long.parseLong(m.group())); } catch (NumberFormatException ignored) { /* skip */ }
+        }
+        return result;
     }
 
     public void update(String planName, Long rootSectionId, String sectionIds, String scheduleMode,
@@ -139,7 +170,25 @@ public class InspectionPlan extends AggregateRoot<Long> {
     public String getScheduleDays() { return scheduleDays; }
     public String getTimeSlots() { return timeSlots; }
     public Boolean getSkipHolidays() { return skipHolidays; }
-    public String getInspectorIds() { return inspectorIds; }
+    /**
+     * 旧接口兼容: 返回 JSON 串 ["1","2","3"] (Jackson Long-as-string 契约).
+     * 空列表返回 null (与旧"未设置=全员"语义一致).
+     * 新代码请用 {@link #getInspectorUserIds()}.
+     */
+    public String getInspectorIds() {
+        if (inspectorUserIds == null || inspectorUserIds.isEmpty()) return null;
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < inspectorUserIds.size(); i++) {
+            if (i > 0) sb.append(',');
+            sb.append('"').append(inspectorUserIds.get(i)).append('"');
+        }
+        return sb.append("]").toString();
+    }
+
+    /** 主接口: 返回不可变 user_id 列表. */
+    public List<Long> getInspectorUserIds() {
+        return Collections.unmodifiableList(inspectorUserIds != null ? inspectorUserIds : new ArrayList<>());
+    }
     public Integer getRatersPerTarget() { return ratersPerTarget == null ? 1 : ratersPerTarget; }
     public Boolean getIsEnabled() { return isEnabled; }
     public Integer getSortOrder() { return sortOrder; }
@@ -163,6 +212,7 @@ public class InspectionPlan extends AggregateRoot<Long> {
         private String timeSlots;
         private Boolean skipHolidays;
         private String inspectorIds;
+        private List<Long> inspectorUserIds;
         private Integer ratersPerTarget;
         private Boolean isEnabled;
         private Integer sortOrder;
@@ -183,6 +233,7 @@ public class InspectionPlan extends AggregateRoot<Long> {
         public Builder timeSlots(String timeSlots) { this.timeSlots = timeSlots; return this; }
         public Builder skipHolidays(Boolean skipHolidays) { this.skipHolidays = skipHolidays; return this; }
         public Builder inspectorIds(String inspectorIds) { this.inspectorIds = inspectorIds; return this; }
+        public Builder inspectorUserIds(List<Long> userIds) { this.inspectorUserIds = userIds; return this; }
         public Builder ratersPerTarget(Integer ratersPerTarget) { this.ratersPerTarget = ratersPerTarget; return this; }
         public Builder isEnabled(Boolean isEnabled) { this.isEnabled = isEnabled; return this; }
         public Builder sortOrder(Integer sortOrder) { this.sortOrder = sortOrder; return this; }

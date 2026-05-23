@@ -278,10 +278,10 @@ class InspProjectCloneServiceTest {
 
         service.cloneProject(1L, req("克隆", 20L, LocalDate.of(2026, 6, 1), null, true), 999L);
 
-        // plan.inspectorIds 应原样保留
+        // plan.inspectorIds 应保留语义 (V20260524_2 后: 格式由 inspectorUserIds 列表序列化输出)
         ArgumentCaptor<InspectionPlan> planCaptor = ArgumentCaptor.forClass(InspectionPlan.class);
         verify(inspectionPlanRepository).save(planCaptor.capture());
-        assertThat(planCaptor.getValue().getInspectorIds()).isEqualTo("[10,11]");
+        assertThat(planCaptor.getValue().getInspectorUserIds()).containsExactly(10L, 11L);
 
         // inspector 已复制
         ArgumentCaptor<ProjectInspector> inspectorCaptor = ArgumentCaptor.forClass(ProjectInspector.class);
