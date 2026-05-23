@@ -279,6 +279,10 @@
   .pdv-kpi-grid { grid-template-columns: repeat(4, 1fr); }
   .pdv-kpi { border-bottom: 1px solid #e5e7eb; }
 }
+/* P1 #5: 窄屏 KPI 网格 2 列 — 8 列在手机上字太挤 */
+@media (max-width: 640px) {
+  .pdv-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
 
 /* ========== A 级升级: 7 天趋势条形图 ========== */
 .pdv-trend {
@@ -430,6 +434,10 @@
   gap: 16px;
   margin-bottom: 0;
 }
+/* P1 #5: 窄屏双栏改单栏 */
+@media (max-width: 720px) {
+  .pdv-two-col { grid-template-columns: 1fr; }
+}
 
 /* ========== Cards ========== */
 .pdv-card {
@@ -501,6 +509,14 @@
 .pdv-assign-row {
   display: flex; align-items: center; gap: 8px;
   padding: 4px 0;
+}
+/* P1 #10: 总览 readonly preview 中, taskCode flex 占满, 长名截断 */
+.pdv-assign-row-code {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .pdv-review-link {
   margin-left: auto;
@@ -629,27 +645,8 @@
   color: #b45309;
   opacity: 0.7;
 }
-/* hover 时小气泡 hint — 仅鼠标停留 1s+ 显示, 不污染常态视觉 */
-.cfg-card.cfg-locked::after {
-  content: '已锁定 — 仅草稿态可改';
-  position: absolute;
-  top: 8px;
-  right: 14px;
-  font-size: 10px;
-  color: #b45309;
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  padding: 2px 8px;
-  border-radius: 10px;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s 0.4s;
-  white-space: nowrap;
-}
-.cfg-card.cfg-locked:hover::after { opacity: 1; }
-/* 当卡片自己已经有 Lock 图标占位 (cfg-card-header 内), 避免气泡和图标重叠:
-   header 的 Lock 一直显示, 气泡仅 hover 时浮现于右上, 二者位置相同时取气泡 */
-.cfg-card.cfg-locked:hover .cfg-card-header .cfg-lock-icon { opacity: 0; }
+/* P2 #32: 删除 hover 气泡 "已锁定" — details + 卡 header Lock 图标 + 虚框三层已足够,
+   气泡与 header Lock 图标重复沟通且需要 hover 才看到, 信息密度反而下降 */
 .cfg-card-header {
   display: flex;
   align-items: center;
@@ -737,6 +734,10 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   margin-top: 12px;
+}
+/* P2 #30: 窄屏所有 cfg-row 都改单栏 */
+@media (max-width: 768px) {
+  .cfg-row2, .cfg-row3 { grid-template-columns: 1fr; }
 }
 
 /* ========== V110 整改策略 ========== */
@@ -888,6 +889,11 @@
   font-size: 12px;
   color: #9ca3af;
 }
+/* P2 #31: padding 16px 通用变体, 替代模板里 inline style="padding: 16px" */
+.cfg-empty--card { padding: 16px; }
+/* P1 #20 (人员与任务): 全 OK 空态 — 图标居中 */
+.pdv-empty-allgood { padding: 16px; }
+.pdv-empty-allgood svg { margin: 0 auto 6px; display: block; }
 
 /* ===== 人员与任务 升级版 ===== */
 .pdv-insp-search {

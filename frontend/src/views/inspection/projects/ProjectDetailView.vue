@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import type { LongId } from '@/types/common'
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   ArrowLeft, Play, Pause, CheckCircle, Send, Trash2, Save, Users, Settings, BarChart3, ClipboardList, Lock,
-  ClipboardCheck, Check, X, ListTree, LayoutDashboard, Pencil, Plus, SlidersHorizontal,
+  ClipboardCheck, Check, X, ListTree, LayoutDashboard, Pencil, Plus, Copy,
+  AlertTriangle, AlertCircle, Info,
 } from 'lucide-vue-next'
 import { useInspExecutionStore } from '@/stores/inspection/inspExecutionStore'
 import { useAuthStore } from '@/stores/auth'
@@ -20,7 +21,7 @@ import { http } from '@/utils/request'
 import { getTasks, assignTask } from '@/api/inspection/task'
 import { getSubmissions } from '@/api/inspection/submission'
 import { getSections } from '@/api/inspection/template'
-import { getProfileByProjectAndSection, getGradeBands, getProfiles } from '@/api/inspection/scoring'
+import { getProfiles } from '@/api/inspection/scoring'
 import type { ScoringProfile } from '@/types/insp/scoring'
 import { getSimpleUserList, getUser } from '@/api/user'
 import { getOrgUnitTree } from '@/api/organization'
@@ -47,6 +48,8 @@ const currentUserName = computed(() =>
 
 // ========== State ==========
 const loading = ref(false)
+// P0 #2: 加载失败时给可见错态, 用户能重试; 不再只 ElMessage 一闪而过
+const loadError = ref<string | null>(null)
 const project = ref<InspProject | null>(null)
 const inspectors = ref<ProjectInspector[]>([])
 const allTasks = ref<InspTask[]>([])
@@ -56,7 +59,6 @@ const submissionsLoadFailedCount = ref(0)
 const sectionNameMap = ref<Map<LongId, { name: string; targetType?: string }>>(new Map())
 const sectionTree = ref<SectionTreeNode[]>([])
 const sectionList = computed(() => [...sectionNameMap.value.entries()].map(([id, info]) => ({ id, sectionName: info.name, targetType: info.targetType })))
-const rootGradeBands = ref<Array<{ name: string; min: number; max: number }>>([])
 // 评分方案列表 — 供"默认评分方案"下拉使用
 const scoringProfiles = ref<ScoringProfile[]>([])
 const scoringProfileOptions = computed(() =>
@@ -182,13 +184,15 @@ const taskStats = computed(() => {
 const progressPct = computed(() => taskStats.value.total === 0 ? 0 : Math.round(taskStats.value.done / taskStats.value.total * 100))
 
 // ========== A 级 KPI 集 (从 2 个升级到 8 个) ==========
-const today = new Date().toISOString().slice(0, 10)
+// P1 #12: today 不再是模块加载时的 const, 改 computed 跨日刷新
+const today = computed(() => new Date().toISOString().slice(0, 10))
 const richKpis = computed(() => {
   const t = filteredTasks.value
   const subs = filteredSubmissions.value
+  const todayStr = today.value
   const overdue = t.filter(x =>
     !['REVIEWED','PUBLISHED','CANCELLED','EXPIRED'].includes(x.status) &&
-    x.taskDate && (((x as any).extendedTo || x.taskDate) < today)
+    x.taskDate && (((x as any).extendedTo || x.taskDate) < todayStr)
   ).length
   const reviewed = t.filter(x => ['REVIEWED','PUBLISHED'].includes(x.status)).length
   const pendingReview = t.filter(x => x.status === 'SUBMITTED').length
@@ -209,29 +213,34 @@ const richKpis = computed(() => {
     avgScore,
     passRate,
     completionRate,
+    // P1 #6: 标志位 — 无任何已提交时模板用 — 占位避免 0.0 / 0% 误导
+    hasScores: submittedSubs.length > 0,
   }
 })
 
 // 顶部告警条 — 需要管理员关注的事项汇总
+// P0 #3: icon 字段不再用空字符串, 改为 type→lucide component 映射, 模板用 <component :is="a.icon" />
 const overviewAlerts = computed(() => {
-  const out: { type: 'warn' | 'info' | 'fail'; icon: string; text: string; action?: { label: string; tab: string } }[] = []
+  type AlertKind = 'warn' | 'info' | 'fail'
+  const iconFor = (t: AlertKind) => t === 'fail' ? AlertCircle : t === 'warn' ? AlertTriangle : Info
+  const out: { type: AlertKind; icon: any; text: string; action?: { label: string; tab: string } }[] = []
   if (richKpis.value.overdue > 0) {
     out.push({
-      type: 'fail', icon: '!',
+      type: 'fail', icon: iconFor('fail'),
       text: `${richKpis.value.overdue} 个任务已逾期未提交`,
       action: { label: '查看', tab: 'team' }
     })
   }
   if (richKpis.value.pendingReview > 0) {
     out.push({
-      type: 'warn', icon: '',
+      type: 'warn', icon: iconFor('warn'),
       text: `${richKpis.value.pendingReview} 个任务等待审核`,
       action: { label: '去审核', tab: 'team' }
     })
   }
   if (pendingAssignTasks.value.length > 0) {
     out.push({
-      type: 'info', icon: '',
+      type: 'info', icon: iconFor('info'),
       text: `${pendingAssignTasks.value.length} 个任务尚未分配检查员`,
       action: { label: '分配', tab: 'team' }
     })
@@ -262,6 +271,8 @@ const weeklyTrendMax = computed(() => Math.max(1, ...weeklyTrend.value.map(d => 
 // ========== 待分配任务 ==========
 const pendingAssignTasks = computed(() => filteredTasks.value.filter(t => t.status === 'PENDING' && !t.inspectorId))
 const assigningTaskId = ref<LongId | null>(null)
+// P0 #14: 给 el-select 强制 re-render — 取消确认后内部状态残留, 同人不能再选
+const assignSelectKey = ref(0)
 
 async function handleAssignTask(task: InspTask, inspector: ProjectInspector) {
   // P1 #11: 选检查员后二次确认, 避免误点 el-select 即刻指派
@@ -271,7 +282,10 @@ async function handleAssignTask(task: InspTask, inspector: ProjectInspector) {
       '确认指派', { type: 'info' }
     )
   } catch {
-    return // 用户取消
+    // P0 #14: 用户取消时刷 key, 让 el-select 恢复空 — 否则下次选同人不触发 @change
+    assignSelectKey.value++
+    await nextTick()
+    return
   }
   try {
     assigningTaskId.value = task.id
@@ -282,6 +296,8 @@ async function handleAssignTask(task: InspTask, inspector: ProjectInspector) {
     ElMessage.error('分配失败: ' + (e?.message || '未知错误'))
   } finally {
     assigningTaskId.value = null
+    assignSelectKey.value++
+    await nextTick()
   }
 }
 
@@ -289,42 +305,51 @@ async function handleAssignTask(task: InspTask, inspector: ProjectInspector) {
 const pendingReviewTasks = computed(() => filteredTasks.value.filter(t => t.status === 'SUBMITTED'))
 const pendingReviewCount = computed(() => pendingReviewTasks.value.length)
 
+// P0 #13: 当前用户名空 (auth.user 未就绪) 时拒绝署名操作, 避免提交空 reviewerName
+function ensureCurrentUser(): boolean {
+  if (!currentUserName.value) {
+    ElMessage.error('用户信息未就绪, 请刷新页面后重试')
+    return false
+  }
+  return true
+}
+
 async function handleApproveTask(task: InspTask) {
+  if (!ensureCurrentUser()) return
   try {
     await ElMessageBox.confirm(`通过任务 ${task.taskCode} 的审核？`, '确认审核', { type: 'info' })
-    await store.reviewTask(task.id, { reviewerName: currentUserName.value, comment: '审核通过' })
+    // P1 #21: 区分 reviewTask 失败 vs publishTask 失败 (当前 store.reviewTask 内置 publish 调用)
+    try {
+      await store.reviewTask(task.id, { reviewerName: currentUserName.value, comment: '审核通过' })
+    } catch (phaseErr: any) {
+      console.error('审核两步原子操作失败', phaseErr)
+      ElMessage.error('审核失败 (reviewTask/publishTask 阶段): ' + (phaseErr?.message || '未知错误'))
+      throw 'phaseHandled'
+    }
     ElMessage.success('审核通过')
     loadProject()
   } catch (e: any) {
+    if (e === 'phaseHandled') return
     if (e !== 'cancel' && e?.toString?.() !== 'cancel') { console.error('审核通过失败', e); ElMessage.error('审核操作失败，请重试') }
   }
 }
 
 async function handleRejectTask(task: InspTask) {
+  if (!ensureCurrentUser()) return
   try {
-    const { value: comment } = await ElMessageBox.prompt('请输入驳回原因', '驳回任务', { type: 'warning', inputPlaceholder: '驳回原因...' }) as any
-    await store.reviewTask(task.id, { reviewerName: currentUserName.value, comment: comment || '审核驳回' })
+    // P1 #18: 驳回原因必填, 空字符串 / 纯空格直接禁掉
+    const { value: comment } = await ElMessageBox.prompt('请输入驳回原因', '驳回任务', {
+      type: 'warning',
+      inputPlaceholder: '驳回原因 (必填)...',
+      inputValidator: (v: string) => !!v?.trim() || '请填写驳回原因',
+    }) as any
+    await store.reviewTask(task.id, { reviewerName: currentUserName.value, comment: comment.trim() })
     ElMessage.success('已驳回')
     loadProject()
   } catch (e: any) {
     if (e !== 'cancel' && e?.toString?.() !== 'cancel') { console.error('驳回失败', e); ElMessage.error('驳回操作失败，请重试') }
   }
 }
-
-// ========== 检查结果统计 ==========
-const resultStats = computed(() => {
-  const agg = aggregatedTargetScores.value
-  if (agg.length === 0) return null
-  const scores = agg.map(a => a.totalScore)
-  const passed = agg.filter(a => a.passed === true).length
-  const failed = agg.filter(a => a.passed === false).length
-  const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0
-  const max = scores.length > 0 ? Math.max(...scores) : 0
-  const min = scores.length > 0 ? Math.min(...scores) : 0
-  const gradeMap = new Map<string, number>()
-  for (const a of agg) { if (a.grade) gradeMap.set(a.grade, (gradeMap.get(a.grade) || 0) + 1) }
-  return { total: agg.length, avg: avg.toFixed(1), max, min, passed, failed, unrated: agg.filter(a => a.passed == null).length, grades: [...gradeMap.entries()].sort((a, b) => b[1] - a[1]) }
-})
 
 // ========== 总览 Tab 数据 ==========
 // IA 收敛 (2026-05-23): 详细排名/分区得分分布下沉到「成绩统计」Tab (IndicatorScoreView),
@@ -339,33 +364,27 @@ const recentTasks = computed(() => {
 })
 
 
-// 按日期合并任务
-interface DayTask { date: string; subTasks: { task: InspTask; projectName: string }[]; totalTargets: number; completedTargets: number; inspectorName: string; allDone: boolean }
-const dayTasks = computed<DayTask[]>(() => {
-  const dateMap = new Map<string, { task: InspTask; projectName: string }[]>()
-  for (const task of filteredTasks.value) {
-    if (!dateMap.has(task.taskDate)) dateMap.set(task.taskDate, [])
-    dateMap.get(task.taskDate)!.push({ task, projectName: project.value?.projectName || '' })
-  }
-  return [...dateMap.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([date, subs]) => ({
-    date, subTasks: subs,
-    totalTargets: subs.reduce((s, x) => s + x.task.totalTargets, 0),
-    completedTargets: subs.reduce((s, x) => s + x.task.completedTargets + x.task.skippedTargets, 0),
-    inspectorName: subs[0]?.task.inspectorName || '未分配',
-    allDone: subs.every(x => ['SUBMITTED', 'UNDER_REVIEW', 'REVIEWED', 'PUBLISHED'].includes(x.task.status)),
-  }))
-})
+// P1 #8: 任务状态文案映射 — 上提为模块常量, 模板里 O(1) 直查
+const TASK_STATUS_LABEL: Record<string, string> = {
+  SUBMITTED: '已提交',
+  UNDER_REVIEW: '审核中',
+  REVIEWED: '已审核',
+  PUBLISHED: '已发布',
+}
 
 const inspectorStats = computed(() => {
-  const todayStr = new Date().toISOString().slice(0, 10)
+  const todayStr = today.value
+  // P1 #17: key 改为 userId(string) 防同名 — 同名 userName 不会再互相聚合
+  // 未分配任务 (inspectorId null) 用 sentinel 'unassigned' 兜底
   const map = new Map<string, {
-    name: string; assigned: number; completed: number; targets: number;
+    userId: string; name: string; assigned: number; completed: number; targets: number;
     active: number; overdue: number;
   }>()
   for (const task of filteredTasks.value) {
+    const idKey = task.inspectorId != null ? String(task.inspectorId) : 'unassigned'
     const name = task.inspectorName || '未分配'
-    if (!map.has(name)) map.set(name, { name, assigned: 0, completed: 0, targets: 0, active: 0, overdue: 0 })
-    const s = map.get(name)!; s.assigned++
+    if (!map.has(idKey)) map.set(idKey, { userId: idKey, name, assigned: 0, completed: 0, targets: 0, active: 0, overdue: 0 })
+    const s = map.get(idKey)!; s.assigned++
     if (['SUBMITTED', 'UNDER_REVIEW', 'REVIEWED', 'PUBLISHED'].includes(task.status)) s.completed++
     if (['CLAIMED', 'IN_PROGRESS'].includes(task.status)) s.active++
     const eff = (task as any).extendedTo || task.taskDate
@@ -382,10 +401,10 @@ const inspectorStats = computed(() => {
   })
 })
 
-// P2 #17: 预聚合 inspectorStats 为 Map, 模板里按 userName 直接 O(1) 取, 避免每行重复 .find()
-const inspectorStatsByName = computed(() => {
+// P1 #17: 按 userId 索引, 模板 inspectorStatsById.get(String(insp.userId)) — 同名安全
+const inspectorStatsById = computed(() => {
   const m = new Map<string, (typeof inspectorStats.value)[number]>()
-  for (const s of inspectorStats.value) m.set(s.name, s)
+  for (const s of inspectorStats.value) m.set(s.userId, s)
   return m
 })
 
@@ -397,146 +416,15 @@ const filteredInspectors = computed(() => {
   return inspectors.value.filter(i => (i.userName || '').toLowerCase().includes(q))
 })
 
-const targetScores = computed(() => {
-  return filteredSubmissions.value
-    .filter(s => s.status === 'COMPLETED' && s.finalScore != null)
-    .sort((a, b) => (a.finalScore ?? 0) - (b.finalScore ?? 0))
-})
-
-// Aggregated target scores: group by rootTargetId, compute average, include section breakdown
-const aggregatedTargetScores = computed(() => {
-  const completed = filteredSubmissions.value.filter(s => s.status === 'COMPLETED' && s.finalScore != null)
-  // Group by rootTargetId (or targetId if rootTargetId is absent)
-  const groups = new Map<LongId, typeof completed>()
-  for (const s of completed) {
-    const key = s.rootTargetId ?? s.targetId
-    if (!key) continue
-    if (!groups.has(key)) groups.set(key, [])
-    groups.get(key)!.push(s)
-  }
-  // Build aggregated rows
-  const rows: Array<{
-    targetId: LongId
-    targetName: string
-    totalScore: number
-    grade: string | null
-    passed: boolean | null
-    sections: Array<{ sectionId: LongId; sectionName: string; score: number; grade: string | null }>
-  }> = []
-  for (const [targetId, subs] of groups) {
-    // Simple average of all section scores
-    let total = 0
-    const sections: typeof rows[0]['sections'] = []
-    for (const s of subs) {
-      const secInfo = sectionNameMap.value.get(s.sectionId!)
-      total += (s.finalScore ?? 0)
-      sections.push({
-        sectionId: s.sectionId!,
-        sectionName: secInfo?.name || (s as any).sectionName || `分区${s.sectionId}`,
-        score: s.finalScore ?? 0,
-        grade: s.grade ?? null,
-      })
-    }
-    const roundedTotal = subs.length > 0 ? Math.round((total / subs.length) * 10) / 10 : 0
-    // Overall grade from root section's grade bands (absolute score matching)
-    let overallGrade: string | null = null
-    let overallPassed: boolean | null = null
-    for (const band of rootGradeBands.value) {
-      if (roundedTotal >= band.min && roundedTotal <= band.max) {
-        overallGrade = band.name
-        break
-      }
-    }
-    // If no root grade bands, check if any section has grades
-    const anySecGrade = sections.some(s => s.grade != null)
-    if (!overallGrade && !anySecGrade) {
-      overallPassed = null
-    } else {
-      overallPassed = overallGrade ? !overallGrade.includes('不') : null
-    }
-    rows.push({
-      targetId,
-      targetName: subs[0].rootTargetName || subs[0].targetName || `目标${targetId}`,
-      totalScore: roundedTotal,
-      grade: overallGrade,
-      passed: overallPassed,
-      sections
-    })
-  }
-  return rows.sort((a, b) => a.totalScore - b.totalScore)
-})
-
-const hasGradeConfig = computed(() => {
-  return aggregatedTargetScores.value.some(a => a.grade != null || a.sections.some(s => s.grade != null))
-})
-
-// ========== 维度选择 (Dimension tabs for scores) ==========
-const selectedDimension = ref<'overall' | LongId>('overall')
-
-const dimensionTabs = computed(() => {
-  const tabs: Array<{ key: 'overall' | LongId; label: string }> = [{ key: 'overall', label: '综合' }]
-  const entries = [...sectionNameMap.value.entries()]
-  for (const [id, info] of entries) {
-    tabs.push({ key: id, label: info.name })
-  }
-  return tabs
-})
-
-const dimensionScores = computed(() => {
-  if (selectedDimension.value === 'overall') {
-    return [...aggregatedTargetScores.value]
-      .sort((a, b) => b.totalScore - a.totalScore)
-      .map((a, i) => ({ ...a, rank: i + 1 }))
-  }
-  const sectionId = selectedDimension.value as LongId
-  const completed = filteredSubmissions.value
-    .filter(s => s.status === 'COMPLETED' && s.finalScore != null && s.sectionId === sectionId)
-    .sort((a, b) => (b.finalScore ?? 0) - (a.finalScore ?? 0))
-  return completed.map((s, i) => ({
-    targetId: s.rootTargetId ?? s.targetId,
-    targetName: s.rootTargetName || s.targetName || '?',
-    totalScore: s.finalScore ?? 0,
-    grade: s.grade ?? null,
-    passed: null as boolean | null,
-    rank: i + 1,
-    sections: [] as Array<{ sectionId: LongId; sectionName: string; score: number; grade: string | null; weight: number }>
-  }))
-})
-
-const dimensionStats = computed(() => {
-  const scores = dimensionScores.value
-  if (scores.length === 0) return null
-  const vals = scores.map(s => s.totalScore)
-  const avg = vals.reduce((a, b) => a + b, 0) / vals.length
-  return {
-    total: scores.length,
-    avg: avg.toFixed(1),
-    max: Math.max(...vals).toFixed(1),
-    min: Math.min(...vals).toFixed(1),
-    passed: scores.filter(s => s.grade && !s.grade.includes('不')).length,
-    failed: scores.filter(s => s.grade && s.grade.includes('不')).length,
-  }
-})
-
-const dimensionHasGrades = computed(() => {
-  return dimensionScores.value.some(s => s.grade != null)
-})
-
-// Grade color resolver (简单回退，详细等级颜色由 IndicatorScoreView 处理)
-function getGradeColor(grade: string | null, _sectionId?: LongId): string | null {
-  if (!grade) return null
-  if (grade.includes('不') || grade.includes('差')) return '#ef4444'
-  return '#10b981'
-}
-
 // ========== Load ==========
 async function loadProject() {
   loading.value = true
+  loadError.value = null
   try {
     project.value = await store.loadProject(projectId)
     inspectors.value = await store.loadInspectors(projectId)
     try { scoringProfiles.value = await getProfiles(projectId) } catch (e) { console.warn('加载评分方案列表失败', e) }
-    if (isDraft.value) activeTab.value = 'settings'
+    // P1 #4: 不再自动切到 settings — 让用户看到总览的"未发布"空态, 由空态 CTA 引导
     syncForm()
     if (project.value.createdBy) { try { const u = await getUser(project.value.createdBy); creatorName.value = u.realName || u.username } catch (e: any) { console.warn('加载创建者信息失败', e) } }
     if (project.value.rootSectionId) {
@@ -559,14 +447,6 @@ async function loadProject() {
         sectionNameMap.value = map
         sectionTree.value = buildSectionTree(sections, project.value.rootSectionId)
       } catch (e) { console.warn('加载分区树失败', e) }
-      // Load root section grade bands
-      try {
-        const rootProfile = await getProfileByProjectAndSection(projectId, project.value.rootSectionId)
-        if (rootProfile?.id) {
-          const bands = await getGradeBands(rootProfile.id)
-          rootGradeBands.value = bands.map(b => ({ name: b.gradeName || b.gradeCode, min: b.minScore, max: b.maxScore }))
-        }
-      } catch (e) { /* no root grade mapping */ rootGradeBands.value = [] }
     }
     allTasks.value = []; allSubmissions.value = []
     submissionsLoadFailedCount.value = 0
@@ -587,7 +467,11 @@ async function loadProject() {
       }
     } catch (e: any) { console.error('加载任务列表失败', e); ElMessage.error('加载任务列表失败: ' + (e?.message || '未知错误')) }
     configDirty.value = false
-  } catch (e: any) { ElMessage.error(e.message || '加载失败') }
+  } catch (e: any) {
+    // P0 #2: 失败留下错误条 + 重试按钮, 不只一闪而过的 toast
+    loadError.value = e?.message || '加载失败'
+    ElMessage.error(loadError.value || '加载失败')
+  }
   finally { loading.value = false }
 }
 function syncForm() {
@@ -684,11 +568,12 @@ async function saveConfig() {
     }
     if (failed.length > 0) {
       // 部分失败 — 保留 configDirty 供重试, 不谎报"已保存"
+      // P0 #22: 失败时不 reload — 否则会用服务端旧值覆盖用户未保存的输入
       ElMessage.error(`基本配置已保存,但 ${failed.join('、')} 保存失败,请重试`)
     } else {
       ElMessage.success('已保存'); configDirty.value = false
+      loadProject()
     }
-    loadProject()
   } catch (e: any) { ElMessage.error(e.message || '保存失败') } finally { saving.value = false }
 }
 
@@ -731,17 +616,50 @@ async function handleComplete() {
 async function handleArchive() { try { await ElMessageBox.confirm('确定归档？归档后不可恢复为活跃状态。', '确认归档', { type: 'warning' }); await inspProjectApi.archive(projectId); ElMessage.success('已归档'); loadProject() } catch (e: any) {
     if (e !== 'cancel' && e?.toString?.() !== 'cancel') { console.error('归档项目失败', e); ElMessage.error('归档项目失败，请重试') }
   } }
-async function handleClaim(task: InspTask) { try { await store.claimTask(task.id, { inspectorName: currentUserName.value }); ElMessage.success('已领取'); loadProject() } catch (e: any) { ElMessage.error(e.message || '领取失败') } }
+async function handleClaim(task: InspTask) {
+  if (!ensureCurrentUser()) return
+  try { await store.claimTask(task.id, { inspectorName: currentUserName.value }); ElMessage.success('已领取'); loadProject() } catch (e: any) { ElMessage.error(e.message || '领取失败') }
+}
 
 // ========== Inspector ==========
 async function searchUsers(q: string) { if (!q.trim()) { addResults.value = []; return }; addLoading.value = true; try { addResults.value = await getSimpleUserList(q.trim()) } catch (e: any) { console.warn('搜索用户失败', e); addResults.value = [] }; addLoading.value = false }
 async function handleAddInspector(userId: LongId) {
   const u = addResults.value.find(x => x.id === userId); if (!u) return
-  try { await store.addInspector(projectId, { userId: u.id, userName: u.realName || u.username, role: addRole.value }); ElMessage.success(`已添加 ${u.realName || u.username}`); addQuery.value = ''; addResults.value = []; inspectors.value = await store.loadInspectors(projectId) } catch (e: any) { ElMessage.error(e.message || '失败') }
+  // P0 #15: 前置去重 — 同一个人已在检查员列表里时直接提示, 不发请求
+  if (inspectors.value.some(i => String(i.userId) === String(u.id))) {
+    ElMessage.warning(`${u.realName || u.username} 已在检查员列表中`)
+    addQuery.value = ''; addResults.value = []
+    return
+  }
+  try {
+    await store.addInspector(projectId, { userId: u.id, userName: u.realName || u.username, role: addRole.value })
+    ElMessage.success(`已添加 ${u.realName || u.username}`)
+    inspectors.value = await store.loadInspectors(projectId)
+  } catch (e: any) {
+    ElMessage.error(e.message || '失败')
+  } finally {
+    // P0 #15: 不管成败都清空, 否则失败后下次同样搜索词会带着旧 selected 卡住
+    addQuery.value = ''; addResults.value = []
+  }
 }
-async function handleRemoveInspector(insp: ProjectInspector) { try { await ElMessageBox.confirm(`移除「${insp.userName}」？`, '确认', { type: 'warning' }); await store.removeInspector(projectId, insp.id); inspectors.value = await store.loadInspectors(projectId) } catch (e: any) {
+async function handleRemoveInspector(insp: ProjectInspector) {
+  // P1 #16: 移除前查影响范围, 名下有 active/overdue 任务时显式提示
+  const stat = inspectorStatsById.value.get(String(insp.userId))
+  let extra = ''
+  if (stat && (stat.active > 0 || stat.overdue > 0)) {
+    const parts: string[] = []
+    if (stat.active > 0) parts.push(`${stat.active} 个进行中`)
+    if (stat.overdue > 0) parts.push(`${stat.overdue} 个逾期`)
+    extra = ` 该检查员名下还有 ${parts.join('、')}的任务, 移除后这些任务需要重新分配.`
+  }
+  try {
+    await ElMessageBox.confirm(`移除「${insp.userName}」？${extra}`, '确认', { type: 'warning' })
+    await store.removeInspector(projectId, insp.id)
+    inspectors.value = await store.loadInspectors(projectId)
+  } catch (e: any) {
     if (e !== 'cancel' && e?.toString?.() !== 'cancel') { console.error('移除检查员失败', e); ElMessage.error('移除检查员失败，请重试') }
-  } }
+  }
+}
 
 function goBack() { router.push('/inspection/projects') }
 function goExecuteTask(taskId: LongId) { router.push(`/inspection/tasks/${taskId}/execute`) }
@@ -766,6 +684,14 @@ function goCreateProfile() {
 // 进入本项目评分方案完整列表 (主菜单已隐藏, 通过此入口可达)
 function goProfileList() {
   router.push({ path: '/inspection/scoring-profiles', query: { projectId: String(projectId) } })
+}
+
+// P1 #23: 已发布项目的"克隆"按钮 — 跳到向导 clone 模式, 给"或克隆"文案真入口
+function handleCloneProject() {
+  router.push({
+    path: '/inspection/projects/create',
+    query: { clone: String(projectId) },
+  })
 }
 
 // review #12: 模板版本状态 (drifted / 当前 / 最新)
@@ -855,8 +781,9 @@ onMounted(async () => {
         </div>
       </div>
       <div class="pdv-header-actions" v-if="project">
+        <!-- P1 #25: 删除 activeTab==='settings' 约束 — configDirty 时全 tab 可见 -->
         <InspButton
-          v-if="configDirty && !isArchived && activeTab === 'settings'"
+          v-if="configDirty && !isArchived"
           variant="accent" size="sm" :loading="saving" @click="saveConfig">
           <Save :size="13" />保存配置
         </InspButton>
@@ -921,22 +848,35 @@ onMounted(async () => {
       <!-- ===== 总览 Tab ===== -->
       <div v-if="activeTab === 'overview'">
 
+        <!-- P0 #2: 加载失败错误条 + 重试 (沿用 pdv-score-warn 配色, 整页可见) -->
+        <div v-if="loadError" class="pdv-score-warn">
+          <span class="pdv-score-warn__icon">!</span>
+          <span>加载项目数据失败: {{ loadError }}</span>
+          <button class="pdv-score-warn__retry" @click="loadProject">重试</button>
+        </div>
+
         <!-- 未发布提示 -->
         <div v-if="isDraft" class="pdv-empty-state">
           <ClipboardList class="w-10 h-10 text-blue-300 mb-3" />
           <div class="font-medium text-gray-600 mb-1">项目尚未发布</div>
           <div class="text-sm text-gray-400 mb-4">请在「设置」中完成配置后发布</div>
-          <el-button type="primary" :disabled="!canPublish" @click="handlePublish" size="small" round>
-            <Send class="w-3.5 h-3.5 mr-1" />发布项目
-          </el-button>
+          <div class="flex items-center gap-2">
+            <el-button @click="activeTab = 'settings'" size="small" round>
+              <Settings class="w-3.5 h-3.5 mr-1" />去设置
+            </el-button>
+            <el-button type="primary" :disabled="!canPublish" @click="handlePublish" size="small" round>
+              <Send class="w-3.5 h-3.5 mr-1" />发布项目
+            </el-button>
+          </div>
         </div>
 
         <template v-else>
-          <!-- A 级升级: 顶部告警条 (有需关注事项才显示) -->
+          <!-- A 级升级: 顶部告警条 (有需关注事项才显示)
+               P0 #3: icon 改为 lucide component, 不再 raw 空字符串 -->
           <div v-if="overviewAlerts.length > 0" class="pdv-alert-strip">
             <div v-for="(a, i) in overviewAlerts" :key="i"
                  class="pdv-alert" :class="`pdv-alert--${a.type}`">
-              <span class="pdv-alert__icon">{{ a.icon }}</span>
+              <component :is="a.icon" class="pdv-alert__icon w-3.5 h-3.5" />
               <span class="pdv-alert__text">{{ a.text }}</span>
               <button v-if="a.action" class="pdv-alert__action"
                       @click="activeTab = a.action.tab">{{ a.action.label }} ></button>
@@ -970,18 +910,23 @@ onMounted(async () => {
               <div class="pdv-kpi__label">待审</div>
             </div>
             <div class="pdv-kpi">
-              <div class="pdv-kpi__num">{{ richKpis.avgScore.toFixed(1) }}</div>
+              <!-- P1 #6: 无成绩数据时 0.0 误导, 改为 — 占位 -->
+              <div class="pdv-kpi__num">{{ richKpis.hasScores ? richKpis.avgScore.toFixed(1) : '—' }}</div>
               <div class="pdv-kpi__label">平均得分</div>
             </div>
             <div class="pdv-kpi">
-              <div class="pdv-kpi__num" :style="{ color: richKpis.passRate >= 80 ? '#10b981' : richKpis.passRate >= 60 ? '#f59e0b' : '#ef4444' }">
+              <div v-if="!richKpis.hasScores" class="pdv-kpi__num">—</div>
+              <div v-else class="pdv-kpi__num" :style="{ color: richKpis.passRate >= 80 ? '#10b981' : richKpis.passRate >= 60 ? '#f59e0b' : '#ef4444' }">
                 {{ richKpis.passRate }}<span class="pdv-kpi__unit">%</span>
               </div>
               <div class="pdv-kpi__label">通过率</div>
             </div>
+            <!-- P1 #11: 删 completionRate (与下方进度条同口径重复), 换"目标完成率" — 目标维度更有信息量 -->
             <div class="pdv-kpi">
-              <div class="pdv-kpi__num">{{ richKpis.completionRate }}<span class="pdv-kpi__unit">%</span></div>
-              <div class="pdv-kpi__label">完成率</div>
+              <div class="pdv-kpi__num">
+                {{ taskStats.totalTargets === 0 ? '—' : Math.round(taskStats.completedTargets / taskStats.totalTargets * 100) }}<span v-if="taskStats.totalTargets > 0" class="pdv-kpi__unit">%</span>
+              </div>
+              <div class="pdv-kpi__label">目标完成率</div>
             </div>
           </div>
 
@@ -1026,7 +971,8 @@ onMounted(async () => {
           </div>
 
           <!-- IA 收敛: 总览只保留"最近活动 + 待办跳转",
-               详细排名/维度对比/目标得分分布全部下沉到「成绩统计」Tab (IndicatorScoreView) -->
+               详细排名/维度对比/目标得分分布全部下沉到「成绩统计」Tab (IndicatorScoreView)
+               P1 #7: 待分配卡空时整卡不再 v-if 隐藏 — 改为空态占位, 保持双栏稳定 -->
           <div class="pdv-two-col">
 
             <!-- 最近检查 -->
@@ -1051,7 +997,7 @@ onMounted(async () => {
                       :type="task.status === 'PUBLISHED' ? 'success' : task.status === 'REVIEWED' ? 'primary' : 'warning'"
                       size="small" round effect="plain"
                     >
-                      {{ ({ SUBMITTED:'已提交', UNDER_REVIEW:'审核中', REVIEWED:'已审核', PUBLISHED:'已发布' } as Record<string, string>)[task.status] || task.status }}
+                      {{ TASK_STATUS_LABEL[task.status] || task.status }}
                     </el-tag>
                     <span class="text-xs text-gray-400">{{ task.completedTargets }}/{{ task.totalTargets }} 目标</span>
                   </div>
@@ -1066,38 +1012,24 @@ onMounted(async () => {
               </div>
             </div>
 
-            <!-- 待分配任务 (快速操作快捷按钮 - 保留) -->
-            <div v-if="pendingAssignTasks.length > 0" class="pdv-card">
+            <!-- 待分配任务 — P1 #10: 总览只 readonly preview, 指派操作在 team tab 完成
+                 P1 #7: 空态也保留卡片, 避免双栏塌成单栏 -->
+            <div class="pdv-card">
               <div class="pdv-card-title">
                 <Users class="w-4 h-4 text-orange-500" />待分配任务
-                <span class="pdv-badge-orange ml-1.5">{{ pendingAssignTasks.length }}</span>
-                <button class="pdv-card-link" @click="activeTab = 'team'"
-                        title="到「人员与任务」批量分配">
-                  全部分配 →
+                <span v-if="pendingAssignTasks.length > 0" class="pdv-badge-orange ml-1.5">{{ pendingAssignTasks.length }}</span>
+                <!-- P1 #9: > 8 条时文案带总数, ≤ 8 条时不显总数 -->
+                <button v-if="pendingAssignTasks.length > 0" class="pdv-card-link" @click="activeTab = 'team'"
+                        title="到「人员与任务」分配">
+                  {{ pendingAssignTasks.length > 8 ? `查看全部 ${pendingAssignTasks.length} →` : '去分配 →' }}
                 </button>
               </div>
-              <div class="pdv-assign-list">
+              <div v-if="pendingAssignTasks.length === 0" class="pdv-card-empty">所有任务已分配</div>
+              <div v-else class="pdv-assign-list">
                 <div v-for="task in pendingAssignTasks.slice(0, 8)" :key="task.id" class="pdv-assign-row">
                   <span class="text-xs text-gray-500">{{ task.taskDate }}</span>
+                  <span class="text-xs text-gray-400 pdv-assign-row-code" :title="task.taskCode">{{ task.taskCode }}</span>
                   <span class="text-xs text-gray-400">{{ task.totalTargets }}个目标</span>
-                  <el-select
-                    :model-value="null"
-                    placeholder="选择检查员"
-                    size="small"
-                    style="width: 140px"
-                    :loading="assigningTaskId === task.id"
-                    @change="(val: any) => {
-                      const insp = inspectors.find((i: ProjectInspector) => String(i.userId) === String(val))
-                      if (insp) handleAssignTask(task, insp)
-                    }"
-                  >
-                    <el-option
-                      v-for="insp in inspectors"
-                      :key="insp.userId"
-                      :label="insp.userName"
-                      :value="insp.userId"
-                    />
-                  </el-select>
                 </div>
               </div>
             </div>
@@ -1115,7 +1047,13 @@ onMounted(async () => {
           <span>{{ submissionsLoadFailedCount }} 个任务的提交记录加载失败, 下方成绩统计可能不完整</span>
           <button class="pdv-score-warn__retry" @click="loadProject">重新加载</button>
         </div>
-        <IndicatorScoreView v-if="!isDraft" :project-id="projectId" />
+        <IndicatorScoreView
+          v-if="!isDraft"
+          :project-id="projectId"
+          :all-tasks="allTasks"
+          :all-submissions="allSubmissions"
+          :submissions-load-failed-count="submissionsLoadFailedCount"
+        />
 
         <!-- P1 #14: Legacy score aggregation 整段死代码 (v-if="false") 已删除 — IndicatorScoreView 承接全部 -->
         <div v-else class="py-20 text-center">
@@ -1129,11 +1067,32 @@ onMounted(async () => {
         <SectionConfigView :project-id="projectId" :sections="sectionList" :section-tree="sectionTree" :root-section-id="project?.rootSectionId" :root-section-name="rootSectionName" :inspectors="inspectors" :project-tasks="allTasks" />
       </div>
 
-      <!-- ===== 设置 Tab ===== -->
-      <!-- ===== 人员与任务 Tab ===== -->
+      <!-- ===== 人员与任务 Tab =====
+           P1 #20: 卡片顺序 "待审核 → 待分配 → 检查员管理" (紧急优先) -->
       <div v-if="activeTab === 'team'" class="cfg-section">
 
-        <!-- 待分配任务 -->
+        <!-- 1. 待审核任务 (最紧急, 阻塞业务) -->
+        <div v-if="pendingReviewCount > 0" class="cfg-card">
+          <div class="cfg-card-title cfg-card-title--with-icon cfg-card-title--mb">
+            <ClipboardCheck class="w-4 h-4" style="color:#1a6dff" />待审核任务
+            <span class="pdv-badge-red">{{ pendingReviewCount }}</span>
+          </div>
+          <div class="cfg-review-list">
+            <div v-for="task in pendingReviewTasks" :key="task.id" class="cfg-review-item">
+              <div class="cfg-review-info">
+                <div class="cfg-insp-name">{{ task.taskCode }}</div>
+                <div class="cfg-hint">检查员: {{ task.inspectorName || '-' }} · {{ task.updatedAt?.substring(0, 16) || '-' }}</div>
+              </div>
+              <div class="cfg-review-actions">
+                <el-tag type="warning" size="small" round>待审核</el-tag>
+                <el-button type="success" size="small" @click="handleApproveTask(task)"><Check class="w-3.5 h-3.5 mr-0.5" />通过</el-button>
+                <el-button type="danger" size="small" plain @click="handleRejectTask(task)"><X class="w-3.5 h-3.5 mr-0.5" />驳回</el-button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. 待分配任务 -->
         <div v-if="pendingAssignTasks.length > 0" class="cfg-card">
           <div class="cfg-card-title cfg-card-title--with-icon cfg-card-title--mb">
             <ClipboardList class="w-4 h-4" style="color:#f59e0b" />待分配任务
@@ -1144,7 +1103,9 @@ onMounted(async () => {
               <span class="text-xs font-medium">{{ task.taskCode }}</span>
               <span class="text-xs text-gray-500">{{ task.taskDate }}</span>
               <span class="text-xs text-gray-400">{{ task.totalTargets }}个目标</span>
+              <!-- P0 #14: :key 含 assignSelectKey, 取消确认后 bump 让 select 重建清空 -->
               <el-select
+                :key="`assign-${task.id}-${assignSelectKey}`"
                 :model-value="null"
                 placeholder="指派检查员"
                 size="small"
@@ -1182,6 +1143,8 @@ onMounted(async () => {
                 </el-select>
               </div>
               <div class="cfg-add-insp-role">
+                <!-- P1 #19: 角色下拉补 label -->
+                <label class="cfg-label">角色</label>
                 <el-select v-model="addRole">
                   <el-option v-for="(v,k) in InspectorRoleConfig" :key="k" :label="v.label" :value="k" />
                 </el-select>
@@ -1200,7 +1163,7 @@ onMounted(async () => {
           <div v-else class="pdv-insp-list">
             <div v-for="insp in filteredInspectors" :key="insp.id"
                  class="pdv-insp-row"
-                 :class="{ 'pdv-insp-row--overdue': (inspectorStatsByName.get(insp.userName)?.overdue ?? 0) > 0 }">
+                 :class="{ 'pdv-insp-row--overdue': (inspectorStatsById.get(String(insp.userId))?.overdue ?? 0) > 0 }">
               <div class="pdv-insp-avatar">{{ (insp.userName || '?')[0] }}</div>
               <div class="pdv-insp-meta">
                 <div class="pdv-insp-name-line">
@@ -1208,65 +1171,44 @@ onMounted(async () => {
                   <span class="pdv-insp-role">{{ InspectorRoleConfig[insp.role as InspectorRole]?.label }}</span>
                 </div>
                 <div class="pdv-insp-stats" v-if="!isDraft">
-                  <template v-if="inspectorStatsByName.get(insp.userName)">
+                  <template v-if="inspectorStatsById.get(String(insp.userId))">
                     <span class="pdv-stat">
-                      分配 <b>{{ inspectorStatsByName.get(insp.userName)!.assigned }}</b>
+                      分配 <b>{{ inspectorStatsById.get(String(insp.userId))!.assigned }}</b>
                     </span>
                     <span class="pdv-stat">
-                      完成 <b style="color: var(--insp-pass)">{{ inspectorStatsByName.get(insp.userName)!.completed }}</b>
+                      完成 <b style="color: var(--insp-pass)">{{ inspectorStatsById.get(String(insp.userId))!.completed }}</b>
                     </span>
-                    <span class="pdv-stat" v-if="inspectorStatsByName.get(insp.userName)!.active > 0">
-                      进行中 <b style="color: var(--insp-info)">{{ inspectorStatsByName.get(insp.userName)!.active }}</b>
+                    <span class="pdv-stat" v-if="inspectorStatsById.get(String(insp.userId))!.active > 0">
+                      进行中 <b style="color: var(--insp-info)">{{ inspectorStatsById.get(String(insp.userId))!.active }}</b>
                     </span>
-                    <span class="pdv-stat pdv-stat--alert" v-if="inspectorStatsByName.get(insp.userName)!.overdue > 0">
-                      逾期 <b>{{ inspectorStatsByName.get(insp.userName)!.overdue }}</b>
+                    <span class="pdv-stat pdv-stat--alert" v-if="inspectorStatsById.get(String(insp.userId))!.overdue > 0">
+                      逾期 <b>{{ inspectorStatsById.get(String(insp.userId))!.overdue }}</b>
                     </span>
                   </template>
                   <span v-else class="pdv-stat-empty">暂无任务</span>
                 </div>
                 <!-- 负载饱和度条 -->
-                <div v-if="!isDraft && inspectorStatsByName.get(insp.userName)" class="pdv-insp-bar">
+                <div v-if="!isDraft && inspectorStatsById.get(String(insp.userId))" class="pdv-insp-bar">
                   <div class="pdv-insp-bar-bg">
                     <div class="pdv-insp-bar-done"
-                         :style="{ width: ((inspectorStatsByName.get(insp.userName)!.completed / Math.max(inspectorStatsByName.get(insp.userName)!.assigned, 1)) * 100) + '%' }" />
+                         :style="{ width: ((inspectorStatsById.get(String(insp.userId))!.completed / Math.max(inspectorStatsById.get(String(insp.userId))!.assigned, 1)) * 100) + '%' }" />
                   </div>
                 </div>
               </div>
               <el-tag :type="insp.isActive ? 'success' : 'info'" size="small" round effect="plain">{{ insp.isActive ? '启用' : '禁用' }}</el-tag>
               <el-button link type="danger" size="small" @click="handleRemoveInspector(insp)"><Trash2 class="w-3.5 h-3.5" /></el-button>
             </div>
-            <div v-if="inspectorFilter && filteredInspectors.length === 0" class="cfg-empty" style="padding: 16px">
+            <div v-if="inspectorFilter && filteredInspectors.length === 0" class="cfg-empty cfg-empty--card">
               没有匹配 "{{ inspectorFilter }}" 的检查员
-            </div>
-          </div>
-        </div>
-
-        <!-- 审核待办 -->
-        <div v-if="pendingReviewCount > 0" class="cfg-card">
-          <div class="cfg-card-title cfg-card-title--with-icon cfg-card-title--mb">
-            <ClipboardCheck class="w-4 h-4" style="color:#1a6dff" />待审核任务
-            <span class="pdv-badge-red">{{ pendingReviewCount }}</span>
-          </div>
-          <div class="cfg-review-list">
-            <div v-for="task in pendingReviewTasks" :key="task.id" class="cfg-review-item">
-              <div class="cfg-review-info">
-                <div class="cfg-insp-name">{{ task.taskCode }}</div>
-                <div class="cfg-hint">检查员: {{ task.inspectorName || '-' }} · {{ task.updatedAt?.substring(0, 16) || '-' }}</div>
-              </div>
-              <div class="cfg-review-actions">
-                <el-tag type="warning" size="small" round>待审核</el-tag>
-                <el-button type="success" size="small" @click="handleApproveTask(task)"><Check class="w-3.5 h-3.5 mr-0.5" />通过</el-button>
-                <el-button type="danger" size="small" plain @click="handleRejectTask(task)"><X class="w-3.5 h-3.5 mr-0.5" />驳回</el-button>
-              </div>
             </div>
           </div>
         </div>
 
         <!-- 无待办时 -->
         <div v-if="pendingAssignTasks.length === 0 && pendingReviewCount === 0 && inspectors.length > 0" class="cfg-card">
-          <div class="cfg-empty" style="padding: 16px">
-            <CheckCircle class="w-5 h-5 text-green-400" style="margin: 0 auto 6px" />
-            所有任务已分配，无待审核项目
+          <div class="cfg-empty pdv-empty-allgood">
+            <CheckCircle class="w-5 h-5 text-green-400" />
+            <div>所有任务已分配，无待审核项目</div>
           </div>
         </div>
       </div>
@@ -1288,7 +1230,8 @@ onMounted(async () => {
                 <ul class="pdv-lock-list">
                   <li>检查范围 (受检组织 / 班级)</li>
                   <li>根分区 (绑定的模板)</li>
-                  <li>评分配置快照 (满分 / 精度 / 多评模式)</li>
+                  <!-- P1 #24: 旧文案"评分配置快照(满分/精度/多评模式)"已不准 — 评分配置下沉到调度组后, 锁定的只剩绑定关系 -->
+                  <li>评分方案绑定关系 (调度组分配 / 默认方案选择)</li>
                   <li>开始日期</li>
                 </ul>
               </div>
@@ -1322,170 +1265,16 @@ onMounted(async () => {
               placeholder="输入项目名称"
             />
           </div>
-          <div v-if="rootSectionName" class="cfg-field cfg-field--mt">
+          <!-- P1 #26: 多模板项目 (rootSectionId 为 null) 也显式显示, 不再 v-if 隐藏整行 -->
+          <div class="cfg-field cfg-field--mt">
             <label class="cfg-label">检查模板</label>
-            <div class="cfg-readonly-text">{{ rootSectionName }}</div>
+            <div v-if="rootSectionName" class="cfg-readonly-text">{{ rootSectionName }}</div>
+            <div v-else class="cfg-readonly-text">多模板项目 (按调度组分别绑定)</div>
           </div>
         </div>
 
-        <!-- 评分方案 (项目-owned) -->
-        <div class="cfg-card">
-          <div class="cfg-card-header">
-            <div class="cfg-card-title cfg-card-title--with-icon">
-              <SlidersHorizontal class="w-4 h-4" style="color:#1a6dff" />评分方案
-              <span v-if="scoringProfiles.length" class="cfg-count">({{ scoringProfiles.length }})</span>
-            </div>
-            <div class="cfg-card-ops">
-              <el-button v-if="isDraft && !isArchived" size="small" type="primary" plain @click="goCreateProfile" round>
-                <Plus class="w-3.5 h-3.5 mr-1" />新建评分方案
-              </el-button>
-              <el-button size="small" plain @click="goProfileList" round>
-                查看全部
-              </el-button>
-            </div>
-          </div>
-          <div class="cfg-desc">
-            本项目专属的评分方案 — 与项目同生命周期, 不与其他项目共享.
-            <span v-if="!isDraft">已发布项目只读, 如需修改请新建草稿项目或克隆.</span>
-          </div>
-          <div class="cfg-field cfg-field--mt">
-            <label class="cfg-label">默认评分方案</label>
-            <el-select
-              v-model="cf.defaultScoringProfileId"
-              placeholder="未设置"
-              clearable
-              filterable
-              size="small"
-              class="w-full"
-              :disabled="isArchived || !isDraft"
-            >
-              <el-option
-                v-for="p in scoringProfileOptions"
-                :key="p.id"
-                :label="p.label"
-                :value="p.id"
-              />
-            </el-select>
-            <div class="cfg-hint">用于临时抽查/自查任务，以及新建调度组时的默认值。计划任务以调度组自身的评分方案为准。</div>
-          </div>
-          <div v-if="scoringProfiles.length === 0" class="cfg-empty" style="padding: 16px">
-            <SlidersHorizontal class="w-5 h-5 text-gray-300" style="margin: 0 auto 6px" />
-            暂无评分方案 ·
-            <el-link v-if="isDraft && !isArchived" type="primary" :underline="false" @click="goCreateProfile">立即新建</el-link>
-            <span v-else>已发布项目无法新建</span>
-          </div>
-          <div v-else class="pdv-profile-list">
-            <div v-for="p in scoringProfiles" :key="p.id" class="pdv-profile-row">
-              <div class="pdv-profile-meta">
-                <div class="pdv-profile-name">
-                  <span v-if="sectionNameMap.get(p.sectionId)" class="pdv-profile-section">
-                    {{ sectionNameMap.get(p.sectionId)?.name }}
-                  </span>
-                  <span v-else class="pdv-profile-section pdv-profile-section--orphan">
-                    未关联分区
-                  </span>
-                  <span class="pdv-profile-id">#{{ p.id }}</span>
-                </div>
-                <div class="pdv-profile-stats">
-                  <span>{{ p.minScore }}–{{ p.maxScore }} 分</span>
-                  <span class="pdv-profile-sep">·</span>
-                  <span>{{ p.precisionDigits }} 位精度</span>
-                  <span v-if="p.multiRaterMode" class="pdv-profile-sep">·</span>
-                  <span v-if="p.multiRaterMode">{{ p.multiRaterMode }}</span>
-                  <template v-if="p.calibrationEnabled || p.trendFactorEnabled || p.decayEnabled">
-                    <span class="pdv-profile-sep">·</span>
-                    <span v-if="p.calibrationEnabled" class="pdv-profile-feat">校准</span>
-                    <span v-if="p.trendFactorEnabled" class="pdv-profile-feat">趋势</span>
-                    <span v-if="p.decayEnabled" class="pdv-profile-feat">衰减</span>
-                  </template>
-                </div>
-              </div>
-              <el-button size="small" link type="primary" @click="goEditProfile(p.id)">
-                <Pencil class="w-3.5 h-3.5 mr-0.5" />{{ isDraft && !isArchived ? '编辑' : '查看' }}
-              </el-button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 检查范围 -->
-        <div class="cfg-card" :class="{ 'cfg-locked': !isDraft }">
-          <div class="cfg-card-header">
-            <div class="cfg-card-title">检查范围</div>
-            <Lock v-if="!isDraft" class="w-3.5 h-3.5 cfg-lock-icon" />
-          </div>
-          <div class="cfg-desc">选择哪些组织单元参与本次检查，系统将根据分区的目标类型自动派生具体检查对象。</div>
-          <div class="cfg-field cfg-field--mt">
-            <label class="cfg-label">检查对象 <span v-if="isDraft" class="cfg-req">*</span></label>
-            <div v-if="loadingOrgTree" class="cfg-org-list cfg-org-loading">加载中...</div>
-            <div v-else-if="orgTree.length === 0" class="cfg-org-list cfg-org-loading">暂无组织单元</div>
-            <div v-else-if="!isDraft" class="cfg-org-readonly">
-              <span v-if="cf.scopeIds.length === 0" class="cfg-readonly-text">未选择</span>
-              <template v-else>
-                <span v-for="id in cf.scopeIds" :key="id" class="cfg-scope-tag">
-                  {{ scopeOrgNames[cf.scopeIds.indexOf(id)] || id }}
-                </span>
-              </template>
-            </div>
-            <template v-else>
-              <div class="flex items-center gap-2 mb-1.5">
-                <el-input
-                  v-model="scopeFilterText"
-                  placeholder="搜索组织..."
-                  size="small"
-                  clearable
-                  style="width: 200px"
-                />
-                <el-button size="small" link type="primary" @click="scopeTreeRef?.setCheckedKeys([]); cf.scopeIds = []">清空</el-button>
-              </div>
-              <div class="cfg-org-list">
-                <el-tree
-                  ref="scopeTreeRef"
-                  :data="orgTree"
-                  :props="{ children: 'children', label: 'unitName' }"
-                  show-checkbox
-                  check-strictly
-                  node-key="id"
-                  :default-checked-keys="cf.scopeIds"
-                  :filter-node-method="filterScopeNode"
-                  default-expand-all
-                  @check="handleScopeCheckChange"
-                />
-              </div>
-            </template>
-          </div>
-          <div v-if="cf.scopeIds.length > 0 && isDraft" class="cfg-hint">
-            已选 {{ cf.scopeIds.length }} 个组织单元，发布后将自动匹配下属场所、部门等目标
-          </div>
-        </div>
-
-        <!-- 时间范围 -->
-        <div class="cfg-card" :class="{ 'cfg-locked': !isDraft }">
-          <div class="cfg-card-header">
-            <div class="cfg-card-title">时间范围</div>
-            <Lock v-if="!isDraft" class="w-3.5 h-3.5 cfg-lock-icon" />
-          </div>
-          <div class="cfg-desc">设置检查的起止时间。具体调度频率在「检查计划」标签页中配置。</div>
-          <div class="cfg-row2">
-            <div class="cfg-field">
-              <label class="cfg-label">开始日期 <span v-if="isDraft" class="cfg-req">*</span></label>
-              <input
-                v-model="cf.startDate"
-                type="date"
-                class="cfg-input"
-                :disabled="!isDraft"
-              />
-            </div>
-            <div class="cfg-field">
-              <label class="cfg-label">结束日期</label>
-              <input
-                v-model="cf.endDate"
-                type="date"
-                class="cfg-input"
-                :disabled="!isDraft"
-              />
-            </div>
-          </div>
-        </div>
+        <!-- P1 #27 卡片顺序: 基本信息 → 运营配置 → 检查模式 → 整改判定策略 → 评分方案 → 检查范围 → 时间范围 (从松锁到强锁渐变);
+             评分方案 / 检查范围 / 时间范围 已下移到整改判定策略之后 -->
 
         <!-- 运营配置 -->
         <div class="cfg-card" :class="{ 'cfg-locked': isArchived }">
@@ -1664,7 +1453,171 @@ onMounted(async () => {
           </details>
         </div>
 
-        <!-- 项目操作 (暂停/恢复/完结/归档) 已上提到页面 header (line 879+), 此处不再重复展示 -->
+        <!-- 评分方案 (项目-owned) — P1 #27 移到策略之后 / 范围之前; P1 #28 去 SlidersHorizontal 图标统一视觉权重 -->
+        <div class="cfg-card">
+          <div class="cfg-card-header">
+            <div class="cfg-card-title">
+              评分方案
+              <span v-if="scoringProfiles.length" class="cfg-count">({{ scoringProfiles.length }})</span>
+            </div>
+            <div class="cfg-card-ops">
+              <el-button v-if="isDraft && !isArchived" size="small" type="primary" plain @click="goCreateProfile" round>
+                <Plus class="w-3.5 h-3.5 mr-1" />新建评分方案
+              </el-button>
+              <!-- P1 #23: 已发布项目加克隆按钮, 跳到向导的 clone 模式; 原"或克隆"文案有了真入口 -->
+              <el-button v-if="!isDraft && !isArchived" size="small" plain @click="handleCloneProject" round>
+                <Copy class="w-3.5 h-3.5 mr-1" />克隆为新项目
+              </el-button>
+              <el-button size="small" plain @click="goProfileList" round>
+                查看全部
+              </el-button>
+            </div>
+          </div>
+          <div class="cfg-desc">
+            本项目专属的评分方案 — 与项目同生命周期, 不与其他项目共享.
+            <!-- P1 #23: 旧文案"或克隆"无入口, 现在有按钮了 -->
+            <span v-if="!isDraft">已发布项目只读, 如需修改请点"克隆为新项目"复制一份草稿.</span>
+          </div>
+          <div class="cfg-field cfg-field--mt">
+            <label class="cfg-label">默认评分方案</label>
+            <el-select
+              v-model="cf.defaultScoringProfileId"
+              placeholder="未设置"
+              clearable
+              filterable
+              size="small"
+              class="w-full"
+              :disabled="isArchived || !isDraft"
+            >
+              <el-option
+                v-for="p in scoringProfileOptions"
+                :key="p.id"
+                :label="p.label"
+                :value="p.id"
+              />
+            </el-select>
+            <div class="cfg-hint">用于临时抽查/自查任务，以及新建调度组时的默认值。计划任务以调度组自身的评分方案为准。</div>
+          </div>
+          <!-- P2 #31: padding 16px 移到 CSS .cfg-empty--card; P1 #28 同步去图标 -->
+          <div v-if="scoringProfiles.length === 0" class="cfg-empty cfg-empty--card">
+            暂无评分方案 ·
+            <el-link v-if="isDraft && !isArchived" type="primary" :underline="false" @click="goCreateProfile">立即新建</el-link>
+            <span v-else>已发布项目无法新建</span>
+          </div>
+          <div v-else class="pdv-profile-list">
+            <div v-for="p in scoringProfiles" :key="p.id" class="pdv-profile-row">
+              <div class="pdv-profile-meta">
+                <div class="pdv-profile-name">
+                  <span v-if="sectionNameMap.get(p.sectionId)" class="pdv-profile-section">
+                    {{ sectionNameMap.get(p.sectionId)?.name }}
+                  </span>
+                  <span v-else class="pdv-profile-section pdv-profile-section--orphan">
+                    未关联分区
+                  </span>
+                  <span class="pdv-profile-id">#{{ p.id }}</span>
+                </div>
+                <div class="pdv-profile-stats">
+                  <span>{{ p.minScore }}–{{ p.maxScore }} 分</span>
+                  <span class="pdv-profile-sep">·</span>
+                  <span>{{ p.precisionDigits }} 位精度</span>
+                  <span v-if="p.multiRaterMode" class="pdv-profile-sep">·</span>
+                  <span v-if="p.multiRaterMode">{{ p.multiRaterMode }}</span>
+                  <template v-if="p.calibrationEnabled || p.trendFactorEnabled || p.decayEnabled">
+                    <span class="pdv-profile-sep">·</span>
+                    <span v-if="p.calibrationEnabled" class="pdv-profile-feat">校准</span>
+                    <span v-if="p.trendFactorEnabled" class="pdv-profile-feat">趋势</span>
+                    <span v-if="p.decayEnabled" class="pdv-profile-feat">衰减</span>
+                  </template>
+                </div>
+              </div>
+              <el-button size="small" link type="primary" @click="goEditProfile(p.id)">
+                <Pencil class="w-3.5 h-3.5 mr-0.5" />{{ isDraft && !isArchived ? '编辑' : '查看' }}
+              </el-button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 检查范围 -->
+        <div class="cfg-card" :class="{ 'cfg-locked': !isDraft }">
+          <div class="cfg-card-header">
+            <div class="cfg-card-title">检查范围</div>
+            <Lock v-if="!isDraft" class="w-3.5 h-3.5 cfg-lock-icon" />
+          </div>
+          <div class="cfg-desc">选择哪些组织单元参与本次检查，系统将根据分区的目标类型自动派生具体检查对象。</div>
+          <div class="cfg-field cfg-field--mt">
+            <label class="cfg-label">检查对象 <span v-if="isDraft" class="cfg-req">*</span></label>
+            <div v-if="loadingOrgTree" class="cfg-org-list cfg-org-loading">加载中...</div>
+            <div v-else-if="orgTree.length === 0" class="cfg-org-list cfg-org-loading">暂无组织单元</div>
+            <div v-else-if="!isDraft" class="cfg-org-readonly">
+              <span v-if="cf.scopeIds.length === 0" class="cfg-readonly-text">未选择</span>
+              <template v-else>
+                <span v-for="id in cf.scopeIds" :key="id" class="cfg-scope-tag">
+                  {{ scopeOrgNames[cf.scopeIds.indexOf(id)] || id }}
+                </span>
+              </template>
+            </div>
+            <template v-else>
+              <div class="flex items-center gap-2 mb-1.5">
+                <el-input
+                  v-model="scopeFilterText"
+                  placeholder="搜索组织..."
+                  size="small"
+                  clearable
+                  style="width: 200px"
+                />
+                <el-button size="small" link type="primary" @click="scopeTreeRef?.setCheckedKeys([]); cf.scopeIds = []">清空</el-button>
+              </div>
+              <div class="cfg-org-list">
+                <el-tree
+                  ref="scopeTreeRef"
+                  :data="orgTree"
+                  :props="{ children: 'children', label: 'unitName' }"
+                  show-checkbox
+                  check-strictly
+                  node-key="id"
+                  :default-checked-keys="cf.scopeIds"
+                  :filter-node-method="filterScopeNode"
+                  default-expand-all
+                  @check="handleScopeCheckChange"
+                />
+              </div>
+            </template>
+          </div>
+          <div v-if="cf.scopeIds.length > 0 && isDraft" class="cfg-hint">
+            已选 {{ cf.scopeIds.length }} 个组织单元，发布后将自动匹配下属场所、部门等目标
+          </div>
+        </div>
+
+        <!-- 时间范围 -->
+        <div class="cfg-card" :class="{ 'cfg-locked': !isDraft }">
+          <div class="cfg-card-header">
+            <div class="cfg-card-title">时间范围</div>
+            <Lock v-if="!isDraft" class="w-3.5 h-3.5 cfg-lock-icon" />
+          </div>
+          <div class="cfg-desc">设置检查的起止时间。具体调度频率在「检查计划」标签页中配置。</div>
+          <div class="cfg-row2">
+            <div class="cfg-field">
+              <label class="cfg-label">开始日期 <span v-if="isDraft" class="cfg-req">*</span></label>
+              <input
+                v-model="cf.startDate"
+                type="date"
+                class="cfg-input"
+                :disabled="!isDraft"
+              />
+            </div>
+            <div class="cfg-field">
+              <label class="cfg-label">结束日期</label>
+              <input
+                v-model="cf.endDate"
+                type="date"
+                class="cfg-input"
+                :disabled="!isDraft"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- P2 #29: 旧"项目操作 已上提"空注释删除 -->
 
       </div>
     </div>

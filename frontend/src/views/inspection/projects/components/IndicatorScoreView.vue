@@ -1,84 +1,173 @@
 <script setup lang="ts">
 import type { LongId } from '@/types/common'
-import { ref, computed, onMounted, watch } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ref, computed, onMounted } from 'vue'
 import {
-  BarChart3, RefreshCw, Trophy,
+  BarChart3, Trophy,
   Users, Calendar, ArrowUpDown, Search, Layers, UserCheck,
 } from 'lucide-vue-next'
-import { getIndicators, getIndicatorScores, computeIndicatorScores } from '@/api/inspection/indicator'
-import { getGradeSchemes } from '@/api/inspection/gradeScheme'
-import { getSubmissions } from '@/api/inspection/submission'
-import { getTasks } from '@/api/inspection/task'
-import type { Indicator, IndicatorScore } from '@/types/insp/indicator'
-import type { GradeScheme } from '@/types/insp/gradeScheme'
 import type { InspTask, InspSubmission } from '@/types/insp/project'
 
-const props = defineProps<{ projectId: LongId }>()
+// P0 #2: 不再自拉 tasks/submissions, 由父组件 (ProjectDetailView) 透传.
+// 删除整套"指标得分加载+重算"死代码 (getIndicators/getGradeSchemes/getIndicatorScores/
+// computeIndicatorScores/scoreMap/rootIndicators/getChildren/schemeName/handleCompute/
+// lastComputedAt/computedTimeText/timeTicker/.da-compute/.da-last-computed), 模板 0 处使用.
+const props = defineProps<{
+  projectId: LongId
+  allTasks: InspTask[]
+  allSubmissions: InspSubmission[]
+  submissionsLoadFailedCount?: number
+}>()
 
-const loading = ref(false)
-const computing = ref(false)
-const lastComputedAt = ref<number | null>(null)
-const indicators = ref<Indicator[]>([])
-const gradeSchemes = ref<GradeScheme[]>([])
-const scoreMap = ref<Map<LongId, IndicatorScore[]>>(new Map())
-const tasks = ref<InspTask[]>([])
-const submissions = ref<InspSubmission[]>([])
+const tasks = computed(() => props.allTasks)
+const submissions = computed(() => props.allSubmissions)
 
 // ═══ Filters ═══
 const dateRangeType = ref<'week' | 'month' | 'all' | 'custom'>('all')
-const customStart = ref(''); const customEnd = ref('')
-const filterSection = ref<number | ''>('')
-const filterInspector = ref<string>('')
+const customStart = ref('')
+const customEnd = ref('')
+const filterSection = ref<LongId | ''>('')
+const filterInspector = ref<string>('') // P1 #6: 统一用 inspectorId 作为 key
 const searchQuery = ref('')
-const activeView = ref<'ranking' | 'sections' | 'inspectors'>('ranking')
 
-const periodRange = computed(() => {
+// P2 #12: activeView 持久化到 localStorage
+type ViewMode = 'ranking' | 'sections' | 'inspectors'
+const VIEW_STORAGE_KEY = 'inspIndicatorScoreView'
+function loadPersistedView(): ViewMode {
+  try {
+    const v = localStorage.getItem(VIEW_STORAGE_KEY)
+    if (v === 'ranking' || v === 'sections' || v === 'inspectors') return v
+  } catch { /* localStorage 不可用时 silently fall through */ }
+  return 'ranking'
+}
+const activeView = ref<ViewMode>(loadPersistedView())
+function setView(v: ViewMode) {
+  activeView.value = v
+  try { localStorage.setItem(VIEW_STORAGE_KEY, v) } catch { /* ignore */ }
+}
+
+// P2 #14: 用本地日期格式, 避免 toISOString().split('T')[0] 时区漂移
+function fmtLocal(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${dd}`
+}
+
+// periodRange: 'all' 时返回 null 边界, 不再用前端任务反推窗口 (P0 #3 关联).
+const periodRange = computed<{ start: string | null; end: string | null }>(() => {
   const today = new Date()
-  const fmt = (d: Date) => d.toISOString().split('T')[0]
-  if (dateRangeType.value === 'custom' && customStart.value && customEnd.value) return { start: customStart.value, end: customEnd.value }
-  if (dateRangeType.value === 'month') return { start: fmt(new Date(today.getFullYear(), today.getMonth(), 1)), end: fmt(new Date(today.getFullYear(), today.getMonth() + 1, 0)) }
+  if (dateRangeType.value === 'custom' && customStart.value && customEnd.value) {
+    return { start: customStart.value, end: customEnd.value }
+  }
+  if (dateRangeType.value === 'month') {
+    return {
+      start: fmtLocal(new Date(today.getFullYear(), today.getMonth(), 1)),
+      end: fmtLocal(new Date(today.getFullYear(), today.getMonth() + 1, 0)),
+    }
+  }
   if (dateRangeType.value === 'week') {
-    const d = today.getDay() || 7; const m = new Date(today); m.setDate(today.getDate() - d + 1); const s = new Date(m); s.setDate(m.getDate() + 6)
-    return { start: fmt(m), end: fmt(s) }
+    const d = today.getDay() || 7
+    const m = new Date(today); m.setDate(today.getDate() - d + 1)
+    const s = new Date(m); s.setDate(m.getDate() + 6)
+    return { start: fmtLocal(m), end: fmtLocal(s) }
   }
   // all
-  const dates = tasks.value.map(t => t.taskDate).filter(Boolean).sort()
-  return { start: dates[0] || fmt(today), end: dates[dates.length - 1] || fmt(today) }
+  return { start: null, end: null }
 })
 
-// ═══ Derived data ═══
-const rootIndicators = computed(() => indicators.value.filter(i => !i.parentIndicatorId).sort((a, b) => a.sortOrder - b.sortOrder))
-function getChildren(pid: LongId) { return indicators.value.filter(i => i.parentIndicatorId === pid).sort((a, b) => a.sortOrder - b.sortOrder) }
-function schemeName(id: LongId | null) { return id ? (gradeSchemes.value.find(s => s.id === id)?.displayName || '') : '' }
+function inRange(taskDate: string | null | undefined): boolean {
+  if (!taskDate) return false
+  const { start, end } = periodRange.value
+  if (start && taskDate < start) return false
+  if (end && taskDate > end) return false
+  return true
+}
 
-// All sections from indicators
-const allSections = computed(() => indicators.value.filter(i => i.sourceSectionId).map(i => ({ id: i.sourceSectionId as LongId, name: i.name })))
-// All inspectors from tasks
-const allInspectors = computed(() => {
+// ═══ Derived data ═══
+// P2 #9: allSections 按 sectionId 去重
+const allSections = computed(() => {
+  const seen = new Map<string, { id: LongId; name: string }>()
+  for (const s of submissions.value) {
+    if (s.sectionId == null) continue
+    const key = String(s.sectionId)
+    if (seen.has(key)) continue
+    seen.set(key, { id: s.sectionId, name: `分区#${s.sectionId}` })
+  }
+  return [...seen.values()]
+})
+
+// P2 #10: allInspectors / inspectorStats 用 inspectorId 当 key, 同名异人不合并
+interface InspectorOption { id: string; name: string }
+const allInspectors = computed<InspectorOption[]>(() => {
   const m = new Map<string, string>()
-  tasks.value.forEach(t => { if (t.inspectorName) m.set(String(t.inspectorId || t.inspectorName), t.inspectorName) })
+  tasks.value.forEach(t => {
+    if (t.inspectorId == null) return
+    const id = String(t.inspectorId)
+    if (!m.has(id)) m.set(id, t.inspectorName || `#${id}`)
+  })
   return [...m.entries()].map(([id, name]) => ({ id, name }))
 })
 
-// Filtered submissions
+// ═══ Filtered submissions ═══
 const filteredSubmissions = computed(() => {
   let subs = submissions.value.filter(s => s.status === 'COMPLETED' && s.finalScore != null)
-  // Date filter
-  const range = periodRange.value
-  subs = subs.filter(s => {
-    const task = tasks.value.find(t => String(t.id) === String(s.taskId))
-    return task && task.taskDate >= range.start && task.taskDate <= range.end
-  })
+  // Date filter (仅当存在 range 时执行)
+  if (periodRange.value.start || periodRange.value.end) {
+    subs = subs.filter(s => {
+      const task = tasks.value.find(t => String(t.id) === String(s.taskId))
+      return task && inRange(task.taskDate)
+    })
+  }
   // Section filter
-  if (filterSection.value) subs = subs.filter(s => s.sectionId === filterSection.value)
-  // Inspector filter
+  if (filterSection.value !== '') {
+    const want = String(filterSection.value)
+    subs = subs.filter(s => s.sectionId != null && String(s.sectionId) === want)
+  }
+  // Inspector filter (P1 #6: 仅按 inspectorId 匹配)
   if (filterInspector.value) {
-    const taskIds = new Set(tasks.value.filter(t => String(t.inspectorId) === filterInspector.value || t.inspectorName === filterInspector.value).map(t => String(t.id)))
+    const want = filterInspector.value
+    const taskIds = new Set(
+      tasks.value
+        .filter(t => t.inspectorId != null && String(t.inspectorId) === want)
+        .map(t => String(t.id)),
+    )
     subs = subs.filter(s => taskIds.has(String(s.taskId)))
   }
   return subs
 })
+
+// ═══ P1 #4: 按 sectionId (=调度组/ScoringProfile) 分桶后再平均 ═══
+// 跨调度组的 finalScore 量纲可能不同 (各自 ScoringProfile), 直接均值会失真.
+// 策略: 先按 sectionId 分桶计算每桶均值, 再对桶均值取平均 (等权融合);
+// 达标率读 submission.passed 字段而非硬编码 ≥60.
+function bucketAvg(subs: InspSubmission[]): number {
+  if (!subs.length) return 0
+  const buckets = new Map<string, { sum: number; n: number }>()
+  for (const s of subs) {
+    if (s.finalScore == null) continue
+    const key = s.sectionId == null ? '__nosec__' : String(s.sectionId)
+    if (!buckets.has(key)) buckets.set(key, { sum: 0, n: 0 })
+    const b = buckets.get(key)!
+    b.sum += s.finalScore
+    b.n++
+  }
+  if (!buckets.size) return 0
+  let totalAvg = 0
+  let bucketCount = 0
+  for (const b of buckets.values()) {
+    if (b.n === 0) continue
+    totalAvg += b.sum / b.n
+    bucketCount++
+  }
+  return bucketCount > 0 ? totalAvg / bucketCount : 0
+}
+function passRateFromPassed(subs: InspSubmission[]): number {
+  // 只计算 passed 有值的样本; 全为 null 时返回 0.
+  const known = subs.filter(s => s.passed !== null && s.passed !== undefined)
+  if (!known.length) return 0
+  const passed = known.filter(s => s.passed === true).length
+  return Math.round(passed / known.length * 100)
+}
 
 // ═══ Ranking view ═══
 const sortField = ref<'score' | 'name'>('score')
@@ -88,92 +177,206 @@ function toggleSort(f: 'score' | 'name') {
   else { sortField.value = f; sortDir.value = f === 'score' ? 'desc' : 'asc' }
 }
 
-interface TargetRow { targetId: LongId; targetName: string; score: number; count: number; avg: number; max: number; min: number; sections: Map<LongId, { score: number; count: number }> }
+interface TargetRow {
+  targetId: LongId
+  targetName: string
+  count: number
+  avg: number
+  max: number
+  min: number
+  sections: Map<string, { sum: number; count: number; sectionId: LongId }>
+}
 
 const targetRows = computed<TargetRow[]>(() => {
-  const map = new Map<LongId, TargetRow>()
+  const map = new Map<string, TargetRow>()
+  // collect per-target per-section
   for (const s of filteredSubmissions.value) {
-    const tid = s.targetId
-    if (!map.has(tid)) map.set(tid, { targetId: tid, targetName: s.targetName || `#${tid}`, score: 0, count: 0, avg: 0, max: -Infinity, min: Infinity, sections: new Map() })
+    const tid = String(s.targetId)
+    if (!map.has(tid)) {
+      map.set(tid, {
+        targetId: s.targetId,
+        targetName: s.targetName || `#${tid}`,
+        count: 0,
+        avg: 0,
+        max: -Infinity,
+        min: Infinity,
+        sections: new Map(),
+      })
+    }
     const row = map.get(tid)!
     const score = s.finalScore!
-    row.score += score; row.count++
+    row.count++
     if (score > row.max) row.max = score
     if (score < row.min) row.min = score
-    // Section breakdown
-    const secId = s.sectionId
-    if (!secId) continue  // skip null sections
-    if (!row.sections.has(secId)) row.sections.set(secId, { score: 0, count: 0 })
-    const sec = row.sections.get(secId)!; sec.score += score; sec.count++
+    if (s.sectionId == null) continue
+    const secKey = String(s.sectionId)
+    if (!row.sections.has(secKey)) {
+      row.sections.set(secKey, { sum: 0, count: 0, sectionId: s.sectionId })
+    }
+    const sec = row.sections.get(secKey)!
+    sec.sum += score
+    sec.count++
   }
+  // P1 #4: row.avg = 按 section 桶等权融合
   for (const row of map.values()) {
-    row.avg = row.count > 0 ? Math.round(row.score / row.count * 10) / 10 : 0
+    let avgSum = 0
+    let bucketN = 0
+    for (const sec of row.sections.values()) {
+      if (sec.count === 0) continue
+      avgSum += sec.sum / sec.count
+      bucketN++
+    }
+    if (bucketN > 0) {
+      row.avg = Math.round(avgSum / bucketN * 10) / 10
+    } else if (row.count > 0) {
+      // 没有 section 的目标 — 用 finalScore 直接均值兜底 (数据残缺场景)
+      const fallback = filteredSubmissions.value
+        .filter(s => String(s.targetId) === String(row.targetId))
+        .reduce((acc, s) => acc + (s.finalScore ?? 0), 0) / row.count
+      row.avg = Math.round(fallback * 10) / 10
+    }
     if (row.max === -Infinity) row.max = 0
     if (row.min === Infinity) row.min = 0
   }
   let rows = [...map.values()]
-  if (searchQuery.value.trim()) { const q = searchQuery.value.toLowerCase(); rows = rows.filter(r => r.targetName.toLowerCase().includes(q)) }
-  rows.sort((a, b) => sortField.value === 'name' ? (sortDir.value === 'asc' ? a.targetName.localeCompare(b.targetName) : b.targetName.localeCompare(a.targetName)) : (sortDir.value === 'asc' ? a.avg - b.avg : b.avg - a.avg))
+  if (searchQuery.value.trim()) {
+    const q = searchQuery.value.toLowerCase()
+    rows = rows.filter(r => r.targetName.toLowerCase().includes(q))
+  }
+  rows.sort((a, b) => sortField.value === 'name'
+    ? (sortDir.value === 'asc' ? a.targetName.localeCompare(b.targetName) : b.targetName.localeCompare(a.targetName))
+    : (sortDir.value === 'asc' ? a.avg - b.avg : b.avg - a.avg))
   return rows
 })
 
 // ═══ Section analysis view ═══
-interface SectionStat { sectionId: LongId; sectionName: string; totalScore: number; count: number; avg: number; max: number; min: number; targets: number }
+interface SectionStat {
+  sectionId: LongId
+  sectionName: string
+  totalScore: number
+  count: number
+  avg: number
+  max: number
+  min: number
+  targets: number
+}
 const sectionStats = computed<SectionStat[]>(() => {
-  const map = new Map<LongId, SectionStat>()
-  const targetSets = new Map<LongId, Set<LongId>>()
+  const map = new Map<string, SectionStat>()
+  const targetSets = new Map<string, Set<string>>()
   for (const s of filteredSubmissions.value) {
-    const secId = s.sectionId
-    if (!secId) continue  // skip submissions without a section (Long→string types: LongId | null)
-    const secName = allSections.value.find(x => x.id === secId)?.name || `分区#${secId}`
-    if (!map.has(secId)) { map.set(secId, { sectionId: secId, sectionName: secName, totalScore: 0, count: 0, avg: 0, max: -Infinity, min: Infinity, targets: 0 }); targetSets.set(secId, new Set()) }
-    const stat = map.get(secId)!; const score = s.finalScore!
-    stat.totalScore += score; stat.count++
-    if (score > stat.max) stat.max = score; if (score < stat.min) stat.min = score
-    targetSets.get(secId)!.add(s.targetId)
+    if (s.sectionId == null) continue
+    const key = String(s.sectionId)
+    if (!map.has(key)) {
+      map.set(key, {
+        sectionId: s.sectionId,
+        sectionName: `分区#${s.sectionId}`,
+        totalScore: 0,
+        count: 0,
+        avg: 0,
+        max: -Infinity,
+        min: Infinity,
+        targets: 0,
+      })
+      targetSets.set(key, new Set())
+    }
+    const stat = map.get(key)!
+    const score = s.finalScore!
+    stat.totalScore += score
+    stat.count++
+    if (score > stat.max) stat.max = score
+    if (score < stat.min) stat.min = score
+    targetSets.get(key)!.add(String(s.targetId))
   }
-  for (const [secId, stat] of map) { stat.avg = stat.count > 0 ? Math.round(stat.totalScore / stat.count * 10) / 10 : 0; stat.targets = targetSets.get(secId)!.size; if (stat.max === -Infinity) stat.max = 0; if (stat.min === Infinity) stat.min = 0 }
+  for (const [key, stat] of map) {
+    stat.avg = stat.count > 0 ? Math.round(stat.totalScore / stat.count * 10) / 10 : 0
+    stat.targets = targetSets.get(key)!.size
+    if (stat.max === -Infinity) stat.max = 0
+    if (stat.min === Infinity) stat.min = 0
+  }
   return [...map.values()].sort((a, b) => b.avg - a.avg)
 })
 
-// ═══ Inspector analysis view ═══
-interface InspectorStat { name: string; taskCount: number; submissionCount: number; avgScore: number; totalScore: number; targets: number }
+// ═══ Inspector analysis view (P2 #10: 用 inspectorId 当 key) ═══
+interface InspectorStat {
+  id: string
+  name: string
+  taskCount: number
+  submissionCount: number
+  avgScore: number
+  totalScore: number
+  targets: number
+}
 const inspectorStats = computed<InspectorStat[]>(() => {
   const map = new Map<string, InspectorStat>()
   for (const t of tasks.value) {
-    if (!t.inspectorName) continue
-    const range = periodRange.value
-    if (t.taskDate < range.start || t.taskDate > range.end) continue
-    const name = t.inspectorName
-    if (!map.has(name)) map.set(name, { name, taskCount: 0, submissionCount: 0, avgScore: 0, totalScore: 0, targets: 0 })
-    map.get(name)!.taskCount++
+    if (t.inspectorId == null) continue
+    if (!inRange(t.taskDate)) continue
+    const id = String(t.inspectorId)
+    if (!map.has(id)) {
+      map.set(id, {
+        id,
+        name: t.inspectorName || `#${id}`,
+        taskCount: 0,
+        submissionCount: 0,
+        avgScore: 0,
+        totalScore: 0,
+        targets: 0,
+      })
+    }
+    map.get(id)!.taskCount++
   }
-  const targetSets = new Map<string, Set<LongId>>()
+  const targetSets = new Map<string, Set<string>>()
   for (const s of filteredSubmissions.value) {
     const task = tasks.value.find(t => String(t.id) === String(s.taskId))
-    if (!task?.inspectorName) continue
-    const name = task.inspectorName
-    if (!map.has(name)) map.set(name, { name, taskCount: 0, submissionCount: 0, avgScore: 0, totalScore: 0, targets: 0 })
-    const stat = map.get(name)!; stat.submissionCount++; stat.totalScore += s.finalScore!
-    if (!targetSets.has(name)) targetSets.set(name, new Set())
-    targetSets.get(name)!.add(s.targetId)
+    if (!task || task.inspectorId == null) continue
+    const id = String(task.inspectorId)
+    if (!map.has(id)) {
+      map.set(id, {
+        id,
+        name: task.inspectorName || `#${id}`,
+        taskCount: 0,
+        submissionCount: 0,
+        avgScore: 0,
+        totalScore: 0,
+        targets: 0,
+      })
+    }
+    const stat = map.get(id)!
+    stat.submissionCount++
+    stat.totalScore += s.finalScore!
+    if (!targetSets.has(id)) targetSets.set(id, new Set())
+    targetSets.get(id)!.add(String(s.targetId))
   }
-  for (const [name, stat] of map) { stat.avgScore = stat.submissionCount > 0 ? Math.round(stat.totalScore / stat.submissionCount * 10) / 10 : 0; stat.targets = targetSets.get(name)?.size || 0 }
-  return [...map.values()].sort((a, b) => b.submissionCount - a.submissionCount)
+  for (const [id, stat] of map) {
+    stat.avgScore = stat.submissionCount > 0 ? Math.round(stat.totalScore / stat.submissionCount * 10) / 10 : 0
+    stat.targets = targetSets.get(id)?.size || 0
+  }
+  // P2 #11: inspectors 视图也响应 searchQuery
+  let rows = [...map.values()]
+  if (searchQuery.value.trim()) {
+    const q = searchQuery.value.toLowerCase()
+    rows = rows.filter(r => r.name.toLowerCase().includes(q))
+  }
+  return rows.sort((a, b) => b.submissionCount - a.submissionCount)
 })
 
-// ═══ Global stats ═══
+// ═══ Global stats (P1 #4: 用 bucketAvg / passed) ═══
 const globalStats = computed(() => {
   const subs = filteredSubmissions.value
   if (!subs.length) return null
   const scores = subs.map(s => s.finalScore!)
-  const avg = scores.reduce((a, b) => a + b, 0) / scores.length
-  const targets = new Set(subs.map(s => s.targetId)).size
-  const sections = new Set(subs.map(s => s.sectionId)).size
+  const targets = new Set(subs.map(s => String(s.targetId))).size
+  const sections = new Set(
+    subs.filter(s => s.sectionId != null).map(s => String(s.sectionId)),
+  ).size
   return {
-    totalChecks: subs.length, targets, sections,
-    avg: avg.toFixed(1), max: Math.max(...scores).toFixed(1), min: Math.min(...scores).toFixed(1),
-    passRate: Math.round(scores.filter(s => s >= 60).length / scores.length * 100),
+    totalChecks: subs.length,
+    targets,
+    sections,
+    avg: bucketAvg(subs).toFixed(1),
+    max: Math.max(...scores).toFixed(1),
+    min: Math.min(...scores).toFixed(1),
+    passRate: passRateFromPassed(subs),
   }
 })
 
@@ -186,71 +389,22 @@ function scoreColor(s: number | null) {
   return 'var(--insp-fail)'
 }
 
-// ═══ Load ═══
-async function loadData() {
-  loading.value = true
-  try {
-    const [ind, gs, tks] = await Promise.all([getIndicators(props.projectId), getGradeSchemes(), getTasks({ projectId: props.projectId })])
-    indicators.value = ind; gradeSchemes.value = gs; tasks.value = tks
-    // P1 #13: 并发拉取各任务提交记录, 替代 N+1 串行 await; 失败计数后给可见提示
-    let subFailed = 0
-    const subResults = await Promise.all(tks.map(async t => {
-      try { return await getSubmissions({ taskId: t.id }) }
-      catch (e: any) { console.warn(`加载任务 ${t.id} 提交记录失败`, e); subFailed++; return null }
-    }))
-    submissions.value = subResults.flatMap(r => r ?? [])
-    if (subFailed > 0) {
-      ElMessage.warning(`${subFailed} 个任务的提交记录加载失败, 成绩分析可能不完整`)
-    }
-    await loadScores()
-  } catch (e: any) { ElMessage.error('加载失败: ' + (e?.message || '未知错误')) }
-  finally { loading.value = false }
-}
-async function loadScores() {
-  const r = periodRange.value; const m = new Map<LongId, IndicatorScore[]>()
-  await Promise.all(indicators.value.map(async ind => { try { m.set(ind.id, await getIndicatorScores(ind.id, r.start, r.end)) } catch { m.set(ind.id, []) } }))
-  scoreMap.value = m
-}
-watch(periodRange, () => { if (indicators.value.length) loadScores() })
-onMounted(loadData)
-
-async function handleCompute() {
-  computing.value = true
-  try {
-    await computeIndicatorScores(props.projectId, periodRange.value.start, periodRange.value.end)
-    lastComputedAt.value = Date.now()
-    ElMessage.success('计算完成')
-    await loadScores()
+// P2 #13: range bar 把 min/max 归一化到 0-100 (满分 100 假设)
+function rangeStyle(min: number, max: number): Record<string, string> {
+  const clamp = (n: number) => Math.max(0, Math.min(100, n))
+  return {
+    '--min': clamp(min) + '%',
+    '--max': clamp(max) + '%',
   }
-  catch (e: any) { ElMessage.error(e.message || '计算失败') }
-  finally { computing.value = false }
 }
 
-// 显示 "上次计算: X 分钟前"
-const computedTimeText = computed(() => {
-  if (!lastComputedAt.value) return ''
-  const seconds = Math.round((Date.now() - lastComputedAt.value) / 1000)
-  if (seconds < 10) return '刚刚'
-  if (seconds < 60) return `${seconds} 秒前`
-  const minutes = Math.round(seconds / 60)
-  if (minutes < 60) return `${minutes} 分钟前`
-  const hours = Math.round(minutes / 60)
-  if (hours < 24) return `${hours} 小时前`
-  return `${Math.round(hours / 24)} 天前`
-})
-
-// 每 30 秒刷新文案 (相对时间)
-import { onUnmounted } from 'vue'
-const computedTimeTicker = ref(0)
-let timeTickerInterval: any = null
 onMounted(() => {
-  timeTickerInterval = setInterval(() => { computedTimeTicker.value++ }, 30000)
+  // 不再加载任何数据 — 全部由 props 透传 (P0 #2)
 })
-onUnmounted(() => { if (timeTickerInterval) clearInterval(timeTickerInterval) })
 </script>
 
 <template>
-  <div class="da" v-loading="loading">
+  <div class="da">
 
     <!-- ═══ Filter bar ═══ -->
     <div class="da-filters">
@@ -272,7 +426,7 @@ onUnmounted(() => { if (timeTickerInterval) clearInterval(timeTickerInterval) })
         <Layers class="w-3 h-3" />
         <select v-model="filterSection" class="da-select">
           <option value="">全部分区</option>
-          <option v-for="s in allSections" :key="s.id" :value="s.id">{{ s.name }}</option>
+          <option v-for="s in allSections" :key="String(s.id)" :value="s.id">{{ s.name }}</option>
         </select>
       </div>
       <div class="da-filter">
@@ -284,16 +438,13 @@ onUnmounted(() => { if (timeTickerInterval) clearInterval(timeTickerInterval) })
       </div>
       <div class="da-search">
         <Search class="w-3 h-3" />
-        <input v-model="searchQuery" placeholder="搜索目标..." class="da-search-input" />
+        <input v-model="searchQuery" placeholder="搜索..." class="da-search-input" />
       </div>
-      <span v-if="lastComputedAt" class="da-last-computed" :title="new Date(lastComputedAt).toLocaleString()">
-        <span style="display:none">{{ computedTimeTicker }}</span>
-        上次计算 <b>{{ computedTimeText }}</b>
-      </span>
-      <button class="da-compute" :disabled="computing" @click="handleCompute">
-        <RefreshCw class="w-3 h-3" :class="{ 'animate-spin': computing }" />
-        {{ computing ? '计算中...' : '重算' }}
-      </button>
+    </div>
+
+    <!-- P1 #5: 父组件加载状态明示 (props 化后子组件不再自维护) -->
+    <div v-if="(props.submissionsLoadFailedCount ?? 0) > 0" class="da-warn">
+      ! {{ props.submissionsLoadFailedCount }} 个任务的提交记录加载失败, 统计可能不完整
     </div>
 
     <!-- ═══ Stats strip ═══ -->
@@ -302,7 +453,7 @@ onUnmounted(() => { if (timeTickerInterval) clearInterval(timeTickerInterval) })
       <div class="da-stat-sep" />
       <div class="da-stat"><span class="da-stat-v">{{ globalStats.targets }}</span><span class="da-stat-l">目标数</span></div>
       <div class="da-stat-sep" />
-      <div class="da-stat"><span class="da-stat-v" style="color:var(--insp-info)">{{ globalStats.avg }}</span><span class="da-stat-l">平均分</span></div>
+      <div class="da-stat"><span class="da-stat-v" style="color:var(--insp-info)">{{ globalStats.avg }}</span><span class="da-stat-l">桶均(分调度组)</span></div>
       <div class="da-stat-sep" />
       <div class="da-stat"><span class="da-stat-v" style="color:var(--insp-pass)">{{ globalStats.max }}</span><span class="da-stat-l">最高</span></div>
       <div class="da-stat-sep" />
@@ -315,13 +466,13 @@ onUnmounted(() => { if (timeTickerInterval) clearInterval(timeTickerInterval) })
 
     <!-- ═══ View tabs ═══ -->
     <div class="da-tabs">
-      <button class="da-tab" :class="{ on: activeView === 'ranking' }" @click="activeView = 'ranking'">
+      <button class="da-tab" :class="{ on: activeView === 'ranking' }" @click="setView('ranking')">
         <Trophy class="w-3.5 h-3.5" /> 目标排名
       </button>
-      <button class="da-tab" :class="{ on: activeView === 'sections' }" @click="activeView = 'sections'">
+      <button class="da-tab" :class="{ on: activeView === 'sections' }" @click="setView('sections')">
         <Layers class="w-3.5 h-3.5" /> 分区分析
       </button>
-      <button class="da-tab" :class="{ on: activeView === 'inspectors' }" @click="activeView = 'inspectors'">
+      <button class="da-tab" :class="{ on: activeView === 'inspectors' }" @click="setView('inspectors')">
         <Users class="w-3.5 h-3.5" /> 检查员分析
       </button>
       <span class="da-tab-count">{{ filteredSubmissions.length }} 条数据</span>
@@ -333,12 +484,12 @@ onUnmounted(() => { if (timeTickerInterval) clearInterval(timeTickerInterval) })
         <div class="da-thead">
           <div class="da-th da-th-rank">#</div>
           <div class="da-th da-th-name" @click="toggleSort('name')">目标 <ArrowUpDown class="w-3 h-3" :style="{ opacity: sortField === 'name' ? 1 : 0.2 }" /></div>
-          <div v-for="sec in allSections" :key="sec.id" class="da-th da-th-sec">{{ sec.name }}</div>
-          <div class="da-th da-th-avg" @click="toggleSort('score')">均分 <ArrowUpDown class="w-3 h-3" :style="{ opacity: sortField === 'score' ? 1 : 0.2 }" /></div>
+          <div v-for="sec in allSections" :key="String(sec.id)" class="da-th da-th-sec">{{ sec.name }}</div>
+          <div class="da-th da-th-avg" @click="toggleSort('score')">桶均 <ArrowUpDown class="w-3 h-3" :style="{ opacity: sortField === 'score' ? 1 : 0.2 }" /></div>
           <div class="da-th da-th-count">次数</div>
           <div class="da-th da-th-range">范围</div>
         </div>
-        <div v-for="(row, idx) in targetRows" :key="row.targetId" class="da-tr" :class="{ top: idx < 3 }">
+        <div v-for="(row, idx) in targetRows" :key="String(row.targetId)" class="da-tr" :class="{ top: idx < 3 }">
           <div class="da-td da-td-rank">
             <span v-if="idx === 0 && sortDir === 'desc' && sortField === 'score'" class="da-medal gold">1</span>
             <span v-else-if="idx === 1 && sortDir === 'desc' && sortField === 'score'" class="da-medal silver">2</span>
@@ -346,17 +497,17 @@ onUnmounted(() => { if (timeTickerInterval) clearInterval(timeTickerInterval) })
             <span v-else class="da-rank-n">{{ idx + 1 }}</span>
           </div>
           <div class="da-td da-td-name">{{ row.targetName }}</div>
-          <div v-for="sec in allSections" :key="sec.id" class="da-td da-td-sec">
-            <template v-if="row.sections.has(sec.id)">
-              <span class="da-sec-score" :style="{ color: scoreColor(row.sections.get(sec.id)!.score / row.sections.get(sec.id)!.count) }">
-                {{ (row.sections.get(sec.id)!.score / row.sections.get(sec.id)!.count).toFixed(1) }}
+          <div v-for="sec in allSections" :key="String(sec.id)" class="da-td da-td-sec">
+            <template v-if="row.sections.has(String(sec.id))">
+              <span class="da-sec-score" :style="{ color: scoreColor(row.sections.get(String(sec.id))!.sum / row.sections.get(String(sec.id))!.count) }">
+                {{ (row.sections.get(String(sec.id))!.sum / row.sections.get(String(sec.id))!.count).toFixed(1) }}
               </span>
             </template>
             <span v-else class="da-empty">—</span>
           </div>
           <div class="da-td da-td-avg"><span class="da-avg-num" :style="{ color: scoreColor(row.avg) }">{{ row.avg }}</span></div>
           <div class="da-td da-td-count">{{ row.count }}</div>
-          <div class="da-td da-td-range"><span class="da-range-bar" :style="{ '--min': row.min + '%', '--max': row.max + '%' }" /><span class="da-range-text">{{ row.min.toFixed(0) }}-{{ row.max.toFixed(0) }}</span></div>
+          <div class="da-td da-td-range"><span class="da-range-bar" :style="rangeStyle(row.min, row.max)" /><span class="da-range-text">{{ row.min.toFixed(0) }}-{{ row.max.toFixed(0) }}</span></div>
         </div>
       </div>
       <div v-else class="da-no-data">暂无数据</div>
@@ -365,7 +516,7 @@ onUnmounted(() => { if (timeTickerInterval) clearInterval(timeTickerInterval) })
     <!-- ═══ View: Sections ═══ -->
     <div v-if="activeView === 'sections'" class="da-view">
       <div v-if="sectionStats.length" class="da-section-grid">
-        <div v-for="sec in sectionStats" :key="sec.sectionId" class="da-sec-card">
+        <div v-for="sec in sectionStats" :key="String(sec.sectionId)" class="da-sec-card">
           <div class="da-sec-head">
             <span class="da-sec-name">{{ sec.sectionName }}</span>
             <span class="da-sec-avg" :style="{ color: scoreColor(sec.avg) }">{{ sec.avg }}</span>
@@ -394,7 +545,7 @@ onUnmounted(() => { if (timeTickerInterval) clearInterval(timeTickerInterval) })
           <div class="da-th" style="flex:1">覆盖目标</div>
           <div class="da-th" style="flex:1">平均分</div>
         </div>
-        <div v-for="insp in inspectorStats" :key="insp.name" class="da-tr">
+        <div v-for="insp in inspectorStats" :key="insp.id" class="da-tr">
           <div class="da-td" style="flex:2; font-weight:600; color:#1e1b4b">{{ insp.name }}</div>
           <div class="da-td" style="flex:1">{{ insp.taskCount }}</div>
           <div class="da-td" style="flex:1">{{ insp.submissionCount }}</div>
@@ -406,7 +557,7 @@ onUnmounted(() => { if (timeTickerInterval) clearInterval(timeTickerInterval) })
     </div>
 
     <!-- ═══ Empty ═══ -->
-    <div v-if="!filteredSubmissions.length && !loading && !globalStats" class="da-empty">
+    <div v-if="!filteredSubmissions.length && !globalStats" class="da-empty">
       <BarChart3 class="w-10 h-10" style="color:#e5e7eb" />
       <div class="da-empty-t">暂无检查数据</div>
       <div class="da-empty-d">完成检查任务后这里将展示成绩分析</div>
@@ -439,13 +590,15 @@ onUnmounted(() => { if (timeTickerInterval) clearInterval(timeTickerInterval) })
 }
 .da-search-input { border: none; outline: none; font-size: 12px; width: 100%; color: #374151; }
 .da-search-input::placeholder { color: #d1d5db; }
-.da-compute {
-  display: flex; align-items: center; gap: 3px; margin-left: auto;
-  padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;
-  background: var(--insp-accent-paler); color: var(--insp-accent); border: 1px solid var(--insp-accent-pale); cursor: pointer;
+
+/* P1 #5: 父级加载失败提示 */
+.da-warn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 10px; margin-bottom: 8px;
+  background: var(--insp-warn-paler, #fef3c7); color: var(--insp-warn, #b45309);
+  border: 1px solid var(--insp-warn-pale, #fde68a); border-radius: 8px;
+  font-size: 12px;
 }
-.da-compute:hover { background: var(--insp-accent-pale); }
-.da-compute:disabled { opacity: 0.5; }
 
 /* ═══ Stats ═══ */
 .da-stats {
@@ -472,15 +625,20 @@ onUnmounted(() => { if (timeTickerInterval) clearInterval(timeTickerInterval) })
 .da-tab.on { background: var(--insp-accent); color: #fff; }
 .da-tab-count { font-size: 11px; color: #9ca3af; margin-left: auto; }
 
-/* ═══ Table ═══ */
-.da-table { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; }
+/* ═══ Table (P1 #7: 横向溢出可滚动) ═══ */
+.da-table {
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
+  overflow: auto; max-width: 100%;
+}
 .da-thead {
   display: flex; padding: 7px 12px; background: #fafbfc; border-bottom: 1px solid #f0f0f3;
   font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.3px;
+  min-width: max-content;
 }
 .da-tr {
   display: flex; padding: 7px 12px; border-bottom: 1px solid #f9fafb;
   align-items: center; transition: background 0.1s; font-size: 12px;
+  min-width: max-content;
 }
 .da-tr:last-child { border-bottom: none; }
 .da-tr:hover { background: #fafbff; }
@@ -488,8 +646,8 @@ onUnmounted(() => { if (timeTickerInterval) clearInterval(timeTickerInterval) })
 
 .da-th, .da-td { display: flex; align-items: center; gap: 3px; cursor: default; }
 .da-th-rank, .da-td-rank { width: 32px; justify-content: center; flex-shrink: 0; }
-.da-th-name, .da-td-name { flex: 1.5; min-width: 0; font-weight: 600; color: #1e1b4b; cursor: pointer; }
-.da-th-sec, .da-td-sec { flex: 0.8; justify-content: center; }
+.da-th-name, .da-td-name { flex: 1.5; min-width: 120px; font-weight: 600; color: #1e1b4b; cursor: pointer; }
+.da-th-sec, .da-td-sec { flex: 0.8; min-width: 80px; justify-content: center; }
 .da-th-avg, .da-td-avg { width: 60px; justify-content: center; flex-shrink: 0; cursor: pointer; }
 .da-th-count, .da-td-count { width: 50px; justify-content: center; flex-shrink: 0; color: #9ca3af; }
 .da-th-range, .da-td-range { width: 90px; flex-shrink: 0; flex-direction: column; align-items: stretch; gap: 2px; }
@@ -536,18 +694,5 @@ onUnmounted(() => { if (timeTickerInterval) clearInterval(timeTickerInterval) })
 @media (max-width: 768px) {
   .da-section-grid { grid-template-columns: 1fr; }
   .da-stats { flex-wrap: wrap; }
-}
-
-/* 上次计算时间戳 */
-.da-last-computed {
-  font-size: 11px;
-  color: #9ca3af;
-  margin-right: 8px;
-  white-space: nowrap;
-}
-.da-last-computed b {
-  color: #6b7280;
-  font-weight: 600;
-  font-family: 'JetBrains Mono', monospace;
 }
 </style>
