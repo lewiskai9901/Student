@@ -20,7 +20,7 @@ import { http } from '@/utils/request'
 import { getTasks, assignTask } from '@/api/inspection/task'
 import { getSubmissions } from '@/api/inspection/submission'
 import { getSections } from '@/api/inspection/template'
-import { getProfileBySection, getGradeBands, getProfiles } from '@/api/inspection/scoring'
+import { getProfileByProjectAndSection, getGradeBands, getProfiles } from '@/api/inspection/scoring'
 import type { ScoringProfile } from '@/types/insp/scoring'
 import { getSimpleUserList, getUser } from '@/api/user'
 import { getOrgUnitTree } from '@/api/organization'
@@ -583,7 +583,7 @@ async function loadProject() {
       } catch (e) { console.warn('加载分区树失败', e) }
       // Load root section grade bands
       try {
-        const rootProfile = await getProfileBySection(project.value.rootSectionId)
+        const rootProfile = await getProfileByProjectAndSection(projectId, project.value.rootSectionId)
         if (rootProfile?.id) {
           const bands = await getGradeBands(rootProfile.id)
           rootGradeBands.value = bands.map(b => ({ name: b.gradeName || b.gradeCode, min: b.minScore, max: b.maxScore }))

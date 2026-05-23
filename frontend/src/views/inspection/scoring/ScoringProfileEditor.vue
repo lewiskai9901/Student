@@ -273,12 +273,12 @@ async function loadAll() {
       profile.value = store.currentProfile
     } else if (tid) {
       templateId.value = tid
-      let p = await store.loadProfileBySection(tid)
+      if (!pid) {
+        loadError.value = '缺少 projectId 参数 — 评分方案现为项目-owned, 请从项目内进入'
+        return
+      }
+      let p = await store.loadProfileByProjectAndSection(pid, tid)
       if (!p) {
-        if (!pid) {
-          loadError.value = '缺少 projectId 参数 — 评分方案现为项目-owned, 请从项目内进入'
-          return
-        }
         // 自动创建默认配置，无需手动点击
         p = await store.createProfile(tid, pid)
       }

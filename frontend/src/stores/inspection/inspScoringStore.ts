@@ -23,7 +23,7 @@ import type {
 import {
   getProfiles,
   getProfile,
-  getProfileBySection,
+  getProfileByProjectAndSection,
   createProfile as createProfileApi,
   updateProfile as updateProfileApi,
   deleteProfile as deleteProfileApi,
@@ -66,14 +66,9 @@ export const useInspScoringStore = defineStore('inspScoring', () => {
     return currentProfile.value
   }
 
-  async function loadProfileBySection(sectionId: LongId) {
-    currentProfile.value = await getProfileBySection(sectionId) ?? null
+  async function loadProfileByProjectAndSection(projectId: LongId, sectionId: LongId) {
+    currentProfile.value = await getProfileByProjectAndSection(projectId, sectionId) ?? null
     return currentProfile.value
-  }
-
-  /** @deprecated Use loadProfileBySection instead */
-  async function loadProfileByTemplate(sectionId: LongId) {
-    return loadProfileBySection(sectionId)
   }
 
   async function createProfile(sectionId: LongId, projectId: LongId) {
@@ -224,8 +219,7 @@ export const useInspScoringStore = defineStore('inspScoring', () => {
     versions,
     loadProfiles,
     loadProfile,
-    loadProfileBySection,
-    loadProfileByTemplate,
+    loadProfileByProjectAndSection,
     loadProfileFull,
     createProfile,
     updateProfile,

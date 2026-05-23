@@ -310,17 +310,11 @@ async function loadScoringForSection(sectionId: LongId) {
   scoringProfile.value = null
   scoringError.value = null
   try {
-    // 评分方案已下沉到项目-owned, 模板编辑器只读相关 section 的方案 (若该 section 在某项目下有方案则展示首个).
-    // 不再在模板编辑器创建评分方案 — 创建入口移至项目详情页.
-    const p = await scoringStore.loadProfileBySection(sectionId)
-    if (p) {
-      scoringProfile.value = p
-      await scoringStore.syncDimensions(p.id)
-      await Promise.all([
-        scoringStore.loadGradeBands(p.id),
-        scoringStore.loadRules(p.id),
-      ])
-    }
+    // 评分方案已下沉到项目-owned (2026-05-23 重构): 模板分区不再持有 profile.
+    // 模板编辑器不显示评分配置 — 创建/查看入口都移至项目详情页的「评分方案」卡.
+    // 此处保留 stub 以兼容旧 UI 调用, 但不再发 API (无 projectId 上下文).
+    void sectionId
+    scoringProfile.value = null
   } catch (e: any) {
     scoringProfile.value = null
     scoringError.value = e?.message || '汇总规则加载失败'

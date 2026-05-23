@@ -34,13 +34,16 @@ export function getProfile(id: LongId): Promise<ScoringProfile> {
   return http.get<ScoringProfile>(`${BASE}/${id}`)
 }
 
-export function getProfileBySection(sectionId: LongId): Promise<ScoringProfile> {
-  return http.get<ScoringProfile>(`${BASE}/by-section/${sectionId}`)
-}
-
-/** @deprecated Use getProfileBySection instead */
-export function getProfileByTemplate(templateId: LongId): Promise<ScoringProfile> {
-  return http.get<ScoringProfile>(`${BASE}/by-section/${templateId}`)
+/**
+ * 按 (projectId, sectionId) 查评分方案. ScoringProfile 项目-owned 后, 必须明确项目.
+ * 后端不存在时返回 null (不抛错), 调用方需处理 null.
+ */
+export function getProfileByProjectAndSection(
+  projectId: LongId, sectionId: LongId,
+): Promise<ScoringProfile | null> {
+  return http.get<ScoringProfile | null>(`${BASE}/by-project-section`, {
+    params: { projectId, sectionId },
+  })
 }
 
 export function createProfile(data: CreateProfileRequest): Promise<ScoringProfile> {
@@ -136,8 +139,7 @@ export function getVersion(profileId: LongId, version: number): Promise<ScoringP
 export const scoringProfileApi = {
   getList: getProfiles,
   getById: getProfile,
-  getBySection: getProfileBySection,
-  getByTemplate: getProfileByTemplate, // @deprecated
+  getByProjectAndSection: getProfileByProjectAndSection,
   create: createProfile,
   update: updateProfile,
   updateAdvanced: updateAdvancedSettings,
