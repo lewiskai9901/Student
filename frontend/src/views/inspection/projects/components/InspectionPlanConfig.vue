@@ -62,7 +62,8 @@ function removeTimeSlot(i: number) {
 }
 
 // ── Format for display ──
-function fmtSections(json: string): string {
+function fmtSections(json: string | null | undefined): string {
+  if (!json) return '全部分区'
   try {
     const ids = (JSON.parse(json) as Array<string | number>).map(String)
     if (!ids.length) return '全部分区'
@@ -70,7 +71,7 @@ function fmtSections(json: string): string {
   } catch { return '全部分区' }
 }
 
-function fmtInspectors(json: string | null): string {
+function fmtInspectors(json: string | null | undefined): string {
   if (!json) return '全员可领取'
   try {
     const ids: number[] = JSON.parse(json)

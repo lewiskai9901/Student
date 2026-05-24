@@ -275,6 +275,36 @@
 }
 .fd-slot-add:hover { color: #8b5cf6; border-color: #c4b5fd; background: #f5f3ff; }
 
+/* V20260524_6: 跨日时段标记 */
+.fd-slot-crossday {
+  display: inline-flex; align-items: center;
+  padding: 1px 8px; border-radius: 10px;
+  background: #fef3c7; color: #92400e;
+  font-size: 11px; font-weight: 600;
+  cursor: help;
+}
+
+/* V20260524_6: RRULE 高级模式 */
+.fd-rrule-presets {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;
+}
+.fd-rrule-preset {
+  padding: 5px 11px; border: 1px solid #e5e7eb; border-radius: 16px;
+  background: #fff; color: #4b5563; font-size: 12px;
+  cursor: pointer; transition: all 0.12s;
+}
+.fd-rrule-preset:hover { border-color: #8b5cf6; color: #6d28d9; }
+.fd-rrule-preset.on {
+  background: #ede9fe; border-color: #8b5cf6; color: #6d28d9; font-weight: 600;
+}
+.fd-rrule-input {
+  width: 100%;
+  padding: 8px 12px; border: 1.5px solid #e5e7eb; border-radius: 8px;
+  font-size: 13px; color: #1f2937; outline: none;
+  font-family: 'SF Mono', 'Consolas', monospace;
+}
+.fd-rrule-input:focus { border-color: #8b5cf6; }
+
 /* Checkbox */
 .fd-check-row {
   display: inline-flex; align-items: center; gap: 6px;

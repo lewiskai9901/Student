@@ -330,15 +330,23 @@ export interface InspectionPlan {
   projectId: LongId
   planName: string
   rootSectionId: LongId | null  // V66: 该计划绑定的模板根分区ID
-  sectionIds: string  // JSON
+  /** @deprecated 后端 V20260524_5 已 DROP 该列, 后续仍读 sectionIdList; 留兼容字段 */
+  sectionIds?: string  // JSON
+  sectionIdList?: LongId[]
   scheduleMode: 'REGULAR' | 'ON_DEMAND'
   cycleType: string
   frequency: number
   scheduleDays: string | null
   timeSlots: string | null
+  /** V20260524_6: RRULE 周期表达式 (RFC 5545 子集), 非空时优先于 cycleType. */
+  rrule?: string | null
   skipHolidays: boolean
-  inspectorIds: string | null  // JSON: 指定检查员ID列表，空=全员
-  /** 每个检查目标的评分人数 (1=单人 >1=多人), 须 ≤ 调度组可用检查员数 */
+  /** @deprecated 后端 V20260524_5 DROP, 仍兼容输出 */
+  inspectorIds?: string | null
+  inspectorUserIds?: LongId[]
+  /** V20260524_3: 显式指派策略 (替代 "空 = 全员" falsy magic) */
+  assignStrategy?: 'SPECIFIC' | 'OPEN_TO_ALL'
+  /** 每个检查目标的评分人数 (1=单人 >1=多人), 须 ≤ 检查计划可用检查员数 */
   ratersPerTarget?: number
   isEnabled: boolean
   sortOrder: number
@@ -357,8 +365,12 @@ export interface CreatePlanRequest {
   frequency?: number
   scheduleDays?: string
   timeSlots?: string
+  /** V20260524_6 */
+  rrule?: string
   skipHolidays?: boolean
   ratersPerTarget?: number
+  /** V20260524_3 */
+  assignStrategy?: 'SPECIFIC' | 'OPEN_TO_ALL'
 }
 
 export interface UpdatePlanRequest {
@@ -371,8 +383,12 @@ export interface UpdatePlanRequest {
   frequency?: number
   scheduleDays?: string
   timeSlots?: string
+  /** V20260524_6 */
+  rrule?: string
   skipHolidays?: boolean
   ratersPerTarget?: number
+  /** V20260524_3 */
+  assignStrategy?: 'SPECIFIC' | 'OPEN_TO_ALL'
 }
 
 // ==================== 评级维度 ====================

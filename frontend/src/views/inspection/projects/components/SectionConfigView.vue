@@ -80,15 +80,31 @@ const MONTH_DAYS = Array.from({ length: 31 }, (_, i) => i + 1)
 const scheduleForm = ref({
   planName: '',
   sectionIds: [] as LongId[],
-  freqMode: 'DAILY' as FreqMode,
+  freqMode: 'DAILY' as FreqMode | 'ADVANCED',
   frequency: 1,
   weekDays: [] as number[],
   monthDays: [] as number[],
   timeSlots: [] as Array<{ start: string; end: string }>,
+  rrule: '',  // V20260524_6: ADVANCED 模式下用 RRULE 表达
   skipHolidays: false,
   inspectorIds: [] as LongId[],
   ratersPerTarget: 1,
 })
+
+// V20260524_6: RRULE 常用模式快捷预设
+const RRULE_PRESETS: Array<{ label: string; value: string; desc: string }> = [
+  { label: '每月第 1 个周一', value: 'FREQ=MONTHLY;BYDAY=1MO', desc: '常用于月初例会检查' },
+  { label: '每月第 2 个周五', value: 'FREQ=MONTHLY;BYDAY=2FR', desc: '常用于月中复查' },
+  { label: '每月最后一个周五', value: 'FREQ=MONTHLY;BYDAY=-1FR', desc: '月末总结性检查' },
+  { label: '每周一三五', value: 'FREQ=WEEKLY;BYDAY=MO,WE,FR', desc: '隔日轮询' },
+  { label: '每两天一次', value: 'FREQ=DAILY;INTERVAL=2', desc: '低频日检' },
+]
+
+/** 判断时段是否跨日: end <= start. */
+function isSlotCrossDay(slot: { start: string; end: string }): boolean {
+  if (!slot.start || !slot.end) return false
+  return slot.end <= slot.start
+}
 
 
 // ══════════════════════════════════════════════
@@ -124,24 +140,33 @@ function parsePlanInspectorIds(plan: InspectionPlan): LongId[] {
 function fmtSchedule(plan: InspectionPlan): string {
   if (plan.scheduleMode === 'ON_DEMAND') return '不定期（手动触发）'
   let s = ''
-  const freq = plan.frequency > 1 ? ` ${plan.frequency}次` : ''
-  if (plan.cycleType === 'DAILY') s = '每天' + freq
-  else if (plan.cycleType === 'WEEKLY') {
-    try {
-      const days: number[] = JSON.parse(plan.scheduleDays || '[]')
-      s = '每周' + (days.length ? days.map(d => WEEKDAYS.find(w => w.v === d)?.l || d).join('、') : '') + freq
-    } catch { s = '每周' + freq }
-  } else if (plan.cycleType === 'MONTHLY') {
-    try {
-      const days: number[] = JSON.parse(plan.scheduleDays || '[]')
-      s = '每月' + (days.length ? days.map(d => d + '日').join('、') : '') + freq
-    } catch { s = '每月' + freq }
+  // V20260524_6: rrule 非空时优先显示
+  if (plan.rrule) {
+    const preset = RRULE_PRESETS.find(p => p.value === plan.rrule)
+    s = preset ? preset.label : `RRULE: ${plan.rrule}`
+  } else {
+    const freq = plan.frequency > 1 ? ` ${plan.frequency}次` : ''
+    if (plan.cycleType === 'DAILY') s = '每天' + freq
+    else if (plan.cycleType === 'WEEKLY') {
+      try {
+        const days: number[] = JSON.parse(plan.scheduleDays || '[]')
+        s = '每周' + (days.length ? days.map(d => WEEKDAYS.find(w => w.v === d)?.l || d).join('、') : '') + freq
+      } catch { s = '每周' + freq }
+    } else if (plan.cycleType === 'MONTHLY') {
+      try {
+        const days: number[] = JSON.parse(plan.scheduleDays || '[]')
+        s = '每月' + (days.length ? days.map(d => d + '日').join('、') : '') + freq
+      } catch { s = '每月' + freq }
+    }
   }
   if (plan.timeSlots) {
     try {
       const slots = JSON.parse(plan.timeSlots)
       if (Array.isArray(slots) && slots.length) {
-        s += ' ' + slots.map((t: any) => `${t.start}-${t.end}`).join(' / ')
+        s += ' ' + slots.map((t: any) => {
+          const crossDay = t.start && t.end && t.end <= t.start
+          return `${t.start}-${t.end}` + (crossDay ? '(次日)' : '')
+        }).join(' / ')
       }
     } catch {}
   }
@@ -199,7 +224,7 @@ function openAddSchedule() {
   editingPlan.value = null
   scheduleForm.value = {
     planName: '', sectionIds: [], freqMode: 'DAILY', frequency: 1,
-    weekDays: [], monthDays: [], timeSlots: [],
+    weekDays: [], monthDays: [], timeSlots: [], rrule: '',
     skipHolidays: false, inspectorIds: [],
     ratersPerTarget: 1,
   }
@@ -222,13 +247,15 @@ function openEditSchedule(plan: InspectionPlan) {
     const raw = JSON.parse(plan.timeSlots || '[]')
     if (Array.isArray(raw)) timeSlots = raw.map((t: any) => ({ start: t.start || '', end: t.end || '' }))
   } catch {}
-  let freqMode: FreqMode = 'DAILY'
+  let freqMode: FreqMode | 'ADVANCED' = 'DAILY'
   if (plan.scheduleMode === 'ON_DEMAND') freqMode = 'ON_DEMAND'
+  else if (plan.rrule) freqMode = 'ADVANCED'    // V20260524_6
   else if (plan.cycleType === 'WEEKLY') freqMode = 'WEEKLY'
   else if (plan.cycleType === 'MONTHLY') freqMode = 'MONTHLY'
   scheduleForm.value = {
     planName: plan.planName, sectionIds, freqMode, frequency: plan.frequency || 1,
-    weekDays, monthDays, timeSlots, skipHolidays: plan.skipHolidays, inspectorIds,
+    weekDays, monthDays, timeSlots, rrule: plan.rrule || '',
+    skipHolidays: plan.skipHolidays, inspectorIds,
     ratersPerTarget: plan.ratersPerTarget ?? 1,
   }
   scheduleDialogVisible.value = true
@@ -243,6 +270,10 @@ async function handleSaveSchedule() {
   if (scheduleForm.value.freqMode === 'MONTHLY' && scheduleForm.value.monthDays.length === 0) {
     ElMessage.warning('按月检查需至少选择一个日期'); return
   }
+  // V20260524_6: ADVANCED 模式必须填 rrule
+  if (scheduleForm.value.freqMode === 'ADVANCED' && !scheduleForm.value.rrule.trim()) {
+    ElMessage.warning('高级模式需填写 RRULE 表达式 (可选预设)'); return
+  }
   // 每目标评分人数不得超过检查计划可用检查员数 (指定了检查员时)
   if (ratersExceedsAvailable.value) {
     ElMessage.warning('每目标评分人数不能超过已指定的检查员数量'); return
@@ -250,15 +281,18 @@ async function handleSaveSchedule() {
   scheduleSaving.value = true
   try {
     const fm = scheduleForm.value.freqMode
+    // V20260524_6: ADVANCED 模式只传 rrule, 其他周期字段都留空 (backend invariant 拒绝混设)
+    const isAdvanced = fm === 'ADVANCED'
     const data = {
       planName: scheduleForm.value.planName,
       sectionIds: JSON.stringify(scheduleForm.value.sectionIds),
       scheduleMode: fm === 'ON_DEMAND' ? 'ON_DEMAND' : 'REGULAR',
-      cycleType: fm === 'ON_DEMAND' ? 'DAILY' : fm,
-      frequency: scheduleForm.value.frequency,
-      scheduleDays: fm === 'WEEKLY' ? JSON.stringify(scheduleForm.value.weekDays) :
-                    fm === 'MONTHLY' ? JSON.stringify(scheduleForm.value.monthDays) : undefined,
+      cycleType: fm === 'ON_DEMAND' ? 'DAILY' : (isAdvanced ? undefined : fm),
+      frequency: isAdvanced ? undefined : scheduleForm.value.frequency,
+      scheduleDays: !isAdvanced && fm === 'WEEKLY' ? JSON.stringify(scheduleForm.value.weekDays) :
+                    !isAdvanced && fm === 'MONTHLY' ? JSON.stringify(scheduleForm.value.monthDays) : undefined,
       timeSlots: scheduleForm.value.timeSlots.length ? JSON.stringify(scheduleForm.value.timeSlots) : undefined,
+      rrule: isAdvanced ? scheduleForm.value.rrule.trim() : undefined,
       skipHolidays: scheduleForm.value.skipHolidays,
       inspectorIds: scheduleForm.value.inspectorIds.length ? JSON.stringify(scheduleForm.value.inspectorIds) : undefined,
       ratersPerTarget: scheduleForm.value.ratersPerTarget,
@@ -443,9 +477,32 @@ defineExpose({ reload: loadAll })
             <button class="fd-freq-btn" :class="{ on: scheduleForm.freqMode === 'MONTHLY' }" @click="scheduleForm.freqMode = 'MONTHLY'">
               <Calendar class="w-4 h-4" /><span>按月</span>
             </button>
+            <button class="fd-freq-btn" :class="{ on: scheduleForm.freqMode === 'ADVANCED' }" @click="scheduleForm.freqMode = 'ADVANCED'">
+              <Calendar class="w-4 h-4" /><span>高级 (RRULE)</span>
+            </button>
             <button class="fd-freq-btn" :class="{ on: scheduleForm.freqMode === 'ON_DEMAND' }" @click="scheduleForm.freqMode = 'ON_DEMAND'">
               <Zap class="w-4 h-4" /><span>不定期</span>
             </button>
+          </div>
+        </div>
+
+        <!-- V20260524_6: 高级 RRULE 模式 -->
+        <div v-if="scheduleForm.freqMode === 'ADVANCED'" class="fd-block">
+          <label class="fd-lbl">RRULE 表达式 <span class="fd-sub">RFC 5545 子集 — 支持 FREQ / INTERVAL / BYDAY</span></label>
+          <div class="fd-rrule-presets">
+            <button v-for="p in RRULE_PRESETS" :key="p.value"
+                    class="fd-rrule-preset"
+                    :class="{ on: scheduleForm.rrule === p.value }"
+                    @click="scheduleForm.rrule = p.value"
+                    :title="p.desc">
+              {{ p.label }}
+            </button>
+          </div>
+          <input v-model="scheduleForm.rrule" type="text" class="fd-rrule-input"
+                 placeholder="或自定义: FREQ=MONTHLY;BYDAY=2FR" />
+          <div class="fd-sub" style="margin-top: 6px">
+            示例: <code>FREQ=MONTHLY;BYDAY=-1FR</code> = 每月最后一个周五;
+            <code>FREQ=WEEKLY;BYDAY=MO,WE,FR</code> = 每周一三五
           </div>
         </div>
 
@@ -474,7 +531,7 @@ defineExpose({ reload: loadAll })
         </div>
 
         <!-- Frequency per day -->
-        <div v-if="scheduleForm.freqMode !== 'ON_DEMAND'" class="fd-block">
+        <div v-if="scheduleForm.freqMode !== 'ON_DEMAND' && scheduleForm.freqMode !== 'ADVANCED'" class="fd-block">
           <label class="fd-lbl">每天检查次数</label>
           <div class="fd-freq-count">
             <button v-for="n in [1,2,3,4,5]" :key="n"
@@ -485,14 +542,15 @@ defineExpose({ reload: loadAll })
           </div>
         </div>
 
-        <!-- Time slots -->
+        <!-- Time slots (V20260524_6: 允许跨日, end<=start 即次日, 如 22:00→02:00 夜巡) -->
         <div v-if="scheduleForm.freqMode !== 'ON_DEMAND'" class="fd-block">
-          <label class="fd-lbl">固定时段 <span class="fd-sub">可选，不设则为不定时抽查</span></label>
+          <label class="fd-lbl">固定时段 <span class="fd-sub">可选；end ≤ start 视为跨日 (如 22:00→02:00 夜巡)</span></label>
           <div class="fd-slots">
             <div v-for="(slot, i) in scheduleForm.timeSlots" :key="i" class="fd-slot">
               <input v-model="slot.start" type="time" class="fd-time" />
               <span class="fd-time-sep">-</span>
               <input v-model="slot.end" type="time" class="fd-time" />
+              <span v-if="isSlotCrossDay(slot)" class="fd-slot-crossday" title="end ≤ start, 视为次日">次日</span>
               <button class="fd-slot-del" @click="removeTimeSlot(i)"><X class="w-3 h-3" /></button>
             </div>
             <button class="fd-slot-add" @click="addTimeSlot"><Plus class="w-3 h-3" /> 添加时段</button>
