@@ -120,16 +120,15 @@ public class InspectionPlanScheduler {
         String inspectorName = null;
         TaskStatus initialStatus = TaskStatus.PENDING;
 
-        if (plan.getInspectorIds() != null && !plan.getInspectorIds().isBlank()) {
-            List<Long> ids = parseLongList(plan.getInspectorIds());
-            if (!ids.isEmpty()) {
-                // 轮转：按日期选人
-                int index = (int) (date.toEpochDay() % ids.size());
-                inspectorId = ids.get(index);
-                // P2#16: 取真实姓名 — 旧实现把 ID 当姓名直接展示, 用户看到一串数字.
-                inspectorName = resolveUserName(inspectorId);
-                initialStatus = TaskStatus.CLAIMED;
-            }
+        // 2026-05-24 C: 直接拿 List, 无需 JSON 解析
+        List<Long> ids = plan.getInspectorUserIds();
+        if (!ids.isEmpty()) {
+            // 轮转：按日期选人
+            int index = (int) (date.toEpochDay() % ids.size());
+            inspectorId = ids.get(index);
+            // P2#16: 取真实姓名 — 旧实现把 ID 当姓名直接展示, 用户看到一串数字.
+            inspectorName = resolveUserName(inspectorId);
+            initialStatus = TaskStatus.CLAIMED;
         }
 
         InspTask task = InspTask.reconstruct(InspTask.builder()

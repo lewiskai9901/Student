@@ -172,7 +172,7 @@ public class InspectionPlanApplicationService {
 
         // ratersPerTarget 为空时沿用现有值 (部分更新语义).
         int resolvedRaters = ratersPerTarget != null ? ratersPerTarget : plan.getRatersPerTarget();
-        validateRatersPerTarget(resolvedRaters, plan.getInspectorIds());
+        validateRatersPerTarget(resolvedRaters, plan.getInspectorUserIds());
         plan.updateRatersPerTarget(resolvedRaters);
 
         // smell A + B: 更新后断言不变量
@@ -271,19 +271,13 @@ public class InspectionPlanApplicationService {
         String taskCode = generateTaskCode();
         InspTask task = InspTask.create(taskCode, plan.getProjectId(), LocalDate.now());
 
+        // 2026-05-24 C: 直接拿 List, 无需 JSON 解析
         Long assignedInspectorId = null;
         String assignedInspectorName = null;
-        if (plan.getInspectorIds() != null && !plan.getInspectorIds().isBlank()) {
-            try {
-                var ids = new com.fasterxml.jackson.databind.ObjectMapper()
-                        .readValue(plan.getInspectorIds(), Long[].class);
-                if (ids.length > 0) {
-                    assignedInspectorId = ids[0];
-                    assignedInspectorName = String.valueOf(ids[0]);
-                }
-            } catch (Exception e) {
-                log.warn("解析计划检查员列表失败: {}", e.getMessage());
-            }
+        java.util.List<Long> userIds = plan.getInspectorUserIds();
+        if (!userIds.isEmpty()) {
+            assignedInspectorId = userIds.get(0);
+            assignedInspectorName = String.valueOf(userIds.get(0));
         }
 
         var builder = InspTask.builder()
@@ -313,22 +307,17 @@ public class InspectionPlanApplicationService {
      * 校验 ratersPerTarget. 调度组若未指定检查员名单 (全员可领取) 不做硬校验.
      */
     private void validateRatersPerTarget(int ratersPerTarget, String inspectorIdsJson) {
+        validateRatersPerTarget(ratersPerTarget, parseInspectorIdsJson(inspectorIdsJson));
+    }
+
+    /** 2026-05-24 C: 主接口直接接收 List, 省 JSON 解析来回. */
+    private void validateRatersPerTarget(int ratersPerTarget, java.util.List<Long> inspectorUserIds) {
         if (ratersPerTarget < 1) {
             throw new IllegalArgumentException("ratersPerTarget 必须 >= 1, 当前值: " + ratersPerTarget);
         }
         if (ratersPerTarget == 1) return;
-        if (inspectorIdsJson == null || inspectorIdsJson.isBlank()) {
-            return;
-        }
-        int available;
-        try {
-            Long[] ids = new com.fasterxml.jackson.databind.ObjectMapper()
-                    .readValue(inspectorIdsJson, Long[].class);
-            available = ids.length;
-        } catch (Exception e) {
-            log.warn("解析调度组检查员列表失败, 跳过 ratersPerTarget 人数校验: {}", e.getMessage());
-            return;
-        }
+        if (inspectorUserIds == null || inspectorUserIds.isEmpty()) return;
+        int available = inspectorUserIds.size();
         if (ratersPerTarget > available) {
             throw new com.school.management.exception.BusinessException(
                     "每目标检查员份数 (" + ratersPerTarget + ") 超过调度组可用检查员数 ("

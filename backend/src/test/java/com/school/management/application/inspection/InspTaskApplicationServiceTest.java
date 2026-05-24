@@ -389,7 +389,7 @@ class InspTaskApplicationServiceTest {
                     .inspectionPlanId(33L));
             when(taskRepository.findAvailableTasks()).thenReturn(List.of(t));
             InspectionPlan plan = mock(InspectionPlan.class);
-            when(plan.getInspectorIds()).thenReturn("100,200");
+            when(plan.getInspectorUserIds()).thenReturn(List.of(100L, 200L));
             when(planRepository.findById(33L)).thenReturn(Optional.of(plan));
 
             List<InspTask> result = service.listAvailableTasksForUser(5L);
@@ -405,7 +405,7 @@ class InspTaskApplicationServiceTest {
                     .inspectionPlanId(33L));
             when(taskRepository.findAvailableTasks()).thenReturn(List.of(t));
             InspectionPlan plan = mock(InspectionPlan.class);
-            when(plan.getInspectorIds()).thenReturn("5,200");
+            when(plan.getInspectorUserIds()).thenReturn(List.of(5L, 200L));
             when(planRepository.findById(33L)).thenReturn(Optional.of(plan));
 
             assertThat(service.listAvailableTasksForUser(5L)).hasSize(1);

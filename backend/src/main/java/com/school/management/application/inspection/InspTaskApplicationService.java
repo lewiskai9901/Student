@@ -347,8 +347,11 @@ public class InspTaskApplicationService {
         return all.stream().filter(task -> {
             if (task.getInspectionPlanId() == null) return true;
             InspectionPlan plan = planRepository.findById(task.getInspectionPlanId()).orElse(null);
-            if (plan == null || plan.getInspectorIds() == null || plan.getInspectorIds().isBlank()) return true;
-            return plan.getInspectorIds().contains(String.valueOf(userId));
+            if (plan == null) return true;
+            // 2026-05-24 C: 直接对比 List, 不再用 String.contains() 假比对 (旧实现易把 1 匹配到 12/13...)
+            List<Long> userIds = plan.getInspectorUserIds();
+            if (userIds.isEmpty()) return true;  // 空 = 全员可领取
+            return userIds.contains(userId);
         }).toList();
     }
 

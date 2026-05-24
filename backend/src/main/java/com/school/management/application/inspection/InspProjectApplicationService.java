@@ -558,19 +558,23 @@ public class InspProjectApplicationService {
         boolean cloneInspectors = command.isCloneInspectors();
         List<InspectionPlan> sourcePlans = inspectionPlanRepository.findByProjectId(sourceId);
         for (InspectionPlan oldPlan : sourcePlans) {
+            // 2026-05-24 C: 直接传 List, 不再经 JSON 序列化-反序列化来回
             InspectionPlan newPlan = InspectionPlan.reconstruct(InspectionPlan.builder()
                     .tenantId(oldPlan.getTenantId())
                     .projectId(newProjectId)
                     .planName(oldPlan.getPlanName())
                     .rootSectionId(oldPlan.getRootSectionId())
-                    .sectionIds(oldPlan.getSectionIds())
+                    .sectionIdList(new java.util.ArrayList<>(oldPlan.getSectionIdList()))
                     .scheduleMode(oldPlan.getScheduleMode())
                     .cycleType(oldPlan.getCycleType())
                     .frequency(oldPlan.getFrequency())
                     .scheduleDays(oldPlan.getScheduleDays())
                     .timeSlots(oldPlan.getTimeSlots())
                     .skipHolidays(oldPlan.getSkipHolidays())
-                    .inspectorIds(cloneInspectors ? oldPlan.getInspectorIds() : null)
+                    .inspectorUserIds(cloneInspectors
+                            ? new java.util.ArrayList<>(oldPlan.getInspectorUserIds())
+                            : new java.util.ArrayList<>())
+                    .assignStrategy(oldPlan.getAssignStrategy())
                     .ratersPerTarget(oldPlan.getRatersPerTarget())
                     .isEnabled(oldPlan.getIsEnabled())
                     .sortOrder(oldPlan.getSortOrder())

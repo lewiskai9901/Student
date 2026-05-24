@@ -2,7 +2,7 @@
 import type { LongId } from '@/types/common'
 import { ref, onMounted } from 'vue'
 import { inspProjectApi } from '@/api/inspection/project'
-import { TargetTypeConfig, ProjectStatusConfig, type TargetType, type ProjectStatus } from '@/types/insp/enums'
+import { ProjectStatusConfig, type ProjectStatus } from '@/types/insp/enums'
 import type { InspProject, ProjectScore } from '@/types/insp/project'
 
 interface ScoreNode {
@@ -53,9 +53,6 @@ onMounted(() => {
       <div class="score-node score-node--root">
         <div class="score-node__header">
           <span class="font-medium">{{ tree.project.projectName }}</span>
-          <el-tag v-if="tree.project.targetType" size="small" type="info">
-            {{ TargetTypeConfig[tree.project.targetType as TargetType]?.label }}
-          </el-tag>
           <el-tag size="small" :type="(ProjectStatusConfig[tree.project.status as ProjectStatus]?.type as any)">
             {{ ProjectStatusConfig[tree.project.status as ProjectStatus]?.label }}
           </el-tag>
@@ -75,9 +72,6 @@ onMounted(() => {
             <div class="score-node__header">
               <span class="text-gray-400 mr-1">└</span>
               <span class="font-medium text-sm">{{ child.project.projectName }}</span>
-              <el-tag v-if="child.project.targetType" size="small" type="info">
-                {{ TargetTypeConfig[child.project.targetType as TargetType]?.label }}
-              </el-tag>
             </div>
             <div class="score-node__score" v-if="child.latestScore">
               <span class="text-lg font-semibold" :class="child.latestScore.score != null && child.latestScore.score >= 60 ? 'text-green-600' : 'text-red-500'">

@@ -28,8 +28,6 @@ export interface InspProject {
   templateVersionId: LongId | null
   scopeType: ScopeType | null
   scopeConfig: string | null
-  /** 目标类型(STUDENT/CLASS/...) — 决定每个 scope 节点展开成多少个检查目标 */
-  targetType?: string | null
   startDate: string
   endDate: string | null
   assignmentMode: AssignmentMode

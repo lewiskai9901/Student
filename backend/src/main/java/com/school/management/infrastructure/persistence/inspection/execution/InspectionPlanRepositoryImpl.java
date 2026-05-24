@@ -140,17 +140,14 @@ public class InspectionPlanRepositoryImpl implements InspectionPlanRepository {
         po.setProjectId(d.getProjectId());
         po.setPlanName(d.getPlanName());
         po.setRootSectionId(d.getRootSectionId());
-        // V20260524_4 smell C: 不再写 section_ids JSON 列 (关系移至 insp_plan_sections)
-        po.setSectionIds(null);
+        // V20260524_5: section_ids JSON 列已物理 DROP, 关系存 insp_plan_sections
         po.setScheduleMode(d.getScheduleMode());
         po.setCycleType(d.getCycleType());
         po.setFrequency(d.getFrequency());
         po.setScheduleDays(d.getScheduleDays());
         po.setTimeSlots(d.getTimeSlots());
         po.setSkipHolidays(d.getSkipHolidays());
-        // V20260524_2: 不再写 inspector_ids JSON 列 (关系移至 insp_plan_inspectors).
-        // 旧列暂保留 NULL, V20260524_3 future 整体 DROP.
-        po.setInspectorIds(null);
+        // V20260524_5: inspector_ids JSON 列已物理 DROP, 关系存 insp_plan_inspectors
         po.setAssignStrategy(d.getAssignStrategy() != null ? d.getAssignStrategy().name() : AssignStrategy.OPEN_TO_ALL.name());
         po.setRatersPerTarget(d.getRatersPerTarget());
         po.setIsEnabled(d.getIsEnabled());
