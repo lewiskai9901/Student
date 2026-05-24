@@ -14,9 +14,6 @@ import ItemEditor from './components/ItemEditor.vue'
 import ItemTypeSelector from './components/ItemTypeSelector.vue'
 import TemplatePreview from './components/TemplatePreview.vue'
 import InspErrorState from '../shared/InspErrorState.vue'
-import CalcRuleChain from '../scoring/components/CalcRuleChain.vue'
-import { useInspScoringStore } from '@/stores/inspection/inspScoringStore'
-import type { ScoringProfile, CreateRuleRequest, UpdateRuleRequest } from '@/types/insp/scoring'
 // ScoringPolicy type kept for potential future use
 
 const route = useRoute()
@@ -259,7 +256,6 @@ async function handleRemoveSection(id: LongId) {
 // ===== Item CRUD =====
 function selectSection(id: LongId) {
   selectedSectionId.value = id; selectedItem.value = null
-  loadScoringForSection(id)
 }
 function selectItem(item: TemplateItem) {
   selectedItem.value = item
@@ -294,66 +290,10 @@ async function handleDeleteItem(item: TemplateItem) {
   catch (e: any) { ElMessage.error(e.message || '删除失败') }
 }
 
-// ===== Inline Scoring =====
-const scoringStore = useInspScoringStore()
-const scoringProfile = ref<ScoringProfile | null>(null)
-const scoringLoading = ref(false)
-const scoringError = ref<string | null>(null)
-
-// 展开汇总规则时才加载
-const scoringSectionId = ref<LongId | null>(null)
-
-async function loadScoringForSection(sectionId: LongId) {
-  if (scoringSectionId.value === sectionId && scoringProfile.value) return
-  scoringSectionId.value = sectionId
-  scoringLoading.value = true
-  scoringProfile.value = null
-  scoringError.value = null
-  try {
-    // 评分方案已下沉到项目-owned (2026-05-23 重构): 模板分区不再持有 profile.
-    // 模板编辑器不显示评分配置 — 创建/查看入口都移至项目详情页的「评分方案」卡.
-    // 此处保留 stub 以兼容旧 UI 调用, 但不再发 API (无 projectId 上下文).
-    void sectionId
-    scoringProfile.value = null
-  } catch (e: any) {
-    scoringProfile.value = null
-    scoringError.value = e?.message || '汇总规则加载失败'
-  }
-  finally { scoringLoading.value = false }
-}
-
-async function saveScoringBasic() {
-  if (!scoringProfile.value) return
-  try {
-    const updated = await scoringStore.updateProfile(scoringProfile.value.id, {
-      maxScore: scoringProfile.value.maxScore,
-      minScore: scoringProfile.value.minScore,
-      precisionDigits: scoringProfile.value.precisionDigits,
-    })
-    if (updated) scoringProfile.value = updated
-  } catch (e: any) { ElMessage.error('保存评分设置失败: ' + (e?.message || '未知错误')) }
-}
-
-async function handleCreateRule(data: CreateRuleRequest) {
-  if (!scoringProfile.value) return
-  await scoringStore.createRule(scoringProfile.value.id, data)
-}
-async function handleUpdateRule(id: LongId, data: UpdateRuleRequest) {
-  if (!scoringProfile.value) return
-  await scoringStore.updateRule(scoringProfile.value.id, id, data)
-}
-async function handleDeleteRule(id: LongId) {
-  if (!scoringProfile.value) return
-  await scoringStore.deleteRule(scoringProfile.value.id, id)
-}
-
-async function addCalcRule() {
-  if (!scoringProfile.value) return
-  await scoringStore.createRule(scoringProfile.value.id, {
-    ruleCode: 'R' + Date.now().toString(36), ruleName: '', ruleType: 'VETO',
-    config: '{}', isEnabled: true, priority: scoringStore.rules.length + 1,
-  })
-}
+// 2026-05-24: 「汇总规则」UI + handlers 已删除. 评分方案 (ScoringProfile) 自 2026-05-23
+// 重构起下沉为 (project, section) project-owned, 模板编辑器内无 projectId 上下文,
+// 旧的 stub 函数全部产生死代码 + 用户看到空白 "汇总规则" 标题. 配置入口现位于
+// 项目详情页「设置」Tab → 评分方案卡片.
 
 // ===== Unlock for editing (to create new version) =====
 async function handleUnlockForEdit() {
@@ -401,9 +341,8 @@ async function loadData() {
     // 选项集加载失败不阻塞模板编辑, 但要可见
     ElMessage.error('选项集加载失败: ' + (e?.message || '未知错误'))
   }
-  // 默认选中根节点并加载汇总规则
+  // 默认选中根节点
   selectedSectionId.value = rootSectionId.value
-  loadScoringForSection(rootSectionId.value)
 }
 onMounted(() => {
   if (!rootSectionId.value) router.replace('/inspection/config'); else loadData()
@@ -620,54 +559,6 @@ onMounted(() => {
                   </div>
                 </div>
 
-                <!-- ── 汇总规则（带标题分割线） ── -->
-                <div class="te-divider-title"><span>汇总规则</span></div>
-
-                <div v-if="scoringLoading" class="te-scoring-skeleton">
-                  <div class="te-skeleton te-skeleton--line" style="width:100%" />
-                  <div class="te-skeleton te-skeleton--line" style="width:70%" />
-                  <div class="te-skeleton te-skeleton--line" style="width:50%" />
-                </div>
-                <div v-else-if="scoringError" class="te-scoring-error">
-                  <span>{{ scoringError }}</span>
-                  <button class="te-scoring-retry" @click="selectedSectionId != null && loadScoringForSection(selectedSectionId)">重试</button>
-                </div>
-                <template v-else-if="scoringProfile">
-                  <!-- 基础数值 -->
-                  <div class="te-flat-group">
-                    <div class="te-inline-row">
-                      <div class="te-prop-field" style="flex:1">
-                        <label>满分</label>
-                        <input v-model.number="scoringProfile.maxScore" type="number" @change="saveScoringBasic" :disabled="isReadonly" />
-                      </div>
-                      <div class="te-prop-field" style="flex:1">
-                        <label>最低分</label>
-                        <input v-model.number="scoringProfile.minScore" type="number" @change="saveScoringBasic" :disabled="isReadonly" />
-                      </div>
-                      <div class="te-prop-field" style="flex:1">
-                        <label>精度</label>
-                        <input v-model.number="scoringProfile.precisionDigits" type="number" min="0" max="4" @change="saveScoringBasic" :disabled="isReadonly" />
-                      </div>
-                    </div>
-                  </div>
-
-
-                  <!-- 即时规则 -->
-                  <div class="te-divider-title te-divider-title--sub"><span>即时规则</span></div>
-                  <div class="te-scoring-block">
-                    <div class="te-scoring-block-head">
-                      <span class="te-scoring-block-title"></span>
-                      <button v-if="!isReadonly" class="te-add-btn" @click="addCalcRule">+</button>
-                    </div>
-                    <div v-if="scoringStore.rules.length === 0" class="te-scoring-empty">暂无规则</div>
-                    <CalcRuleChain v-else
-                      :rules="scoringStore.rules"
-                      @create="handleCreateRule"
-                      @update="handleUpdateRule"
-                      @delete="handleDeleteRule"
-                    />
-                  </div>
-                </template>
               </div>
             </template>
 
@@ -715,14 +606,7 @@ onMounted(() => {
   0% { background-position: 100% 0; }
   100% { background-position: 0 0; }
 }
-.te-scoring-skeleton { display: flex; flex-direction: column; gap: 8px; padding: 8px 0; }
-.te-scoring-error {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 11px; color: var(--insp-fail);
-  padding: 8px 10px; background: var(--insp-fail-pale);
-  border: 1px solid var(--insp-fail-border); border-radius: var(--insp-radius-sm);
-}
-.te-scoring-retry, .te-target-retry {
+.te-target-retry {
   margin-left: auto; font-size: 11px; color: var(--insp-accent);
   background: none; border: none; cursor: pointer; padding: 0;
   text-decoration: underline;
@@ -1103,19 +987,4 @@ onMounted(() => {
 .te-modal-mask { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.35); }
 .te-modal { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); overflow-y: auto; }
 
-/* ======= Scoring blocks ======= */
-.te-scoring-block { display: flex; flex-direction: column; gap: 6px; }
-.te-scoring-block-head { display: flex; align-items: center; justify-content: space-between; }
-.te-scoring-block-title { font-size: 11px; font-weight: 600; color: #374151; }
-.te-scoring-empty { font-size: 11px; color: #b8c0cc; padding: 4px 0; }
-
-/* Add inline button */
-.te-add-btn {
-  width: 20px; height: 20px; border-radius: 4px;
-  border: 1px dashed #d1d5db; background: none; color: #9ca3af;
-  font-size: 14px; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.12s;
-}
-.te-add-btn:hover { border-color: #1a6dff; color: #1a6dff; background: #eef4ff; }
 </style>
