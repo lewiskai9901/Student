@@ -22,6 +22,8 @@ public class InspectionPlanPO {
     private Integer frequency;
     private String scheduleDays;
     private String timeSlots;
+    /** V20260524_6: RRULE 周期表达式 (RFC 5545 子集), 非空时优先于 cycleType. */
+    private String rrule;
     private Boolean skipHolidays;
     // 2026-05-24 V20260524_5: inspectorIds JSON 列已 DROP, 关系存 insp_plan_inspectors
     /** smell A 修复 (V20260524_3): 显式指派策略, 替代 inspector_ids 空字符串 falsy 语义. */

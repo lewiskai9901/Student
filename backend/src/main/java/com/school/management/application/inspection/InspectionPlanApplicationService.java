@@ -30,6 +30,18 @@ public class InspectionPlanApplicationService {
     private final InspTaskRepository taskRepository;
     private final ProjectInspectorRepository projectInspectorRepository;
     private final com.school.management.infrastructure.persistence.inspection.execution.InspectionPlanInspectorMapper planInspectorMapper;
+    // V20260524_6: 冲突检测 (optional, 测试可空)
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private InspectionPlanConflictDetector conflictDetector;
+    @lombok.Getter
+    private final ThreadLocal<java.util.List<InspectionPlanConflictDetector.ConflictReport>> lastConflicts = ThreadLocal.withInitial(java.util.Collections::emptyList);
+
+    /** 上次 createPlan/updatePlan 计算出的冲突报告 (controller 读取后清理). */
+    public java.util.List<InspectionPlanConflictDetector.ConflictReport> takeLastConflicts() {
+        java.util.List<InspectionPlanConflictDetector.ConflictReport> v = lastConflicts.get();
+        lastConflicts.remove();
+        return v;
+    }
 
     /**
      * 2026-05-24: 校验调度组的 inspectorIds 必须全部在项目 inspector 池.
@@ -131,6 +143,14 @@ public class InspectionPlanApplicationService {
         InspectionPlan saved = planRepository.save(plan);
         log.info("创建检查计划: projectId={}, planName={}, rootSectionId={}, scheduleMode={}",
                 projectId, planName, resolvedRootSectionId, scheduleMode);
+        // V20260524_6: 异步收集冲突报告供 controller 返回
+        if (conflictDetector != null) {
+            var reports = conflictDetector.detect(saved);
+            lastConflicts.set(reports);
+            if (!reports.isEmpty()) {
+                log.info("[Conflict] plan#{} 检测到 {} 个冲突", saved.getId(), reports.size());
+            }
+        }
         return saved;
     }
 

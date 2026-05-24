@@ -490,6 +490,24 @@ public class InspTask extends AggregateRoot<Long> {
     public String getTimeSlotCode() { return timeSlotCode; }
     public LocalTime getTimeSlotStart() { return timeSlotStart; }
     public LocalTime getTimeSlotEnd() { return timeSlotEnd; }
+
+    /**
+     * V20260524_6: 时段是否跨日 (end ≤ start, 如 22:00→02:00 夜巡).
+     * 跨日时 deadline 应取次日 endTime, 而非当日.
+     */
+    public boolean isTimeSlotCrossDay() {
+        return timeSlotStart != null && timeSlotEnd != null && !timeSlotEnd.isAfter(timeSlotStart);
+    }
+
+    /**
+     * V20260524_6: 计算时段的实际结束时刻 — 跨日时 endTime 落在 taskDate+1.
+     * 用于 deadline / 任务窗口判断.
+     */
+    public java.time.LocalDateTime effectiveSlotEndDateTime() {
+        if (timeSlotEnd == null || taskDate == null) return null;
+        java.time.LocalDate endDate = isTimeSlotCrossDay() ? taskDate.plusDays(1) : taskDate;
+        return java.time.LocalDateTime.of(endDate, timeSlotEnd);
+    }
     public Long getInspectorId() { return inspectorId; }
     public String getInspectorName() { return inspectorName; }
     public Long getReviewerId() { return reviewerId; }

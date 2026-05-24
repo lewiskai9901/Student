@@ -78,6 +78,15 @@ public class InspectionPlanScheduler {
      * 判断今天是否需要执行该计划
      */
     boolean shouldRunToday(InspectionPlan plan, LocalDate today) {
+        // V20260524_6 RRULE 优先: 非空时忽略 cycleType/frequency/scheduleDays
+        com.school.management.domain.inspection.model.execution.RecurrenceRule rrule = plan.getParsedRrule();
+        if (rrule != null) {
+            // anchor: 用 plan 的创建日期作为锚点 (用于 INTERVAL/MONTHLY 计算)
+            java.time.LocalDate anchor = plan.getCreatedAt() != null
+                    ? plan.getCreatedAt().toLocalDate()
+                    : today;
+            return rrule.matches(today, anchor);
+        }
         String cycleType = plan.getCycleType();
         if ("DAILY".equals(cycleType)) {
             return true;

@@ -30,7 +30,9 @@ public class InspectionPlan extends AggregateRoot<Long> {
     private String cycleType;          // DAILY / WEEKLY / MONTHLY
     private Integer frequency;         // 每周期执行次数
     private String scheduleDays;       // JSON: [1,3,5] 周几
-    private String timeSlots;          // JSON: ["07:00-08:00"]
+    private String timeSlots;          // JSON: ["07:00-08:00"] (V20260524_6: 支持跨日 "22:00-02:00")
+    /** V20260524_6: RRULE 周期 (RFC 5545 子集). 非空时 scheduler 用 RecurrenceRule 计算, 忽略 cycleType/frequency/scheduleDays. */
+    private String rrule;
     private Boolean skipHolidays;
     /**
      * 检查员列表 (V20260524_2 重构: 原 JSON String → List&lt;Long&gt; 由 insp_plan_inspectors 关系表持久化).
@@ -73,6 +75,7 @@ public class InspectionPlan extends AggregateRoot<Long> {
         this.frequency = builder.frequency != null ? builder.frequency : 1;
         this.scheduleDays = builder.scheduleDays;
         this.timeSlots = builder.timeSlots;
+        this.rrule = builder.rrule;
         this.skipHolidays = builder.skipHolidays != null ? builder.skipHolidays : false;
         this.inspectorUserIds = builder.inspectorUserIds != null
                 ? new ArrayList<>(builder.inspectorUserIds)
@@ -144,6 +147,7 @@ public class InspectionPlan extends AggregateRoot<Long> {
         if (frequency != null) this.frequency = frequency;
         if (scheduleDays != null) this.scheduleDays = scheduleDays;
         if (timeSlots != null) this.timeSlots = timeSlots;
+        // rrule 由专门 setter 处理 (避免 update 签名再加参数)
         if (skipHolidays != null) this.skipHolidays = skipHolidays;
         if (isEnabled != null) this.isEnabled = isEnabled;
         if (sortOrder != null) this.sortOrder = sortOrder;
@@ -200,6 +204,18 @@ public class InspectionPlan extends AggregateRoot<Long> {
     public Integer getFrequency() { return frequency; }
     public String getScheduleDays() { return scheduleDays; }
     public String getTimeSlots() { return timeSlots; }
+
+    /**
+     * V20260524_6: 解析时段 JSON 为 TimeSlot 值对象列表.
+     * 跨日 slot (如 22:00→02:00) 由 TimeSlot.isCrossDay() 自动识别.
+     */
+    public List<TimeSlot> getParsedTimeSlots() {
+        return TimeSlot.parseList(timeSlots);
+    }
+
+    public String getRrule() { return rrule; }
+    public void setRrule(String rrule) { this.rrule = rrule; this.updatedAt = LocalDateTime.now(); }
+    public RecurrenceRule getParsedRrule() { return RecurrenceRule.parse(rrule); }
     public Boolean getSkipHolidays() { return skipHolidays; }
     /**
      * 旧接口兼容: 返回 JSON 串 ["1","2","3"] (Jackson Long-as-string 契约).
@@ -258,15 +274,23 @@ public class InspectionPlan extends AggregateRoot<Long> {
     public void assertScheduleModeInvariant() {
         String mode = this.scheduleMode != null ? this.scheduleMode : "REGULAR";
         if ("ON_DEMAND".equals(mode)) {
-            if (cycleType != null || frequency != null || scheduleDays != null || timeSlots != null) {
+            if (cycleType != null || frequency != null || scheduleDays != null || timeSlots != null
+                    || (rrule != null && !rrule.isBlank())) {
                 throw new com.school.management.domain.inspection.exception.InvalidPlanStateException(
-                    "ON_DEMAND 调度组不应设置 cycleType / frequency / scheduleDays / timeSlots; " +
+                    "ON_DEMAND 调度组不应设置 cycleType / frequency / scheduleDays / timeSlots / rrule; " +
                     "若要按周期触发请改成 REGULAR.");
             }
         } else if ("REGULAR".equals(mode)) {
-            if (cycleType == null || cycleType.isBlank()) {
+            // V20260524_6: rrule 非空时不需要 cycleType (rrule 自带 FREQ)
+            boolean hasRrule = rrule != null && !rrule.isBlank();
+            if (!hasRrule && (cycleType == null || cycleType.isBlank())) {
                 throw new com.school.management.domain.inspection.exception.InvalidPlanStateException(
-                    "REGULAR 调度组必须指定 cycleType (DAILY / WEEKLY / MONTHLY).");
+                    "REGULAR 调度组必须指定 cycleType (DAILY / WEEKLY / MONTHLY) 或 rrule 表达式.");
+            }
+            // V20260524_6: rrule 非空时校验格式合法
+            if (hasRrule && com.school.management.domain.inspection.model.execution.RecurrenceRule.parse(rrule) == null) {
+                throw new com.school.management.domain.inspection.exception.InvalidPlanStateException(
+                    "rrule 格式不合法: " + rrule + " (示例: FREQ=MONTHLY;BYDAY=2FR)");
             }
         } else {
             throw new com.school.management.domain.inspection.exception.InvalidPlanStateException(
@@ -295,6 +319,7 @@ public class InspectionPlan extends AggregateRoot<Long> {
         private Integer frequency;
         private String scheduleDays;
         private String timeSlots;
+        private String rrule;
         private Boolean skipHolidays;
         private String inspectorIds;
         private List<Long> inspectorUserIds;
@@ -318,6 +343,7 @@ public class InspectionPlan extends AggregateRoot<Long> {
         public Builder frequency(Integer frequency) { this.frequency = frequency; return this; }
         public Builder scheduleDays(String scheduleDays) { this.scheduleDays = scheduleDays; return this; }
         public Builder timeSlots(String timeSlots) { this.timeSlots = timeSlots; return this; }
+        public Builder rrule(String rrule) { this.rrule = rrule; return this; }
         public Builder skipHolidays(Boolean skipHolidays) { this.skipHolidays = skipHolidays; return this; }
         public Builder inspectorIds(String inspectorIds) { this.inspectorIds = inspectorIds; return this; }
         public Builder inspectorUserIds(List<Long> userIds) { this.inspectorUserIds = userIds; return this; }

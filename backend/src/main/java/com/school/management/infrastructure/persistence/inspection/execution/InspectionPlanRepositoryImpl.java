@@ -146,6 +146,7 @@ public class InspectionPlanRepositoryImpl implements InspectionPlanRepository {
         po.setFrequency(d.getFrequency());
         po.setScheduleDays(d.getScheduleDays());
         po.setTimeSlots(d.getTimeSlots());
+        po.setRrule(d.getRrule());
         po.setSkipHolidays(d.getSkipHolidays());
         // V20260524_5: inspector_ids JSON 列已物理 DROP, 关系存 insp_plan_inspectors
         po.setAssignStrategy(d.getAssignStrategy() != null ? d.getAssignStrategy().name() : AssignStrategy.OPEN_TO_ALL.name());
@@ -178,6 +179,7 @@ public class InspectionPlanRepositoryImpl implements InspectionPlanRepository {
                 .frequency(po.getFrequency())
                 .scheduleDays(po.getScheduleDays())
                 .timeSlots(po.getTimeSlots())
+                .rrule(po.getRrule())
                 .skipHolidays(po.getSkipHolidays())
                 .inspectorUserIds(userIds != null ? userIds : new ArrayList<>())
                 .assignStrategy(po.getAssignStrategy() != null
