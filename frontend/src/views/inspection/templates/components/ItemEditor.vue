@@ -23,6 +23,8 @@ const props = defineProps<{
   item: TemplateItem
   responseSets: ResponseSet[]
   allItems?: TemplateItem[]
+  /** 2026-05-24 Bug#1: 模板 PUBLISHED 时禁用编辑 + 隐藏保存按钮 */
+  readonly?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -846,7 +848,7 @@ const scoringFromResponseSet = computed(() =>
 </script>
 
 <template>
-  <div class="ie-root">
+  <div class="ie-root" :class="{ 'ie-root--readonly': readonly }">
     <!-- ═══════ Header ═══════ -->
     <div class="ie-header">
       <div class="ie-header-left">
@@ -857,12 +859,16 @@ const scoringFromResponseSet = computed(() =>
         <span class="ie-code">{{ item.itemCode }}</span>
       </div>
       <div class="ie-header-right">
-        <button class="ie-btn-ghost" @click="emit('cancel')">取消</button>
-        <button class="ie-btn-primary" @click="handleSave">
+        <span v-if="readonly" class="ie-readonly-hint">只读 · 模板已发布</span>
+        <button class="ie-btn-ghost" @click="emit('cancel')">{{ readonly ? '关闭' : '取消' }}</button>
+        <button v-if="!readonly" class="ie-btn-primary" @click="handleSave">
           <Save :size="12" /> 保存
         </button>
       </div>
     </div>
+
+    <!-- ═══════ Readonly overlay (V20260524: published 模板时禁用全部输入) ═══════ -->
+    <div v-if="readonly" class="ie-readonly-shield" aria-hidden="true"></div>
 
     <!-- ═══════ Scrollable Body ═══════ -->
     <div class="ie-body">
@@ -979,7 +985,7 @@ const scoringFromResponseSet = computed(() =>
                   {{ opt.optionLabel }}
                   <span v-if="opt.isFlagged" class="ie-rs-flag">标记</span>
                 </div>
-                <span class="ie-rs-score">{{ opt.score ?? 0 }}分</span>
+                <span class="ie-rs-score" :class="{ 'ie-rs-score--flagged': opt.isFlagged }">{{ opt.score ?? 0 }}分</span>
               </div>
             </div>
             <!-- #7/#10: 选项集加载中 / 失败 / 空 三态分明 -->
@@ -1305,7 +1311,11 @@ const scoringFromResponseSet = computed(() =>
 
 <style scoped>
 /* ═══════ Root ═══════ */
-.ie-root { display:flex; flex-direction:column; height:100%; }
+.ie-root { display:flex; flex-direction:column; height:100%; position:relative; }
+/* V20260524 Bug#1: readonly 透明遮罩拦截全部输入, 但不挡视觉 — 与 header 关闭按钮独立 */
+.ie-root--readonly .ie-body { pointer-events: none; opacity: 0.7; }
+.ie-readonly-shield { position: absolute; inset: 40px 0 0 0; z-index: 5; cursor: not-allowed; background: transparent; }
+.ie-readonly-hint { font-size: 11px; color: #d97706; padding: 2px 8px; background: #fef3c7; border-radius: 4px; }
 
 /* ═══════ Header ═══════ */
 .ie-header { display:flex; align-items:center; justify-content:space-between; padding:6px 10px; border-bottom:1px solid #e8ecf0; }
@@ -1378,6 +1388,8 @@ const scoringFromResponseSet = computed(() =>
 .ie-rs-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
 .ie-rs-flag { font-size:9px; padding:0 4px; border-radius:3px; background:#fef3c7; color:#92400e; font-weight:500; }
 .ie-rs-score { font-size:11px; font-weight:600; color:#1a6dff; padding:1px 6px; background:#eff6ff; border-radius:3px; }
+/* V20260524 Bug#5: isFlagged 选项分数标红, 区分"差/不合格" 视觉权重 */
+.ie-rs-score--flagged { color:#dc2626; background:#fef2f2; }
 
 /* ═══════ Scoring summary row ═══════ */
 .ie-scoring-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }

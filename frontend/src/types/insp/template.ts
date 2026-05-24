@@ -67,7 +67,8 @@ export interface TemplateSection {
   status: TemplateStatus
   latestVersion: number
   sortOrder: number
-  weight: number
+  /** @deprecated 后端 PO 无该列, 前端不再显示; 权重在评分方案配置 (ScoringProfile) */
+  weight?: number
   isRepeatable: boolean
   scoringConfig: string | null
   inputMode?: 'INLINE' | 'EVENT_STREAM'
@@ -111,7 +112,6 @@ export interface CreateSectionRequest {
   sectionName: string
   parentSectionId?: LongId | null
   targetType?: string
-  weight?: number
   isRepeatable?: boolean
   sortOrder?: number
 }
@@ -121,7 +121,6 @@ export interface UpdateSectionRequest {
   targetType?: string
   targetSourceMode?: string
   targetTypeFilter?: string
-  weight?: number
   isRepeatable?: boolean
   inputMode?: 'INLINE' | 'EVENT_STREAM'
 }

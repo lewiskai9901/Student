@@ -3,7 +3,7 @@ import type { LongId } from '@/types/common'
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowLeft, Eye, Upload, FileText, Layers } from 'lucide-vue-next'
+import { ArrowLeft, Eye, Upload, FileText, Layers, X } from 'lucide-vue-next'
 import { useInspTemplateStore } from '@/stores/inspection/inspTemplateStore'
 import { useTemplateEditor } from '@/composables/inspection/useTemplateEditor'
 import { http } from '@/utils/request'
@@ -46,6 +46,16 @@ const selectedSection = computed(() => {
   return editor.sections.value.find(s => s.id === selectedSectionId.value) || null
 })
 const allItems = computed(() => { const r: TemplateItem[] = []; for (const l of editor.itemsBySection.value.values()) r.push(...l); return r })
+
+// V20260524 Bug#2: 选中子分区的统计 — 子分区数 + 检查项数 KPI
+const childSectionCount = computed(() => {
+  if (selectedSectionId.value == null) return 0
+  return editor.sections.value.filter(s => String(s.parentSectionId) === String(selectedSectionId.value)).length
+})
+const itemCountOfSelected = computed(() => {
+  if (selectedSectionId.value == null) return 0
+  return (editor.itemsBySection.value.get(String(selectedSectionId.value)) || []).length
+})
 
 // ==================== S+ 顶栏 KPI 概览 ====================
 const sectionsCount = computed(() => editor.sections.value.length)
@@ -140,7 +150,7 @@ async function saveRootProps() {
 }
 
 // ===== Section form (right panel when no item selected) =====
-const sf = ref({ sectionName: '', targetType: null as TargetType | null, targetTypeFilter: [] as string[], weight: 100, isRepeatable: false, inputMode: 'INLINE' as 'INLINE' | 'EVENT_STREAM' })
+const sf = ref({ sectionName: '', targetType: null as TargetType | null, targetTypeFilter: [] as string[], isRepeatable: false, inputMode: 'INLINE' as 'INLINE' | 'EVENT_STREAM' })
 const sfDirty = ref(false)
 
 // 类型选项列表（根据 targetType 动态加载）
@@ -189,7 +199,7 @@ function arrayToFilter(arr: string[]): string | null {
 watch(selectedSection, (s) => {
   if (s) {
     const filterArr = parseFilterToArray(s.targetTypeFilter)
-    sf.value = { sectionName: s.sectionName, targetType: s.targetType as TargetType | null, targetTypeFilter: filterArr, weight: s.weight, isRepeatable: s.isRepeatable, inputMode: s.inputMode || 'INLINE' }
+    sf.value = { sectionName: s.sectionName, targetType: s.targetType as TargetType | null, targetTypeFilter: filterArr, isRepeatable: s.isRepeatable, inputMode: s.inputMode || 'INLINE' }
     sfDirty.value = false
     loadTypeFilterOptions(s.targetType as string | null)
   }
@@ -200,7 +210,7 @@ function markDirty() { sfDirty.value = true }
 async function saveSection() {
   if (!selectedSection.value) return
   try {
-    await editor.editSection(selectedSection.value.id, { sectionName: sf.value.sectionName, targetType: sf.value.targetType, targetTypeFilter: arrayToFilter(sf.value.targetTypeFilter), weight: sf.value.weight, isRepeatable: sf.value.isRepeatable, inputMode: sf.value.inputMode } as any)
+    await editor.editSection(selectedSection.value.id, { sectionName: sf.value.sectionName, targetType: sf.value.targetType, targetTypeFilter: arrayToFilter(sf.value.targetTypeFilter), isRepeatable: sf.value.isRepeatable, inputMode: sf.value.inputMode } as any)
     sfDirty.value = false; ElMessage.success('已保存')
   } catch (e: any) { ElMessage.error(e.message || '保存失败') }
 }
@@ -426,7 +436,7 @@ onMounted(() => {
 
       <!-- ===== 2-Column body ===== -->
       <div class="te-body">
-        <TemplatePreview v-if="showPreview" :sections="editor.sections.value" :items-by-section="editor.itemsBySection.value" class="flex-1" @close="showPreview = false" />
+        <TemplatePreview v-if="showPreview" :sections="editor.sections.value" :items-by-section="editor.itemsBySection.value" :response-sets="responseSets" class="flex-1" @close="showPreview = false" />
 
         <template v-else>
           <!-- LEFT: Section + Field tree -->
@@ -456,7 +466,7 @@ onMounted(() => {
                 <span class="te-props-path">{{ selectedSection?.sectionName }} / {{ selectedItem.itemName }}</span>
               </div>
               <div class="te-props-scroll">
-                <ItemEditor :item="selectedItem" :response-sets="responseSets" :all-items="allItems" @save="handleSaveItem" @cancel="selectedItem = null" />
+                <ItemEditor :item="selectedItem" :response-sets="responseSets" :all-items="allItems" :readonly="isReadonly" @save="handleSaveItem" @cancel="selectedItem = null" />
               </div>
             </template>
 
@@ -497,6 +507,30 @@ onMounted(() => {
                       <input type="checkbox" v-model="sf.isRepeatable" @change="markDirty" :disabled="isReadonly" />
                       <span>可重复</span>
                     </label>
+                  </div>
+                  <!-- V20260524 Bug#2: 分区代码 + KPI + 快捷操作 - 之前面板信息过贫 -->
+                  <div class="te-sec-meta">
+                    <div class="te-sec-meta-row">
+                      <span class="te-sec-meta-label">编码</span>
+                      <code class="te-sec-meta-code">{{ selectedSection?.sectionCode }}</code>
+                    </div>
+                    <div class="te-sec-meta-row">
+                      <span class="te-sec-meta-label">子分区</span>
+                      <span class="te-sec-meta-num">{{ childSectionCount }}</span>
+                      <span class="te-sec-meta-label" style="margin-left: 12px">检查项</span>
+                      <span class="te-sec-meta-num">{{ itemCountOfSelected }}</span>
+                    </div>
+                  </div>
+                  <div v-if="!isReadonly" class="te-sec-actions">
+                    <button class="te-sec-action-btn" @click="handleAddSection(selectedSectionId as LongId)">
+                      <Layers :size="11" /> 添加子分区
+                    </button>
+                    <button class="te-sec-action-btn" @click="openAddItem(selectedSectionId as LongId)">
+                      <FileText :size="11" /> 添加检查项
+                    </button>
+                    <button class="te-sec-action-btn te-sec-action-btn--danger" @click="handleRemoveSection(selectedSectionId as LongId)">
+                      <X :size="11" /> 删除分区
+                    </button>
                   </div>
                 </div>
 
@@ -900,6 +934,32 @@ onMounted(() => {
 }
 
 .te-flat-group { display: flex; flex-direction: column; gap: var(--insp-sp-2); }
+
+/* V20260524 Bug#2: 分区元数据 + 快捷操作 */
+.te-sec-meta {
+  display: flex; flex-direction: column; gap: 4px;
+  margin-top: 8px; padding: 8px 12px;
+  background: var(--insp-bg-subtle); border-radius: 6px;
+  font-size: 12px;
+}
+.te-sec-meta-row { display: flex; align-items: center; gap: 8px; }
+.te-sec-meta-label { color: var(--insp-ink-tertiary); }
+.te-sec-meta-code {
+  font-family: 'SF Mono', Consolas, monospace; font-size: 11.5px;
+  color: var(--insp-ink-primary); background: var(--insp-bg-surface);
+  padding: 1px 6px; border-radius: 4px; border: 1px solid var(--insp-border-default);
+}
+.te-sec-meta-num { color: var(--insp-ink-primary); font-weight: 600; font-size: 13px; }
+.te-sec-actions { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.te-sec-action-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 10px; background: var(--insp-bg-surface);
+  border: 1px solid var(--insp-border-default); border-radius: 5px;
+  font-size: 11.5px; color: var(--insp-ink-secondary); cursor: pointer;
+  transition: all 0.12s;
+}
+.te-sec-action-btn:hover { border-color: #7aadff; color: #1a6dff; background: #eef4ff; }
+.te-sec-action-btn--danger:hover { border-color: #fecaca; color: #dc2626; background: #fef2f2; }
 .te-inline-row { display: flex; gap: var(--insp-sp-2); align-items: flex-end; }
 
 .te-check-compact {

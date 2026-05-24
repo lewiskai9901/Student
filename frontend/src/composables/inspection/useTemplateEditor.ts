@@ -122,7 +122,6 @@ export function useTemplateEditor(rootSectionId: Ref<LongId>) {
       targetType: data.targetType ?? undefined,
       targetSourceMode: data.targetSourceMode ?? undefined,
       targetTypeFilter: data.targetTypeFilter ?? undefined,
-      weight: data.weight,
       isRepeatable: data.isRepeatable,
       inputMode: data.inputMode,
     })

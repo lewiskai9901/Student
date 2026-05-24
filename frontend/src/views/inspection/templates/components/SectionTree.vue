@@ -143,7 +143,6 @@ function getItemLabel(item: TemplateItem): string {
           <div class="st-node-content" @click="emit('selectSection', node.section!.id)">
             <span class="st-indent-marker" />
             <span class="st-node-name">{{ node.section.sectionName || '未命名' }}</span>
-            <span v-if="node.section.weight && node.section.weight !== 100" class="st-tag st-tag-weight">{{ node.section.weight }}</span>
             <span v-if="isFirstLevel(node.section) && node.section.targetType" class="st-tag st-tag-target">
               {{ TargetTypeConfig[node.section.targetType as TargetType]?.label }}
             </span>
