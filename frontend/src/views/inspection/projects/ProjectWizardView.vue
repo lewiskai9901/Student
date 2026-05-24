@@ -6,6 +6,8 @@ import { ElMessage } from 'element-plus'
 import { inspProjectApi, updateProject, createPlan, cloneProject } from '@/api/inspection/project'
 import { inspTemplateApi } from '@/api/inspection/template'
 import { getOrgUnitTree } from '@/api/organization'
+import { universalPlaceApi } from '@/api/universalPlace'
+import type { PlaceTreeNode } from '@/types/universalPlace'
 import type { OrgUnitTreeNode } from '@/types'
 import type { OrgUnit } from '@/types'
 import type { TemplateSection } from '@/types/insp/template'
@@ -29,6 +31,9 @@ const scopeSearchKeyword = ref('')
 const rootSections = ref<TemplateSection[]>([])
 const orgTree = ref<OrgUnitTreeNode[]>([])
 const flatOrgUnits = ref<(OrgUnit & { depth: number })[]>([])
+// V20260524 Bug#11: 模板 targetType=PLACE 时加载场所树
+const placeTree = ref<PlaceTreeNode[]>([])
+const flatPlaces = ref<PlaceTreeNode[]>([])
 
 const form = reactive({
   projectName: '',
@@ -189,16 +194,24 @@ function isPublished(section: TemplateSection): boolean {
 
 // ========== Scope Tree ==========
 
-// Collect unique unitType values for quick-filter buttons
+// V20260524 Bug#11: 按 scopeType 收集 quick-filter 类型
 const availableUnitTypes = computed(() => {
   const typeMap = new Map<string, { code: string; name: string; count: number }>()
-  for (const unit of flatOrgUnits.value) {
-    const code = unit.unitType || ''
-    if (!code) continue
-    if (typeMap.has(code)) {
-      typeMap.get(code)!.count++
-    } else {
-      typeMap.set(code, { code, name: unit.typeName || code, count: 1 })
+  if (form.scopeType === 'PLACE') {
+    for (const p of flatPlaces.value) {
+      const code = p.typeCode || ''
+      if (!code) continue
+      const existing = typeMap.get(code)
+      if (existing) existing.count++
+      else typeMap.set(code, { code, name: p.typeName || code, count: 1 })
+    }
+  } else {
+    for (const unit of flatOrgUnits.value) {
+      const code = unit.unitType || ''
+      if (!code) continue
+      const existing = typeMap.get(code)
+      if (existing) existing.count++
+      else typeMap.set(code, { code, name: unit.typeName || code, count: 1 })
     }
   }
   return Array.from(typeMap.values())
@@ -231,18 +244,48 @@ const filteredOrgTree = computed(() => {
   return orgTree.value.map(n => filterOrgNode(n)).filter(Boolean) as OrgUnitTreeNode[]
 })
 
-// el-tree data format
-const treeData = computed(() => {
-  function mapNode(node: OrgUnitTreeNode): any {
-    return {
-      id: String(node.id),
-      label: node.unitName,
-      typeName: node.typeName || node.unitType || '',
-      unitType: node.unitType || '',
-      children: (node.children || []).map(mapNode),
-    }
+// V20260524 Bug#11: 按 scopeType 切换加载源 (ORG / PLACE / USER)
+function mapOrgNode(node: OrgUnitTreeNode): any {
+  return {
+    id: String(node.id),
+    label: node.unitName,
+    typeName: node.typeName || node.unitType || '',
+    unitType: node.unitType || '',
+    children: (node.children || []).map(mapOrgNode),
   }
-  return filteredOrgTree.value.map(mapNode)
+}
+function mapPlaceNode(node: PlaceTreeNode): any {
+  return {
+    id: String(node.id),
+    label: node.placeName,
+    typeName: node.typeName || node.typeCode || '',
+    unitType: node.typeCode || '',
+    children: (node.children || []).map(mapPlaceNode),
+  }
+}
+
+/** 过滤场所树 (按 keyword + activeTypeFilter) */
+function filterPlaceNode(node: PlaceTreeNode): PlaceTreeNode | null {
+  const matchName = !scopeSearchKeyword.value
+    || node.placeName.toLowerCase().includes(scopeSearchKeyword.value.toLowerCase())
+  const matchType = !activeTypeFilter.value || node.typeCode === activeTypeFilter.value
+  const filteredChildren = (node.children || [])
+    .map(c => filterPlaceNode(c))
+    .filter(Boolean) as PlaceTreeNode[]
+  if (matchName && matchType) return { ...node, children: filteredChildren }
+  if (filteredChildren.length > 0) return { ...node, children: filteredChildren }
+  return null
+}
+
+const filteredPlaceTree = computed(() => {
+  if (!scopeSearchKeyword.value && !activeTypeFilter.value) return placeTree.value
+  return placeTree.value.map(n => filterPlaceNode(n)).filter(Boolean) as PlaceTreeNode[]
+})
+
+// el-tree data format — 按 scopeType 选数据源
+const treeData = computed(() => {
+  if (form.scopeType === 'PLACE') return filteredPlaceTree.value.map(mapPlaceNode)
+  return filteredOrgTree.value.map(mapOrgNode)
 })
 
 const treeRef = ref<any>(null)
@@ -257,10 +300,16 @@ function handleTreeCheck() {
 // Select all visible nodes
 function selectAll() {
   if (!treeRef.value) return
-  // Get all leaf + branch node keys from current filtered tree
-  const allKeys = flatOrgUnits.value
-    .filter(u => !activeTypeFilter.value || u.unitType === activeTypeFilter.value)
-    .map(u => String(u.id))
+  let allKeys: string[]
+  if (form.scopeType === 'PLACE') {
+    allKeys = flatPlaces.value
+      .filter(p => !activeTypeFilter.value || p.typeCode === activeTypeFilter.value)
+      .map(p => String(p.id))
+  } else {
+    allKeys = flatOrgUnits.value
+      .filter(u => !activeTypeFilter.value || u.unitType === activeTypeFilter.value)
+      .map(u => String(u.id))
+  }
   for (const key of allKeys) {
     treeRef.value.setChecked(key, true, false)
   }
@@ -277,9 +326,12 @@ function deselectAll() {
 // Select all nodes of a specific type
 function selectByType(typeCode: string) {
   if (!treeRef.value) return
-  const keys = flatOrgUnits.value
-    .filter(u => u.unitType === typeCode)
-    .map(u => String(u.id))
+  let keys: string[]
+  if (form.scopeType === 'PLACE') {
+    keys = flatPlaces.value.filter(p => p.typeCode === typeCode).map(p => String(p.id))
+  } else {
+    keys = flatOrgUnits.value.filter(u => u.unitType === typeCode).map(u => String(u.id))
+  }
   for (const key of keys) {
     treeRef.value.setChecked(key, true, false)
   }
@@ -430,9 +482,41 @@ async function loadOrgUnits() {
   }
 }
 
+/** V20260524 Bug#11: 加载场所树 (模板 targetType=PLACE 时调) */
+async function loadPlaces() {
+  loadingOrg.value = true
+  orgError.value = false
+  try {
+    const tree = await universalPlaceApi.getTree()
+    placeTree.value = tree
+    // flat: 递归展开供 selectAll / selectByType 用
+    const flat: PlaceTreeNode[] = []
+    function walk(list: PlaceTreeNode[]) {
+      for (const n of list) {
+        flat.push(n)
+        if (n.children?.length) walk(n.children)
+      }
+    }
+    walk(tree)
+    flatPlaces.value = flat
+  } catch (e: any) {
+    orgError.value = true
+    ElMessage.error('加载场所失败: ' + (e?.message || '未知错误'))
+  } finally {
+    loadingOrg.value = false
+  }
+}
+
+/** 根据 scopeType 切换数据源, 选完模板自动触发 */
+watch(() => form.scopeType, (st) => {
+  form.scopeIds = [] // 切换 scope 类型, 清空已选 (不同 ID 空间)
+  if (st === 'PLACE' && placeTree.value.length === 0) loadPlaces()
+  else if (st === 'ORG' && orgTree.value.length === 0) loadOrgUnits()
+})
+
 onMounted(() => {
   loadTemplates()
-  loadOrgUnits()
+  loadOrgUnits()  // 默认先加载 ORG (大多数场景), PLACE 切换时按需懒加载
 })
 </script>
 
@@ -697,17 +781,18 @@ onMounted(() => {
               >选全部 {{ ut.name }}</button>
             </template>
             <div class="scope-actions__spacer" />
-            <input v-model="scopeSearchKeyword" class="scope-search" placeholder="搜索组织..." />
+            <input v-model="scopeSearchKeyword" class="scope-search"
+              :placeholder="form.scopeType === 'PLACE' ? '搜索场所...' : (form.scopeType === 'USER' ? '搜索人员...' : '搜索组织...')" />
           </div>
 
           <!-- Tree -->
           <div class="scope-tree-wrap">
             <div v-if="loadingOrg" class="wz-state wz-state--small">加载中...</div>
             <div v-else-if="orgError" class="wz-state wz-state--small wz-state--error">
-              <span>组织单元加载失败</span>
-              <button class="insp-btn insp-btn--sm" @click="loadOrgUnits">重试</button>
+              <span>{{ form.scopeType === 'PLACE' ? '场所' : '组织单元' }}加载失败</span>
+              <button class="insp-btn insp-btn--sm" @click="form.scopeType === 'PLACE' ? loadPlaces() : loadOrgUnits()">重试</button>
             </div>
-            <div v-else-if="treeData.length === 0" class="wz-state wz-state--small">暂无组织单元</div>
+            <div v-else-if="treeData.length === 0" class="wz-state wz-state--small">暂无{{ form.scopeType === 'PLACE' ? '场所' : '组织单元' }}</div>
             <el-tree
               v-else
               ref="treeRef"
