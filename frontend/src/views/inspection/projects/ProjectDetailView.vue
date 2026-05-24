@@ -25,6 +25,8 @@ import { getProfiles } from '@/api/inspection/scoring'
 import type { ScoringProfile } from '@/types/insp/scoring'
 import { getSimpleUserList, getUser } from '@/api/user'
 import { getOrgUnitTree } from '@/api/organization'
+import { universalPlaceApi } from '@/api/universalPlace'
+import type { PlaceTreeNode } from '@/types/universalPlace'
 import type { OrgUnitTreeNode } from '@/api/organization'
 import type { SimpleUser } from '@/types/user'
 import { getRootSection } from '@/api/inspection/template'
@@ -70,6 +72,9 @@ const rootSectionName = ref('')
 const scopeOrgNames = ref<string[]>([])
 const orgTree = ref<OrgUnitTreeNode[]>([])
 const loadingOrgTree = ref(false)
+// V20260524 Bug#12: 项目详情页设置 Tab 范围 picker 也按 scopeType 切换
+const placeTree = ref<PlaceTreeNode[]>([])
+const userList = ref<SimpleUser[]>([])
 // Tabs
 const activeTab = ref('overview')
 // 评级 Tab 的子页 (config / results)
@@ -159,7 +164,8 @@ function handleScopeCheckChange() {
 
 function filterScopeNode(value: string, data: any): boolean {
   if (!value) return true
-  return (data.unitName || data.label || '').includes(value)
+  // V20260524 Bug#12: 同时匹配 unitName / placeName / label
+  return (data.unitName || data.placeName || data.label || '').includes(value)
 }
 
 // 检查员添加
@@ -526,10 +532,75 @@ watch(scopeFilterText, (val) => { scopeTreeRef.value?.filter(val) })
 async function loadScopeNames() {
   scopeOrgNames.value = []
   if (!project.value?.scopeConfig) return
-  try { const rawIds: (number | string)[] = JSON.parse(project.value.scopeConfig); const ids = rawIds.map(String); if (orgTree.value.length === 0) await loadOrgTree(); const m = buildMap(orgTree.value); scopeOrgNames.value = ids.map(id => m.get(id) || `#${id}`) } catch (e: any) { console.warn('加载检查范围名称失败', e) }
+  try {
+    const rawIds: (number | string)[] = JSON.parse(project.value.scopeConfig)
+    const ids = rawIds.map(String)
+    // V20260524 Bug#12: 按 scopeType 加载并构 id→name 映射
+    await loadScopeSource()
+    const m = new Map<string, string>()
+    const st = project.value.scopeType
+    function walkPlace(list: PlaceTreeNode[]) {
+      for (const n of list) {
+        m.set(String(n.id), n.placeName)
+        if (n.children?.length) walkPlace(n.children)
+      }
+    }
+    if (st === 'PLACE') {
+      walkPlace(placeTree.value)
+    } else if (st === 'USER') {
+      for (const u of userList.value) m.set(String(u.id), u.realName || u.username || `#${u.id}`)
+    } else {
+      const om = buildMap(orgTree.value)
+      om.forEach((v, k) => m.set(k, v))
+    }
+    scopeOrgNames.value = ids.map(id => m.get(id) || `#${id}`)
+  } catch (e: any) { console.warn('加载检查范围名称失败', e) }
 }
 function buildMap(nodes: OrgUnitTreeNode[]): Map<string, string> { const m = new Map<string, string>(); function w(l: OrgUnitTreeNode[]) { for (const n of l) { m.set(String(n.id), n.unitName); if (n.children) w(n.children) } }; w(nodes); return m }
 async function loadOrgTree() { if (orgTree.value.length > 0) return; loadingOrgTree.value = true; try { orgTree.value = await getOrgUnitTree() } catch (e: any) { console.error('加载组织树失败', e); ElMessage.error('加载组织结构失败') }; loadingOrgTree.value = false }
+
+// V20260524 Bug#12: 按 scopeType 加载相应数据源
+async function loadPlaceTree() {
+  if (placeTree.value.length > 0) return
+  loadingOrgTree.value = true
+  try { placeTree.value = await universalPlaceApi.getTree() }
+  catch (e: any) { ElMessage.error('加载场所失败') }
+  finally { loadingOrgTree.value = false }
+}
+async function loadUserList() {
+  if (userList.value.length > 0) return
+  loadingOrgTree.value = true
+  try { userList.value = await getSimpleUserList() }
+  catch (e: any) { ElMessage.error('加载人员失败') }
+  finally { loadingOrgTree.value = false }
+}
+async function loadScopeSource() {
+  const st = project.value?.scopeType || cf.value.scopeType
+  if (st === 'PLACE') await loadPlaceTree()
+  else if (st === 'USER') await loadUserList()
+  else await loadOrgTree()
+}
+
+// 当前 scope 数据源 (按 scopeType 切换 tree/list)
+const scopeTreeData = computed(() => {
+  const st = project.value?.scopeType || cf.value.scopeType
+  if (st === 'PLACE') return placeTree.value
+  if (st === 'USER') return userList.value.map(u => ({
+    id: u.id, placeName: u.realName || u.username, unitName: u.realName || u.username,
+    children: [],
+  }))
+  return orgTree.value
+})
+const scopeTreeProps = computed(() => {
+  const st = project.value?.scopeType || cf.value.scopeType
+  if (st === 'PLACE') return { children: 'children', label: 'placeName' }
+  if (st === 'USER') return { children: 'children', label: 'unitName' }
+  return { children: 'children', label: 'unitName' }
+})
+const scopeKindLabel = computed(() => {
+  const st = project.value?.scopeType || cf.value.scopeType
+  return st === 'PLACE' ? '场所' : (st === 'USER' ? '人员' : '组织单元')
+})
 
 // ========== Save ==========
 async function saveConfig() {
@@ -750,7 +821,7 @@ async function handleUpgradeTemplate() {
   }
 }
 onMounted(async () => {
-  await loadOrgTree()
+  await loadScopeSource()
   await loadProject()
   startWatch()
 })
@@ -787,7 +858,8 @@ onMounted(async () => {
             <template v-if="scopeOrgNames.length > 0">
               <span class="pdv-subtitle-sep">·</span>
               <span :title="scopeOrgNames.join(', ')">
-                <span class="insp-num">{{ scopeOrgNames.length }}</span> 受检组织
+                <span class="insp-num">{{ scopeOrgNames.length }}</span>
+                {{ project?.scopeType === 'PLACE' ? '受检场所' : (project?.scopeType === 'USER' ? '受检人员' : '受检组织') }}
               </span>
             </template>
           </div>
@@ -1436,11 +1508,11 @@ onMounted(async () => {
             <div class="cfg-card-title">检查范围</div>
             <Lock v-if="!isDraft" class="w-3.5 h-3.5 cfg-lock-icon" />
           </div>
-          <div class="cfg-desc">选择哪些组织单元参与本次检查，系统将根据分区的目标类型自动派生具体检查对象。</div>
+          <div class="cfg-desc">选择哪些{{ scopeKindLabel }}参与本次检查，系统将根据分区的目标类型自动派生具体检查对象。</div>
           <div class="cfg-field cfg-field--mt">
             <label class="cfg-label">检查对象 <span v-if="isDraft" class="cfg-req">*</span></label>
             <div v-if="loadingOrgTree" class="cfg-org-list cfg-org-loading">加载中...</div>
-            <div v-else-if="orgTree.length === 0" class="cfg-org-list cfg-org-loading">暂无组织单元</div>
+            <div v-else-if="scopeTreeData.length === 0" class="cfg-org-list cfg-org-loading">暂无{{ scopeKindLabel }}</div>
             <div v-else-if="!isDraft" class="cfg-org-readonly">
               <span v-if="cf.scopeIds.length === 0" class="cfg-readonly-text">未选择</span>
               <template v-else>
@@ -1453,7 +1525,7 @@ onMounted(async () => {
               <div class="flex items-center gap-2 mb-1.5">
                 <el-input
                   v-model="scopeFilterText"
-                  placeholder="搜索组织..."
+                  :placeholder="`搜索${scopeKindLabel}...`"
                   size="small"
                   clearable
                   style="width: 200px"
@@ -1463,8 +1535,8 @@ onMounted(async () => {
               <div class="cfg-org-list">
                 <el-tree
                   ref="scopeTreeRef"
-                  :data="orgTree"
-                  :props="{ children: 'children', label: 'unitName' }"
+                  :data="scopeTreeData"
+                  :props="scopeTreeProps"
                   show-checkbox
                   check-strictly
                   node-key="id"
@@ -1477,7 +1549,7 @@ onMounted(async () => {
             </template>
           </div>
           <div v-if="cf.scopeIds.length > 0 && isDraft" class="cfg-hint">
-            已选 {{ cf.scopeIds.length }} 个组织单元，发布后将自动匹配下属场所、部门等目标
+            已选 {{ cf.scopeIds.length }} 个{{ scopeKindLabel }}，发布后将作为本项目的检查目标
           </div>
         </div>
 

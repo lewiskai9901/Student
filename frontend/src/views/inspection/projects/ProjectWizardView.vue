@@ -8,6 +8,8 @@ import { inspTemplateApi } from '@/api/inspection/template'
 import { getOrgUnitTree } from '@/api/organization'
 import { universalPlaceApi } from '@/api/universalPlace'
 import type { PlaceTreeNode } from '@/types/universalPlace'
+import { getSimpleUserList } from '@/api/user'
+import type { SimpleUser } from '@/types/user'
 import type { OrgUnitTreeNode } from '@/types'
 import type { OrgUnit } from '@/types'
 import type { TemplateSection } from '@/types/insp/template'
@@ -34,6 +36,8 @@ const flatOrgUnits = ref<(OrgUnit & { depth: number })[]>([])
 // V20260524 Bug#11: 模板 targetType=PLACE 时加载场所树
 const placeTree = ref<PlaceTreeNode[]>([])
 const flatPlaces = ref<PlaceTreeNode[]>([])
+// V20260524 彻底完善: USER 维度
+const userList = ref<SimpleUser[]>([])
 
 const form = reactive({
   projectName: '',
@@ -284,6 +288,20 @@ const filteredPlaceTree = computed(() => {
 
 // el-tree data format — 按 scopeType 选数据源
 const treeData = computed(() => {
+  if (form.scopeType === 'USER') {
+    // USER 模式: 平铺成"扁平树" (无 children), 每人一行
+    const kw = scopeSearchKeyword.value.trim().toLowerCase()
+    return userList.value
+      .filter(u => !kw || (u.realName || u.username || '').toLowerCase().includes(kw)
+                || (u.orgUnitName || '').toLowerCase().includes(kw))
+      .map(u => ({
+        id: String(u.id),
+        label: (u.realName || u.username || ('#' + u.id)) as string,
+        typeName: u.orgUnitName || '',
+        unitType: '',
+        children: [],
+      }))
+  }
   if (form.scopeType === 'PLACE') return filteredPlaceTree.value.map(mapPlaceNode)
   return filteredOrgTree.value.map(mapOrgNode)
 })
@@ -301,7 +319,9 @@ function handleTreeCheck() {
 function selectAll() {
   if (!treeRef.value) return
   let allKeys: string[]
-  if (form.scopeType === 'PLACE') {
+  if (form.scopeType === 'USER') {
+    allKeys = userList.value.map(u => String(u.id))
+  } else if (form.scopeType === 'PLACE') {
     allKeys = flatPlaces.value
       .filter(p => !activeTypeFilter.value || p.typeCode === activeTypeFilter.value)
       .map(p => String(p.id))
@@ -507,10 +527,25 @@ async function loadPlaces() {
   }
 }
 
+/** V20260524 USER: 加载所有用户 (无 keyword 拿全量, 默认 200 上限由后端控) */
+async function loadUsers() {
+  loadingOrg.value = true
+  orgError.value = false
+  try {
+    userList.value = await getSimpleUserList()
+  } catch (e: any) {
+    orgError.value = true
+    ElMessage.error('加载人员失败: ' + (e?.message || '未知错误'))
+  } finally {
+    loadingOrg.value = false
+  }
+}
+
 /** 根据 scopeType 切换数据源, 选完模板自动触发 */
 watch(() => form.scopeType, (st) => {
   form.scopeIds = [] // 切换 scope 类型, 清空已选 (不同 ID 空间)
   if (st === 'PLACE' && placeTree.value.length === 0) loadPlaces()
+  else if (st === 'USER' && userList.value.length === 0) loadUsers()
   else if (st === 'ORG' && orgTree.value.length === 0) loadOrgUnits()
 })
 
@@ -789,10 +824,11 @@ onMounted(() => {
           <div class="scope-tree-wrap">
             <div v-if="loadingOrg" class="wz-state wz-state--small">加载中...</div>
             <div v-else-if="orgError" class="wz-state wz-state--small wz-state--error">
-              <span>{{ form.scopeType === 'PLACE' ? '场所' : '组织单元' }}加载失败</span>
-              <button class="insp-btn insp-btn--sm" @click="form.scopeType === 'PLACE' ? loadPlaces() : loadOrgUnits()">重试</button>
+              <span>{{ form.scopeType === 'PLACE' ? '场所' : (form.scopeType === 'USER' ? '人员' : '组织单元') }}加载失败</span>
+              <button class="insp-btn insp-btn--sm"
+                @click="form.scopeType === 'PLACE' ? loadPlaces() : (form.scopeType === 'USER' ? loadUsers() : loadOrgUnits())">重试</button>
             </div>
-            <div v-else-if="treeData.length === 0" class="wz-state wz-state--small">暂无{{ form.scopeType === 'PLACE' ? '场所' : '组织单元' }}</div>
+            <div v-else-if="treeData.length === 0" class="wz-state wz-state--small">暂无{{ form.scopeType === 'PLACE' ? '场所' : (form.scopeType === 'USER' ? '人员' : '组织单元') }}</div>
             <el-tree
               v-else
               ref="treeRef"
