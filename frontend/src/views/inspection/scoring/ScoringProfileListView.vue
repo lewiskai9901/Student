@@ -47,7 +47,7 @@ const stats = computed(() => ({
 async function load() {
   if (!projectIdQuery.value) {
     profiles.value = []
-    ElMessage.warning('请通过项目详情页进入评分方案列表 (URL 需带 ?projectId=)')
+    ElMessage.warning('评分方案是项目级配置, 请打开项目详情 → 设置 → 评分方案 卡片进入')
     return
   }
   loading.value = true
@@ -177,7 +177,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeySP))
     <section class="sp-list" v-loading="loading">
       <div v-if="!loading && filtered.length === 0" class="sp-empty">
         <p>暂无评分方案</p>
-        <p class="sp-empty__sub">评分方案在模板编辑器中通过分区配置, 这里可全局查看与编辑</p>
+        <p class="sp-empty__sub">评分方案是 (项目, 分区) 复合维度配置, 请打开项目详情 → 设置 → 评分方案卡片新建</p>
       </div>
 
       <div v-else class="sp-rows">

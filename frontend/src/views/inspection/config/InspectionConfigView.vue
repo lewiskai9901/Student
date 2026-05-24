@@ -124,6 +124,8 @@ const loading = ref(false)
 const rootSections = ref<TemplateSection[]>([])
 const total = ref(0)
 const childSectionsMap = ref<Map<LongId, TemplateSection[]>>(new Map())
+// V20260524 Bug#8: 缓存创建者 id → name, 避免列表显示 "#1" 而无姓名
+const creatorNamesMap = ref<Map<string, string>>(new Map())
 // P1-160: 使用计数 (rootSectionId > 在用项目数)
 const usageMap = ref<Record<LongId, number>>({})
 
@@ -419,14 +421,30 @@ async function loadTemplates() {
     } catch { usageMap.value = {} }
 
     // Load first-level children for each root section to show target type tags
+    // V20260524 Bug#7: 保留全部子孙分区 (旧版只存一级直接 children, 导致列表"5 分区"与编辑器"7 分区"不一致)
     const map = new Map<LongId, TemplateSection[]>()
     await Promise.all(result.records.map(async (root) => {
       try {
-        const children = await inspTemplateApi.getSections(root.id)
-        map.set(root.id, children.filter((c: TemplateSection) => c.parentSectionId === root.id))
+        const allDescendants = await inspTemplateApi.getSections(root.id)
+        map.set(root.id, allDescendants)
       } catch { /* ignore */ }
     }))
     childSectionsMap.value = map
+
+    // V20260524 Bug#8: 批量解析 createdBy 用户姓名
+    const creatorIds = new Set<string>()
+    for (const r of result.records) {
+      const cid = (r as any).createdBy
+      if (cid != null) creatorIds.add(String(cid))
+    }
+    await Promise.all(Array.from(creatorIds).map(async (uid) => {
+      if (creatorNamesMap.value.has(uid)) return
+      try {
+        const u: any = await (await import('@/api/user')).getUser(uid as any)
+        creatorNamesMap.value.set(uid, u?.realName || u?.username || `#${uid}`)
+      } catch { creatorNamesMap.value.set(uid, `#${uid}`) }
+    }))
+    creatorNamesMap.value = new Map(creatorNamesMap.value)
   } catch (e: any) {
     ElMessage.error(e.message || '加载失败')
   } finally {
@@ -434,13 +452,23 @@ async function loadTemplates() {
   }
 }
 
+/** V20260524 Bug#7: 返回直接 children (一级子分区) — 给 target type tags 用 */
 function getFirstLevelChildren(rootId: LongId): TemplateSection[] {
+  const all = childSectionsMap.value.get(rootId) || []
+  return all.filter(c => c.parentSectionId === rootId)
+}
+
+/** V20260524 Bug#7: 返回所有子孙分区 — 给计数显示用, 与编辑器顶栏一致 */
+function getAllDescendants(rootId: LongId): TemplateSection[] {
   return childSectionsMap.value.get(rootId) || []
 }
 
 function getTargetTypes(rootId: LongId): TargetType[] {
-  const children = getFirstLevelChildren(rootId)
+  // V20260524 Bug#10: root.targetType 也算入 — 旧逻辑只看 children 导致单层模板显示"待配置"
   const types = new Set<TargetType>()
+  const root = rootSections.value.find(s => String(s.id) === String(rootId))
+  if (root?.targetType) types.add(root.targetType as TargetType)
+  const children = getFirstLevelChildren(rootId)
   for (const c of children) {
     if (c.targetType) types.add(c.targetType as TargetType)
   }
@@ -448,7 +476,7 @@ function getTargetTypes(rootId: LongId): TargetType[] {
 }
 
 function getSectionCount(rootId: LongId): number {
-  return getFirstLevelChildren(rootId).length
+  return getAllDescendants(rootId).length
 }
 
 function handleSearch() { query.page = 1; loadTemplates() }
@@ -881,7 +909,9 @@ onMounted(() => { loadTemplates() })
               <span class="tpl-row__date" :title="sec.updatedAt">更新于 <span class="insp-num">{{ formatDate(sec.updatedAt) }}</span></span>
               <template v-if="(sec as any).createdBy">
                 <span class="tpl-row__sep">·</span>
-                <span class="tpl-row__owner">创建人 <span class="insp-num">#{{ (sec as any).createdBy }}</span></span>
+                <span class="tpl-row__owner">创建人
+                  <span class="insp-num">{{ creatorNamesMap.get(String((sec as any).createdBy)) || ('#' + (sec as any).createdBy) }}</span>
+                </span>
               </template>
               <template v-if="sec.sectionCode">
                 <span class="tpl-row__sep">·</span>

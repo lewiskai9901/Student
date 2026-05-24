@@ -569,16 +569,19 @@ onMounted(() => {
                       <label>类型过滤</label>
                       <div class="te-filter-tags">
                         <label v-for="opt in typeFilterOptions" :key="opt.code"
-                          class="te-filter-tag" :class="{ active: (isRootSelected ? rootForm.targetTypeFilter : sf.targetTypeFilter).includes(opt.code) }">
+                          class="te-filter-tag"
+                          :class="{ active: (isRootSelected ? rootForm.targetTypeFilter : sf.targetTypeFilter).includes(opt.code), 'te-filter-tag--readonly': isReadonly }"
+                          @click.prevent.stop="isReadonly ? null : (() => {
+                            const arr = isRootSelected ? rootForm.targetTypeFilter : sf.targetTypeFilter
+                            const idx = arr.indexOf(opt.code)
+                            if (idx >= 0) arr.splice(idx, 1); else arr.push(opt.code)
+                            if (isRootSelected) rootInfoDirty = true; else markDirty()
+                          })()">
                           <input type="checkbox" :value="opt.code"
                             :checked="(isRootSelected ? rootForm.targetTypeFilter : sf.targetTypeFilter).includes(opt.code)"
-                            @change="(e: Event) => {
-                              const arr = isRootSelected ? rootForm.targetTypeFilter : sf.targetTypeFilter
-                              const checked = (e.target as HTMLInputElement).checked
-                              if (checked) arr.push(opt.code); else arr.splice(arr.indexOf(opt.code), 1)
-                              if (isRootSelected) rootInfoDirty = true; else markDirty()
-                            }"
-                            :disabled="isReadonly" />
+                            :disabled="isReadonly"
+                            tabindex="-1"
+                            style="pointer-events:none" />
                           <span>{{ opt.name }}</span>
                         </label>
                       </div>
@@ -1041,6 +1044,9 @@ onMounted(() => {
 }
 .te-filter-tag:hover { border-color: #93c5fd; }
 .te-filter-tag.active { border-color: #1a6dff; background: #eef4ff; color: #1a6dff; }
+/* V20260524 Bug#6: readonly 时禁用 hover + click 视觉, 不允许伪切换 */
+.te-filter-tag--readonly { cursor: not-allowed; opacity: 0.65; }
+.te-filter-tag--readonly:hover { border-color: var(--insp-border-default); }
 .te-filter-tag input[type="checkbox"] { display: none; }
 
 /* Modal */
