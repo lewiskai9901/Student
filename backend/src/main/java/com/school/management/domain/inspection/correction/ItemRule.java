@@ -4,100 +4,169 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.Collections;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 检查项级整改覆盖规则 (insp_template_items.corrective_override JSON).
+ * 检查项级整改规则 (insp_template_items.corrective_override JSON).
  *
- * <p>所有字段都是 optional. 缺失字段 → 用项目级策略.
+ * <p>字段:
+ * <ul>
+ *   <li>{@code criticality} — RED 红线题, 一旦不通过强制 HIGH</li>
+ *   <li>{@code neverCorrect} — 该题永不建整改 (备注/签字类)</li>
+ *   <li>{@code baseSeverityMap} — 响应值 → 严重度的显式映射 (PASS_FAIL/LEVEL 离散模式)</li>
+ *   <li>{@code singleThreshold} — 单阈值模式 "sev ≥ X → triggerSeverity" (RATING_SCALE/DIRECT_SCORE/DEDUCTION 连续模式)</li>
+ *   <li>{@code deadlineOverrideDays} — 该题特定 deadline (天数)</li>
+ * </ul>
+ *
+ * <p>持久化格式:
  * <pre>
  * {
- *   "neverCorrect": false,            // 该项永不建整改
- *   "forceCorrect": ["FAIL"],         // 特定 response 强制建单 (HIGH)
- *   "thresholdOverride": {"high":0.6,"medium":0.4,"low":0.2},
- *   "deadlineOverride": {"high":1,"medium":3,"low":7}
+ *   "criticality": "NORMAL|RED",
+ *   "neverCorrect": false,
+ *   "baseSeverityMap": {"FAIL":"HIGH","D":"HIGH","C":"MEDIUM"},
+ *   "singleThreshold": {"sevThreshold": 0.4, "triggerSeverity": "HIGH"},
+ *   "deadlineOverrideDays": 3
  * }
  * </pre>
  */
-public class ItemRule {
+public final class ItemRule {
 
-    public static final ItemRule EMPTY = new ItemRule(false, Collections.emptyList(), null, null);
+    public static final ItemRule EMPTY = new ItemRule(
+            Criticality.NORMAL, false, Collections.emptyMap(), null, null);
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    private final boolean neverCorrect;
-    private final List<String> forceCorrect;
-    private final SeverityThresholds thresholdOverride;  // 可为 null
-    private final DeadlinePresets deadlineOverride;       // 可为 null
+    public enum Criticality { NORMAL, RED }
 
-    public ItemRule(boolean neverCorrect, List<String> forceCorrect,
-                    SeverityThresholds thresholdOverride, DeadlinePresets deadlineOverride) {
-        this.neverCorrect = neverCorrect;
-        this.forceCorrect = forceCorrect == null ? Collections.emptyList() : forceCorrect;
-        this.thresholdOverride = thresholdOverride;
-        this.deadlineOverride = deadlineOverride;
-    }
-
-    public boolean isNeverCorrect() { return neverCorrect; }
-    public List<String> getForceCorrect() { return forceCorrect; }
-    public SeverityThresholds getThresholdOverride() { return thresholdOverride; }
-    public DeadlinePresets getDeadlineOverride() { return deadlineOverride; }
-
-    public boolean isForceCorrect(String responseValue) {
-        if (responseValue == null || forceCorrect.isEmpty()) return false;
-        for (String f : forceCorrect) {
-            if (f != null && f.equalsIgnoreCase(responseValue)) return true;
+    /** 单阈值: 题目级独立阈值, 覆盖项目阈值. */
+    public static final class SingleThreshold {
+        private final double sevThreshold;
+        private final Severity triggerSeverity;
+        public SingleThreshold(double sevThreshold, Severity triggerSeverity) {
+            this.sevThreshold = sevThreshold;
+            this.triggerSeverity = triggerSeverity != null ? triggerSeverity : Severity.HIGH;
         }
-        return false;
+        public double getSevThreshold() { return sevThreshold; }
+        public Severity getTriggerSeverity() { return triggerSeverity; }
     }
 
-    /** 解析 JSON 到 ItemRule. 解析失败返回 EMPTY. */
+    private final Criticality criticality;
+    private final boolean neverCorrect;
+    private final Map<String, Severity> baseSeverityMap;
+    private final SingleThreshold singleThreshold;
+    private final Integer deadlineOverrideDays;
+
+    public ItemRule(Criticality criticality, boolean neverCorrect,
+                    Map<String, Severity> baseSeverityMap,
+                    SingleThreshold singleThreshold,
+                    Integer deadlineOverrideDays) {
+        this.criticality = criticality != null ? criticality : Criticality.NORMAL;
+        this.neverCorrect = neverCorrect;
+        this.baseSeverityMap = baseSeverityMap != null ? baseSeverityMap : Collections.emptyMap();
+        this.singleThreshold = singleThreshold;
+        this.deadlineOverrideDays = deadlineOverrideDays;
+    }
+
+    public Criticality getCriticality() { return criticality; }
+    public boolean isRedLine() { return criticality == Criticality.RED; }
+    public boolean isNeverCorrect() { return neverCorrect; }
+    public Map<String, Severity> getBaseSeverityMap() { return baseSeverityMap; }
+    public SingleThreshold getSingleThreshold() { return singleThreshold; }
+    public boolean hasSingleThreshold() { return singleThreshold != null; }
+    public Integer getDeadlineOverrideDays() { return deadlineOverrideDays; }
+
+    public Severity lookupBaseSeverity(String responseValue) {
+        if (responseValue == null || baseSeverityMap.isEmpty()) return null;
+        Severity exact = baseSeverityMap.get(responseValue);
+        if (exact != null) return exact;
+        for (Map.Entry<String, Severity> e : baseSeverityMap.entrySet()) {
+            if (e.getKey() != null && e.getKey().equalsIgnoreCase(responseValue)) return e.getValue();
+        }
+        return null;
+    }
+
     public static ItemRule fromJson(String json) {
         if (json == null || json.isBlank()) return EMPTY;
         try {
             JsonNode n = MAPPER.readTree(json);
+
+            Criticality crit = Criticality.NORMAL;
+            String cs = n.path("criticality").asText(null);
+            if ("RED".equalsIgnoreCase(cs)) crit = Criticality.RED;
+
             boolean never = n.path("neverCorrect").asBoolean(false);
 
-            List<String> force = Collections.emptyList();
+            Map<String, Severity> map = new HashMap<>();
+            if (n.has("baseSeverityMap") && n.get("baseSeverityMap").isObject()) {
+                n.get("baseSeverityMap").fields().forEachRemaining(entry -> {
+                    String key = entry.getKey();
+                    String val = entry.getValue().asText();
+                    try { map.put(key, Severity.valueOf(val.toUpperCase())); }
+                    catch (IllegalArgumentException ignored) {}
+                });
+            }
             if (n.has("forceCorrect") && n.get("forceCorrect").isArray()) {
-                force = new java.util.ArrayList<>();
                 for (JsonNode v : n.get("forceCorrect")) {
-                    if (v.isTextual()) force.add(v.asText());
+                    if (v.isTextual()) map.put(v.asText(), Severity.HIGH);
                 }
             }
 
-            SeverityThresholds tOverride = null;
-            if (n.has("thresholdOverride") && n.get("thresholdOverride").isObject()) {
-                JsonNode t = n.get("thresholdOverride");
-                tOverride = new SeverityThresholds(
-                        t.path("high").asDouble(0.8),
-                        t.path("medium").asDouble(0.5),
-                        t.path("low").asDouble(0.3));
+            SingleThreshold st = null;
+            if (n.has("singleThreshold") && n.get("singleThreshold").isObject()) {
+                JsonNode stNode = n.get("singleThreshold");
+                double sev = stNode.path("sevThreshold").asDouble(-1);
+                if (sev >= 0 && sev <= 1) {
+                    Severity ts = Severity.HIGH;
+                    String tsStr = stNode.path("triggerSeverity").asText(null);
+                    if (tsStr != null) {
+                        try { ts = Severity.valueOf(tsStr.toUpperCase()); }
+                        catch (IllegalArgumentException ignored) {}
+                    }
+                    st = new SingleThreshold(sev, ts);
+                }
             }
 
-            DeadlinePresets dOverride = null;
-            if (n.has("deadlineOverride") && n.get("deadlineOverride").isObject()) {
-                JsonNode d = n.get("deadlineOverride");
-                dOverride = new DeadlinePresets(
-                        d.path("high").asInt(3),
-                        d.path("medium").asInt(7),
-                        d.path("low").asInt(14));
+            Integer deadlineDays = null;
+            if (n.has("deadlineOverrideDays") && n.get("deadlineOverrideDays").isNumber()) {
+                deadlineDays = n.get("deadlineOverrideDays").asInt();
+            } else if (n.has("deadlineOverride") && n.get("deadlineOverride").isObject()) {
+                deadlineDays = n.get("deadlineOverride").path("high").asInt(0);
+                if (deadlineDays == 0) deadlineDays = null;
             }
 
-            return new ItemRule(never, force, tOverride, dOverride);
+            return new ItemRule(crit, never, map, st, deadlineDays);
         } catch (Exception e) {
             return EMPTY;
         }
     }
 
-    /** 工厂方法 — 给 Map 用 (provider 解析直接给 Map). */
-    @SuppressWarnings("unchecked")
-    public static ItemRule fromMap(Map<String, Object> m) {
-        if (m == null || m.isEmpty()) return EMPTY;
+    public String toJson() {
         try {
-            return fromJson(MAPPER.writeValueAsString(m));
+            Map<String, Object> out = new HashMap<>();
+            out.put("criticality", criticality.name());
+            out.put("neverCorrect", neverCorrect);
+            if (!baseSeverityMap.isEmpty()) {
+                Map<String, String> m = new HashMap<>();
+                baseSeverityMap.forEach((k, v) -> m.put(k, v.name()));
+                out.put("baseSeverityMap", m);
+            }
+            if (singleThreshold != null) {
+                Map<String, Object> st = new HashMap<>();
+                st.put("sevThreshold", singleThreshold.getSevThreshold());
+                st.put("triggerSeverity", singleThreshold.getTriggerSeverity().name());
+                out.put("singleThreshold", st);
+            }
+            if (deadlineOverrideDays != null) out.put("deadlineOverrideDays", deadlineOverrideDays);
+            return MAPPER.writeValueAsString(out);
         } catch (Exception e) {
-            return EMPTY;
+            return "{}";
         }
+    }
+
+    public boolean isEmpty() {
+        return criticality == Criticality.NORMAL && !neverCorrect
+                && baseSeverityMap.isEmpty()
+                && singleThreshold == null
+                && deadlineOverrideDays == null;
     }
 }

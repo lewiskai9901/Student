@@ -11,7 +11,8 @@ import java.math.BigDecimal;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Sprint 3: ItemRule 检查项级覆盖单测.
+ * V20260524_7 ItemRule 检查项级覆盖单测 (重构后).
+ * <p>新模型: criticality / neverCorrect / baseSeverityMap / deadlineOverrideDays.
  */
 class ItemRuleTest {
 
@@ -36,17 +37,28 @@ class ItemRuleTest {
         }
 
         @Test
-        void parse_full() {
-            String json = "{\"neverCorrect\":true,\"forceCorrect\":[\"FAIL\",\"D\"]," +
-                    "\"thresholdOverride\":{\"high\":0.6,\"medium\":0.4,\"low\":0.2}," +
+        void parse_new_schema() {
+            String json = "{\"criticality\":\"RED\",\"neverCorrect\":false," +
+                    "\"baseSeverityMap\":{\"FAIL\":\"HIGH\",\"D\":\"HIGH\",\"C\":\"MEDIUM\"}," +
+                    "\"deadlineOverrideDays\":2}";
+            ItemRule r = ItemRule.fromJson(json);
+            assertTrue(r.isRedLine());
+            assertEquals(Severity.HIGH, r.lookupBaseSeverity("FAIL"));
+            assertEquals(Severity.HIGH, r.lookupBaseSeverity("d"));   // case-insensitive
+            assertEquals(Severity.MEDIUM, r.lookupBaseSeverity("C"));
+            assertNull(r.lookupBaseSeverity("PASS"));
+            assertEquals(Integer.valueOf(2), r.getDeadlineOverrideDays());
+        }
+
+        @Test
+        void parse_legacy_forceCorrect_maps_to_HIGH() {
+            String json = "{\"forceCorrect\":[\"FAIL\",\"D\"]," +
                     "\"deadlineOverride\":{\"high\":1,\"medium\":3,\"low\":5}}";
             ItemRule r = ItemRule.fromJson(json);
-            assertTrue(r.isNeverCorrect());
-            assertTrue(r.isForceCorrect("FAIL"));
-            assertTrue(r.isForceCorrect("d"));
-            assertFalse(r.isForceCorrect("PASS"));
-            assertEquals(0.6, r.getThresholdOverride().high(), 0.001);
-            assertEquals(1, r.getDeadlineOverride().high());
+            assertEquals(Severity.HIGH, r.lookupBaseSeverity("FAIL"));
+            assertEquals(Severity.HIGH, r.lookupBaseSeverity("D"));
+            // 旧 deadlineOverride.high → 取 high
+            assertEquals(Integer.valueOf(1), r.getDeadlineOverrideDays());
         }
 
         @Test
@@ -68,52 +80,28 @@ class ItemRuleTest {
         }
 
         @Test
-        void forceCorrect_makes_HIGH_with_must() {
-            // 配置 forceCorrect 在 LEVEL=B 时强制建单 (B 默认是 NONE)
-            ItemRule rule = ItemRule.fromJson("{\"forceCorrect\":[\"B\"]}");
+        void baseSeverityMap_explicit_response_to_HIGH() {
+            // 配置 baseSeverityMap 把 LEVEL=B 映射到 HIGH (B 默认是 NONE)
+            ItemRule rule = ItemRule.fromJson("{\"baseSeverityMap\":{\"B\":\"HIGH\"}}");
             SubmissionDetail d = det(ScoringMode.LEVEL, "B", null, null);
             CorrectionVerdict v = engine.judge(d, normal, rule, 0);
             assertEquals(Severity.HIGH, v.getSeverity());
-            assertTrue(v.isMustCorrect());
         }
 
         @Test
-        void thresholdOverride_lowers_severity() {
-            // -3/10 = 0.3, NORMAL.low=0.3 → LOW. itemRule low=0.5 → NONE.
+        void red_line_forces_HIGH_on_FAIL() {
+            // 即使 LEVEL=B 默认 NONE, RED 红线 + baseSeverityMap=MEDIUM 也会被升 HIGH
             ItemRule rule = ItemRule.fromJson(
-                    "{\"thresholdOverride\":{\"high\":0.9,\"medium\":0.7,\"low\":0.5}}");
-            SubmissionDetail d = det(ScoringMode.DEDUCTION, null,
-                    new BigDecimal("-3"), new BigDecimal("10"));
+                    "{\"criticality\":\"RED\",\"baseSeverityMap\":{\"B\":\"MEDIUM\"}}");
+            SubmissionDetail d = det(ScoringMode.LEVEL, "B", null, null);
             CorrectionVerdict v = engine.judge(d, normal, rule, 0);
-            assertEquals(Severity.NONE, v.getSeverity());
+            assertEquals(Severity.HIGH, v.getSeverity());
         }
 
         @Test
-        void thresholdOverride_raises_severity() {
-            // -3/10 = 0.3, NORMAL → LOW. itemRule m=0.3, h=0.5 → MEDIUM.
-            ItemRule rule = ItemRule.fromJson(
-                    "{\"thresholdOverride\":{\"high\":0.5,\"medium\":0.3,\"low\":0.1}}");
-            SubmissionDetail d = det(ScoringMode.DEDUCTION, null,
-                    new BigDecimal("-3"), new BigDecimal("10"));
-            CorrectionVerdict v = engine.judge(d, normal, rule, 0);
-            assertEquals(Severity.MEDIUM, v.getSeverity());
-        }
-
-        @Test
-        void deadlineOverride_used() {
-            ItemRule rule = ItemRule.fromJson(
-                    "{\"deadlineOverride\":{\"high\":1,\"medium\":2,\"low\":3}}");
+        void deadlineOverrideDays_used() {
+            ItemRule rule = ItemRule.fromJson("{\"deadlineOverrideDays\":1}");
             SubmissionDetail d = det(ScoringMode.PASS_FAIL, "FAIL", null, null);
-            CorrectionVerdict v = engine.judge(d, normal, rule, 0);
-            assertEquals(Severity.HIGH, v.getSeverity());
-            assertEquals(1, v.getSuggestedDeadlineDays());
-        }
-
-        @Test
-        void forceCorrect_with_deadlineOverride_combines() {
-            ItemRule rule = ItemRule.fromJson(
-                    "{\"forceCorrect\":[\"B\"],\"deadlineOverride\":{\"high\":1}}");
-            SubmissionDetail d = det(ScoringMode.LEVEL, "B", null, null);
             CorrectionVerdict v = engine.judge(d, normal, rule, 0);
             assertEquals(Severity.HIGH, v.getSeverity());
             assertEquals(1, v.getSuggestedDeadlineDays());

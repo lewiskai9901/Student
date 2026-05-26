@@ -79,12 +79,13 @@ public class CorrectiveAutoCreationHandler {
             return;
         }
 
-        // V110 引擎接入: 仅 STRICT 策略下自动建单. 其他策略下由前端确认对话框处理.
+        // V20260524_7 重构: 改用 policy.autoCreateLevel 判定哪个 severity 自动建单.
+        // 旧 STRICT 自动 / 其他候选 的硬绑定已解耦; 现在每个 severity 独立可配.
         ProjectCorrectivePolicy policy = suggestionService.loadPolicy(projectId);
-        if (!"STRICT".equalsIgnoreCase(policy.strictness())) {
-            log.info("Project {} corrective_strictness={}, skip auto-create. " +
-                    "前端将通过 candidates API 让用户确认.",
-                    projectId, policy.strictness());
+        if (policy.isOff() || policy.autoCreateLevel() == null
+                || policy.autoCreateLevel() == com.school.management.domain.inspection.correction.Severity.NONE) {
+            log.info("Project {} autoCreateLevel={}, skip auto-create. 前端 candidates 流程接管.",
+                    projectId, policy.autoCreateLevel());
             return;
         }
 

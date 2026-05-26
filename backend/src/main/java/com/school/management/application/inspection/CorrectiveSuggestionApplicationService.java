@@ -43,15 +43,21 @@ public class CorrectiveSuggestionApplicationService {
         }
     }
 
-    /** 更新项目整改策略. */
+    /** 更新项目整改策略 (V20260524_7 重构: 加新字段 enabled / strictnessAdj / autoCreateLevel). */
     @Transactional
-    public void updateProjectPolicy(Long projectId, String strictness,
+    public void updateProjectPolicy(Long projectId,
+                                    Boolean enabled, Integer strictnessAdj, String autoCreateLevel,
                                     String thresholdsJson, String deadlinesJson) {
+        // 旧 strictness 列保留为兼容数据 (loadPolicy 回退使用), 暂不主动覆盖
         jdbcTemplate.update(
-                "UPDATE insp_projects SET corrective_strictness=?, " +
+                "UPDATE insp_projects SET corrective_enabled=?, " +
+                " corrective_strictness_adj=?, corrective_auto_create_level=?, " +
                 " corrective_severity_thresholds=?, corrective_default_deadlines=? " +
                 " WHERE id=?",
-                strictness, thresholdsJson, deadlinesJson, projectId);
+                enabled == null ? 1 : (enabled ? 1 : 0),
+                strictnessAdj == null ? 0 : strictnessAdj,
+                autoCreateLevel,
+                thresholdsJson, deadlinesJson, projectId);
     }
 
     /** 拉取某主体过去 30 天每个 itemCode 的复发计数. */

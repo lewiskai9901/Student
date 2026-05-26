@@ -38,10 +38,12 @@ class CorrectionEngineTest {
     class PassFail {
         @Test
         void fail_triggers_HIGH() {
+            // V20260524_7: normalDefault() autoCreateLevel=NONE, mustCorrect 不自动触发
+            // (HIGH severity 进入候选, 但项目 autoCreateLevel=NONE 时不强制建单)
             SubmissionDetail d = detail(ScoringMode.PASS_FAIL, "FAIL", null, null);
             CorrectionVerdict v = engine.judge(d, normal, 0);
             assertEquals(Severity.HIGH, v.getSeverity());
-            assertTrue(v.isMustCorrect());
+            assertFalse(v.isMustCorrect());        // NORMAL policy: 候选, 非强制
             assertEquals(1.0, v.getSeverityScore(), 0.0001);
         }
 
@@ -203,7 +205,8 @@ class CorrectionEngineTest {
         void STRICT_lowers_thresholds() {
             // 30% 扣分 在 STRICT 模式下 → MEDIUM (m=0.3)
             ProjectCorrectivePolicy strict = new ProjectCorrectivePolicy(
-                    "STRICT", SeverityThresholds.STRICT, DeadlinePresets.DEFAULT);
+                    true, 0, Severity.LOW,
+                    SeverityThresholds.STRICT, DeadlinePresets.DEFAULT);
             SubmissionDetail d = detail(ScoringMode.DEDUCTION, null,
                     new BigDecimal("-3"), new BigDecimal("10"));
             CorrectionVerdict v = engine.judge(d, strict, 0);
@@ -215,7 +218,8 @@ class CorrectionEngineTest {
         void LENIENT_raises_thresholds() {
             // 50% 扣分 在 LENIENT (l=0.5) 下 → LOW (而非 NORMAL 的 MEDIUM)
             ProjectCorrectivePolicy lenient = new ProjectCorrectivePolicy(
-                    "LENIENT", SeverityThresholds.LENIENT, DeadlinePresets.DEFAULT);
+                    true, 0, Severity.NONE,
+                    SeverityThresholds.LENIENT, DeadlinePresets.DEFAULT);
             SubmissionDetail d = detail(ScoringMode.DEDUCTION, null,
                     new BigDecimal("-5"), new BigDecimal("10"));
             CorrectionVerdict v = engine.judge(d, lenient, 0);
@@ -225,7 +229,8 @@ class CorrectionEngineTest {
         @Test
         void OFF_skips_engine() {
             ProjectCorrectivePolicy off = new ProjectCorrectivePolicy(
-                    "OFF", SeverityThresholds.NORMAL, DeadlinePresets.DEFAULT);
+                    false, 0, Severity.NONE,
+                    SeverityThresholds.NORMAL, DeadlinePresets.DEFAULT);
             SubmissionDetail d = detail(ScoringMode.PASS_FAIL, "FAIL", null, null);
             CorrectionVerdict v = engine.judge(d, off, 0);
             assertEquals(Severity.NONE, v.getSeverity());

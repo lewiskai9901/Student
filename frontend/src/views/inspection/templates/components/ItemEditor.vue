@@ -17,7 +17,8 @@ import { useKbdHint } from '@/composables/useKbdHint'
 import { eventTypeApi } from '@/api/event'
 import type { EventType } from '@/types/event'
 import ConditionBuilder from '@/components/insp/ConditionBuilder.vue'
-import CorrectiveOverrideEditor from './CorrectiveOverrideEditor.vue'
+// 架构 E: CorrectiveOverrideEditor 已废弃, 整改规则上提至项目级
+// import CorrectiveOverrideEditor from './CorrectiveOverrideEditor.vue'
 
 const props = defineProps<{
   item: TemplateItem
@@ -243,6 +244,38 @@ const scoring = reactive<ScoringConfigData>({
   ],
   formulaMaxScore: 10,
   formulaMinScore: 0,
+})
+
+// 整改规则按本题量表配置时所需的离散选项 (LEVEL/SCORE_TABLE 模式)
+const itemDiscreteOptions = computed<string[]>(() => {
+  switch (scoring.mode) {
+    case 'LEVEL':         return scoring.levels.map(l => l.label).filter(Boolean)
+    case 'SCORE_TABLE':   return scoring.options.map(o => o.label).filter(Boolean)
+    case 'TIERED_DEDUCTION': return scoring.tiers.map(t => t.label).filter(Boolean)
+    case 'THRESHOLD':     return scoring.thresholds.map(t => t.label).filter(Boolean)
+    default: return []
+  }
+})
+
+// RISK_MATRIX 模式的等级列表 (L/M/H/VH 默认, 未来从 matrix 配置解析)
+const itemRiskLevels = computed<string[]>(() => {
+  if (scoring.mode !== 'RISK_MATRIX') return []
+  // 默认四级 (与 RiskMatrixNormalizer DEFAULT_LEVEL_MAP 对齐)
+  return ['L', 'M', 'H', 'VH']
+})
+
+// 整改规则按本题量表配置时所需的"满分"参考值 (按 scoringMode 取对应字段)
+const itemMaxScoreForCorrective = computed(() => {
+  switch (scoring.mode) {
+    case 'RATING_SCALE':      return scoring.maxStars || 5
+    case 'DIRECT':            return scoring.maxScore || 10
+    case 'DEDUCTION':         return Math.abs(scoring.maxDeduction) || 10
+    case 'WEIGHTED_MULTI':    return scoring.weightedMultiMaxScore || 10
+    case 'FORMULA':           return scoring.formulaMaxScore || 10
+    case 'CUMULATIVE':        return scoring.maxCount || 10
+    case 'ADDITION':          return scoring.maxBonus || 5
+    default:                  return 10
+  }
 })
 
 // Scoring mode summary for collapsed view
@@ -1299,11 +1332,9 @@ const scoringFromResponseSet = computed(() =>
 
       </div>
 
-      <!-- V110: 整改触发覆盖 (跨 tab 通用, 仅评分项显示) -->
-      <CorrectiveOverrideEditor
-        v-if="itemCategory === 'scored' && props.item?.id"
-        :item-id="props.item.id"
-      />
+      <!-- 架构 E (2026-05-25): 整改规则已上提到项目级配置, 模板不再含整改面板.
+           参考: docs/plans/2026-05-25-corrective-architecture-E.md -->
+      <!-- (CorrectiveOverrideEditor 已移除) -->
     </div>
 
   </div>

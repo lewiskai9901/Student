@@ -51,15 +51,15 @@ public class CorrectionEngine {
                 .itemCode(detail.getItemCode())
                 .itemName(detail.getItemName());
 
-        // OFF 模式: 引擎完全不建议
+        // Step 1: 总开关
         if (policy.isOff()) {
             return b.severity(Severity.NONE)
-                    .reason("项目策略为 OFF, 完全人工")
-                    .addTrace("policy", "OFF", "—", "skip")
+                    .reason("项目整改引擎已关闭, 完全人工")
+                    .addTrace("policy", "disabled", "—", "skip")
                     .build();
         }
 
-        // L2.1 ItemRule.neverCorrect: 永不建单
+        // Step 2: 题目级 neverCorrect
         if (itemRule.isNeverCorrect()) {
             return b.severity(Severity.NONE)
                     .reason("检查项配置 neverCorrect=true")
@@ -67,74 +67,119 @@ public class CorrectionEngine {
                     .build();
         }
 
-        // L2.2 ItemRule.forceCorrect: 特定响应强制建 HIGH
-        if (itemRule.isForceCorrect(detail.getResponseValue())) {
-            int days = (itemRule.getDeadlineOverride() != null
-                    ? itemRule.getDeadlineOverride()
-                    : policy.deadlines()).forSeverity(Severity.HIGH);
-            return b.severity(Severity.HIGH)
-                    .severityScore(1.0)
-                    .mustCorrect(true)
-                    .deadlineDays(days)
-                    .reason(detail.getItemName() + ": 响应 " + detail.getResponseValue()
-                            + " 命中强制规则 → HIGH")
-                    .addTrace("itemRule", "forceCorrect",
-                            "resp=" + detail.getResponseValue(), "HIGH (forced)")
-                    .build();
+        // Step 3: baseSeverity 来源 (优先级: baseSeverityMap > singleThreshold > normalizer + 项目阈值)
+        // baseSeverityMap 同时尝试: 响应值原值 + normalizer 解析的"语义标签" (用于 RISK_MATRIX 等复合模式)
+        Severity baseSev;
+        double sevScore = 0.0;
+        ScoringMode dmode = detail.getScoringMode();
+        SeverityNormalizer dnormalizer = SeverityNormalizer.of(dmode);
+        Severity explicit = itemRule.lookupBaseSeverity(detail.getResponseValue());
+        String semanticLabel = null;
+        if (explicit == null) {
+            // fallback: 用 normalizer 解析的语义标签 (例如 RISK_MATRIX 的 L/M/H/VH)
+            semanticLabel = dnormalizer.resolveLabel(detail);
+            if (semanticLabel != null && !semanticLabel.equals(detail.getResponseValue())) {
+                explicit = itemRule.lookupBaseSeverity(semanticLabel);
+            }
+        }
+        if (explicit != null) {
+            baseSev = explicit;
+            sevScore = explicit == Severity.HIGH ? 1.0 : explicit == Severity.MEDIUM ? 0.6 : explicit == Severity.LOW ? 0.3 : 0.0;
+            String matchKey = semanticLabel != null && itemRule.lookupBaseSeverity(detail.getResponseValue()) == null
+                    ? "label=" + semanticLabel
+                    : "resp=" + detail.getResponseValue();
+            b.severityScore(sevScore)
+             .addTrace("itemRule.baseSeverityMap",
+                     matchKey, "—", explicit.name());
+        } else if (itemRule.hasSingleThreshold()) {
+            // 题目级单阈值: sev ≥ sevThreshold → triggerSeverity, 否则 NONE
+            ScoringMode mode = detail.getScoringMode();
+            SeverityNormalizer normalizer = SeverityNormalizer.of(mode);
+            Double sev = normalizer.normalize(detail, detail.getItemWeight());
+            if (sev == null) {
+                return b.severity(Severity.NONE)
+                        .reason("响应未参与判定 (空/N/A)")
+                        .addTrace("normalize", String.valueOf(mode), "skip", "null")
+                        .build();
+            }
+            sevScore = sev;
+            ItemRule.SingleThreshold st = itemRule.getSingleThreshold();
+            if (sev >= st.getSevThreshold()) {
+                baseSev = st.getTriggerSeverity();
+                b.severityScore(sev)
+                 .addTrace("itemRule.singleThreshold",
+                         String.format("sev=%.3f ≥ %.3f", sev, st.getSevThreshold()),
+                         "—", baseSev.name());
+            } else {
+                baseSev = Severity.NONE;
+                b.severityScore(sev)
+                 .addTrace("itemRule.singleThreshold",
+                         String.format("sev=%.3f < %.3f", sev, st.getSevThreshold()),
+                         "—", "NONE");
+            }
+        } else {
+            ScoringMode mode = detail.getScoringMode();
+            SeverityNormalizer normalizer = SeverityNormalizer.of(mode);
+            Double sev = normalizer.normalize(detail, detail.getItemWeight());
+            if (sev == null) {
+                return b.severity(Severity.NONE)
+                        .reason("响应未参与判定 (空/N/A)")
+                        .addTrace("normalize", String.valueOf(mode), "skip", "null")
+                        .build();
+            }
+            sevScore = sev;
+            b.severityScore(sev)
+             .addTrace("normalize", String.valueOf(mode),
+                     String.format("score=%s/weight=%s/resp=%s",
+                             detail.getScore(), detail.getItemWeight(), detail.getResponseValue()),
+                     String.format("%.3f", sev));
+            baseSev = policy.thresholds().classify(sev);
+            b.addTrace("threshold", "project",
+                    String.format("h=%.2f m=%.2f l=%.2f",
+                            policy.thresholds().high(), policy.thresholds().medium(), policy.thresholds().low()),
+                    baseSev.name());
         }
 
-        // L1 标准化
-        ScoringMode mode = detail.getScoringMode();
-        SeverityNormalizer normalizer = SeverityNormalizer.of(mode);
-        Double sev = normalizer.normalize(detail, detail.getItemWeight());
-        if (sev == null) {
-            return b.severity(Severity.NONE)
-                    .reason("响应未参与判定 (空/N/A)")
-                    .addTrace("normalize", String.valueOf(mode), "skip", "null")
-                    .build();
+        // Step 4: 红线题强制 HIGH
+        if (itemRule.isRedLine() && baseSev != Severity.NONE) {
+            b.addTrace("itemRule.criticality", "RED", baseSev.name(), "HIGH (forced)");
+            baseSev = Severity.HIGH;
         }
-        b.severityScore(sev)
-         .addTrace("normalize", String.valueOf(mode),
-                 String.format("score=%s/weight=%s/resp=%s",
-                         detail.getScore(), detail.getItemWeight(), detail.getResponseValue()),
-                 String.format("%.3f", sev));
 
-        // L3 阈值 → severity 等级 (ItemRule.thresholdOverride 优先, 其次 project)
-        SeverityThresholds t = itemRule.getThresholdOverride() != null
-                ? itemRule.getThresholdOverride() : policy.thresholds();
-        Severity level = t.classify(sev);
-        String thresholdSrc = itemRule.getThresholdOverride() != null
-                ? "itemRule.override" : policy.strictness();
-        b.addTrace("threshold", thresholdSrc,
-                String.format("h=%.2f m=%.2f l=%.2f", t.high(), t.medium(), t.low()),
-                level.name());
-
-        // L4 复发增强
-        if (recurrenceCount >= 1 && level.requiresCorrection()) {
-            Severity escalated = level.escalateOne();
-            if (escalated != level) {
-                b.addTrace("recurrence", "30d_count=" + recurrenceCount,
-                        level.name(), escalated.name() + " (升级)");
-                level = escalated;
+        // Step 5: 复发增强 (近 30 天 ≥1 次 → 升级一档; ≥3 次额外升级 + mustCorrect)
+        Severity afterRecurrence = baseSev;
+        if (recurrenceCount >= 1 && baseSev.requiresCorrection()) {
+            afterRecurrence = baseSev.escalateOne();
+            if (afterRecurrence != baseSev) {
+                b.addTrace("recurrence", "30d=" + recurrenceCount, baseSev.name(), afterRecurrence.name());
             }
         }
 
-        // mustCorrect: HIGH 必须 / MEDIUM 项目级可关闭 / LOW 建议
-        boolean must = level == Severity.HIGH;
-        if (level == Severity.MEDIUM && "STRICT".equalsIgnoreCase(policy.strictness())) {
-            must = true;
+        // Step 6: 项目级整体调档 (strictnessAdjustment)
+        Severity finalSev = policy.shiftBy(afterRecurrence);
+        if (finalSev != afterRecurrence) {
+            b.addTrace("strictnessAdj", "adj=" + policy.strictnessAdjustment(),
+                    afterRecurrence.name(), finalSev.name());
         }
-        // 复发 ≥3 次强制建单
-        if (recurrenceCount >= 3 && level.requiresCorrection()) must = true;
 
-        DeadlinePresets dp = itemRule.getDeadlineOverride() != null
-                ? itemRule.getDeadlineOverride() : policy.deadlines();
-        int days = dp.forSeverity(level);
+        // Step 7: 自动建单门槛 (policy.autoCreateLevel 判定)
+        boolean must = policy.shouldAutoCreate(finalSev);
+        // 复发 ≥3 次 + 需整改 → 强制 mustCorrect (避免被 autoCreateLevel=NONE 漏掉严重屡犯)
+        if (recurrenceCount >= 3 && finalSev.requiresCorrection()) must = true;
 
-        return b.severity(level)
+        // Step 8: deadline (itemRule.deadlineOverrideDays 优先, 否则项目 preset)
+        int days;
+        if (itemRule.getDeadlineOverrideDays() != null) {
+            days = itemRule.getDeadlineOverrideDays();
+            b.addTrace("deadline", "itemRule.override", "—", days + "d");
+        } else {
+            days = policy.deadlines().forSeverity(finalSev);
+        }
+
+        return b.severity(finalSev)
                 .mustCorrect(must)
                 .deadlineDays(days)
-                .reason(buildReason(detail, mode, sev, level, recurrenceCount))
+                .reason(buildReason(detail, detail.getScoringMode(), sevScore, finalSev, recurrenceCount))
                 .build();
     }
 

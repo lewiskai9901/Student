@@ -46,6 +46,25 @@ public class RiskMatrixNormalizer implements SeverityNormalizer {
         DEFAULT_LEVEL_MAP.put("E",  1.0);  // Extreme 别名
     }
 
+    /** 暴露解析出的 risk level (L/M/H/VH 等) 给 ItemRule.baseSeverityMap 按等级查询. */
+    @Override
+    public String resolveLabel(SubmissionDetail detail) {
+        String resp = detail.getResponseValue();
+        if (resp == null || resp.isBlank()) return null;
+        try {
+            int[] coords = parseCoords(resp);
+            String cfgJson = detail.getScoringConfig();
+            JsonNode cfg = null;
+            if (cfgJson != null && !cfgJson.isBlank()) {
+                try { cfg = MAPPER.readTree(cfgJson); } catch (Exception ignored) {}
+            }
+            String level = lookupLevel(cfg, coords[0], coords[1]);
+            return level == null ? null : level.toUpperCase();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     @Override
     public Double normalize(SubmissionDetail detail, BigDecimal itemWeight) {
         String resp = detail.getResponseValue();

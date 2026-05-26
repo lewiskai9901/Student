@@ -7,6 +7,7 @@ import com.school.management.domain.inspection.correction.CorrectionVerdict;
 import com.school.management.domain.inspection.correction.DeadlinePresets;
 import com.school.management.domain.inspection.correction.ItemRule;
 import com.school.management.domain.inspection.correction.ProjectCorrectivePolicy;
+import com.school.management.domain.inspection.correction.Severity;
 import com.school.management.domain.inspection.correction.SeverityThresholds;
 import com.school.management.domain.inspection.model.execution.InspSubmission;
 import com.school.management.domain.inspection.model.execution.InspTask;
@@ -66,33 +67,88 @@ public class CorrectiveSuggestionService {
 
         return engine.judgeAll(details, policy,
                 d -> countRecentRecurrence(pid, subjectOrgId, d.getItemCode()),
-                this::loadItemRule)
+                d -> loadItemRule(pid, d))
                 .stream()
                 .filter(CorrectionVerdict::shouldSuggest)
                 .toList();
     }
 
-    /** 加载 insp_template_items.corrective_override → ItemRule. */
-    public ItemRule loadItemRule(SubmissionDetail detail) {
-        if (detail == null || detail.getTemplateItemId() == null) return ItemRule.EMPTY;
-        try {
-            String json = jdbcTemplate.queryForObject(
-                    "SELECT corrective_override FROM insp_template_items WHERE id=?",
-                    String.class, detail.getTemplateItemId());
-            return ItemRule.fromJson(json);
-        } catch (Exception e) {
-            return ItemRule.EMPTY;
+    /**
+     * 加载题目整改规则 (架构 E 优先级链):
+     * <ol>
+     *   <li>项目题目个例 (insp_project_item_overrides by projectId + templateItemId)</li>
+     *   <li>项目按题型规则 (insp_project_corrective_rules by projectId + scoringMode)</li>
+     *   <li>EMPTY 兜底 (引擎按现有逻辑 fall through 到项目阈值)</li>
+     * </ol>
+     *
+     * <p>注: 老的 insp_template_items.corrective_override 字段不再被引擎直接读取,
+     * 该字段保留作"创建项目时的预设建议" (UI 一键导入).
+     */
+    public ItemRule loadItemRule(Long projectId, SubmissionDetail detail) {
+        if (detail == null) return ItemRule.EMPTY;
+
+        // 优先级 1: 项目题目个例覆盖
+        if (projectId != null && detail.getTemplateItemId() != null) {
+            try {
+                String json = jdbcTemplate.queryForObject(
+                        "SELECT rule_json FROM insp_project_item_overrides " +
+                        " WHERE project_id=? AND template_item_id=? AND deleted=0",
+                        String.class, projectId, detail.getTemplateItemId());
+                if (json != null && !json.isBlank()) return ItemRule.fromJson(json);
+            } catch (Exception ignored) { /* not found, continue */ }
         }
+
+        // 优先级 2: 项目按题型规则
+        if (projectId != null && detail.getScoringMode() != null) {
+            try {
+                String json = jdbcTemplate.queryForObject(
+                        "SELECT rule_json FROM insp_project_corrective_rules " +
+                        " WHERE project_id=? AND scoring_mode=? AND deleted=0",
+                        String.class, projectId, detail.getScoringMode().name());
+                if (json != null && !json.isBlank()) return ItemRule.fromJson(json);
+            } catch (Exception ignored) { /* not found, continue */ }
+        }
+
+        // 优先级 3: 兜底 EMPTY (引擎 fall through 到项目阈值)
+        return ItemRule.EMPTY;
     }
 
-    /** 项目级策略加载: insp_projects.corrective_* 字段. */
+    /** @deprecated 兼容入口, 内部调用新链路. */
+    @Deprecated
+    public ItemRule loadItemRule(SubmissionDetail detail) {
+        return loadItemRule(null, detail);
+    }
+
+    /**
+     * 项目级策略加载 (V20260524_7 重构):
+     * 新模型 enabled / strictnessAdjustment / autoCreateLevel 优先, 旧 strictness 作为回退.
+     */
     public ProjectCorrectivePolicy loadPolicy(Long projectId) {
         if (projectId == null) return ProjectCorrectivePolicy.normalDefault();
         try {
             Map<String, Object> row = jdbcTemplate.queryForMap(
                     "SELECT corrective_strictness, corrective_severity_thresholds, " +
-                    "       corrective_default_deadlines " +
+                    "       corrective_default_deadlines, " +
+                    "       corrective_enabled, corrective_strictness_adj, corrective_auto_create_level " +
                     "  FROM insp_projects WHERE id=?", projectId);
+
+            // 新字段优先
+            Object enabledObj = row.get("corrective_enabled");
+            boolean enabled = enabledObj == null
+                    ? true
+                    : ((Number) enabledObj).intValue() != 0;
+            int adj = row.get("corrective_strictness_adj") != null
+                    ? ((Number) row.get("corrective_strictness_adj")).intValue()
+                    : 0;
+            Severity autoLevel = Severity.NONE;
+            Object autoLevelObj = row.get("corrective_auto_create_level");
+            if (autoLevelObj instanceof String s && !s.isBlank()) {
+                try { autoLevel = Severity.valueOf(s.toUpperCase()); }
+                catch (IllegalArgumentException ignored) {}
+            }
+
+            // 旧 strictness 兼容: 如果 enabled=0 强制视为 disabled
+            // 旧 thresholds JSON 仍解析用作 sev classify 的 thresholds
             String strictness = (String) row.get("corrective_strictness");
             if (strictness == null) strictness = "NORMAL";
 
@@ -120,7 +176,7 @@ public class CorrectiveSuggestionService {
                 } catch (JsonProcessingException ignored) {}
             }
 
-            return new ProjectCorrectivePolicy(strictness, t, d);
+            return new ProjectCorrectivePolicy(enabled, adj, autoLevel, t, d);
         } catch (Exception e) {
             log.warn("loadPolicy({}) failed: {}, fallback to NORMAL", projectId, e.getMessage());
             return ProjectCorrectivePolicy.normalDefault();

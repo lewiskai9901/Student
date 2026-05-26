@@ -5,8 +5,12 @@ import com.school.management.application.inspection.CorrectiveSuggestionApplicat
 import com.school.management.application.inspection.CorrectiveSuggestionService;
 import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
+import com.school.management.domain.inspection.correction.CorrectionEngine;
 import com.school.management.domain.inspection.correction.CorrectionVerdict;
+import com.school.management.domain.inspection.correction.ItemRule;
+import com.school.management.domain.inspection.correction.ProjectCorrectivePolicy;
 import com.school.management.domain.inspection.correction.Severity;
+import com.school.management.domain.inspection.model.execution.ScoringMode;
 import com.school.management.domain.inspection.model.corrective.CasePriority;
 import com.school.management.domain.inspection.model.corrective.CorrectiveCase;
 import com.school.management.domain.inspection.model.execution.InspSubmission;
@@ -48,6 +52,7 @@ public class CorrectiveSuggestionController {
     private final InspSubmissionRepository submissionRepository;
     private final InspTaskRepository taskRepository;
     private final CorrectiveSuggestionApplicationService suggestionAppService;
+    private final CorrectionEngine correctionEngine;
     /** 复用单例 — 不要每请求 new ObjectMapper() (开销大). */
     private final ObjectMapper objectMapper;
 
@@ -164,13 +169,20 @@ public class CorrectiveSuggestionController {
 
     // ==================== 项目策略 GET / PUT ====================
 
-    /** 取项目整改策略. 缺省 NORMAL. */
+    /** 取项目整改策略. V20260524_7: enabled / strictnessAdjustment / autoCreateLevel 三段式. */
     @GetMapping("/projects/{projectId}/policy")
     @CasbinAccess(resource = "insp:project", action = "view")
     public Result<PolicyView> getPolicy(@PathVariable Long projectId) {
         var p = suggestionService.loadPolicy(projectId);
         PolicyView v = new PolicyView();
-        v.strictness = p.strictness();
+        v.enabled = p.enabled();
+        v.strictnessAdjustment = p.strictnessAdjustment();
+        v.autoCreateLevel = p.autoCreateLevel() == null ? "NONE" : p.autoCreateLevel().name();
+        // 旧 strictness 字段保留, 由新字段反推: !enabled→OFF, adj>=1→STRICT, adj<=-1→LENIENT, 其他→NORMAL
+        if (!p.enabled()) v.strictness = "OFF";
+        else if (p.strictnessAdjustment() >= 1) v.strictness = "STRICT";
+        else if (p.strictnessAdjustment() <= -1) v.strictness = "LENIENT";
+        else v.strictness = "NORMAL";
         v.thresholdHigh = p.thresholds().high();
         v.thresholdMedium = p.thresholds().medium();
         v.thresholdLow = p.thresholds().low();
@@ -180,18 +192,46 @@ public class CorrectiveSuggestionController {
         return Result.success(v);
     }
 
-    /** 更新项目整改策略. strictness ∈ {STRICT,NORMAL,LENIENT,OFF}. */
+    /**
+     * 更新项目整改策略 (V20260524_7 三段式).
+     * <p>请求体:
+     * <ul>
+     *   <li>enabled — 总开关</li>
+     *   <li>strictnessAdjustment — 调档 -2..+2</li>
+     *   <li>autoCreateLevel — HIGH/MEDIUM/LOW/NONE</li>
+     *   <li>thresholds/deadlines — 可选阈值与时限</li>
+     * </ul>
+     * <p>兼容: 老前端仍可传 strictness, 映射为新字段 (STRICT→adj=+1/auto=LOW, LENIENT→adj=-1/auto=NONE, OFF→enabled=false).
+     */
     @PutMapping("/projects/{projectId}/policy")
     @CasbinAccess(resource = "insp:project", action = "update")
     public Result<PolicyView> updatePolicy(@PathVariable Long projectId,
                                            @RequestBody PolicyView req) {
-        if (req.strictness == null
-                || !List.of("STRICT","NORMAL","LENIENT","OFF")
-                       .contains(req.strictness.toUpperCase())) {
-            throw new IllegalArgumentException("strictness 必须是 STRICT/NORMAL/LENIENT/OFF");
+        Boolean enabled = req.enabled;
+        Integer adj = req.strictnessAdjustment;
+        String autoLevel = req.autoCreateLevel;
+
+        // 兼容: 旧 strictness → 新字段
+        if (enabled == null && adj == null && autoLevel == null && req.strictness != null) {
+            switch (req.strictness.toUpperCase()) {
+                case "STRICT":  enabled = true;  adj = 1;  autoLevel = "LOW";    break;
+                case "NORMAL":  enabled = true;  adj = 0;  autoLevel = "NONE";   break;
+                case "LENIENT": enabled = true;  adj = -1; autoLevel = "NONE";   break;
+                case "OFF":     enabled = false; adj = 0;  autoLevel = "NONE";   break;
+                default: throw new IllegalArgumentException(
+                        "strictness 必须是 STRICT/NORMAL/LENIENT/OFF");
+            }
+        }
+        if (enabled == null) enabled = true;
+        if (adj == null) adj = 0;
+        if (adj < -2 || adj > 2) {
+            throw new IllegalArgumentException("strictnessAdjustment 必须在 -2..+2 之间");
+        }
+        if (autoLevel == null) autoLevel = "NONE";
+        if (!List.of("HIGH","MEDIUM","LOW","NONE").contains(autoLevel.toUpperCase())) {
+            throw new IllegalArgumentException("autoCreateLevel 必须是 HIGH/MEDIUM/LOW/NONE");
         }
 
-        // thresholds JSON (允许 null 走默认)
         String tjson = null;
         if (req.thresholdHigh != null && req.thresholdMedium != null && req.thresholdLow != null) {
             tjson = String.format("{\"high\":%s,\"medium\":%s,\"low\":%s}",
@@ -204,7 +244,7 @@ public class CorrectiveSuggestionController {
         }
 
         suggestionAppService.updateProjectPolicy(
-                projectId, req.strictness.toUpperCase(), tjson, djson);
+                projectId, enabled, adj, autoLevel.toUpperCase(), tjson, djson);
 
         return getPolicy(projectId);
     }
@@ -303,7 +343,14 @@ public class CorrectiveSuggestionController {
     }
 
     public static class PolicyView {
+        /** @deprecated 旧 strictness 字段, V20260524_7 后由 enabled+adjustment+autoLevel 替代. 仅保留兼容. */
+        @Deprecated
         public String strictness;
+        // V20260524_7 新字段
+        public Boolean enabled;
+        public Integer strictnessAdjustment;
+        public String autoCreateLevel;        // HIGH / MEDIUM / LOW / NONE
+
         public Double thresholdHigh;
         public Double thresholdMedium;
         public Double thresholdLow;
@@ -340,5 +387,92 @@ public class CorrectiveSuggestionController {
         }
         suggestionAppService.updateItemOverride(itemId, json);
         return Result.success(json);
+    }
+
+    // ==================== Simulate API (WhatIf 模拟器) ====================
+
+    /**
+     * 模拟整改判定 — 不需要真实 submission, 配置阶段即可验证规则.
+     * <p>典型用法: 前端 RuleSimulator 在用户配置整改规则时, 让其输入"假设响应",
+     * 引擎计算 verdict 实时反馈, 消除"配完不知道对不对"的认知 gap.
+     */
+    @PostMapping("/simulate")
+    @CasbinAccess(resource = "insp:template", action = "view")
+    public Result<SimulateView> simulate(@RequestBody SimulateRequest req) {
+        if (req == null || req.scoringMode == null) {
+            throw new IllegalArgumentException("scoringMode 必填");
+        }
+        ScoringMode mode;
+        try { mode = ScoringMode.valueOf(req.scoringMode.toUpperCase()); }
+        catch (IllegalArgumentException e) { throw new IllegalArgumentException("scoringMode 非法"); }
+
+        ProjectCorrectivePolicy policy = req.projectId != null
+                ? suggestionService.loadPolicy(req.projectId)
+                : ProjectCorrectivePolicy.normalDefault();
+
+        ItemRule itemRule = ItemRule.fromJson(req.itemRuleJson);
+
+        java.math.BigDecimal score = req.score == null ? null : java.math.BigDecimal.valueOf(req.score);
+        java.math.BigDecimal weight = req.itemWeight == null ? null : java.math.BigDecimal.valueOf(req.itemWeight);
+
+        com.school.management.domain.inspection.model.execution.SubmissionDetail detail =
+                com.school.management.domain.inspection.model.execution.SubmissionDetail.builder()
+                .id(-1L)
+                .itemCode(req.itemCode != null ? req.itemCode : "SIM")
+                .itemName(req.itemName != null ? req.itemName : "模拟题")
+                .scoringMode(mode)
+                .responseValue(req.responseValue)
+                .score(score)
+                .itemWeight(weight)
+                .scoringConfig(req.scoringConfigJson)
+                .build();
+
+        CorrectionVerdict v = correctionEngine.judge(detail, policy, itemRule, req.recurrenceCount == null ? 0 : req.recurrenceCount);
+
+        SimulateView out = new SimulateView();
+        out.severity = v.getSeverity().name();
+        out.severityScore = v.getSeverityScore();
+        out.mustCorrect = v.isMustCorrect();
+        out.deadlineDays = v.getSuggestedDeadlineDays();
+        out.reason = v.getReason();
+        out.trace = v.getTrace() == null ? List.of()
+                : v.getTrace().stream().map(t -> {
+                    SimulateTrace st = new SimulateTrace();
+                    st.layer = t.layer();
+                    st.rule = t.rule();
+                    st.input = t.input();
+                    st.output = t.output();
+                    return st;
+                }).collect(java.util.stream.Collectors.toList());
+        return Result.success(out);
+    }
+
+    public static class SimulateRequest {
+        public Long projectId;          // 可选, 用于加载项目策略
+        public String scoringMode;      // PASS_FAIL / RATING_SCALE / ...
+        public String responseValue;    // 检查员假设填的响应值
+        public Double score;            // 假设得分 (continuous 模式)
+        public Double itemWeight;       // 题权重 (扣分模式用)
+        public String scoringConfigJson; // 题目评分配置 (RISK_MATRIX/THRESHOLD 等需要)
+        public String itemRuleJson;     // 题目整改规则 JSON (草稿态, 未保存)
+        public Integer recurrenceCount; // 假设近 30 天复发次数
+        public String itemCode;
+        public String itemName;
+    }
+
+    public static class SimulateView {
+        public String severity;         // HIGH / MEDIUM / LOW / NONE
+        public double severityScore;    // sev 0~1
+        public boolean mustCorrect;     // 是否自动建单
+        public int deadlineDays;        // 建议时限
+        public String reason;
+        public List<SimulateTrace> trace;
+    }
+
+    public static class SimulateTrace {
+        public String layer;            // 决策层 (policy/itemRule/normalize/threshold/...)
+        public String rule;
+        public String input;
+        public String output;
     }
 }

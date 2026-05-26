@@ -91,11 +91,18 @@ const parsedTrace = computed<TraceEntry[]>(() => {
 
 function traceLayerLabel(layer: string): string {
   const map: Record<string, string> = {
-    normalize:  'L1 标准化',
-    itemRule:   'L2 检查项规则',
-    threshold:  'L3 阈值判定',
-    recurrence: 'L4 复发增强',
-    policy:     '项目策略',
+    policy:                          '项目策略',
+    'itemRule':                      '题目规则',
+    'itemRule.neverCorrect':         '题目规则·永不建单',
+    'itemRule.criticality':          '题目规则·红线',
+    'itemRule.baseSeverityMap':      '题目规则·响应映射',
+    'itemRule.singleThreshold':      '题目规则·单阈值',
+    normalize:                       'sev 标准化',
+    threshold:                       '项目阈值切档',
+    recurrence:                      '复发增强',
+    strictnessAdj:                   '严格度调档',
+    deadline:                        '完成时限',
+    error:                           '判定异常',
   }
   return map[layer] || layer
 }

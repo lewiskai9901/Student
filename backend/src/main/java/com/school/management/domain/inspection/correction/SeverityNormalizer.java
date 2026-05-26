@@ -18,6 +18,19 @@ public interface SeverityNormalizer {
      */
     Double normalize(SubmissionDetail detail, java.math.BigDecimal itemWeight);
 
+    /**
+     * 解析"归一化标签" — 用于题目级 ItemRule.baseSeverityMap 按本模式的语义标签匹配.
+     *
+     * <p>默认实现返回 responseValue (PASS_FAIL/LEVEL 等离散值原样匹配).
+     * RiskMatrixNormalizer 覆盖返回 risk level (L/M/H/VH), Threshold 覆盖返回 tier 标签 等.
+     *
+     * <p>引擎判定时优先用此标签查 baseSeverityMap, 而非 responseValue 原始值,
+     * 这样用户对 RISK_MATRIX 等复合模式可以按"高风险→严重"配置, 不必理解坐标(p,i).
+     */
+    default String resolveLabel(SubmissionDetail detail) {
+        return detail.getResponseValue();
+    }
+
     /** 静态分发器: 按 ScoringMode 取对应 normalizer. */
     static SeverityNormalizer of(ScoringMode mode) {
         if (mode == null) return new DeductionNormalizer();
