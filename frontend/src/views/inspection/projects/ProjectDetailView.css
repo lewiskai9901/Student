@@ -763,6 +763,84 @@
 .cfg-advanced summary:hover { color: #374151; }
 .cfg-advanced[open] summary { color: #111827; font-weight: 500; }
 
+/* ========== V20260524 整改策略自定义阈值表 ========== */
+.cfg-custom-thresholds {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: #fafbff;
+  border: 1px solid #e0e7ff;
+  border-radius: 6px;
+}
+.cfg-custom-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.cfg-custom-label {
+  font-size: 13px;
+  color: #374151;
+  font-weight: 500;
+}
+.cfg-select--inline {
+  width: 180px;
+  display: inline-block;
+}
+.cfg-custom-extra {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #6b7280;
+}
+.cfg-threshold-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.cfg-threshold-table th,
+.cfg-threshold-table td {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid #eef0f4;
+}
+.cfg-threshold-table th {
+  font-weight: 500;
+  color: #6b7280;
+  background: #f8f9fb;
+  font-size: 12px;
+}
+.cfg-threshold-table tr:last-child td { border-bottom: none; }
+.cfg-sev {
+  font-weight: 600;
+  width: 90px;
+}
+.cfg-sev--high { color: #dc2626; }
+.cfg-sev--medium { color: #d97706; }
+.cfg-sev--low { color: #2563eb; }
+.cfg-unit {
+  font-size: 12px;
+  color: #6b7280;
+}
+.cfg-hint--note {
+  margin-top: 10px;
+  font-size: 11px;
+  color: #6b7280;
+  font-style: italic;
+}
+.cfg-warn-note {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.cfg-warn-note b { color: #b45309; font-weight: 600; }
+
 /* ========== Readonly display ========== */
 .cfg-readonly-text {
   font-size: 13px;

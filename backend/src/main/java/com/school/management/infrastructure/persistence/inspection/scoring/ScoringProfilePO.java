@@ -14,8 +14,9 @@ public class ScoringProfilePO {
     private Long id;
 
     private Long tenantId;
+    /** 历史保留: 兼容旧查询路径 (按 section 反查 profile). 主键索引仍是 projectId. */
     private Long sectionId;
-    /** 项目-owned (2026-05-23): profile 归属项目, Phase 2 可空, Phase 5 加 NOT NULL. */
+    /** 项目-owned: 评分方案与项目同生命周期, NOT NULL. */
     private Long projectId;
     private BigDecimal maxScore;
     private BigDecimal minScore;

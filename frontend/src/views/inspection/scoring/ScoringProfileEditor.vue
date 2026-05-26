@@ -42,12 +42,15 @@
       </InspEmptyState>
     </div>
 
+    <!-- Concept diagram (P3a 2026-05-26: 顶部数据流图 + 算例, 默认折叠) -->
+    <ConceptDiagram v-else-if="profile" />
+
     <!-- Main 2-column layout -->
-    <div v-else class="sp-body">
+    <div v-if="profile" class="sp-body">
       <!-- LEFT: Scrollable config column -->
       <div class="sp-left">
         <!-- Inline settings -->
-        <section class="sp-card">
+        <section id="sp-anchor-raw" class="sp-card">
           <header class="sp-section-head">
             <h3 class="sp-section-title">基础设置</h3>
           </header>
@@ -67,15 +70,11 @@
           </div>
         </section>
 
-        <section class="sp-card">
+        <section id="sp-anchor-dims" class="sp-card">
           <DimensionTable :dimensions="store.dimensions" />
         </section>
 
-        <!-- GradeBand 编辑区已移除 (评级引擎完美架构 Phase 5).
-             评级 (等级映射) 改由项目「评级」Tab 的 Indicator + GradeScheme 模型管理.
-             本编辑器仅保留 "评分" 范畴 (维度权重 / 计算规则 / 多评融合 / 趋势 / 衰减 / 校准). -->
-
-        <section class="sp-card">
+        <section id="sp-anchor-rules" class="sp-card">
           <CalcRuleChain
             :rules="store.rules"
             @create="handleCreateRule"
@@ -84,7 +83,7 @@
           />
         </section>
 
-        <section class="sp-card">
+        <section id="sp-anchor-adv" class="sp-card">
           <AdvancedScoringSettings
             v-if="profile"
             :profile="profile"
@@ -153,6 +152,7 @@ import CalcRuleChain from './components/CalcRuleChain.vue'
 import ScoreSimulator from './components/ScoreSimulator.vue'
 import VersionHistory from './components/VersionHistory.vue'
 import AdvancedScoringSettings from './components/AdvancedScoringSettings.vue'
+import ConceptDiagram from './components/ConceptDiagram.vue'
 import InspButton from '../shared/InspButton.vue'
 import InspSpinner from '../shared/InspSpinner.vue'
 import InspEmptyState from '../shared/InspEmptyState.vue'
@@ -207,8 +207,6 @@ const healthChecks = computed<HealthCheck[]>(() => {
     })
   }
 
-  // (评级 GradeBand 相关 health check 已移除 — 评级改由「评级」Tab 的 Indicator + GradeScheme 管理)
-
   // 5. Rules
   const ruleCount = store.rules.length
   const enabledRules = store.rules.filter(r => r.isEnabled).length
@@ -247,9 +245,9 @@ async function loadAll() {
       }
       if (p) {
         profile.value = p
+        // GradeBand 已迁移到「评级」Tab Indicator + GradeScheme, 此处不再加载
         await Promise.all([
           store.syncDimensions(p.id),
-          store.loadGradeBands(p.id),
           store.loadRules(p.id),
         ])
       }

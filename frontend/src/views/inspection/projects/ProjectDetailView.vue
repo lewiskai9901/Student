@@ -31,6 +31,9 @@ import type { OrgUnitTreeNode } from '@/api/organization'
 import type { SimpleUser } from '@/types/user'
 import { getRootSection } from '@/api/inspection/template'
 import SectionConfigView from './components/SectionConfigView.vue'
+import CustomThresholdInput from './components/CustomThresholdInput.vue'
+import PolicyFlowDiagram from './components/PolicyFlowDiagram.vue'
+import ProjectCorrectiveStrategy from './components/ProjectCorrectiveStrategy.vue'
 import { buildSectionTree, type SectionTreeNode } from '@/utils/sectionTree'
 import IndicatorScoreView from './components/IndicatorScoreView.vue'
 import EvaluationConfigView from './components/EvaluationConfigView.vue'
@@ -138,12 +141,35 @@ const filteredSubmissions = computed(() => {
 const configDirty = ref(false)
 const saving = ref(false)
 
+// 整改强度 → 自动建单门槛 (与后端 ProjectCorrectivePolicy.legacyFromStrictness 对齐)
+const autoCreateLevelFromStrictness = computed(() => {
+  switch (cf.value?.correctiveStrictness) {
+    case 'STRICT':  return 'LOW'
+    case 'NORMAL':  return 'NONE'
+    case 'LENIENT': return 'NONE'
+    case 'OFF':     return 'NONE'
+    default: return 'NONE'
+  }
+})
+
+// ════ 整改判定策略 — sev 阈值预设 (与后端 SeverityThresholds 保持一致) ════
+const STRICTNESS_THRESHOLD_DEFAULTS: Record<string, { high: number; medium: number; low: number }> = {
+  STRICT:  { high: 0.5, medium: 0.3, low: 0.1 },
+  NORMAL:  { high: 0.8, medium: 0.5, low: 0.3 },
+  LENIENT: { high: 0.9, medium: 0.7, low: 0.5 },
+  OFF:     { high: 0.8, medium: 0.5, low: 0.3 },
+}
+
 // 配置表单
 const cf = ref({ scopeType: 'ORG', scopeIds: [] as string[], startDate: '', endDate: '', assignmentMode: 'FREE', reviewRequired: true, autoPublish: false, projectName: '',
   // V108: 检查模式
   inspectionMode: 'PLANNED' as 'PLANNED'|'HYBRID'|'SPOT_CHECK'|'SELF_AUDIT'|'EMERGENCY',
-  // V110: 整改判定策略
+  // 整改判定策略: 4 档预设 + 可选自定义阈值
   correctiveStrictness: 'NORMAL' as 'STRICT'|'NORMAL'|'LENIENT'|'OFF',
+  useCustomThresholds: false as boolean,                  // 是否启用自定义阈值
+  customThresholdMode: 'RATING_SCALE' as 'RATING_SCALE'|'DIRECT_SCORE'|'DEDUCTION'|'LEVEL',
+  customRatingMax: 5 as number,                           // 星级满分
+  customDirectMax: 10 as number,                          // 直接打分满分
   correctiveThresholdHigh: null as number | null,
   correctiveThresholdMedium: null as number | null,
   correctiveThresholdLow: null as number | null,
@@ -519,6 +545,12 @@ async function loadInspectionModeFallback() {
       cf.value.correctiveDeadlineHigh = p.deadlineHigh ?? null
       cf.value.correctiveDeadlineMedium = p.deadlineMedium ?? null
       cf.value.correctiveDeadlineLow = p.deadlineLow ?? null
+      // 自定义阈值: 当返回的阈值偏离 strictness 默认值时, 自动开启
+      const defaults = STRICTNESS_THRESHOLD_DEFAULTS[cf.value.correctiveStrictness] || STRICTNESS_THRESHOLD_DEFAULTS.NORMAL
+      cf.value.useCustomThresholds =
+        (p.thresholdHigh != null && Math.abs(p.thresholdHigh - defaults.high) > 0.001) ||
+        (p.thresholdMedium != null && Math.abs(p.thresholdMedium - defaults.medium) > 0.001) ||
+        (p.thresholdLow != null && Math.abs(p.thresholdLow - defaults.low) > 0.001)
     }
   } catch { /* skip */ }
 }
@@ -629,9 +661,10 @@ async function saveConfig() {
     try {
       await http.put('/inspection/corrective/projects/' + projectId + '/policy', {
         strictness: cf.value.correctiveStrictness,
-        thresholdHigh: cf.value.correctiveThresholdHigh,
-        thresholdMedium: cf.value.correctiveThresholdMedium,
-        thresholdLow: cf.value.correctiveThresholdLow,
+        // 仅自定义启用时上送阈值, 否则后端用 strictness 预设默认
+        thresholdHigh: cf.value.useCustomThresholds ? cf.value.correctiveThresholdHigh : null,
+        thresholdMedium: cf.value.useCustomThresholds ? cf.value.correctiveThresholdMedium : null,
+        thresholdLow: cf.value.useCustomThresholds ? cf.value.correctiveThresholdLow : null,
         deadlineHigh: cf.value.correctiveDeadlineHigh,
         deadlineMedium: cf.value.correctiveDeadlineMedium,
         deadlineLow: cf.value.correctiveDeadlineLow,
@@ -765,10 +798,7 @@ async function onTeamChange() {
   }
 }
 
-// 进入本项目评分方案完整列表 (主菜单已隐藏, 通过此入口可达)
-function goProfileList() {
-  router.push({ path: '/inspection/scoring-profiles', query: { projectId: String(projectId) } })
-}
+// "查看全部"已删除 (ScoringProfileListView 已废) — 评分方案在项目内直接 inline 列表
 
 // P1 #23: 已发布项目的"克隆"按钮 — 跳到向导 clone 模式, 给"或克隆"文案真入口
 function handleCloneProject() {
@@ -921,8 +951,14 @@ onMounted(async () => {
       <button :class="['pdv-tab', activeTab === 'scores' && 'active']" @click="activeTab = 'scores'">
         <BarChart3 class="w-3.5 h-3.5" />成绩统计
       </button>
+      <button :class="['pdv-tab', activeTab === 'scoring' && 'active']" @click="activeTab = 'scoring'">
+        <ListTree class="w-3.5 h-3.5" />评分方案
+      </button>
       <button :class="['pdv-tab', activeTab === 'evaluation' && 'active']" @click="activeTab = 'evaluation'">
         <ListTree class="w-3.5 h-3.5" />评级
+      </button>
+      <button :class="['pdv-tab', activeTab === 'corrective' && 'active']" @click="activeTab = 'corrective'">
+        <ListTree class="w-3.5 h-3.5" />整改
       </button>
       <button :class="['pdv-tab', activeTab === 'settings' && 'active']" @click="activeTab = 'settings'">
         <Settings class="w-3.5 h-3.5" />设置
@@ -1194,6 +1230,69 @@ onMounted(async () => {
         <TeamTab :project-id="projectId" :is-draft="isDraft" @change="onTeamChange" />
       </div>
 
+      <!-- ===== 评分方案 Tab (P2: 独立 Tab, 从 设置 卡片提升) ===== -->
+      <div v-if="activeTab === 'scoring'">
+        <div class="pdv-tab-head">
+          <div class="pdv-tab-title-row">
+            <h2 class="pdv-tab-title">评分方案</h2>
+            <span v-if="scoringProfiles.length" class="pdv-tab-count">{{ scoringProfiles.length }} 套</span>
+          </div>
+          <div class="pdv-tab-ops">
+            <el-button v-if="isDraft && !isArchived" size="small" type="primary" plain @click="goCreateProfile" round>
+              <Plus class="w-3.5 h-3.5 mr-1" />新建评分方案
+            </el-button>
+            <el-button v-if="!isDraft && !isArchived" size="small" plain @click="handleCloneProject" round>
+              <Copy class="w-3.5 h-3.5 mr-1" />克隆为新项目
+            </el-button>
+          </div>
+        </div>
+        <div class="pdv-tab-desc">
+          本项目专属的评分方案 — 与项目同生命周期, 不与其他项目共享.
+          <span v-if="!isDraft">已发布项目只读, 如需修改请点"克隆为新项目"复制一份草稿.</span>
+        </div>
+        <div v-if="scoringProfiles.length === 0" class="cfg-empty cfg-empty--card">
+          暂无评分方案 ·
+          <el-link v-if="isDraft && !isArchived" type="primary" :underline="false" @click="goCreateProfile">立即新建</el-link>
+          <span v-else>已发布项目无法新建</span>
+        </div>
+        <div v-else class="pdv-profile-list">
+          <div v-for="p in scoringProfiles" :key="p.id" class="pdv-profile-row">
+            <div class="pdv-profile-meta">
+              <div class="pdv-profile-name">
+                <span v-if="sectionNameMap.get(p.sectionId)" class="pdv-profile-section">
+                  {{ sectionNameMap.get(p.sectionId)?.name }}
+                </span>
+                <span v-else class="pdv-profile-section pdv-profile-section--orphan">
+                  未关联分区
+                </span>
+                <span class="pdv-profile-id">#{{ p.id }}</span>
+              </div>
+              <div class="pdv-profile-stats">
+                <span>{{ p.minScore }}–{{ p.maxScore }} 分</span>
+                <span class="pdv-profile-sep">·</span>
+                <span>{{ p.precisionDigits }} 位精度</span>
+                <span v-if="p.multiRaterMode" class="pdv-profile-sep">·</span>
+                <span v-if="p.multiRaterMode">{{ p.multiRaterMode }}</span>
+                <template v-if="p.calibrationEnabled || p.trendFactorEnabled || p.decayEnabled">
+                  <span class="pdv-profile-sep">·</span>
+                  <span v-if="p.calibrationEnabled" class="pdv-profile-feat">校准</span>
+                  <span v-if="p.trendFactorEnabled" class="pdv-profile-feat">趋势</span>
+                  <span v-if="p.decayEnabled" class="pdv-profile-feat">衰减</span>
+                </template>
+              </div>
+            </div>
+            <el-button size="small" type="primary" plain @click="goEditProfile(p.id)">
+              <Pencil class="w-3.5 h-3.5 mr-0.5" />{{ isDraft && !isArchived ? '编辑' : '查看' }}
+            </el-button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== 整改 Tab (架构 E: 题目级整改设置) ===== -->
+      <div v-if="activeTab === 'corrective'">
+        <ProjectCorrectiveStrategy :project-id="projectId" />
+      </div>
+
 
       <div v-if="activeTab === 'settings'" class="cfg-section">
 
@@ -1343,164 +1442,12 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- V110: 整改判定策略 -->
-        <div class="cfg-card" :class="{ 'cfg-locked': isArchived }">
-          <div class="cfg-card-header">
-            <div class="cfg-card-title">整改判定策略</div>
-            <Lock v-if="isArchived" class="w-3.5 h-3.5 cfg-lock-icon" />
-          </div>
-          <div class="cfg-desc">
-            控制系统如何识别"需要整改的检查项". 99% 项目选预设即可,
-            高级用户可自定义阈值与 deadline.
-          </div>
-          <div class="cfg-row2">
-            <div class="cfg-field">
-              <label class="cfg-label">严格度预设</label>
-              <select v-model="cf.correctiveStrictness" class="cfg-select" :disabled="isArchived">
-                <option value="STRICT">严格 — 任何不达标都建整改单 (医院/食药监)</option>
-                <option value="NORMAL">标准 — 中等及以上严重度才建 (推荐)</option>
-                <option value="LENIENT">宽松 — 仅严重问题建单 (学校/社区)</option>
-                <option value="OFF">关闭 — 完全人工建单</option>
-              </select>
-              <div class="cfg-hint">
-                {{ cf.correctiveStrictness === 'STRICT' ? '阈值 H=0.5/M=0.3/L=0.1, 自动建单' :
-                   cf.correctiveStrictness === 'NORMAL' ? '阈值 H=0.8/M=0.5/L=0.3, 引擎建议+人工确认' :
-                   cf.correctiveStrictness === 'LENIENT' ? '阈值 H=0.9/M=0.7/L=0.5, 仅严重问题建议' :
-                   '不启用引擎, 检查员自主决定' }}
-              </div>
-            </div>
-            <div class="cfg-field">
-              <label class="cfg-label">建单流程</label>
-              <div class="cfg-readonly">
-                {{ cf.correctiveStrictness === 'STRICT'
-                    ? '✓ 提交后自动建立整改单'
-                    : cf.correctiveStrictness === 'OFF'
-                      ? '✗ 不自动判定'
-                      : '✓ 提交后弹候选确认对话框' }}
-              </div>
-              <div class="cfg-hint">
-                STRICT 自动建单 / NORMAL+LENIENT 候选确认 / OFF 完全人工
-              </div>
-            </div>
-          </div>
+        <!-- 架构 E (2026-05-25): 原"整改判定策略"卡已迁移到独立"整改" Tab.
+             模板纯粹 (评分定义) + 项目级题目逐项开关阈值 (在"整改" Tab 中). -->
 
-          <details class="cfg-advanced" :open="false">
-            <summary>高级: 自定义阈值与 deadline</summary>
-            <div class="cfg-row3">
-              <div class="cfg-field">
-                <label class="cfg-label">HIGH 阈值 (0-1)</label>
-                <el-input-number v-model="cf.correctiveThresholdHigh"
-                  :min="0" :max="1" :step="0.05" :precision="2"
-                  :disabled="isArchived || cf.correctiveStrictness === 'OFF'"
-                  placeholder="留空=用预设" class="w-full" />
-              </div>
-              <div class="cfg-field">
-                <label class="cfg-label">MEDIUM 阈值</label>
-                <el-input-number v-model="cf.correctiveThresholdMedium"
-                  :min="0" :max="1" :step="0.05" :precision="2"
-                  :disabled="isArchived || cf.correctiveStrictness === 'OFF'"
-                  placeholder="留空=用预设" class="w-full" />
-              </div>
-              <div class="cfg-field">
-                <label class="cfg-label">LOW 阈值</label>
-                <el-input-number v-model="cf.correctiveThresholdLow"
-                  :min="0" :max="1" :step="0.05" :precision="2"
-                  :disabled="isArchived || cf.correctiveStrictness === 'OFF'"
-                  placeholder="留空=用预设" class="w-full" />
-              </div>
-            </div>
-            <div class="cfg-row3">
-              <div class="cfg-field">
-                <label class="cfg-label">HIGH deadline (天)</label>
-                <el-input-number v-model="cf.correctiveDeadlineHigh"
-                  :min="1" :max="60"
-                  :disabled="isArchived || cf.correctiveStrictness === 'OFF'"
-                  placeholder="默认 3 天" class="w-full" />
-              </div>
-              <div class="cfg-field">
-                <label class="cfg-label">MEDIUM deadline (天)</label>
-                <el-input-number v-model="cf.correctiveDeadlineMedium"
-                  :min="1" :max="60"
-                  :disabled="isArchived || cf.correctiveStrictness === 'OFF'"
-                  placeholder="默认 7 天" class="w-full" />
-              </div>
-              <div class="cfg-field">
-                <label class="cfg-label">LOW deadline (天)</label>
-                <el-input-number v-model="cf.correctiveDeadlineLow"
-                  :min="1" :max="60"
-                  :disabled="isArchived || cf.correctiveStrictness === 'OFF'"
-                  placeholder="默认 14 天" class="w-full" />
-              </div>
-            </div>
-          </details>
-        </div>
 
-        <!-- 评分方案 (项目-owned) — P1 #27 移到策略之后 / 范围之前; P1 #28 去 SlidersHorizontal 图标统一视觉权重 -->
-        <div class="cfg-card">
-          <div class="cfg-card-header">
-            <div class="cfg-card-title">
-              评分方案
-              <span v-if="scoringProfiles.length" class="cfg-count">({{ scoringProfiles.length }})</span>
-            </div>
-            <div class="cfg-card-ops">
-              <el-button v-if="isDraft && !isArchived" size="small" type="primary" plain @click="goCreateProfile" round>
-                <Plus class="w-3.5 h-3.5 mr-1" />新建评分方案
-              </el-button>
-              <!-- P1 #23: 已发布项目加克隆按钮, 跳到向导的 clone 模式; 原"或克隆"文案有了真入口 -->
-              <el-button v-if="!isDraft && !isArchived" size="small" plain @click="handleCloneProject" round>
-                <Copy class="w-3.5 h-3.5 mr-1" />克隆为新项目
-              </el-button>
-              <el-button size="small" plain @click="goProfileList" round>
-                查看全部
-              </el-button>
-            </div>
-          </div>
-          <div class="cfg-desc">
-            本项目专属的评分方案 — 与项目同生命周期, 不与其他项目共享.
-            <!-- P1 #23: 旧文案"或克隆"无入口, 现在有按钮了 -->
-            <span v-if="!isDraft">已发布项目只读, 如需修改请点"克隆为新项目"复制一份草稿.</span>
-          </div>
-          <!-- 默认评分方案选择已移除 (评级引擎完美架构 Phase 1 — 删 default_scoring_profile_id);
-               评级配置改用「评级」Tab 的 Indicator 模型 (含 gradeScheme + triggerMode 等). -->
-          <!-- P2 #31: padding 16px 移到 CSS .cfg-empty--card; P1 #28 同步去图标 -->
+        <!-- 评分方案已迁移到独立 "评分方案" Tab (P2, 2026-05-26) -->
 
-          <div v-if="scoringProfiles.length === 0" class="cfg-empty cfg-empty--card">
-            暂无评分方案 ·
-            <el-link v-if="isDraft && !isArchived" type="primary" :underline="false" @click="goCreateProfile">立即新建</el-link>
-            <span v-else>已发布项目无法新建</span>
-          </div>
-          <div v-else class="pdv-profile-list">
-            <div v-for="p in scoringProfiles" :key="p.id" class="pdv-profile-row">
-              <div class="pdv-profile-meta">
-                <div class="pdv-profile-name">
-                  <span v-if="sectionNameMap.get(p.sectionId)" class="pdv-profile-section">
-                    {{ sectionNameMap.get(p.sectionId)?.name }}
-                  </span>
-                  <span v-else class="pdv-profile-section pdv-profile-section--orphan">
-                    未关联分区
-                  </span>
-                  <span class="pdv-profile-id">#{{ p.id }}</span>
-                </div>
-                <div class="pdv-profile-stats">
-                  <span>{{ p.minScore }}–{{ p.maxScore }} 分</span>
-                  <span class="pdv-profile-sep">·</span>
-                  <span>{{ p.precisionDigits }} 位精度</span>
-                  <span v-if="p.multiRaterMode" class="pdv-profile-sep">·</span>
-                  <span v-if="p.multiRaterMode">{{ p.multiRaterMode }}</span>
-                  <template v-if="p.calibrationEnabled || p.trendFactorEnabled || p.decayEnabled">
-                    <span class="pdv-profile-sep">·</span>
-                    <span v-if="p.calibrationEnabled" class="pdv-profile-feat">校准</span>
-                    <span v-if="p.trendFactorEnabled" class="pdv-profile-feat">趋势</span>
-                    <span v-if="p.decayEnabled" class="pdv-profile-feat">衰减</span>
-                  </template>
-                </div>
-              </div>
-              <el-button size="small" link type="primary" @click="goEditProfile(p.id)">
-                <Pencil class="w-3.5 h-3.5 mr-0.5" />{{ isDraft && !isArchived ? '编辑' : '查看' }}
-              </el-button>
-            </div>
-          </div>
-        </div>
 
         <!-- 检查范围 -->
         <div class="cfg-card" :class="{ 'cfg-locked': !isDraft }">
@@ -1592,6 +1539,41 @@ onMounted(async () => {
 <style scoped src="./ProjectDetailView.css"></style>
 
 <style scoped>
+/* ===== 独立 Tab 通用头 (P2 评分方案 Tab) ===== */
+.pdv-tab-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.pdv-tab-title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.pdv-tab-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--insp-ink-primary, #111827);
+  margin: 0;
+}
+.pdv-tab-count {
+  font-size: 12px;
+  color: var(--insp-ink-tertiary, #6b7280);
+  font-weight: 500;
+}
+.pdv-tab-ops {
+  display: inline-flex;
+  gap: 8px;
+  margin-left: auto;
+}
+.pdv-tab-desc {
+  font-size: 12px;
+  color: var(--insp-ink-tertiary, #6b7280);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
 /* ===== 评分方案卡片 (Phase 4: 评分方案下沉项目-owned) ===== */
 .cfg-card-ops {
   display: inline-flex;

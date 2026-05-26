@@ -55,18 +55,8 @@ const inspectionRoutes: RouteRecordRaw[] = [
           permission: 'insp:template:edit'
         }
       },
-      // P0-2: 评分方案独立列表入口
-      {
-        path: '/inspection/scoring-profiles',
-        name: 'ScoringProfileList',
-        component: () => import('@/views/inspection/scoring/ScoringProfileListView.vue'),
-        meta: {
-          title: '评分方案',
-          hidden: true,
-          requiresAuth: true,
-          permission: 'insp:scoring-profile:view'
-        }
-      },
+      // 评分方案"独立列表"入口已删除 (2026-05-26): 评分方案是项目-owned, 无独立列表语义.
+      // 评分方案编辑改从项目详情 → 评分方案 卡片进入.
       {
         path: '/inspection/scoring/:id',
         name: 'ScoringProfileEdit',

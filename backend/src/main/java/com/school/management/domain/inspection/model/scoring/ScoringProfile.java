@@ -11,11 +11,9 @@ import java.time.LocalDateTime;
 public class ScoringProfile extends AggregateRoot<Long> {
 
     private Long tenantId;
+    /** 历史保留: 兼容旧查询路径 (按 section 反查 profile). 主键索引是 projectId. */
     private Long sectionId;
-    /**
-     * 项目-owned (2026-05-23): 评分方案归属项目, 不再跨项目共享.
-     * Phase 2 阶段允许 null (旧数据迁移中); Phase 5 加 NOT NULL 约束.
-     */
+    /** 项目-owned: 评分方案与项目同生命周期, NOT NULL. */
     private Long projectId;
     private BigDecimal maxScore;
     private BigDecimal minScore;

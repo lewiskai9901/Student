@@ -7,19 +7,17 @@ import { ref } from 'vue'
 import type {
   ScoringProfile,
   ScoreDimension,
-  GradeBand,
   CalculationRule,
   ScoringProfileVersion,
   UpdateProfileRequest,
   CreateDimensionRequest,
   UpdateDimensionRequest,
-  CreateGradeBandRequest,
-  UpdateGradeBandRequest,
   CreateRuleRequest,
   UpdateRuleRequest,
   PublishVersionRequest,
   UpdateAdvancedSettingsRequest,
 } from '@/types/insp/scoring'
+// 评级 GradeBand 已迁移到「评级」Tab 的 Indicator + GradeScheme 模型, 此处不再导入
 import {
   getProfiles,
   getProfile,
@@ -32,10 +30,6 @@ import {
   updateDimension as updateDimensionApi,
   deleteDimension as deleteDimensionApi,
   syncDimensionsFromModules as syncDimensionsApi,
-  getGradeBands,
-  createGradeBand as createGradeBandApi,
-  updateGradeBand as updateGradeBandApi,
-  deleteGradeBand as deleteGradeBandApi,
   getRules,
   createRule as createRuleApi,
   updateRule as updateRuleApi,
@@ -51,7 +45,6 @@ export const useInspScoringStore = defineStore('inspScoring', () => {
   const profiles = ref<ScoringProfile[]>([])
   const currentProfile = ref<ScoringProfile | null>(null)
   const dimensions = ref<ScoreDimension[]>([])
-  const gradeBands = ref<GradeBand[]>([])
   const rules = ref<CalculationRule[]>([])
   const versions = ref<ScoringProfileVersion[]>([])
 
@@ -93,7 +86,6 @@ export const useInspScoringStore = defineStore('inspScoring', () => {
     await deleteProfileApi(id)
     currentProfile.value = null
     dimensions.value = []
-    gradeBands.value = []
     rules.value = []
   }
 
@@ -123,30 +115,6 @@ export const useInspScoringStore = defineStore('inspScoring', () => {
   async function deleteDimension(profileId: LongId, dimensionId: LongId) {
     await deleteDimensionApi(profileId, dimensionId)
     dimensions.value = dimensions.value.filter(d => d.id !== dimensionId)
-  }
-
-  // ===== GradeBand Actions =====
-
-  async function loadGradeBands(profileId: LongId) {
-    gradeBands.value = await getGradeBands(profileId)
-  }
-
-  async function createGradeBand(profileId: LongId, data: CreateGradeBandRequest) {
-    const band = await createGradeBandApi(profileId, data)
-    gradeBands.value.push(band)
-    return band
-  }
-
-  async function updateGradeBand(profileId: LongId, bandId: LongId, data: UpdateGradeBandRequest) {
-    const band = await updateGradeBandApi(profileId, bandId, data)
-    const idx = gradeBands.value.findIndex(b => String(b.id) === String(bandId))
-    if (idx >= 0) gradeBands.value[idx] = band
-    return band
-  }
-
-  async function deleteGradeBand(profileId: LongId, bandId: LongId) {
-    await deleteGradeBandApi(profileId, bandId)
-    gradeBands.value = gradeBands.value.filter(b => String(b.id) !== String(bandId))
   }
 
   // ===== Rule Actions =====
@@ -200,7 +168,6 @@ export const useInspScoringStore = defineStore('inspScoring', () => {
       await Promise.all([
         loadProfile(profileId),
         loadDimensions(profileId),
-        loadGradeBands(profileId),
         loadRules(profileId),
         loadVersions(profileId),
       ])
@@ -214,7 +181,6 @@ export const useInspScoringStore = defineStore('inspScoring', () => {
     profiles,
     currentProfile,
     dimensions,
-    gradeBands,
     rules,
     versions,
     loadProfiles,
@@ -230,10 +196,6 @@ export const useInspScoringStore = defineStore('inspScoring', () => {
     createDimension,
     updateDimension,
     deleteDimension,
-    loadGradeBands,
-    createGradeBand,
-    updateGradeBand,
-    deleteGradeBand,
     loadRules,
     createRule,
     updateRule,
