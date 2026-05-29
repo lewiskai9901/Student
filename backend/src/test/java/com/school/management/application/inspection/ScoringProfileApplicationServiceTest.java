@@ -255,7 +255,8 @@ class ScoringProfileApplicationServiceTest {
                     .thenAnswer(inv -> inv.getArgument(0));
 
             ScoringProfile result = service.updateProfile(
-                    500L, new BigDecimal("120"), new BigDecimal("10"), 3, 88L);
+                    500L, new BigDecimal("120"), new BigDecimal("10"), 3,
+                    null, null, null, null, null, 88L);
 
             assertThat(result.getMaxScore()).isEqualByComparingTo("120");
             assertThat(result.getMinScore()).isEqualByComparingTo("10");
@@ -268,7 +269,8 @@ class ScoringProfileApplicationServiceTest {
         void shouldRejectUpdateMissing() {
             when(profileRepository.findById(9L)).thenReturn(Optional.empty());
             assertThatThrownBy(() -> service.updateProfile(
-                    9L, BigDecimal.TEN, BigDecimal.ONE, 2, 1L))
+                    9L, BigDecimal.TEN, BigDecimal.ONE, 2,
+                    null, null, null, null, null, 1L))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("评分配置不存在");
         }
@@ -279,7 +281,8 @@ class ScoringProfileApplicationServiceTest {
             ScoringProfile p = profile(500L, 100L);
             when(profileRepository.findById(500L)).thenReturn(Optional.of(p));
             assertThatThrownBy(() -> service.updateProfile(
-                    500L, new BigDecimal("10"), new BigDecimal("99"), 2, 1L))
+                    500L, new BigDecimal("10"), new BigDecimal("99"), 2,
+                    null, null, null, null, null, 1L))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 

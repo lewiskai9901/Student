@@ -67,7 +67,10 @@ public class ScoringProfileController {
         Long userId = SecurityUtils.requireCurrentUserId();
         return Result.success(scoringService.updateProfile(id,
                 request.getMaxScore(), request.getMinScore(),
-                request.getPrecisionDigits(), userId));
+                request.getPrecisionDigits(),
+                request.getNormalizeBy(), request.getNormalizationMode(),
+                request.getBaselinePopulation(), request.getNormFloor(), request.getNormCap(),
+                userId));
     }
 
     @PutMapping("/{id}/advanced-settings")
@@ -291,6 +294,12 @@ public class ScoringProfileController {
         private BigDecimal maxScore;
         private BigDecimal minScore;
         private Integer precisionDigits;
+        // 1.13 章节级归一化 (规模公平性). 入参可空 — 缺省回落 NONE/1.
+        private NormalizeBy normalizeBy;
+        private NormalizationMode normalizationMode;
+        private Integer baselinePopulation;
+        private BigDecimal normFloor;
+        private BigDecimal normCap;
     }
 
     @lombok.Data

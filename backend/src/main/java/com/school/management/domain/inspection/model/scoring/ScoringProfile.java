@@ -140,6 +140,28 @@ public class ScoringProfile extends AggregateRoot<Long> {
         this.updatedAt = LocalDateTime.now();
     }
 
+    /**
+     * 更新章节级归一化 (规模公平性) 配置.
+     * 入参为 null 时按"未配置"语义兜底: 维度/方式回落 NONE, 基准回落 1, floor/cap 清空.
+     */
+    public void updateNormalization(NormalizeBy normalizeBy, NormalizationMode normalizationMode,
+                                    Integer baselinePopulation, BigDecimal normFloor, BigDecimal normCap,
+                                    Long updatedBy) {
+        if (baselinePopulation != null && baselinePopulation < 1) {
+            throw new IllegalArgumentException("baselinePopulation 必须 >= 1");
+        }
+        if (normFloor != null && normCap != null && normFloor.compareTo(normCap) > 0) {
+            throw new IllegalArgumentException("normFloor 不能大于 normCap");
+        }
+        this.normalizeBy = normalizeBy != null ? normalizeBy : NormalizeBy.NONE;
+        this.normalizationMode = normalizationMode != null ? normalizationMode : NormalizationMode.NONE;
+        this.baselinePopulation = baselinePopulation != null ? baselinePopulation : 1;
+        this.normFloor = normFloor;
+        this.normCap = normCap;
+        this.updatedBy = updatedBy;
+        this.updatedAt = LocalDateTime.now();
+    }
+
     public void updateAdvancedSettings(Boolean trendFactorEnabled, Integer trendLookbackDays,
                                         BigDecimal trendBonusPerPercent, BigDecimal trendPenaltyPerPercent,
                                         BigDecimal trendMaxAdjustment,

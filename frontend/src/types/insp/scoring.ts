@@ -19,11 +19,31 @@ export const RuleTypeConfig: Record<RuleType, { label: string; description: stri
   CUSTOM: { label: '自定义', description: '自定义公式规则', color: '#909399' },
 }
 
+// 1.13 章节级归一化 (规模公平性)
+export type NormalizeBy = 'NONE' | 'PER_MEMBER' | 'PER_PLACE' | 'PER_SUB_ORG'
+export type NormalizationMode = 'NONE' | 'PER_CAPITA' | 'SQRT_ADJUSTED'
+
+export const NormalizeByOptions: { value: NormalizeBy; label: string }[] = [
+  { value: 'NONE', label: '不归一' },
+  { value: 'PER_MEMBER', label: '按成员数' },
+  { value: 'PER_PLACE', label: '按场所数' },
+  { value: 'PER_SUB_ORG', label: '按子组织数' },
+]
+
+export const NormalizationModeOptions: { value: NormalizationMode; label: string }[] = [
+  { value: 'NONE', label: '不归一' },
+  { value: 'PER_CAPITA', label: '人均' },
+  { value: 'SQRT_ADJUSTED', label: '开方折中' },
+]
+
 // ==================== 评分配置 ====================
 
 export interface ScoringProfile {
   id: LongId
   tenantId: LongId
+  /** 2026-05-23 评级引擎完美架构: profile 项目-owned, projectId NOT NULL */
+  projectId: LongId
+  /** 检查模板分区 ID — 每 (project, section) 对应一套 profile */
   sectionId: LongId
   maxScore: number
   minScore: number
@@ -49,6 +69,12 @@ export interface ScoringProfile {
   calibrationMethod: string | null
   calibrationPeriodDays: number | null
   calibrationMinSamples: number | null
+  // 1.13 章节级归一化 (规模公平性)
+  normalizeBy: NormalizeBy
+  normalizationMode: NormalizationMode
+  baselinePopulation: number
+  normFloor: number | null
+  normCap: number | null
 
   createdBy: number | null
   createdAt: string
@@ -66,6 +92,12 @@ export interface UpdateProfileRequest {
   maxScore: number
   minScore: number
   precisionDigits: number
+  // 1.13 章节级归一化 (规模公平性). 可空 — 后端缺省回落 NONE/1.
+  normalizeBy?: NormalizeBy
+  normalizationMode?: NormalizationMode
+  baselinePopulation?: number
+  normFloor?: number | null
+  normCap?: number | null
 }
 
 export interface UpdateAdvancedSettingsRequest {

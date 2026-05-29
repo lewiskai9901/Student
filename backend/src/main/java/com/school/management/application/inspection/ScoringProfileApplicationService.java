@@ -102,10 +102,14 @@ public class ScoringProfileApplicationService {
     @CacheEvict(value = "ratingConfig", allEntries = true)
     public ScoringProfile updateProfile(Long id, BigDecimal maxScore,
                                          BigDecimal minScore, Integer precisionDigits,
+                                         NormalizeBy normalizeBy, NormalizationMode normalizationMode,
+                                         Integer baselinePopulation, BigDecimal normFloor, BigDecimal normCap,
                                          Long updatedBy) {
         ScoringProfile profile = profileRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("评分配置不存在: " + id));
         profile.update(maxScore, minScore, precisionDigits, updatedBy);
+        profile.updateNormalization(normalizeBy, normalizationMode,
+                baselinePopulation, normFloor, normCap, updatedBy);
         return profileRepository.save(profile);
     }
 
