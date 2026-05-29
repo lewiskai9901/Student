@@ -69,7 +69,9 @@ class ScoreAggregationServiceNormalizationTest {
                 .id(id).projectId(9L).sectionId(100L)
                 .normalizeBy(NormalizeBy.PER_MEMBER)
                 .normalizationMode(NormalizationMode.PER_CAPITA)
-                .baselinePopulation(40));
+                .baselinePopulation(40)
+                .normFloor(new BigDecimal("0.5"))
+                .normCap(new BigDecimal("2.0")));
     }
 
     private SubmissionDetail deductionDetail() {
@@ -114,6 +116,9 @@ class ScoreAggregationServiceNormalizationTest {
         assertThat(nc.isEnabled()).isTrue();
         assertThat(nc.getMode()).isEqualTo(NormalizationMode.PER_CAPITA);
         assertThat(nc.getBaselinePopulation()).isEqualTo(40);
+        // floor/cap 不能传反: normFloor→floorAt(下限 0.5), normCap→cappedAt(上限 2.0)
+        assertThat(nc.getFloorAt()).isEqualByComparingTo("0.5");
+        assertThat(nc.getCappedAt()).isEqualByComparingTo("2.0");
     }
 
     @Test
