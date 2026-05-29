@@ -297,6 +297,7 @@ public class ScoreCalculationDomainService {
                     penaltyItems.forEach(n -> penaltySet.add(n.asText()));
                     long count = itemOutputs.stream()
                             .filter(o -> penaltySet.contains(o.getItemCode())
+                                    // 非 0 = 该项有扣分动作 (与 VETO 一致); 区别于 BONUS 的 > 0
                                     && o.getFinalScore().compareTo(BigDecimal.ZERO) != 0)
                             .count();
                     if (count > 0) {

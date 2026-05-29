@@ -369,6 +369,11 @@ class ScoreCalculationDomainServiceTest {
             assertThat(app.isApplied()).isTrue();
             // 命中 2 项 (I1, I2)，每项扣 5 → -10
             assertThat(app.getAdjustment()).isEqualByComparingTo("-10");
+            // 端到端: 扣分流入最终分
+            // deductionTotal 累计所有负向 adjustment = -10
+            assertThat(result.getDeductionTotal()).isEqualByComparingTo("-10");
+            // 维度分 = base 100 + I1(-1) + I2(-1) + I3(0) = 98; 再被 PENALTY 扣 10 = 88
+            assertThat(result.getFinalScore()).isEqualByComparingTo("88");
         }
 
         @Test
