@@ -8,6 +8,8 @@ import com.school.management.infrastructure.persistence.inspection.analytics.Ins
 import com.school.management.infrastructure.persistence.inspection.analytics.ItemFrequencySummaryPO;
 import com.school.management.infrastructure.persistence.inspection.analytics.PeriodSummaryPO;
 import com.school.management.infrastructure.persistence.inspection.appeal.InspAppealPO;
+import com.school.management.infrastructure.persistence.inspection.correction.ProjectCorrectiveRulePO;
+import com.school.management.infrastructure.persistence.inspection.correction.ProjectItemOverridePO;
 import com.school.management.infrastructure.persistence.inspection.corrective.CorrectiveCaseMapper;
 import com.school.management.infrastructure.persistence.inspection.corrective.CorrectiveCasePO;
 import com.school.management.infrastructure.persistence.inspection.corrective.CorrectiveSubtaskPO;
@@ -151,6 +153,16 @@ public class InspectionUpstreamRouter {
             Long viaSubmission = resolveSubmissionOrgUnit(submissionMapper, a.getSubmissionId());
             return viaSubmission != null ? viaSubmission
                     : resolveProjectOrgUnit(projectMapper, a.getProjectId());
+        });
+
+        // 项目级整改规则配置 (架构 E): 均为项目级配置, 反查 project.orgUnitId
+        register(ProjectCorrectiveRulePO.class, po -> {
+            ProjectCorrectiveRulePO r = (ProjectCorrectiveRulePO) po;
+            return resolveProjectOrgUnit(projectMapper, r.getProjectId());
+        });
+        register(ProjectItemOverridePO.class, po -> {
+            ProjectItemOverridePO o = (ProjectItemOverridePO) po;
+            return resolveProjectOrgUnit(projectMapper, o.getProjectId());
         });
 
         // 评级引擎完美架构 (2026-05-23): IndicatorResult 反查 indicator.project.orgUnitId
