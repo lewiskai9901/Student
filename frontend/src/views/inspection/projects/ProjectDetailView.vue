@@ -37,6 +37,7 @@ import ProjectCorrectiveStrategy from './components/ProjectCorrectiveStrategy.vu
 import ScoringSectionCard from './components/ScoringSectionCard.vue'
 import { buildSectionTree, type SectionTreeNode } from '@/utils/sectionTree'
 import IndicatorScoreView from './components/IndicatorScoreView.vue'
+import OrgScoreRanking from './components/OrgScoreRanking.vue'
 import EvaluationConfigView from './components/EvaluationConfigView.vue'
 import EvaluationResultsView from './components/EvaluationResultsView.vue'
 import InspButton from '../shared/InspButton.vue'
@@ -1165,13 +1166,16 @@ onMounted(async () => {
           <span>{{ submissionsLoadFailedCount }} 个任务的提交记录加载失败, 下方成绩统计可能不完整</span>
           <button class="pdv-score-warn__retry" @click="loadProject">重新加载</button>
         </div>
-        <IndicatorScoreView
-          v-if="!isDraft"
-          :project-id="projectId"
-          :all-tasks="allTasks"
-          :all-submissions="allSubmissions"
-          :submissions-load-failed-count="submissionsLoadFailedCount"
-        />
+        <template v-if="!isDraft">
+          <!-- Phase 3.5b: 组织树 roll-up 得分排名 — 规模公平得分可见 -->
+          <OrgScoreRanking :project-id="projectId" />
+          <IndicatorScoreView
+            :project-id="projectId"
+            :all-tasks="allTasks"
+            :all-submissions="allSubmissions"
+            :submissions-load-failed-count="submissionsLoadFailedCount"
+          />
+        </template>
 
         <!-- P1 #14: Legacy score aggregation 整段死代码 (v-if="false") 已删除 — IndicatorScoreView 承接全部 -->
         <div v-else class="py-20 text-center">

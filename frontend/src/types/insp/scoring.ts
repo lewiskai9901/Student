@@ -207,6 +207,26 @@ export interface UpdateRuleRequest {
   exclusionGroup?: string
 }
 
+// ==================== 组织树 roll-up 得分 (Phase 3.5) ====================
+
+/**
+ * 某周期下单个组织单元的 roll-up 得分视图.
+ * 后端沿 tree_path 用均值汇总, 让"5 班 vs 20 班"的规模公平得分可见.
+ * 受数据权限约束 — 用户只看自己范围内组织.
+ */
+export interface OrgScoreView {
+  orgUnitId: LongId
+  orgUnitName: string
+  /** roll-up 得分 (decimal). 真数值, 非 id. */
+  score: number
+  /** 等级 (可空 — 未配置等级区间时为 null) */
+  grade: string | null
+  /** 直接子单位数 */
+  childCount: number
+  /** 参与汇总的来源样本数 */
+  sourceCount: number
+}
+
 // ==================== 版本快照 (1.7) ====================
 
 export interface ScoringProfileVersion {

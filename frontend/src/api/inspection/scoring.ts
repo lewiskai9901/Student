@@ -18,6 +18,7 @@ import type {
   UpdateRuleRequest,
   ScoringProfileVersion,
   PublishVersionRequest,
+  OrgScoreView,
 } from '@/types/insp/scoring'
 
 const BASE = '/inspection/scoring-profiles'
@@ -129,6 +130,19 @@ export function getVersion(profileId: LongId, version: number): Promise<ScoringP
   return http.get<ScoringProfileVersion>(`${BASE}/${profileId}/versions/${version}`)
 }
 
+// ==================== 组织树 roll-up 得分 (Phase 3.5) ====================
+
+/**
+ * 查某周期下各组织的 roll-up 得分排名 (后端已按 score 降序).
+ * @param projectId 检查项目 ID
+ * @param cycleDate 周期日期 (yyyy-MM-dd)
+ */
+export function getOrgScores(projectId: LongId, cycleDate: string): Promise<OrgScoreView[]> {
+  return http.get<OrgScoreView[]>('/inspection/org-scores', {
+    params: { projectId, cycleDate },
+  })
+}
+
 // ==================== API 对象 ====================
 
 export const scoringProfileApi = {
@@ -154,4 +168,5 @@ export const scoringProfileApi = {
   publishVersion,
   getVersions,
   getVersion,
+  getOrgScores,
 }
