@@ -289,6 +289,25 @@ public class ScoreCalculationDomainService {
                 return new RuleApplication(rule.getRuleCode(), rule.getRuleType(), false, BigDecimal.ZERO, null);
             }
 
+            case PENALTY: {
+                JsonNode penaltyItems = config.get("penaltyItems");
+                BigDecimal penaltyScore = getDecimal(config, "penaltyScore", BigDecimal.ZERO);
+                if (penaltyItems != null && penaltyItems.isArray()) {
+                    Set<String> penaltySet = new HashSet<>();
+                    penaltyItems.forEach(n -> penaltySet.add(n.asText()));
+                    long count = itemOutputs.stream()
+                            .filter(o -> penaltySet.contains(o.getItemCode())
+                                    && o.getFinalScore().compareTo(BigDecimal.ZERO) != 0)
+                            .count();
+                    if (count > 0) {
+                        BigDecimal adj = penaltyScore.abs()
+                                .multiply(BigDecimal.valueOf(count)).negate();
+                        return new RuleApplication(rule.getRuleCode(), rule.getRuleType(), true, adj, "扣分 x" + count);
+                    }
+                }
+                return new RuleApplication(rule.getRuleCode(), rule.getRuleType(), false, BigDecimal.ZERO, null);
+            }
+
             case PROGRESSIVE: {
                 JsonNode thresholds = config.get("thresholds");
                 if (thresholds != null && thresholds.isArray()) {

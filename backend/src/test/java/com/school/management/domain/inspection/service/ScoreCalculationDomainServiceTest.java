@@ -335,6 +335,43 @@ class ScoreCalculationDomainServiceTest {
         }
 
         @Test
+        @DisplayName("PENALTY 扣分规则 — 命中每个不合格项各扣 penaltyScore")
+        void applyRule_penalty_deductsPerMatchedItem() {
+            ScoringProfile profile = buildProfile(new BigDecimal("100"), new BigDecimal("-100"));
+
+            ScoreDimension dim = buildDimension(1L, "DIM1", "维度1", 100,
+                    new BigDecimal("100"), null);
+
+            // I1, I2 不合格 (DEDUCTION → finalScore != 0); I3 合格 (finalScore == 0)
+            List<ItemScoreInput> inputs = List.of(
+                    buildDeductionInput("I1", 1L, new BigDecimal("-1"), 1),
+                    buildDeductionInput("I2", 1L, new BigDecimal("-1"), 1),
+                    buildDeductionInput("I3", 1L, new BigDecimal("0"), 1)
+            );
+
+            CalculationRule penaltyRule = CalculationRule.builder()
+                    .id(1L)
+                    .ruleCode("PENALTY_RULE")
+                    .ruleType(RuleType.PENALTY)
+                    .priority(1)
+                    .isEnabled(true)
+                    .config("{\"penaltyItems\": [\"I1\", \"I2\"], \"penaltyScore\": \"5\"}")
+                    .build();
+
+            ScoreResult result = service.calculate(
+                    profile, List.of(dim), List.of(penaltyRule),
+                    Collections.emptyList(), inputs, 0);
+
+            RuleApplication app = result.getRuleApplications().stream()
+                    .filter(a -> a.getRuleType() == RuleType.PENALTY)
+                    .findFirst()
+                    .orElseThrow();
+            assertThat(app.isApplied()).isTrue();
+            // 命中 2 项 (I1, I2)，每项扣 5 → -10
+            assertThat(app.getAdjustment()).isEqualByComparingTo("-10");
+        }
+
+        @Test
         @DisplayName("禁用的规则不执行")
         void testDisabledRuleSkipped() {
             ScoringProfile profile = buildProfile(new BigDecimal("100"), BigDecimal.ZERO);
