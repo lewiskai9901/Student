@@ -84,7 +84,10 @@ class ComplexNormalizerTest {
             SubmissionDetail d = det(ScoringMode.RISK_MATRIX, "3,3", CFG, null);
             CorrectionVerdict v = engine.judge(d, ProjectCorrectivePolicy.normalDefault(), 0);
             assertEquals(Severity.HIGH, v.getSeverity());
-            assertTrue(v.isMustCorrect());
+            // V20260524_7: normalDefault() autoCreateLevel=NONE → HIGH 进入候选但不强制建单.
+            // 与 CorrectionEngineTest.fail_triggers_HIGH 一致 (此前本断言为 assertTrue, 是 Sprint 2
+            // 旧行为遗留, 架构 E 重构改默认策略后未同步更新 → 一直红).
+            assertFalse(v.isMustCorrect());
         }
     }
 
