@@ -338,6 +338,33 @@ public class ScoreCalculationDomainService {
                 return new RuleApplication(rule.getRuleCode(), rule.getRuleType(), false, BigDecimal.ZERO, null);
             }
 
+            case PROGRESSIVE_BONUS: {
+                JsonNode thresholds = config.get("thresholds");
+                if (thresholds != null && thresholds.isArray()) {
+                    // 合格/加分项数 = finalScore > 0 (与 BONUS 一致, 区别于 PROGRESSIVE 的 < 0)
+                    long bonusCount = itemOutputs.stream()
+                            .filter(o -> o.getFinalScore().compareTo(BigDecimal.ZERO) > 0)
+                            .count();
+
+                    List<JsonNode> sorted = new ArrayList<>();
+                    thresholds.forEach(sorted::add);
+                    sorted.sort(Comparator.comparingInt(n -> n.path("count").asInt(0)));
+
+                    BigDecimal bonus = BigDecimal.ZERO;
+                    for (JsonNode t : sorted) {
+                        if (bonusCount >= t.path("count").asInt(0)) {
+                            bonus = getDecimal(t, "bonus", BigDecimal.ZERO);
+                        }
+                    }
+                    if (bonus.compareTo(BigDecimal.ZERO) != 0) {
+                        // 加分: 不 negate
+                        return new RuleApplication(rule.getRuleCode(), rule.getRuleType(), true, bonus,
+                                "累进加分: " + bonusCount + " 项达标");
+                    }
+                }
+                return new RuleApplication(rule.getRuleCode(), rule.getRuleType(), false, BigDecimal.ZERO, null);
+            }
+
             case CUSTOM: {
                 String formula = config.has("formula") ? config.get("formula").asText() : null;
                 if (formula != null && !formula.isBlank()) {

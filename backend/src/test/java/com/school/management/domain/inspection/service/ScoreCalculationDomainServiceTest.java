@@ -377,6 +377,47 @@ class ScoreCalculationDomainServiceTest {
         }
 
         @Test
+        @DisplayName("PROGRESSIVE_BONUS 累进加分规则 — 达标项数命中最大阈值档")
+        void applyRule_progressiveBonus_addsByThreshold() {
+            // maxScore 足够大避免 clamp 截掉加分: 维度分 112 + bonus 6 = 118
+            ScoringProfile profile = buildProfile(new BigDecimal("130"), new BigDecimal("-100"));
+
+            ScoreDimension dim = buildDimension(1L, "DIM1", "维度1", 100,
+                    new BigDecimal("100"), null);
+
+            // 4 个合格(加分)项, finalScore = 3 > 0 each
+            List<ItemScoreInput> inputs = List.of(
+                    buildAdditionInput("Q1", 1L, new BigDecimal("3"), 1),
+                    buildAdditionInput("Q2", 1L, new BigDecimal("3"), 1),
+                    buildAdditionInput("Q3", 1L, new BigDecimal("3"), 1),
+                    buildAdditionInput("Q4", 1L, new BigDecimal("3"), 1)
+            );
+
+            CalculationRule progressiveBonusRule = CalculationRule.builder()
+                    .id(1L)
+                    .ruleCode("PROGRESSIVE_BONUS_RULE")
+                    .ruleType(RuleType.PROGRESSIVE_BONUS)
+                    .priority(1)
+                    .isEnabled(true)
+                    .config("{\"thresholds\": [{\"count\": 2, \"bonus\": 3}, {\"count\": 4, \"bonus\": 6}]}")
+                    .build();
+
+            ScoreResult result = service.calculate(
+                    profile, List.of(dim), List.of(progressiveBonusRule),
+                    Collections.emptyList(), inputs, 0);
+
+            RuleApplication app = result.getRuleApplications().stream()
+                    .filter(a -> a.getRuleType() == RuleType.PROGRESSIVE_BONUS)
+                    .findFirst()
+                    .orElseThrow();
+            assertThat(app.isApplied()).isTrue();
+            // 4 项达标 → 命中 count>=4 档 → +6 (加分, 不 negate)
+            assertThat(app.getAdjustment()).isEqualByComparingTo("6");
+            // 端到端: 加分流入 bonusTotal
+            assertThat(result.getBonusTotal()).isEqualByComparingTo("6");
+        }
+
+        @Test
         @DisplayName("禁用的规则不执行")
         void testDisabledRuleSkipped() {
             ScoringProfile profile = buildProfile(new BigDecimal("100"), BigDecimal.ZERO);
