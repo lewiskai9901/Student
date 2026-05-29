@@ -93,6 +93,7 @@ public class DefaultNormalizationBasisResolver implements NormalizationBasisReso
                 population = (int) orgUnitRepository.countByParentId(orgUnitId);
                 break;
             default:
+                log.warn("未处理的归一化维度 normalizeBy={}, 回退不归一", normalizeBy);
                 population = 0;
         }
         return population > 0 ? population : 1;
