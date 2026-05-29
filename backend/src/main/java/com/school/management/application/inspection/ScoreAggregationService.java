@@ -232,11 +232,8 @@ public class ScoreAggregationService {
                                     break;
                                 }
                             }
-                            if (grade != null && maxPossible.compareTo(BigDecimal.ZERO) > 0) {
-                                BigDecimal pct = sum.multiply(BigDecimal.valueOf(100))
-                                        .divide(maxPossible, 2, RoundingMode.HALF_UP);
-                                passed = pct.compareTo(BigDecimal.valueOf(60)) >= 0;
-                            }
+                            // 系统为等级制, 无配置化及格线: 不臆造 60 分硬判定.
+                            // passed 保持 null (未知), grade 仍按 gradeBand 给出.
                         }
                     }
                 } catch (Exception e) {
@@ -266,9 +263,7 @@ public class ScoreAggregationService {
                                         break;
                                     }
                                 }
-                                if (grade != null) {
-                                    passed = percentage.compareTo(BigDecimal.valueOf(60)) >= 0;
-                                }
+                                // 等级制, 无配置化及格线: 不臆造 60 分硬判定, passed 保持 null.
                             }
                         }
                     } catch (Exception e) {
