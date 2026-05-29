@@ -1,5 +1,7 @@
 package com.school.management.infrastructure.persistence.inspection.scoring;
 
+import com.school.management.domain.inspection.model.scoring.NormalizationMode;
+import com.school.management.domain.inspection.model.scoring.NormalizeBy;
 import com.school.management.domain.inspection.model.scoring.ScoringProfile;
 import com.school.management.domain.inspection.repository.ScoringProfileRepository;
 import org.springframework.stereotype.Repository;
@@ -102,6 +104,12 @@ public class ScoringProfileRepositoryImpl implements ScoringProfileRepository {
         po.setCalibrationMethod(d.getCalibrationMethod());
         po.setCalibrationPeriodDays(d.getCalibrationPeriodDays());
         po.setCalibrationMinSamples(d.getCalibrationMinSamples());
+        // 1.13 章节级归一化 (枚举 -> String, null 兜底 NONE)
+        po.setNormalizeBy(d.getNormalizeBy() != null ? d.getNormalizeBy().name() : NormalizeBy.NONE.name());
+        po.setNormalizationMode(d.getNormalizationMode() != null ? d.getNormalizationMode().name() : NormalizationMode.NONE.name());
+        po.setBaselinePopulation(d.getBaselinePopulation() != null ? d.getBaselinePopulation() : 1);
+        po.setNormFloor(d.getNormFloor());
+        po.setNormCap(d.getNormCap());
 
         po.setCreatedBy(d.getCreatedBy());
         po.setCreatedAt(d.getCreatedAt());
@@ -140,10 +148,38 @@ public class ScoringProfileRepositoryImpl implements ScoringProfileRepository {
                 .calibrationMethod(po.getCalibrationMethod())
                 .calibrationPeriodDays(po.getCalibrationPeriodDays())
                 .calibrationMinSamples(po.getCalibrationMinSamples())
+                // 1.13 章节级归一化 (String -> 枚举, null/非法值兜底 NONE)
+                .normalizeBy(parseNormalizeBy(po.getNormalizeBy()))
+                .normalizationMode(parseNormalizationMode(po.getNormalizationMode()))
+                .baselinePopulation(po.getBaselinePopulation() != null ? po.getBaselinePopulation() : 1)
+                .normFloor(po.getNormFloor())
+                .normCap(po.getNormCap())
 
                 .createdBy(po.getCreatedBy())
                 .createdAt(po.getCreatedAt())
                 .updatedBy(po.getUpdatedBy())
                 .updatedAt(po.getUpdatedAt()));
+    }
+
+    private static NormalizeBy parseNormalizeBy(String s) {
+        if (s == null || s.isBlank()) {
+            return NormalizeBy.NONE;
+        }
+        try {
+            return NormalizeBy.valueOf(s.trim());
+        } catch (IllegalArgumentException ex) {
+            return NormalizeBy.NONE;
+        }
+    }
+
+    private static NormalizationMode parseNormalizationMode(String s) {
+        if (s == null || s.isBlank()) {
+            return NormalizationMode.NONE;
+        }
+        try {
+            return NormalizationMode.valueOf(s.trim());
+        } catch (IllegalArgumentException ex) {
+            return NormalizationMode.NONE;
+        }
     }
 }

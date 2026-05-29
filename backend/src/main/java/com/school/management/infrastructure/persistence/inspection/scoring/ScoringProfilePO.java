@@ -47,6 +47,13 @@ public class ScoringProfilePO {
     private Integer calibrationPeriodDays;
     private Integer calibrationMinSamples;
 
+    // 1.13 章节级归一化 (规模公平性) — 枚举存 String, 与既有 decayMode/multiRaterMode 风格一致
+    private String normalizeBy;            // NONE|PER_MEMBER|PER_PLACE|PER_SUB_ORG
+    private String normalizationMode;      // NONE|PER_CAPITA|SQRT_ADJUSTED
+    private Integer baselinePopulation;
+    private BigDecimal normFloor;
+    private BigDecimal normCap;
+
     private Long createdBy;
     private LocalDateTime createdAt;
     private Long updatedBy;

@@ -16,6 +16,12 @@ CREATE TABLE IF NOT EXISTS `insp_scoring_profiles` (
     `aggregation_method`      VARCHAR(20)    NOT NULL DEFAULT 'WEIGHTED_AVG',
     `formula_engine`          VARCHAR(20)    NOT NULL DEFAULT 'EXPRESSION',
     `default_normalization`   JSON           NULL     COMMENT '全局默认归一化配置',
+    -- 章节级归一化 (规模公平性, V20260529_1) — 全新建库与迁移后保持一致
+    `normalize_by`            VARCHAR(20)    NOT NULL DEFAULT 'NONE' COMMENT '归一化分母维度 NONE|PER_MEMBER|PER_PLACE|PER_SUB_ORG',
+    `normalization_mode`      VARCHAR(20)    NOT NULL DEFAULT 'NONE' COMMENT '归一化模式 NONE|PER_CAPITA|SQRT_ADJUSTED',
+    `baseline_population`     INT            NOT NULL DEFAULT 1      COMMENT '归一化基准人口/规模',
+    `norm_floor`              DECIMAL(10,4)  NULL                    COMMENT '归一化后下限(NULL=不限)',
+    `norm_cap`                DECIMAL(10,4)  NULL                    COMMENT '归一化后上限(NULL=不限)',
     `created_by`              BIGINT         NULL,
     `created_at`              DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_by`              BIGINT         NULL,

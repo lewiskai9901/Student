@@ -44,6 +44,13 @@ public class ScoringProfile extends AggregateRoot<Long> {
     private Integer calibrationPeriodDays;
     private Integer calibrationMinSamples;
 
+    // 1.13 章节级归一化 (规模公平性) — 供装配层解析归一化分母时读取
+    private NormalizeBy normalizeBy;          // NONE|PER_MEMBER|PER_PLACE|PER_SUB_ORG
+    private NormalizationMode normalizationMode; // NONE|PER_CAPITA|SQRT_ADJUSTED
+    private Integer baselinePopulation;       // 归一化基准人口/规模, 默认 1
+    private BigDecimal normFloor;             // 归一化后下限 (NULL=不限)
+    private BigDecimal normCap;               // 归一化后上限 (NULL=不限)
+
     private Long createdBy;
     private LocalDateTime createdAt;
     private Long updatedBy;
@@ -81,6 +88,12 @@ public class ScoringProfile extends AggregateRoot<Long> {
         this.calibrationMethod = builder.calibrationMethod;
         this.calibrationPeriodDays = builder.calibrationPeriodDays;
         this.calibrationMinSamples = builder.calibrationMinSamples;
+        // 1.13 章节级归一化
+        this.normalizeBy = builder.normalizeBy != null ? builder.normalizeBy : NormalizeBy.NONE;
+        this.normalizationMode = builder.normalizationMode != null ? builder.normalizationMode : NormalizationMode.NONE;
+        this.baselinePopulation = builder.baselinePopulation != null ? builder.baselinePopulation : 1;
+        this.normFloor = builder.normFloor;
+        this.normCap = builder.normCap;
 
         this.createdBy = builder.createdBy;
         this.createdAt = builder.createdAt != null ? builder.createdAt : LocalDateTime.now();
@@ -190,6 +203,12 @@ public class ScoringProfile extends AggregateRoot<Long> {
     public String getCalibrationMethod() { return calibrationMethod; }
     public Integer getCalibrationPeriodDays() { return calibrationPeriodDays; }
     public Integer getCalibrationMinSamples() { return calibrationMinSamples; }
+    // 1.13 章节级归一化
+    public NormalizeBy getNormalizeBy() { return normalizeBy; }
+    public NormalizationMode getNormalizationMode() { return normalizationMode; }
+    public Integer getBaselinePopulation() { return baselinePopulation; }
+    public BigDecimal getNormFloor() { return normFloor; }
+    public BigDecimal getNormCap() { return normCap; }
 
     public Long getCreatedBy() { return createdBy; }
     public LocalDateTime getCreatedAt() { return createdAt; }
@@ -225,6 +244,11 @@ public class ScoringProfile extends AggregateRoot<Long> {
         private String calibrationMethod;
         private Integer calibrationPeriodDays;
         private Integer calibrationMinSamples;
+        private NormalizeBy normalizeBy;
+        private NormalizationMode normalizationMode;
+        private Integer baselinePopulation;
+        private BigDecimal normFloor;
+        private BigDecimal normCap;
         private Long createdBy;
         private LocalDateTime createdAt;
         private Long updatedBy;
@@ -254,6 +278,11 @@ public class ScoringProfile extends AggregateRoot<Long> {
         public Builder calibrationMethod(String v) { this.calibrationMethod = v; return this; }
         public Builder calibrationPeriodDays(Integer v) { this.calibrationPeriodDays = v; return this; }
         public Builder calibrationMinSamples(Integer v) { this.calibrationMinSamples = v; return this; }
+        public Builder normalizeBy(NormalizeBy v) { this.normalizeBy = v; return this; }
+        public Builder normalizationMode(NormalizationMode v) { this.normalizationMode = v; return this; }
+        public Builder baselinePopulation(Integer v) { this.baselinePopulation = v; return this; }
+        public Builder normFloor(BigDecimal v) { this.normFloor = v; return this; }
+        public Builder normCap(BigDecimal v) { this.normCap = v; return this; }
         public Builder createdBy(Long createdBy) { this.createdBy = createdBy; return this; }
         public Builder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
         public Builder updatedBy(Long updatedBy) { this.updatedBy = updatedBy; return this; }
