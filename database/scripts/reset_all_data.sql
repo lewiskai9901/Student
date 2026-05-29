@@ -173,7 +173,6 @@ TRUNCATE TABLE insp_item_compliance_mappings;
 TRUNCATE TABLE insp_knowledge_articles;
 TRUNCATE TABLE insp_report_templates;
 TRUNCATE TABLE insp_violation_records;
-TRUNCATE TABLE insp_rater_calibration_stats;
 TRUNCATE TABLE insp_rating_dimensions;
 TRUNCATE TABLE insp_rating_results;
 TRUNCATE TABLE insp_rating_links;
