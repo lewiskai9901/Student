@@ -1,6 +1,8 @@
 package com.school.management.config;
 
 import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.Operation;
+import io.swagger.v3.oas.models.PathItem;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
@@ -8,12 +10,17 @@ import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.servers.Server;
+import org.springdoc.core.customizers.GlobalOpenApiCustomizer;
 import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * OpenAPI (Swagger) 配置类
@@ -108,6 +115,85 @@ public class OpenApiConfig {
 
                 // 全局应用安全认证
                 .addSecurityItem(new SecurityRequirement().addList("bearer-jwt"));
+    }
+
+    /**
+     * operationId 去重定稳定器.
+     *
+     * <p>问题: springdoc 默认用 controller 方法名当 operationId, 多个 controller 都有
+     * {@code list/create/update/delete} 时会碰撞, springdoc 按扫描顺序加数字后缀
+     * (list, list2, ... list16). hey-api 据此生成 SDK 函数名, 于是前端 import 写成
+     * {@code list16 as listHolidayCalendarsSdk} —— 一旦增删任何端点, 序号整体重排,
+     * alias 静默指向错误端点 (编译可能仍过, 运行时调错 API).
+     *
+     * <p>方案: 只对"碰撞"的 operationId 重命名为稳定且唯一的形式 (方法名 + 路径末段),
+     * 唯一的不动. 这样生成的 SDK 名稳定有意义 (listHolidayCalendars), 旧的泛化名
+     * (list/list16) 不再存在 —— 任何残留的旧 import 变成编译错误而非静默误绑,
+     * type-check 即可兜底全部破绽. 命名只由 path 派生, 跨 regen 稳定.
+     */
+    @Bean
+    public GlobalOpenApiCustomizer uniqueOperationIdCustomizer() {
+        return openApi -> {
+            if (openApi.getPaths() == null) return;
+            // pass 1: 按"基名"统计 — springdoc 已对碰撞方法名加了 _N 后缀
+            // (list, list_1, ... list_15), 各串本身唯一. 真正的碰撞要剥掉 _N 后缀按基名归组.
+            Map<String, Integer> baseCounts = new HashMap<>();
+            openApi.getPaths().values().forEach(pi ->
+                    pi.readOperations().forEach(op -> {
+                        if (op.getOperationId() != null) {
+                            baseCounts.merge(baseName(op.getOperationId()), 1, Integer::sum);
+                        }
+                    }));
+            // pass 2: 基名碰撞 (>1) 的全部重命名为稳定 path 派生名; 唯一的不动. used 保证最终唯一.
+            Set<String> used = new HashSet<>();
+            for (Map.Entry<String, PathItem> pe : openApi.getPaths().entrySet()) {
+                String path = pe.getKey();
+                for (Map.Entry<PathItem.HttpMethod, Operation> oe : pe.getValue().readOperationsMap().entrySet()) {
+                    Operation op = oe.getValue();
+                    String id = op.getOperationId();
+                    if (id == null) continue;
+                    if (baseCounts.get(baseName(id)) <= 1) {
+                        used.add(id);
+                        continue;
+                    }
+                    String base = stableOperationId(baseName(id), path);
+                    String candidate = base;
+                    int n = 2;
+                    while (used.contains(candidate)) candidate = base + n++;
+                    op.setOperationId(candidate);
+                    used.add(candidate);
+                }
+            }
+        };
+    }
+
+    /**
+     * 由方法名 + 路径派生稳定唯一 operationId.
+     * 例: ("list", "/api/inspection/holiday-calendars") → "listHolidayCalendars".
+     * 跳过版本段 (api/v2) 与路径参数 ({id}); 若方法名已以末段结尾则不重复拼接.
+     */
+    /** 剥掉 springdoc 碰撞去重加的 _N 后缀, 得到原始方法名 (基名). */
+    private static String baseName(String operationId) {
+        return operationId.replaceAll("_\\d+$", "");
+    }
+
+    private static String stableOperationId(String methodId, String path) {
+        StringBuilder tail = new StringBuilder();
+        String lastSeg = "";
+        for (String seg : path.split("/")) {
+            if (seg.isEmpty() || seg.startsWith("{")) continue;
+            if (seg.equalsIgnoreCase("api") || seg.matches("v\\d+")) continue;
+            lastSeg = seg;
+        }
+        // 取末段, kebab/snake → PascalCase
+        for (String word : lastSeg.split("[-_]")) {
+            if (word.isEmpty()) continue;
+            tail.append(Character.toUpperCase(word.charAt(0))).append(word.substring(1));
+        }
+        String suffix = tail.toString();
+        if (suffix.isEmpty()) return methodId;
+        if (methodId.toLowerCase().endsWith(suffix.toLowerCase())) return methodId;
+        return methodId + suffix;
     }
 
     /**

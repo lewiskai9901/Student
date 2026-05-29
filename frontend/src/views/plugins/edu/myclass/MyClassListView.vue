@@ -80,7 +80,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Trophy, DataAnalysis, ArrowRight, School } from '@element-plus/icons-vue'
-import { getMyClasses1 } from '@/api-generated/sdk.gen'
+import { getMyClasses2 as getMyClasses1 } from '@/api-generated/sdk.gen'
 import type { MyClassItem } from '@/types/myClass'
 import MiniTrendChart from './components/MiniTrendChart.vue'
 

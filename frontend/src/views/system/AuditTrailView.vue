@@ -280,7 +280,7 @@ import {
   Search, RotateCcw, X, Loader2, FileText,
   ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight
 } from 'lucide-vue-next'
-import { list21 as listAuditTrail } from '@/api-generated/sdk.gen'
+import { listAuditTrail } from '@/api-generated/sdk.gen'
 import { getSimpleUserList } from '@/api/user'
 import type { SimpleUser } from '@/types/user'
 

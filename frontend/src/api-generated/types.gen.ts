@@ -118,40 +118,21 @@ export type ActivityEventQuery = {
 }
 
 export type AdHocRequest = {
-  projectId?: LongId
+  projectId: LongId
   reason?: string
 }
 
 export type AddEvidenceRequest = {
   detailId?: LongId
-  evidenceType?: 'PHOTO' | 'VIDEO' | 'DOCUMENT' | 'SIGNATURE' | 'GPS_POINT'
+  evidenceType: 'PHOTO' | 'VIDEO' | 'DOCUMENT' | 'SIGNATURE' | 'GPS_POINT'
   fileName?: string
-  fileUrl?: string
+  fileUrl: string
 }
 
 export type AddInspectorRequest = {
-  role?: 'INSPECTOR' | 'REVIEWER' | 'LEAD'
-  userId?: LongId
+  role: 'INSPECTOR' | 'REVIEWER' | 'LEAD'
+  userId: LongId
   userName?: string
-}
-
-export type AdvancedScoringRequest = {
-  calibrationEnabled?: boolean
-  calibrationMethod?: string
-  calibrationMinSamples?: number
-  calibrationPeriodDays?: number
-  consensusThreshold?: number
-  decayEnabled?: boolean
-  decayFloor?: number
-  decayMode?: string
-  decayRatePerDay?: number
-  multiRaterMode?: string
-  raterWeightBy?: string
-  trendBonusPerPercent?: number
-  trendFactorEnabled?: boolean
-  trendLookbackDays?: number
-  trendMaxAdjustment?: number
-  trendPenaltyPerPercent?: number
 }
 
 /**
@@ -221,7 +202,7 @@ export type AssignRoleWithScopeRequest = {
 }
 
 export type AssignTaskRequest = {
-  inspectorId?: LongId
+  inspectorId: LongId
   inspectorName?: string
 }
 
@@ -256,6 +237,21 @@ export type AuditTrailEntry = {
   userName?: string
 }
 
+export type BatchAssignRequest = {
+  inspectorId: LongId
+  inspectorName?: string
+  taskIds: Array<LongId>
+}
+
+/**
+ * Response data
+ */
+export type BatchAssignResponse = {
+  errors?: Array<string>
+  failureCount?: number
+  successCount?: number
+}
+
 export type BatchDeleteRequest = {
   ids?: Array<LongId>
 }
@@ -264,16 +260,16 @@ export type CalcRuleRequest = {
   config?: string
   isEnabled?: boolean
   priority?: number
-  ruleCode?: string
-  ruleName?: string
-  ruleType?: string
+  ruleCode: string
+  ruleName: string
+  ruleType: string
 }
 
 export type CalculateRequest = {
   periodEnd?: string
   periodStart?: string
-  periodType?: string
-  projectId?: LongId
+  periodType: string
+  projectId: LongId
 }
 
 /**
@@ -391,8 +387,16 @@ export type ClientError = {
 }
 
 export type CloneGradeSchemeRequest = {
-  displayName?: string
-  sourceSchemeId?: LongId
+  displayName: string
+  sourceSchemeId: LongId
+}
+
+export type CloneProjectRequest = {
+  cloneInspectors?: boolean
+  endDate?: string
+  orgUnitId: LongId
+  projectName: string
+  startDate: string
 }
 
 /**
@@ -442,16 +446,6 @@ export type CompleteRequest = {
       [key: string]: unknown
     }
   }
-}
-
-export type CompleteSubmissionRequest = {
-  baseScore?: number
-  bonusTotal?: number
-  deductionTotal?: number
-  finalScore?: number
-  grade?: string
-  passed?: boolean
-  scoreBreakdown?: string
 }
 
 export type ConfirmRequest = {
@@ -628,11 +622,11 @@ export type CreateAcademicYearCommand = {
 }
 
 export type CreateAlertRuleRequest = {
-  metricType?: string
+  metricType: string
   notificationChannels?: string
   projectId?: LongId
-  ruleName?: string
-  severity?: string
+  ruleName: string
+  severity: string
   thresholdConfig?: string
 }
 
@@ -652,8 +646,8 @@ export type CreateCaseRequest = {
 }
 
 export type CreateCatalogRequest = {
-  catalogCode?: string
-  catalogName?: string
+  catalogCode: string
+  catalogName: string
   description?: string
   icon?: string
   parentId?: LongId
@@ -663,9 +657,9 @@ export type CreateCatalogRequest = {
 export type CreateChildSectionRequest = {
   conditionLogic?: string
   isRepeatable?: boolean
-  parentSectionId?: LongId
-  sectionCode?: string
-  sectionName?: string
+  parentSectionId: LongId
+  sectionCode: string
+  sectionName: string
   sortOrder?: number
   targetType?: string
 }
@@ -749,11 +743,11 @@ export type CreateCompositeRequest = {
   gradeSchemeId?: LongId
   gradeThresholds?: string
   missingPolicy?: string
-  name?: string
+  name: string
   normalization?: string
   normalizationConfig?: string
   parentIndicatorId?: LongId
-  projectId?: LongId
+  projectId: LongId
   sortOrder?: number
 }
 
@@ -827,7 +821,7 @@ export type CreateEscalationPolicyRequest = {
 }
 
 export type CreateFromLibraryRequest = {
-  libraryItemId?: LongId
+  libraryItemId: LongId
   syncWithLibrary?: boolean
 }
 
@@ -850,17 +844,26 @@ export type CreateGradeMajorDirectionRequest = {
 
 export type CreateGradeSchemeRequest = {
   description?: string
-  displayName?: string
+  displayName: string
   grades?: Array<GradeDefRequest>
-  schemeType?: string
+  schemeType: string
 }
 
 export type CreateHolidayCalendarRequest = {
-  calendarName?: string
+  calendarName: string
   holidays?: string
   isDefault?: boolean
   workdays?: string
-  year?: number
+  year: number
+}
+
+export type CreateIssueCategoryRequest = {
+  categoryCode: string
+  categoryName: string
+  description?: string
+  icon?: string
+  parentId?: LongId
+  sortOrder?: number
 }
 
 export type CreateItemRequest = {
@@ -872,9 +875,9 @@ export type CreateItemRequest = {
   inputMode?: string
   isRequired?: boolean
   isScored?: boolean
-  itemCode?: string
-  itemName?: string
-  itemType?:
+  itemCode: string
+  itemName: string
+  itemType:
     | 'TEXT'
     | 'TEXTAREA'
     | 'RICH_TEXT'
@@ -909,18 +912,34 @@ export type CreateItemRequest = {
 }
 
 export type CreateLeafRequest = {
+  countThreshold?: number
+  countThresholdValid?: boolean
   evaluationMethod?: string
   evaluationPeriod?: string
   gradeSchemeId?: LongId
   gradeThresholds?: string
-  name?: string
+  latePolicy?: 'REVISE_ORIGINAL' | 'CARRY_FORWARD' | 'EXCLUDE'
+  missingPolicy?: 'IGNORE' | 'ZERO' | 'MAX' | 'WAIT'
+  missingPolicyEnum?: 'IGNORE' | 'ZERO' | 'MAX' | 'WAIT'
+  name: string
   normalization?: string
   normalizationConfig?: string
   parentIndicatorId?: LongId
-  projectId?: LongId
+  projectId: LongId
+  rankDirection?: 'ASC' | 'DESC'
+  sectionsProvided?: boolean
   sortOrder?: number
   sourceAggregation?: string
+  /**
+   * @deprecated
+   */
   sourceSectionId?: LongId
+  sourceSectionIds?: Array<LongId>
+  submissionDateField?: 'taskDate' | 'completedAt'
+  triggerMode?: 'TIME_WINDOW' | 'COUNT' | 'MANUAL'
+  weightsBySection?: {
+    [key: string]: number
+  }
 }
 
 export type CreateLibraryItemRequest = {
@@ -931,9 +950,9 @@ export type CreateLibraryItemRequest = {
   defaultValidationRules?: string
   description?: string
   isStandard?: boolean
-  itemCode?: string
-  itemName?: string
-  itemType?:
+  itemCode: string
+  itemName: string
+  itemType:
     | 'TEXT'
     | 'TEXTAREA'
     | 'RICH_TEXT'
@@ -964,9 +983,9 @@ export type CreateLibraryItemRequest = {
 export type CreateLinkRequest = {
   autoCalculate?: boolean
   createdBy?: LongId
-  periodType?: string
-  projectId?: LongId
-  ratingConfigId?: LongId
+  periodType: string
+  projectId: LongId
+  ratingConfigId: LongId
 }
 
 export type CreateMajorDirectionRequest = {
@@ -993,8 +1012,8 @@ export type CreateMajorRequest = {
 export type CreateOptionRequest = {
   isFlagged?: boolean
   optionColor?: string
-  optionLabel?: string
-  optionValue?: string
+  optionLabel: string
+  optionValue: string
   score?: number
   sortOrder?: number
 }
@@ -1093,11 +1112,13 @@ export type CreatePlanCourseCommand = {
 }
 
 export type CreatePlanRequest = {
+  assignStrategy?: string
   cycleType?: string
   frequency?: number
   inspectorIds?: string
-  planName?: string
-  projectId?: LongId
+  planName: string
+  projectId: LongId
+  ratersPerTarget?: number
   rootSectionId?: LongId
   scheduleDays?: string
   scheduleMode?: string
@@ -1117,12 +1138,13 @@ export type CreatePolicyRequest = {
 }
 
 export type CreateProfileRequest = {
-  sectionId?: LongId
+  projectId: LongId
+  sectionId: LongId
 }
 
 export type CreateProjectRequest = {
-  orgUnitId?: LongId
-  projectName?: string
+  orgUnitId: LongId
+  projectName: string
   rootSectionId?: LongId
   startDate?: string
 }
@@ -1149,8 +1171,8 @@ export type CreateRequest = {
 
 export type CreateResponseSetRequest = {
   isGlobal?: boolean
-  setCode?: string
-  setName?: string
+  setCode: string
+  setName: string
 }
 
 export type CreateRoleRequest = {
@@ -1178,8 +1200,8 @@ export type CreateRuleRequest = {
 
 export type CreateScoringPresetRequest = {
   itemValues?: string
-  presetName?: string
-  presetType?: string
+  presetName: string
+  presetType: string
 }
 
 export type CreateSemesterCommand = {
@@ -1192,10 +1214,10 @@ export type CreateSemesterCommand = {
 }
 
 export type CreateSubmissionRequest = {
-  targetId?: LongId
+  targetId: LongId
   targetName?: string
-  targetType?: 'ORG' | 'PLACE' | 'USER' | 'ASSET' | 'COMPOSITE'
-  taskId?: LongId
+  targetType: 'ORG' | 'PLACE' | 'USER' | 'ASSET' | 'COMPOSITE'
+  taskId: LongId
 }
 
 export type CreateSubscriptionRuleRequest = {
@@ -1219,8 +1241,8 @@ export type CreateSubtaskRequest = {
 }
 
 export type CreateTaskRequest = {
-  projectId?: LongId
-  taskDate?: string
+  projectId: LongId
+  taskDate: string
   timeSlotCode?: string
   timeSlotEnd?: LocalTime
   timeSlotStart?: LocalTime
@@ -1251,22 +1273,22 @@ export type CreateUserRequest = {
 
 export type CreateViolationRecordRequest = {
   classInfo?: string
-  description?: string
+  description: string
   evidenceUrls?: string
   itemId?: LongId
   occurredAt?: string
   score?: number
   sectionId?: LongId
-  severity?: string
+  severity: string
   submissionDetailId?: LongId
-  submissionId?: LongId
-  userId?: LongId
+  submissionId: LongId
+  userId: LongId
   userName?: string
 }
 
 export type CrossAuditRequest = {
-  dueDate?: string
-  projectId?: LongId
+  dueDate: string
+  projectId: LongId
   reason?: string
 }
 
@@ -1714,7 +1736,7 @@ export type ExecutionResponse = {
 }
 
 export type ExtendDeadlineRequest = {
-  newDeadline?: string
+  newDeadline: string
 }
 
 export type FieldChangeDto = {
@@ -1760,8 +1782,8 @@ export type GradeBand = {
 }
 
 export type GradeBandRequest = {
-  gradeCode?: string
-  gradeName?: string
+  gradeCode: string
+  gradeName: string
   maxPercent?: number
   minPercent?: number
   sortOrder?: number
@@ -1895,6 +1917,7 @@ export type IPageSchoolClassResponse = {
 export type Indicator = {
   composite?: boolean
   compositeAggregation?: string
+  countThreshold?: number
   createdAt?: string
   evaluationMethod?: string
   evaluationPeriod?: string
@@ -1902,19 +1925,60 @@ export type Indicator = {
   gradeThresholds?: string
   id?: LongId
   indicatorType?: string
+  latePolicy?: 'REVISE_ORIGINAL' | 'CARRY_FORWARD' | 'EXCLUDE'
   leaf?: boolean
-  missingPolicy?: string
+  missingPolicy?: 'IGNORE' | 'ZERO' | 'MAX' | 'WAIT'
+  /**
+   * @deprecated
+   */
+  missingPolicyName?: string
   name?: string
   normalization?: string
   normalizationConfig?: string
   parentIndicatorId?: LongId
   projectId?: LongId
+  rankDirection?: 'ASC' | 'DESC'
   root?: boolean
   sortOrder?: number
   sourceAggregation?: string
+  /**
+   * @deprecated
+   */
   sourceSectionId?: LongId
+  sourceSectionIds?: Array<LongId>
+  submissionDateField?: 'taskDate' | 'completedAt'
+  tenantId?: LongId
+  triggerMode?: 'TIME_WINDOW' | 'COUNT' | 'MANUAL'
+  updatedAt?: string
+  weightsBySection?: {
+    [key: string]: number
+  }
+}
+
+/**
+ * Response data
+ */
+export type IndicatorResult = {
+  computedAt?: string
+  createdAt?: string
+  domainEvents?: Array<DomainEvent>
+  grade?: string
+  id?: LongId
+  indicatorId?: LongId
+  orgUnitId?: LongId
+  periodKey?: string
+  publishedAt?: string
+  rankPosition?: number
+  revisionOf?: LongId
+  sourceSectionIds?: Array<LongId>
+  sourceSubmissionIds?: Array<LongId>
+  status?: 'DRAFT' | 'PUBLISHED' | 'SUPERSEDED'
+  targetId?: LongId
+  targetName?: string
   tenantId?: LongId
   updatedAt?: string
+  value?: number
+  version?: LongId
 }
 
 /**
@@ -2001,31 +2065,21 @@ export type InspProject = {
   appealWindowDays?: number
   assignmentMode?: 'FREE' | 'ASSIGNED'
   autoPublish?: boolean
-  calibrationEnabled?: boolean
-  calibrationMethod?: string
-  consensusThreshold?: number
   createdAt?: string
   createdBy?: LongId
-  decayEnabled?: boolean
-  decayMode?: string
   domainEvents?: Array<DomainEvent>
   endDate?: string
-  evaluationMode?: string
   id?: LongId
   maxEscalationLevel?: number
   maxRejectCount?: number
-  multiRaterMode?: string
   orgUnitId?: LongId
   projectCode?: string
   projectName?: string
-  raterWeightBy?: string
   reviewRequired?: boolean
   rootSectionId?: LongId
   scopeConfig?: string
   scopeType?: 'ORG' | 'PLACE' | 'USER' | 'CUSTOM'
   scoringConfigSnapshot?: string
-  scoringProfileId?: LongId
-  splitStrategy?: string
   startDate?: string
   status?: 'DRAFT' | 'PUBLISHED' | 'PAUSED' | 'COMPLETED' | 'ARCHIVED'
   /**
@@ -2034,8 +2088,6 @@ export type InspProject = {
   templateId?: LongId
   templateVersionId?: LongId
   tenantId?: LongId
-  trendEnabled?: boolean
-  trendLookbackDays?: number
   updatedAt?: string
   updatedBy?: LongId
   version?: LongId
@@ -2141,6 +2193,7 @@ export type InspTask = {
   taskType?: 'SCHEDULED' | 'AD_HOC' | 'TRIGGERED' | 'SELF_CHECK' | 'COMPLAINT' | 'CROSS_AUDIT'
   tenantId?: LongId
   timeSlotCode?: string
+  timeSlotCrossDay?: boolean
   timeSlotEnd?: LocalTime
   timeSlotStart?: LocalTime
   totalTargets?: number
@@ -2159,6 +2212,7 @@ export type InspectionModeRequest = {
  * Response data
  */
 export type InspectionPlan = {
+  assignStrategy?: 'SPECIFIC' | 'OPEN_TO_ALL'
   createdAt?: string
   createdBy?: LongId
   cycleType?: string
@@ -2166,13 +2220,19 @@ export type InspectionPlan = {
   frequency?: number
   id?: LongId
   inspectorIds?: string
+  inspectorUserIds?: Array<LongId>
   isEnabled?: boolean
   onDemand?: boolean
+  parsedRrule?: RecurrenceRule
+  parsedTimeSlots?: Array<TimeSlot>
   planName?: string
   projectId?: LongId
+  ratersPerTarget?: number
   rootSectionId?: LongId
+  rrule?: string
   scheduleDays?: string
   scheduleMode?: string
+  sectionIdList?: Array<LongId>
   sectionIds?: string
   skipHolidays?: boolean
   sortOrder?: number
@@ -2249,6 +2309,15 @@ export type ItemFrequencySummary = {
   tenantId?: LongId
   totalDeduction?: number
   updatedAt?: string
+}
+
+/**
+ * Response data
+ */
+export type ItemOverrideView = {
+  id?: LongId
+  ruleJson?: string
+  templateItemId?: LongId
 }
 
 /**
@@ -2383,8 +2452,24 @@ export type MajorDirectionDto = {
   yearsDisplay?: string
 }
 
+export type ManualEvaluateRequest = {
+  dateRangeValid?: boolean
+  endDate: string
+  indicatorId: LongId
+  startDate: string
+}
+
 export type MemberRequest = {
   userIds?: Array<LongId>
+}
+
+/**
+ * Response data
+ */
+export type ModeRuleView = {
+  id?: LongId
+  ruleJson?: string
+  scoringMode?: string
 }
 
 export type ModuleDto = {
@@ -2393,14 +2478,6 @@ export type ModuleDto = {
   industry?: string
   name?: string
   pluginEnabled?: boolean
-}
-
-export type ModulePermSnapshot = {
-  moduleCode?: string
-  scopeCode?: string
-  scopeItems?: Array<{
-    [key: string]: unknown
-  }>
 }
 
 export type ModulePermissionDto = {
@@ -2623,6 +2700,18 @@ export type OrgPlaceStats = {
   placeCount?: number
   totalCapacity?: number
   totalOccupancy?: number
+}
+
+/**
+ * Response data
+ */
+export type OrgScoreView = {
+  childCount?: number
+  grade?: string
+  orgUnitId?: LongId
+  orgUnitName?: string
+  score?: number
+  sourceCount?: number
 }
 
 /**
@@ -2860,6 +2949,18 @@ export type PendingRelationApproval = {
 /**
  * Response data
  */
+export type PeopleWorkbenchView = {
+  pendingAssignTasks?: Array<TaskRow>
+  people?: Array<PersonRow>
+  projectCode?: string
+  projectId?: LongId
+  projectName?: string
+  summary?: Summary
+}
+
+/**
+ * Response data
+ */
 export type PeriodSummary = {
   avgScore?: number
   correctiveClosedCount?: number
@@ -2928,6 +3029,34 @@ export type PersonInfo = {
   id?: LongId
   name?: string
   orgUnitId?: LongId
+}
+
+export type PersonRow = {
+  active?: boolean
+  creator?: boolean
+  orgUnitName?: string
+  roles?: Array<string>
+  stats?: PersonStats
+  tasks?: PersonTasks
+  userId?: LongId
+  userName?: string
+}
+
+export type PersonStats = {
+  inProgress?: number
+  overdue?: number
+  pendingAssignCandidates?: number
+  pendingReview?: number
+  totalAssigned?: number
+  totalCompleted?: number
+  weekAssigned?: number
+  weekCompleted?: number
+}
+
+export type PersonTasks = {
+  inProgress?: Array<TaskRow>
+  overdue?: Array<TaskRow>
+  pendingReview?: Array<TaskRow>
 }
 
 /**
@@ -3097,10 +3226,16 @@ export type PolicyResponse = {
 }
 
 export type PolicyView = {
+  autoCreateLevel?: string
   deadlineHigh?: number
   deadlineLow?: number
   deadlineMedium?: number
+  enabled?: boolean
+  /**
+   * @deprecated
+   */
   strictness?: string
+  strictnessAdjustment?: number
   thresholdHigh?: number
   thresholdLow?: number
   thresholdMedium?: number
@@ -3134,6 +3269,18 @@ export type ProjectInspector = {
   updatedAt?: string
   userId?: LongId
   userName?: string
+}
+
+/**
+ * Response data
+ */
+export type ProjectItemView = {
+  itemId?: LongId
+  itemName?: string
+  maxScore?: number
+  overrideRuleJson?: string
+  scoringMode?: string
+  sectionName?: string
 }
 
 /**
@@ -3236,14 +3383,14 @@ export type ReassignDepartedRequest = {
 }
 
 export type RebuildDailyRequest = {
-  date?: string
-  projectId?: LongId
+  date: string
+  projectId: LongId
 }
 
 export type RebuildPeriodRequest = {
-  periodStart?: string
-  periodType?: 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY'
-  projectId?: LongId
+  periodStart: string
+  periodType: 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY'
+  projectId: LongId
 }
 
 export type RecentCheckRecord = {
@@ -3252,6 +3399,11 @@ export type RecentCheckRecord = {
   id?: LongId
   rank?: number
   score?: number
+}
+
+export type RecurrenceRule = {
+  freq?: 'DAILY' | 'WEEKLY' | 'MONTHLY'
+  interval?: number
 }
 
 /**
@@ -3269,7 +3421,7 @@ export type RefreshTokenRequest = {
 }
 
 export type RejectAppealRequest = {
-  comment?: string
+  comment: string
   reviewerName?: string
 }
 
@@ -3292,8 +3444,8 @@ export type RemarkRequest = {
 }
 
 export type ReorderSectionsRequest = {
-  parentSectionId?: LongId
-  sectionIds?: Array<LongId>
+  parentSectionId: LongId
+  sectionIds: Array<LongId>
 }
 
 /**
@@ -3416,6 +3568,25 @@ export type ResultAlertRule = {
    */
   code?: number
   data?: AlertRule
+  /**
+   * Response message
+   */
+  message?: string
+  /**
+   * Timestamp
+   */
+  timestamp?: LongId
+}
+
+/**
+ * Unified response result
+ */
+export type ResultBatchAssignResponse = {
+  /**
+   * Response code
+   */
+  code?: number
+  data?: BatchAssignResponse
   /**
    * Response message
    */
@@ -3964,6 +4135,25 @@ export type ResultIndicator = {
 /**
  * Unified response result
  */
+export type ResultIndicatorResult = {
+  /**
+   * Response code
+   */
+  code?: number
+  data?: IndicatorResult
+  /**
+   * Response message
+   */
+  message?: string
+  /**
+   * Timestamp
+   */
+  timestamp?: LongId
+}
+
+/**
+ * Unified response result
+ */
 export type ResultInspAppeal = {
   /**
    * Response code
@@ -4125,6 +4315,25 @@ export type ResultIssueCategory = {
    */
   code?: number
   data?: IssueCategory
+  /**
+   * Response message
+   */
+  message?: string
+  /**
+   * Timestamp
+   */
+  timestamp?: LongId
+}
+
+/**
+ * Unified response result
+ */
+export type ResultItemOverrideView = {
+  /**
+   * Response code
+   */
+  code?: number
+  data?: ItemOverrideView
   /**
    * Response message
    */
@@ -4883,6 +5092,28 @@ export type ResultListIndicator = {
 /**
  * Unified response result
  */
+export type ResultListIndicatorResult = {
+  /**
+   * Response code
+   */
+  code?: number
+  /**
+   * Response data
+   */
+  data?: Array<IndicatorResult>
+  /**
+   * Response message
+   */
+  message?: string
+  /**
+   * Timestamp
+   */
+  timestamp?: LongId
+}
+
+/**
+ * Unified response result
+ */
 export type ResultListIndicatorScore = {
   /**
    * Response code
@@ -5125,6 +5356,28 @@ export type ResultListItemFrequencySummary = {
 /**
  * Unified response result
  */
+export type ResultListItemOverrideView = {
+  /**
+   * Response code
+   */
+  code?: number
+  /**
+   * Response data
+   */
+  data?: Array<ItemOverrideView>
+  /**
+   * Response message
+   */
+  message?: string
+  /**
+   * Timestamp
+   */
+  timestamp?: LongId
+}
+
+/**
+ * Unified response result
+ */
 export type ResultListLibraryItem = {
   /**
    * Response code
@@ -5254,6 +5507,28 @@ export type ResultListMapStringObject = {
       [key: string]: unknown
     }
   }>
+  /**
+   * Response message
+   */
+  message?: string
+  /**
+   * Timestamp
+   */
+  timestamp?: LongId
+}
+
+/**
+ * Unified response result
+ */
+export type ResultListModeRuleView = {
+  /**
+   * Response code
+   */
+  code?: number
+  /**
+   * Response data
+   */
+  data?: Array<ModeRuleView>
   /**
    * Response message
    */
@@ -5460,6 +5735,28 @@ export type ResultListOrgMemberDto = {
    * Timestamp
    */
   timestamp?: string
+}
+
+/**
+ * Unified response result
+ */
+export type ResultListOrgScoreView = {
+  /**
+   * Response code
+   */
+  code?: number
+  /**
+   * Response data
+   */
+  data?: Array<OrgScoreView>
+  /**
+   * Response message
+   */
+  message?: string
+  /**
+   * Timestamp
+   */
+  timestamp?: LongId
 }
 
 /**
@@ -5760,6 +6057,28 @@ export type ResultListProjectInspector = {
    * Response data
    */
   data?: Array<ProjectInspector>
+  /**
+   * Response message
+   */
+  message?: string
+  /**
+   * Timestamp
+   */
+  timestamp?: LongId
+}
+
+/**
+ * Unified response result
+ */
+export type ResultListProjectItemView = {
+  /**
+   * Response code
+   */
+  code?: number
+  /**
+   * Response data
+   */
+  data?: Array<ProjectItemView>
   /**
    * Response message
    */
@@ -6976,6 +7295,25 @@ export type ResultMapStringObject = {
 /**
  * Unified response result
  */
+export type ResultModeRuleView = {
+  /**
+   * Response code
+   */
+  code?: number
+  data?: ModeRuleView
+  /**
+   * Response message
+   */
+  message?: string
+  /**
+   * Timestamp
+   */
+  timestamp?: LongId
+}
+
+/**
+ * Unified response result
+ */
 export type ResultMsgSubscriptionRule = {
   /**
    * Response code
@@ -7028,30 +7366,6 @@ export type ResultMyClassOverviewDto = {
    * Timestamp
    */
   timestamp?: string
-}
-
-/**
- * Unified response result
- */
-export type ResultObject = {
-  /**
-   * Response code
-   */
-  code?: number
-  /**
-   * Response data
-   */
-  data?: {
-    [key: string]: unknown
-  }
-  /**
-   * Response message
-   */
-  message?: string
-  /**
-   * Timestamp
-   */
-  timestamp?: LongId
 }
 
 /**
@@ -7291,6 +7605,25 @@ export type ResultPageResultTemplateSection = {
    */
   code?: number
   data?: PageResultTemplateSection
+  /**
+   * Response message
+   */
+  message?: string
+  /**
+   * Timestamp
+   */
+  timestamp?: LongId
+}
+
+/**
+ * Unified response result
+ */
+export type ResultPeopleWorkbenchView = {
+  /**
+   * Response code
+   */
+  code?: number
+  data?: PeopleWorkbenchView
   /**
    * Response message
    */
@@ -7807,6 +8140,25 @@ export type ResultSetString = {
    * Response data
    */
   data?: Array<string>
+  /**
+   * Response message
+   */
+  message?: string
+  /**
+   * Timestamp
+   */
+  timestamp?: LongId
+}
+
+/**
+ * Unified response result
+ */
+export type ResultSimulateView = {
+  /**
+   * Response code
+   */
+  code?: number
+  data?: SimulateView
   /**
    * Response message
    */
@@ -8557,32 +8909,22 @@ export type ScoringPreset = {
  * Response data
  */
 export type ScoringProfile = {
-  calibrationEnabled?: boolean
-  calibrationMethod?: string
-  calibrationMinSamples?: number
-  calibrationPeriodDays?: number
-  consensusThreshold?: number
+  baselinePopulation?: number
   createdAt?: string
   createdBy?: LongId
   currentVersion?: number
-  decayEnabled?: boolean
-  decayFloor?: number
-  decayMode?: string
-  decayRatePerDay?: number
   domainEvents?: Array<DomainEvent>
   id?: LongId
   maxScore?: number
   minScore?: number
-  multiRaterMode?: string
+  normCap?: number
+  normFloor?: number
+  normalizationMode?: 'NONE' | 'PER_CAPITA' | 'SQRT_ADJUSTED'
+  normalizeBy?: 'NONE' | 'PER_MEMBER' | 'PER_PLACE' | 'PER_SUB_ORG'
   precisionDigits?: number
-  raterWeightBy?: string
+  projectId?: LongId
   sectionId?: LongId
   tenantId?: LongId
-  trendBonusPerPercent?: number
-  trendFactorEnabled?: boolean
-  trendLookbackDays?: number
-  trendMaxAdjustment?: number
-  trendPenaltyPerPercent?: number
   updatedAt?: string
   updatedBy?: LongId
   version?: LongId
@@ -8604,7 +8946,7 @@ export type ScoringProfileVersion = {
 }
 
 export type SelfCheckRequest = {
-  projectId?: LongId
+  projectId: LongId
   reason?: string
 }
 
@@ -8689,8 +9031,35 @@ export type SimpleUserResponse = {
 }
 
 export type SimulateRequest = {
-  modulePermissions?: Array<ModulePermSnapshot>
-  userId?: LongId
+  itemCode?: string
+  itemName?: string
+  itemRuleJson?: string
+  itemWeight?: number
+  projectId?: LongId
+  recurrenceCount?: number
+  responseValue?: string
+  score?: number
+  scoringConfigJson?: string
+  scoringMode?: string
+}
+
+export type SimulateTrace = {
+  input?: string
+  layer?: string
+  output?: string
+  rule?: string
+}
+
+/**
+ * Response data
+ */
+export type SimulateView = {
+  deadlineDays?: number
+  mustCorrect?: boolean
+  reason?: string
+  severity?: string
+  severityScore?: number
+  trace?: Array<SimulateTrace>
 }
 
 export type SplitOrgRequest = {
@@ -8810,6 +9179,7 @@ export type StudentGradePo = {
  * Response data
  */
 export type SubmissionDetail = {
+  appealAdjustedAt?: string
   conditionLogic?: string
   createdAt?: string
   dimensions?: string
@@ -8882,8 +9252,8 @@ export type SubmissionObservationPo = {
 export type SubmitAppealRequest = {
   attachments?: string
   expectedAdjustment?: number
-  reason?: string
-  submissionDetailId?: LongId
+  reason: string
+  submissionDetailId: LongId
   submitterName?: string
 }
 
@@ -8925,6 +9295,18 @@ export type SuggestScoreResponse = {
   suggestedVerdict?: string
 }
 
+export type Summary = {
+  inProgressCount?: number
+  leadName?: string
+  overdueCount?: number
+  pendingAssignCount?: number
+  pendingReviewCount?: number
+  totalInspectors?: number
+  totalLeads?: number
+  totalPeople?: number
+  totalReviewers?: number
+}
+
 export type SwapPositionRequest = {
   recordId1?: LongId
   recordId2?: LongId
@@ -8932,7 +9314,7 @@ export type SwapPositionRequest = {
 
 export type SyncPullRequest = {
   lastSyncAt?: string
-  taskId?: LongId
+  taskId: LongId
 }
 
 /**
@@ -8947,11 +9329,11 @@ export type SyncPullResponse = {
 export type SyncPushItem = {
   clientSyncVersion?: number
   formData?: string
-  submissionId?: LongId
+  submissionId: LongId
 }
 
 export type SyncPushRequest = {
-  items?: Array<SyncPushItem>
+  items: Array<SyncPushItem>
 }
 
 /**
@@ -9003,8 +9385,23 @@ export type SystemModuleResponse = {
 
 export type TargetPreviewRequest = {
   scopeConfig?: string
-  scopeType?: 'ORG' | 'PLACE' | 'USER' | 'CUSTOM'
-  targetType?: 'ORG' | 'PLACE' | 'USER' | 'ASSET' | 'COMPOSITE'
+  scopeType: 'ORG' | 'PLACE' | 'USER' | 'CUSTOM'
+  targetType: 'ORG' | 'PLACE' | 'USER' | 'ASSET' | 'COMPOSITE'
+}
+
+export type TaskRow = {
+  completedTargets?: number
+  daysOverdue?: number
+  inspectorId?: LongId
+  inspectorName?: string
+  reviewerId?: LongId
+  reviewerName?: string
+  status?: string
+  submittedAt?: string
+  taskCode?: string
+  taskDate?: string
+  taskId?: LongId
+  totalTargets?: number
 }
 
 export type TaskSource = {
@@ -9279,6 +9676,12 @@ export type TenantPo = {
   updatedAt?: string
 }
 
+export type TimeSlot = {
+  crossDay?: boolean
+  endTime?: LocalTime
+  startTime?: LocalTime
+}
+
 /**
  * Response data
  */
@@ -9356,36 +9759,17 @@ export type UpdateAcademicYearCommand = {
   yearName?: string
 }
 
-export type UpdateAdvancedSettingsRequest = {
-  calibrationEnabled?: boolean
-  calibrationMethod?: string
-  calibrationMinSamples?: number
-  calibrationPeriodDays?: number
-  consensusThreshold?: number
-  decayEnabled?: boolean
-  decayFloor?: number
-  decayMode?: string
-  decayRatePerDay?: number
-  multiRaterMode?: string
-  raterWeightBy?: string
-  trendBonusPerPercent?: number
-  trendFactorEnabled?: boolean
-  trendLookbackDays?: number
-  trendMaxAdjustment?: number
-  trendPenaltyPerPercent?: number
-}
-
 export type UpdateAlertRuleRequest = {
-  metricType?: string
+  metricType: string
   notificationChannels?: string
   projectId?: LongId
-  ruleName?: string
-  severity?: string
+  ruleName: string
+  severity: string
   thresholdConfig?: string
 }
 
 export type UpdateCatalogRequest = {
-  catalogName?: string
+  catalogName: string
   description?: string
   icon?: string
   isEnabled?: boolean
@@ -9537,31 +9921,50 @@ export type UpdateGradeMajorDirectionRequest = {
 
 export type UpdateGradeSchemeRequest = {
   description?: string
-  displayName?: string
+  displayName: string
   grades?: Array<GradeDefRequest>
 }
 
 export type UpdateHolidayCalendarRequest = {
-  calendarName?: string
+  calendarName: string
   holidays?: string
   isDefault?: boolean
   workdays?: string
-  year?: number
+  year: number
 }
 
 export type UpdateIndicatorRequest = {
   compositeAggregation?: string
+  countThreshold?: number
+  countThresholdValid?: boolean
   evaluationMethod?: string
   evaluationPeriod?: string
   gradeSchemeId?: LongId
   gradeThresholds?: string
+  latePolicy?: 'REVISE_ORIGINAL' | 'CARRY_FORWARD' | 'EXCLUDE'
   missingPolicy?: string
-  name?: string
+  missingPolicyEnum?: 'IGNORE' | 'ZERO' | 'MAX' | 'WAIT'
+  name: string
   normalization?: string
   normalizationConfig?: string
+  rankDirection?: 'ASC' | 'DESC'
   sortOrder?: number
   sourceAggregation?: string
   sourceSectionId?: LongId
+  sourceSectionIds?: Array<LongId>
+  submissionDateField?: 'taskDate' | 'completedAt'
+  triggerMode?: 'TIME_WINDOW' | 'COUNT' | 'MANUAL'
+  weightsBySection?: {
+    [key: string]: number
+  }
+}
+
+export type UpdateIssueCategoryRequest = {
+  categoryName: string
+  description?: string
+  icon?: string
+  isEnabled?: boolean
+  sortOrder?: number
 }
 
 export type UpdateItemRequest = {
@@ -9573,8 +9976,8 @@ export type UpdateItemRequest = {
   inputMode?: string
   isRequired?: boolean
   isScored?: boolean
-  itemName?: string
-  itemType?:
+  itemName: string
+  itemType:
     | 'TEXT'
     | 'TEXTAREA'
     | 'RICH_TEXT'
@@ -9615,8 +10018,8 @@ export type UpdateLibraryItemRequest = {
   defaultValidationRules?: string
   description?: string
   isStandard?: boolean
-  itemName?: string
-  itemType?:
+  itemName: string
+  itemType:
     | 'TEXT'
     | 'TEXTAREA'
     | 'RICH_TEXT'
@@ -9646,7 +10049,7 @@ export type UpdateLibraryItemRequest = {
 
 export type UpdateLinkRequest = {
   autoCalculate?: boolean
-  periodType?: string
+  periodType: string
 }
 
 export type UpdateMajorDirectionRequest = {
@@ -9761,10 +10164,12 @@ export type UpdatePlanCourseCommand = {
 }
 
 export type UpdatePlanRequest = {
+  assignStrategy?: string
   cycleType?: string
   frequency?: number
   inspectorIds?: string
-  planName?: string
+  planName: string
+  ratersPerTarget?: number
   rootSectionId?: LongId
   scheduleDays?: string
   scheduleMode?: string
@@ -9781,14 +10186,19 @@ export type UpdatePolicyConfigRequest = {
 
 export type UpdatePolicyRequest = {
   description?: string
-  policyName?: string
+  policyName: string
   precisionDigits?: number
   sortOrder?: number
 }
 
 export type UpdateProfileRequest = {
+  baselinePopulation?: number
   maxScore?: number
   minScore?: number
+  normCap?: number
+  normFloor?: number
+  normalizationMode?: 'NONE' | 'PER_CAPITA' | 'SQRT_ADJUSTED'
+  normalizeBy?: 'NONE' | 'PER_MEMBER' | 'PER_PLACE' | 'PER_SUB_ORG'
   precisionDigits?: number
 }
 
@@ -9801,7 +10211,6 @@ export type UpdateProjectRequest = {
   rootSectionId?: LongId
   scopeConfig?: string
   scopeType?: 'ORG' | 'PLACE' | 'USER' | 'CUSTOM'
-  scoringProfileId?: LongId
   startDate?: string
 }
 
@@ -9827,7 +10236,7 @@ export type UpdateRequest = {
 export type UpdateResponseSetRequest = {
   isEnabled?: boolean
   isGlobal?: boolean
-  setName?: string
+  setName: string
 }
 
 export type UpdateRoleRequest = {
@@ -9856,14 +10265,14 @@ export type UpdateScoringConfigRequest = {
 
 export type UpdateScoringPresetRequest = {
   itemValues?: string
-  presetName?: string
+  presetName: string
 }
 
 export type UpdateSectionRequest = {
   conditionLogic?: string
   inputMode?: string
   isRepeatable?: boolean
-  sectionName?: string
+  sectionName: string
   targetSourceMode?: string
   targetType?: string
   targetTypeFilter?: string
@@ -9877,7 +10286,7 @@ export type UpdateSemesterCommand = {
 }
 
 export type UpdateStatusRequest = {
-  status?: string
+  status: string
 }
 
 /**
@@ -9929,7 +10338,7 @@ export type UpdateStudentRequest = {
 export type UpdateTemplateRequest = {
   catalogId?: LongId
   description?: string
-  name?: string
+  name: string
   tags?: string
 }
 
@@ -9947,10 +10356,10 @@ export type UpdateUserRequest = {
 
 export type UpdateViolationRecordRequest = {
   classInfo?: string
-  description?: string
+  description: string
   evidenceUrls?: string
   score?: number
-  severity?: string
+  severity: string
 }
 
 /**
@@ -10215,6 +10624,10 @@ export type ListWarningsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -10265,6 +10678,10 @@ export type StudentWarningHistoryErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -10317,6 +10734,10 @@ export type ListRules2Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -10337,7 +10758,7 @@ export type ListRules2Responses = {
 
 export type ListRules2Response = ListRules2Responses[keyof ListRules2Responses]
 
-export type CreateRule2Data = {
+export type CreateRuleRules2Data = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -10348,7 +10769,7 @@ export type CreateRule2Data = {
   url: '/academic-warnings/rules'
 }
 
-export type CreateRule2Errors = {
+export type CreateRuleRules2Errors = {
   /**
    * Bad Request
    */
@@ -10370,6 +10791,10 @@ export type CreateRule2Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -10379,18 +10804,18 @@ export type CreateRule2Errors = {
   500: ResultVoid
 }
 
-export type CreateRule2Error = CreateRule2Errors[keyof CreateRule2Errors]
+export type CreateRuleRules2Error = CreateRuleRules2Errors[keyof CreateRuleRules2Errors]
 
-export type CreateRule2Responses = {
+export type CreateRuleRules2Responses = {
   /**
    * OK
    */
   200: ResultLong
 }
 
-export type CreateRule2Response = CreateRule2Responses[keyof CreateRule2Responses]
+export type CreateRuleRules2Response = CreateRuleRules2Responses[keyof CreateRuleRules2Responses]
 
-export type DeleteRule2Data = {
+export type DeleteRuleRules2Data = {
   body?: never
   path: {
     id: string
@@ -10399,7 +10824,7 @@ export type DeleteRule2Data = {
   url: '/academic-warnings/rules/{id}'
 }
 
-export type DeleteRule2Errors = {
+export type DeleteRuleRules2Errors = {
   /**
    * Bad Request
    */
@@ -10421,6 +10846,10 @@ export type DeleteRule2Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -10430,18 +10859,18 @@ export type DeleteRule2Errors = {
   500: ResultVoid
 }
 
-export type DeleteRule2Error = DeleteRule2Errors[keyof DeleteRule2Errors]
+export type DeleteRuleRules2Error = DeleteRuleRules2Errors[keyof DeleteRuleRules2Errors]
 
-export type DeleteRule2Responses = {
+export type DeleteRuleRules2Responses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type DeleteRule2Response = DeleteRule2Responses[keyof DeleteRule2Responses]
+export type DeleteRuleRules2Response = DeleteRuleRules2Responses[keyof DeleteRuleRules2Responses]
 
-export type UpdateRule2Data = {
+export type UpdateRuleRules2Data = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -10454,7 +10883,7 @@ export type UpdateRule2Data = {
   url: '/academic-warnings/rules/{id}'
 }
 
-export type UpdateRule2Errors = {
+export type UpdateRuleRules2Errors = {
   /**
    * Bad Request
    */
@@ -10476,6 +10905,10 @@ export type UpdateRule2Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -10485,16 +10918,16 @@ export type UpdateRule2Errors = {
   500: ResultVoid
 }
 
-export type UpdateRule2Error = UpdateRule2Errors[keyof UpdateRule2Errors]
+export type UpdateRuleRules2Error = UpdateRuleRules2Errors[keyof UpdateRuleRules2Errors]
 
-export type UpdateRule2Responses = {
+export type UpdateRuleRules2Responses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type UpdateRule2Response = UpdateRule2Responses[keyof UpdateRule2Responses]
+export type UpdateRuleRules2Response = UpdateRuleRules2Responses[keyof UpdateRuleRules2Responses]
 
 export type ToggleRuleData = {
   body?: never
@@ -10526,6 +10959,10 @@ export type ToggleRuleErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -10578,6 +11015,10 @@ export type ScanWarningsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -10629,6 +11070,10 @@ export type PreviewScanErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -10649,7 +11094,7 @@ export type PreviewScanResponses = {
 
 export type PreviewScanResponse = PreviewScanResponses[keyof PreviewScanResponses]
 
-export type Statistics1Data = {
+export type Statistics2Data = {
   body?: never
   path?: never
   query?: {
@@ -10658,7 +11103,7 @@ export type Statistics1Data = {
   url: '/academic-warnings/statistics'
 }
 
-export type Statistics1Errors = {
+export type Statistics2Errors = {
   /**
    * Bad Request
    */
@@ -10680,6 +11125,10 @@ export type Statistics1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -10689,16 +11138,16 @@ export type Statistics1Errors = {
   500: ResultVoid
 }
 
-export type Statistics1Error = Statistics1Errors[keyof Statistics1Errors]
+export type Statistics2Error = Statistics2Errors[keyof Statistics2Errors]
 
-export type Statistics1Responses = {
+export type Statistics2Responses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type Statistics1Response = Statistics1Responses[keyof Statistics1Responses]
+export type Statistics2Response = Statistics2Responses[keyof Statistics2Responses]
 
 export type GetWarningDetailData = {
   body?: never
@@ -10730,6 +11179,10 @@ export type GetWarningDetailErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -10781,6 +11234,10 @@ export type ConfirmWarningErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -10835,6 +11292,10 @@ export type DismissWarningErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -10887,6 +11348,10 @@ export type InterveneWarningErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -10944,6 +11409,10 @@ export type ListCoursesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -10993,6 +11462,10 @@ export type CreateCourseErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -11041,6 +11514,10 @@ export type ListAllCoursesErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -11093,6 +11570,10 @@ export type GetCourseByCodeErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -11143,6 +11624,10 @@ export type DeleteCourseErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -11195,6 +11680,10 @@ export type GetCourseErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -11245,6 +11734,10 @@ export type UpdateCourseErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -11301,6 +11794,10 @@ export type UpdateCourseStatusErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -11322,7 +11819,7 @@ export type UpdateCourseStatusResponses = {
 export type UpdateCourseStatusResponse =
   UpdateCourseStatusResponses[keyof UpdateCourseStatusResponses]
 
-export type ListPlans2Data = {
+export type ListPlansCurriculumPlansData = {
   body?: never
   path?: never
   query?: {
@@ -11335,7 +11832,7 @@ export type ListPlans2Data = {
   url: '/academic/curriculum-plans'
 }
 
-export type ListPlans2Errors = {
+export type ListPlansCurriculumPlansErrors = {
   /**
    * Bad Request
    */
@@ -11357,6 +11854,10 @@ export type ListPlans2Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -11366,25 +11867,27 @@ export type ListPlans2Errors = {
   500: ResultVoid
 }
 
-export type ListPlans2Error = ListPlans2Errors[keyof ListPlans2Errors]
+export type ListPlansCurriculumPlansError =
+  ListPlansCurriculumPlansErrors[keyof ListPlansCurriculumPlansErrors]
 
-export type ListPlans2Responses = {
+export type ListPlansCurriculumPlansResponses = {
   /**
    * OK
    */
   200: ResultPageCurriculumPlanDto
 }
 
-export type ListPlans2Response = ListPlans2Responses[keyof ListPlans2Responses]
+export type ListPlansCurriculumPlansResponse =
+  ListPlansCurriculumPlansResponses[keyof ListPlansCurriculumPlansResponses]
 
-export type CreatePlan2Data = {
+export type CreatePlanCurriculumPlansData = {
   body: CreateCurriculumPlanCommand
   path?: never
   query?: never
   url: '/academic/curriculum-plans'
 }
 
-export type CreatePlan2Errors = {
+export type CreatePlanCurriculumPlansErrors = {
   /**
    * Bad Request
    */
@@ -11406,6 +11909,10 @@ export type CreatePlan2Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -11415,18 +11922,20 @@ export type CreatePlan2Errors = {
   500: ResultVoid
 }
 
-export type CreatePlan2Error = CreatePlan2Errors[keyof CreatePlan2Errors]
+export type CreatePlanCurriculumPlansError =
+  CreatePlanCurriculumPlansErrors[keyof CreatePlanCurriculumPlansErrors]
 
-export type CreatePlan2Responses = {
+export type CreatePlanCurriculumPlansResponses = {
   /**
    * OK
    */
   200: ResultCurriculumPlanDto
 }
 
-export type CreatePlan2Response = CreatePlan2Responses[keyof CreatePlan2Responses]
+export type CreatePlanCurriculumPlansResponse =
+  CreatePlanCurriculumPlansResponses[keyof CreatePlanCurriculumPlansResponses]
 
-export type DeletePlan2Data = {
+export type DeletePlanCurriculumPlansData = {
   body?: never
   path: {
     id: string
@@ -11435,7 +11944,7 @@ export type DeletePlan2Data = {
   url: '/academic/curriculum-plans/{id}'
 }
 
-export type DeletePlan2Errors = {
+export type DeletePlanCurriculumPlansErrors = {
   /**
    * Bad Request
    */
@@ -11457,6 +11966,10 @@ export type DeletePlan2Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -11466,18 +11979,20 @@ export type DeletePlan2Errors = {
   500: ResultVoid
 }
 
-export type DeletePlan2Error = DeletePlan2Errors[keyof DeletePlan2Errors]
+export type DeletePlanCurriculumPlansError =
+  DeletePlanCurriculumPlansErrors[keyof DeletePlanCurriculumPlansErrors]
 
-export type DeletePlan2Responses = {
+export type DeletePlanCurriculumPlansResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type DeletePlan2Response = DeletePlan2Responses[keyof DeletePlan2Responses]
+export type DeletePlanCurriculumPlansResponse =
+  DeletePlanCurriculumPlansResponses[keyof DeletePlanCurriculumPlansResponses]
 
-export type GetPlan1Data = {
+export type GetPlanCurriculumPlansData = {
   body?: never
   path: {
     id: string
@@ -11486,7 +12001,7 @@ export type GetPlan1Data = {
   url: '/academic/curriculum-plans/{id}'
 }
 
-export type GetPlan1Errors = {
+export type GetPlanCurriculumPlansErrors = {
   /**
    * Bad Request
    */
@@ -11508,6 +12023,10 @@ export type GetPlan1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -11517,18 +12036,20 @@ export type GetPlan1Errors = {
   500: ResultVoid
 }
 
-export type GetPlan1Error = GetPlan1Errors[keyof GetPlan1Errors]
+export type GetPlanCurriculumPlansError =
+  GetPlanCurriculumPlansErrors[keyof GetPlanCurriculumPlansErrors]
 
-export type GetPlan1Responses = {
+export type GetPlanCurriculumPlansResponses = {
   /**
    * OK
    */
   200: ResultCurriculumPlanDto
 }
 
-export type GetPlan1Response = GetPlan1Responses[keyof GetPlan1Responses]
+export type GetPlanCurriculumPlansResponse =
+  GetPlanCurriculumPlansResponses[keyof GetPlanCurriculumPlansResponses]
 
-export type UpdatePlan2Data = {
+export type UpdatePlanCurriculumPlansData = {
   body: UpdateCurriculumPlanCommand
   path: {
     id: string
@@ -11537,7 +12058,7 @@ export type UpdatePlan2Data = {
   url: '/academic/curriculum-plans/{id}'
 }
 
-export type UpdatePlan2Errors = {
+export type UpdatePlanCurriculumPlansErrors = {
   /**
    * Bad Request
    */
@@ -11559,6 +12080,10 @@ export type UpdatePlan2Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -11568,16 +12093,18 @@ export type UpdatePlan2Errors = {
   500: ResultVoid
 }
 
-export type UpdatePlan2Error = UpdatePlan2Errors[keyof UpdatePlan2Errors]
+export type UpdatePlanCurriculumPlansError =
+  UpdatePlanCurriculumPlansErrors[keyof UpdatePlanCurriculumPlansErrors]
 
-export type UpdatePlan2Responses = {
+export type UpdatePlanCurriculumPlansResponses = {
   /**
    * OK
    */
   200: ResultCurriculumPlanDto
 }
 
-export type UpdatePlan2Response = UpdatePlan2Responses[keyof UpdatePlan2Responses]
+export type UpdatePlanCurriculumPlansResponse =
+  UpdatePlanCurriculumPlansResponses[keyof UpdatePlanCurriculumPlansResponses]
 
 export type CopyPlanData = {
   body?: never
@@ -11609,6 +12136,10 @@ export type CopyPlanErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -11661,6 +12192,10 @@ export type DeprecatePlanErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -11681,7 +12216,7 @@ export type DeprecatePlanResponses = {
 
 export type DeprecatePlanResponse = DeprecatePlanResponses[keyof DeprecatePlanResponses]
 
-export type PublishPlan1Data = {
+export type PublishPlanPublish2Data = {
   body?: never
   path: {
     id: string
@@ -11690,7 +12225,7 @@ export type PublishPlan1Data = {
   url: '/academic/curriculum-plans/{id}/publish'
 }
 
-export type PublishPlan1Errors = {
+export type PublishPlanPublish2Errors = {
   /**
    * Bad Request
    */
@@ -11712,6 +12247,10 @@ export type PublishPlan1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -11721,16 +12260,17 @@ export type PublishPlan1Errors = {
   500: ResultVoid
 }
 
-export type PublishPlan1Error = PublishPlan1Errors[keyof PublishPlan1Errors]
+export type PublishPlanPublish2Error = PublishPlanPublish2Errors[keyof PublishPlanPublish2Errors]
 
-export type PublishPlan1Responses = {
+export type PublishPlanPublish2Responses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type PublishPlan1Response = PublishPlan1Responses[keyof PublishPlan1Responses]
+export type PublishPlanPublish2Response =
+  PublishPlanPublish2Responses[keyof PublishPlanPublish2Responses]
 
 export type ListPlanCoursesData = {
   body?: never
@@ -11762,6 +12302,10 @@ export type ListPlanCoursesErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -11813,6 +12357,10 @@ export type AddPlanCourseErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -11866,6 +12414,10 @@ export type RemovePlanCourseErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -11918,6 +12470,10 @@ export type UpdatePlanCourseErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -11966,6 +12522,10 @@ export type AddDirectionToYearErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -12016,6 +12576,10 @@ export type BatchDeleteGradeMajorDirectionsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -12070,6 +12634,10 @@ export type GetDirectionsByMajorDirectionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -12123,6 +12691,10 @@ export type GetDirectionsByYearErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -12174,6 +12746,10 @@ export type BatchAddDirectionsToYearErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -12229,6 +12805,10 @@ export type GetByYearAndDirectionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -12282,6 +12862,10 @@ export type DeleteGradeMajorDirectionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -12304,7 +12888,7 @@ export type DeleteGradeMajorDirectionResponses = {
 export type DeleteGradeMajorDirectionResponse =
   DeleteGradeMajorDirectionResponses[keyof DeleteGradeMajorDirectionResponses]
 
-export type GetById11Data = {
+export type GetByIdGradeMajorDirectionsData = {
   body?: never
   path: {
     id: string
@@ -12313,7 +12897,7 @@ export type GetById11Data = {
   url: '/academic/grade-major-directions/{id}'
 }
 
-export type GetById11Errors = {
+export type GetByIdGradeMajorDirectionsErrors = {
   /**
    * Bad Request
    */
@@ -12335,6 +12919,10 @@ export type GetById11Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -12344,16 +12932,18 @@ export type GetById11Errors = {
   500: ResultVoid
 }
 
-export type GetById11Error = GetById11Errors[keyof GetById11Errors]
+export type GetByIdGradeMajorDirectionsError =
+  GetByIdGradeMajorDirectionsErrors[keyof GetByIdGradeMajorDirectionsErrors]
 
-export type GetById11Responses = {
+export type GetByIdGradeMajorDirectionsResponses = {
   /**
    * OK
    */
   200: ResultGradeMajorDirectionDto
 }
 
-export type GetById11Response = GetById11Responses[keyof GetById11Responses]
+export type GetByIdGradeMajorDirectionsResponse =
+  GetByIdGradeMajorDirectionsResponses[keyof GetByIdGradeMajorDirectionsResponses]
 
 export type UpdateGradeMajorDirectionData = {
   body: UpdateGradeMajorDirectionRequest
@@ -12385,6 +12975,10 @@ export type UpdateGradeMajorDirectionErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -12437,6 +13031,10 @@ export type CreateDirectionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -12486,6 +13084,10 @@ export type GetAllDirectionsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -12534,6 +13136,10 @@ export type BatchDeleteDirectionsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -12588,6 +13194,10 @@ export type GetDirectionsByMajorErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -12640,6 +13250,10 @@ export type DeleteDirectionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -12691,6 +13305,10 @@ export type GetDirectionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -12741,6 +13359,10 @@ export type UpdateDirectionErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -12798,6 +13420,10 @@ export type GetMajorListErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -12846,6 +13472,10 @@ export type CreateMajorErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -12898,6 +13528,10 @@ export type BatchDeleteMajorsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -12946,6 +13580,10 @@ export type GetAllEnabledMajorsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -12999,6 +13637,10 @@ export type GetMajorsByOrgUnitErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -13051,6 +13693,10 @@ export type DeleteMajorErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -13102,6 +13748,10 @@ export type GetMajorErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -13152,6 +13802,10 @@ export type UpdateMajorErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -13210,6 +13864,10 @@ export type QueryErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -13230,14 +13888,14 @@ export type QueryResponses = {
 
 export type QueryResponse = QueryResponses[keyof QueryResponses]
 
-export type Create19Data = {
+export type CreateAccessRelationsData = {
   body: CreateCommand
   path?: never
   query?: never
   url: '/access-relations'
 }
 
-export type Create19Errors = {
+export type CreateAccessRelationsErrors = {
   /**
    * Bad Request
    */
@@ -13259,6 +13917,10 @@ export type Create19Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -13268,25 +13930,27 @@ export type Create19Errors = {
   500: ResultVoid
 }
 
-export type Create19Error = Create19Errors[keyof Create19Errors]
+export type CreateAccessRelationsError =
+  CreateAccessRelationsErrors[keyof CreateAccessRelationsErrors]
 
-export type Create19Responses = {
+export type CreateAccessRelationsResponses = {
   /**
    * OK
    */
   200: ResultAccessRelation
 }
 
-export type Create19Response = Create19Responses[keyof Create19Responses]
+export type CreateAccessRelationsResponse =
+  CreateAccessRelationsResponses[keyof CreateAccessRelationsResponses]
 
-export type ListPending1Data = {
+export type ListPendingApprovalsData = {
   body?: never
   path?: never
   query?: never
   url: '/access-relations/approvals'
 }
 
-export type ListPending1Errors = {
+export type ListPendingApprovalsErrors = {
   /**
    * Bad Request
    */
@@ -13308,6 +13972,10 @@ export type ListPending1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -13317,18 +13985,19 @@ export type ListPending1Errors = {
   500: ResultVoid
 }
 
-export type ListPending1Error = ListPending1Errors[keyof ListPending1Errors]
+export type ListPendingApprovalsError = ListPendingApprovalsErrors[keyof ListPendingApprovalsErrors]
 
-export type ListPending1Responses = {
+export type ListPendingApprovalsResponses = {
   /**
    * OK
    */
   200: ResultListPendingRelationApproval
 }
 
-export type ListPending1Response = ListPending1Responses[keyof ListPending1Responses]
+export type ListPendingApprovalsResponse =
+  ListPendingApprovalsResponses[keyof ListPendingApprovalsResponses]
 
-export type Approve2Data = {
+export type Approve3Data = {
   body: ApproveRequest
   path: {
     id: string
@@ -13337,7 +14006,7 @@ export type Approve2Data = {
   url: '/access-relations/approvals/{id}/approve'
 }
 
-export type Approve2Errors = {
+export type Approve3Errors = {
   /**
    * Bad Request
    */
@@ -13359,6 +14028,10 @@ export type Approve2Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -13368,19 +14041,19 @@ export type Approve2Errors = {
   500: ResultVoid
 }
 
-export type Approve2Error = Approve2Errors[keyof Approve2Errors]
+export type Approve3Error = Approve3Errors[keyof Approve3Errors]
 
-export type Approve2Responses = {
+export type Approve3Responses = {
   /**
    * OK
    */
   200: ResultLong
 }
 
-export type Approve2Response = Approve2Responses[keyof Approve2Responses]
+export type Approve3Response = Approve3Responses[keyof Approve3Responses]
 
-export type Cancel2Data = {
-  body: CancelRequest
+export type Cancel3Data = {
+  body?: never
   path: {
     id: string
   }
@@ -13388,7 +14061,7 @@ export type Cancel2Data = {
   url: '/access-relations/approvals/{id}/cancel'
 }
 
-export type Cancel2Errors = {
+export type Cancel3Errors = {
   /**
    * Bad Request
    */
@@ -13410,6 +14083,10 @@ export type Cancel2Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -13419,18 +14096,18 @@ export type Cancel2Errors = {
   500: ResultVoid
 }
 
-export type Cancel2Error = Cancel2Errors[keyof Cancel2Errors]
+export type Cancel3Error = Cancel3Errors[keyof Cancel3Errors]
 
-export type Cancel2Responses = {
+export type Cancel3Responses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Cancel2Response = Cancel2Responses[keyof Cancel2Responses]
+export type Cancel3Response = Cancel3Responses[keyof Cancel3Responses]
 
-export type Reject2Data = {
+export type Reject3Data = {
   body: RejectRequest
   path: {
     id: string
@@ -13439,7 +14116,7 @@ export type Reject2Data = {
   url: '/access-relations/approvals/{id}/reject'
 }
 
-export type Reject2Errors = {
+export type Reject3Errors = {
   /**
    * Bad Request
    */
@@ -13461,6 +14138,10 @@ export type Reject2Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -13470,16 +14151,16 @@ export type Reject2Errors = {
   500: ResultVoid
 }
 
-export type Reject2Error = Reject2Errors[keyof Reject2Errors]
+export type Reject3Error = Reject3Errors[keyof Reject3Errors]
 
-export type Reject2Responses = {
+export type Reject3Responses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Reject2Response = Reject2Responses[keyof Reject2Responses]
+export type Reject3Response = Reject3Responses[keyof Reject3Responses]
 
 export type BatchDeleteData = {
   body: BatchDeleteRequest
@@ -13509,6 +14190,10 @@ export type BatchDeleteErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -13558,6 +14243,10 @@ export type BatchCreateErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -13614,6 +14303,10 @@ export type CheckErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -13666,6 +14359,10 @@ export type ByResourceErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -13720,6 +14417,10 @@ export type BySubjectErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -13740,7 +14441,7 @@ export type BySubjectResponses = {
 
 export type BySubjectResponse = BySubjectResponses[keyof BySubjectResponses]
 
-export type Recent1Data = {
+export type Recent2Data = {
   body?: never
   path?: never
   query?: {
@@ -13750,7 +14451,7 @@ export type Recent1Data = {
   url: '/access-relations/history/recent'
 }
 
-export type Recent1Errors = {
+export type Recent2Errors = {
   /**
    * Bad Request
    */
@@ -13772,6 +14473,10 @@ export type Recent1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -13781,18 +14486,18 @@ export type Recent1Errors = {
   500: ResultVoid
 }
 
-export type Recent1Error = Recent1Errors[keyof Recent1Errors]
+export type Recent2Error = Recent2Errors[keyof Recent2Errors]
 
-export type Recent1Responses = {
+export type Recent2Responses = {
   /**
    * OK
    */
   200: ResultListMapStringObject
 }
 
-export type Recent1Response = Recent1Responses[keyof Recent1Responses]
+export type Recent2Response = Recent2Responses[keyof Recent2Responses]
 
-export type Delete20Data = {
+export type DeleteAccessRelationsData = {
   body?: never
   path: {
     id: string
@@ -13801,7 +14506,7 @@ export type Delete20Data = {
   url: '/access-relations/{id}'
 }
 
-export type Delete20Errors = {
+export type DeleteAccessRelationsErrors = {
   /**
    * Bad Request
    */
@@ -13823,6 +14528,10 @@ export type Delete20Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -13832,18 +14541,20 @@ export type Delete20Errors = {
   500: ResultVoid
 }
 
-export type Delete20Error = Delete20Errors[keyof Delete20Errors]
+export type DeleteAccessRelationsError =
+  DeleteAccessRelationsErrors[keyof DeleteAccessRelationsErrors]
 
-export type Delete20Responses = {
+export type DeleteAccessRelationsResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Delete20Response = Delete20Responses[keyof Delete20Responses]
+export type DeleteAccessRelationsResponse =
+  DeleteAccessRelationsResponses[keyof DeleteAccessRelationsResponses]
 
-export type Update18Data = {
+export type UpdateAccessRelationsData = {
   body: UpdateCommand
   path: {
     id: string
@@ -13852,7 +14563,7 @@ export type Update18Data = {
   url: '/access-relations/{id}'
 }
 
-export type Update18Errors = {
+export type UpdateAccessRelationsErrors = {
   /**
    * Bad Request
    */
@@ -13874,6 +14585,10 @@ export type Update18Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -13883,25 +14598,27 @@ export type Update18Errors = {
   500: ResultVoid
 }
 
-export type Update18Error = Update18Errors[keyof Update18Errors]
+export type UpdateAccessRelationsError =
+  UpdateAccessRelationsErrors[keyof UpdateAccessRelationsErrors]
 
-export type Update18Responses = {
+export type UpdateAccessRelationsResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Update18Response = Update18Responses[keyof Update18Responses]
+export type UpdateAccessRelationsResponse =
+  UpdateAccessRelationsResponses[keyof UpdateAccessRelationsResponses]
 
-export type SimulateData = {
+export type Simulate2Data = {
   body: SimulateRequest
   path?: never
   query?: never
   url: '/access/data-permissions/simulate'
 }
 
-export type SimulateErrors = {
+export type Simulate2Errors = {
   /**
    * Bad Request
    */
@@ -13923,6 +14640,10 @@ export type SimulateErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -13932,18 +14653,18 @@ export type SimulateErrors = {
   500: ResultVoid
 }
 
-export type SimulateError = SimulateErrors[keyof SimulateErrors]
+export type Simulate2Error = Simulate2Errors[keyof Simulate2Errors]
 
-export type SimulateResponses = {
+export type Simulate2Responses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type SimulateResponse = SimulateResponses[keyof SimulateResponses]
+export type Simulate2Response = Simulate2Responses[keyof Simulate2Responses]
 
-export type ListEvents1Data = {
+export type ListEventsActivityEventsData = {
   body?: never
   path?: never
   query: {
@@ -13952,7 +14673,7 @@ export type ListEvents1Data = {
   url: '/activity-events'
 }
 
-export type ListEvents1Errors = {
+export type ListEventsActivityEventsErrors = {
   /**
    * Bad Request
    */
@@ -13974,6 +14695,10 @@ export type ListEvents1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -13983,16 +14708,18 @@ export type ListEvents1Errors = {
   500: ResultVoid
 }
 
-export type ListEvents1Error = ListEvents1Errors[keyof ListEvents1Errors]
+export type ListEventsActivityEventsError =
+  ListEventsActivityEventsErrors[keyof ListEventsActivityEventsErrors]
 
-export type ListEvents1Responses = {
+export type ListEventsActivityEventsResponses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type ListEvents1Response = ListEvents1Responses[keyof ListEvents1Responses]
+export type ListEventsActivityEventsResponse =
+  ListEventsActivityEventsResponses[keyof ListEventsActivityEventsResponses]
 
 export type GetResourceTimelineData = {
   body?: never
@@ -14028,6 +14755,10 @@ export type GetResourceTimelineErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -14049,7 +14780,7 @@ export type GetResourceTimelineResponses = {
 export type GetResourceTimelineResponse =
   GetResourceTimelineResponses[keyof GetResourceTimelineResponses]
 
-export type GetStats1Data = {
+export type GetStats2Data = {
   body?: never
   path?: never
   query?: {
@@ -14059,7 +14790,7 @@ export type GetStats1Data = {
   url: '/activity-events/stats'
 }
 
-export type GetStats1Errors = {
+export type GetStats2Errors = {
   /**
    * Bad Request
    */
@@ -14081,6 +14812,10 @@ export type GetStats1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -14090,16 +14825,16 @@ export type GetStats1Errors = {
   500: ResultVoid
 }
 
-export type GetStats1Error = GetStats1Errors[keyof GetStats1Errors]
+export type GetStats2Error = GetStats2Errors[keyof GetStats2Errors]
 
-export type GetStats1Responses = {
+export type GetStats2Responses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type GetStats1Response = GetStats1Responses[keyof GetStats1Responses]
+export type GetStats2Response = GetStats2Responses[keyof GetStats2Responses]
 
 export type GetUserActivityData = {
   body?: never
@@ -14133,6 +14868,10 @@ export type GetUserActivityErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -14182,6 +14921,10 @@ export type FireErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -14234,6 +14977,10 @@ export type ListDeadLetterErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -14284,6 +15031,10 @@ export type ClearDeadLetterErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -14337,6 +15088,10 @@ export type ListFailedErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -14385,6 +15140,10 @@ export type RetryBatchErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -14437,6 +15196,10 @@ export type MarkDeadErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -14487,6 +15250,10 @@ export type RetryErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -14543,6 +15310,10 @@ export type QueryAlertsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -14592,6 +15363,10 @@ export type MarkAllAsReadErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -14612,14 +15387,14 @@ export type MarkAllAsReadResponses = {
 
 export type MarkAllAsReadResponse = MarkAllAsReadResponses[keyof MarkAllAsReadResponses]
 
-export type GetStatistics6Data = {
+export type GetStatistics7Data = {
   body?: never
   path?: never
   query?: never
   url: '/asset-alerts/statistics'
 }
 
-export type GetStatistics6Errors = {
+export type GetStatistics7Errors = {
   /**
    * Bad Request
    */
@@ -14641,6 +15416,10 @@ export type GetStatistics6Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -14650,16 +15429,16 @@ export type GetStatistics6Errors = {
   500: ResultVoid
 }
 
-export type GetStatistics6Error = GetStatistics6Errors[keyof GetStatistics6Errors]
+export type GetStatistics7Error = GetStatistics7Errors[keyof GetStatistics7Errors]
 
-export type GetStatistics6Responses = {
+export type GetStatistics7Responses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type GetStatistics6Response = GetStatistics6Responses[keyof GetStatistics6Responses]
+export type GetStatistics7Response = GetStatistics7Responses[keyof GetStatistics7Responses]
 
 export type GetUnhandledAlertsData = {
   body?: never
@@ -14689,6 +15468,10 @@ export type GetUnhandledAlertsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -14740,6 +15523,10 @@ export type GetUnreadAlertsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -14789,6 +15576,10 @@ export type CountUnreadErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -14809,7 +15600,7 @@ export type CountUnreadResponses = {
 
 export type CountUnreadResponse = CountUnreadResponses[keyof CountUnreadResponses]
 
-export type GetAlert1Data = {
+export type GetAlertAssetAlertsData = {
   body?: never
   path: {
     id: string
@@ -14818,7 +15609,7 @@ export type GetAlert1Data = {
   url: '/asset-alerts/{id}'
 }
 
-export type GetAlert1Errors = {
+export type GetAlertAssetAlertsErrors = {
   /**
    * Bad Request
    */
@@ -14840,6 +15631,10 @@ export type GetAlert1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -14849,16 +15644,17 @@ export type GetAlert1Errors = {
   500: ResultVoid
 }
 
-export type GetAlert1Error = GetAlert1Errors[keyof GetAlert1Errors]
+export type GetAlertAssetAlertsError = GetAlertAssetAlertsErrors[keyof GetAlertAssetAlertsErrors]
 
-export type GetAlert1Responses = {
+export type GetAlertAssetAlertsResponses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type GetAlert1Response = GetAlert1Responses[keyof GetAlert1Responses]
+export type GetAlertAssetAlertsResponse =
+  GetAlertAssetAlertsResponses[keyof GetAlertAssetAlertsResponses]
 
 export type HandleAlertData = {
   body?: never
@@ -14890,6 +15686,10 @@ export type HandleAlertErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -14941,6 +15741,10 @@ export type MarkAsReadErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -14997,6 +15801,10 @@ export type QueryApprovalsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -15050,6 +15858,10 @@ export type CreateApprovalErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -15098,6 +15910,10 @@ export type GetMyApprovalsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -15148,6 +15964,10 @@ export type GetPendingApprovalsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -15197,6 +16017,10 @@ export type CountPendingErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -15249,6 +16073,10 @@ export type GetApprovalErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -15269,7 +16097,7 @@ export type GetApprovalResponses = {
 
 export type GetApprovalResponse = GetApprovalResponses[keyof GetApprovalResponses]
 
-export type Approve1Data = {
+export type Approve2Data = {
   body?: never
   path: {
     id: string
@@ -15278,7 +16106,7 @@ export type Approve1Data = {
   url: '/asset-approvals/{id}/approve'
 }
 
-export type Approve1Errors = {
+export type Approve2Errors = {
   /**
    * Bad Request
    */
@@ -15300,6 +16128,10 @@ export type Approve1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -15309,18 +16141,18 @@ export type Approve1Errors = {
   500: ResultVoid
 }
 
-export type Approve1Error = Approve1Errors[keyof Approve1Errors]
+export type Approve2Error = Approve2Errors[keyof Approve2Errors]
 
-export type Approve1Responses = {
+export type Approve2Responses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Approve1Response = Approve1Responses[keyof Approve1Responses]
+export type Approve2Response = Approve2Responses[keyof Approve2Responses]
 
-export type Cancel1Data = {
+export type Cancel2Data = {
   body?: never
   path: {
     id: string
@@ -15329,7 +16161,7 @@ export type Cancel1Data = {
   url: '/asset-approvals/{id}/cancel'
 }
 
-export type Cancel1Errors = {
+export type Cancel2Errors = {
   /**
    * Bad Request
    */
@@ -15351,6 +16183,10 @@ export type Cancel1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -15360,18 +16196,18 @@ export type Cancel1Errors = {
   500: ResultVoid
 }
 
-export type Cancel1Error = Cancel1Errors[keyof Cancel1Errors]
+export type Cancel2Error = Cancel2Errors[keyof Cancel2Errors]
 
-export type Cancel1Responses = {
+export type Cancel2Responses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Cancel1Response = Cancel1Responses[keyof Cancel1Responses]
+export type Cancel2Response = Cancel2Responses[keyof Cancel2Responses]
 
-export type Reject1Data = {
+export type Reject2Data = {
   body?: never
   path: {
     id: string
@@ -15380,7 +16216,7 @@ export type Reject1Data = {
   url: '/asset-approvals/{id}/reject'
 }
 
-export type Reject1Errors = {
+export type Reject2Errors = {
   /**
    * Bad Request
    */
@@ -15402,6 +16238,10 @@ export type Reject1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -15411,16 +16251,16 @@ export type Reject1Errors = {
   500: ResultVoid
 }
 
-export type Reject1Error = Reject1Errors[keyof Reject1Errors]
+export type Reject2Error = Reject2Errors[keyof Reject2Errors]
 
-export type Reject1Responses = {
+export type Reject2Responses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Reject1Response = Reject1Responses[keyof Reject1Responses]
+export type Reject2Response = Reject2Responses[keyof Reject2Responses]
 
 export type ListBorrowsData = {
   body?: never
@@ -15457,6 +16297,10 @@ export type ListBorrowsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -15511,6 +16355,10 @@ export type CreateBorrowErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -15561,6 +16409,10 @@ export type GetAssetBorrowHistoryErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -15613,6 +16465,10 @@ export type GetMyBorrowsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -15662,6 +16518,10 @@ export type GetOverdueBorrowsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -15682,14 +16542,14 @@ export type GetOverdueBorrowsResponses = {
 
 export type GetOverdueBorrowsResponse = GetOverdueBorrowsResponses[keyof GetOverdueBorrowsResponses]
 
-export type GetStatistics5Data = {
+export type GetStatistics6Data = {
   body?: never
   path?: never
   query?: never
   url: '/asset-borrows/statistics'
 }
 
-export type GetStatistics5Errors = {
+export type GetStatistics6Errors = {
   /**
    * Bad Request
    */
@@ -15711,6 +16571,10 @@ export type GetStatistics5Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -15720,16 +16584,16 @@ export type GetStatistics5Errors = {
   500: ResultVoid
 }
 
-export type GetStatistics5Error = GetStatistics5Errors[keyof GetStatistics5Errors]
+export type GetStatistics6Error = GetStatistics6Errors[keyof GetStatistics6Errors]
 
-export type GetStatistics5Responses = {
+export type GetStatistics6Responses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type GetStatistics5Response = GetStatistics5Responses[keyof GetStatistics5Responses]
+export type GetStatistics6Response = GetStatistics6Responses[keyof GetStatistics6Responses]
 
 export type GetBorrowData = {
   body?: never
@@ -15761,6 +16625,10 @@ export type GetBorrowErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -15812,6 +16680,10 @@ export type CancelBorrowErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -15868,6 +16740,10 @@ export type ReturnBorrowErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -15921,6 +16797,10 @@ export type GenerateBarcodeErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -15972,6 +16852,10 @@ export type GenerateAssetCodeErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -16025,6 +16909,10 @@ export type GenerateAssetCodesErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -16081,6 +16969,10 @@ export type GenerateLabelErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -16134,6 +17026,10 @@ export type GenerateLabelsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -16184,6 +17080,10 @@ export type ParseQrCodeErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -16238,6 +17138,10 @@ export type GenerateQrCodeErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -16288,6 +17192,10 @@ export type CalculateAllDepreciationErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -16340,6 +17248,10 @@ export type GetMethodsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -16360,7 +17272,7 @@ export type GetMethodsResponses = {
 
 export type GetMethodsResponse = GetMethodsResponses[keyof GetMethodsResponses]
 
-export type GetPeriodSummary1Data = {
+export type GetPeriodSummaryPeriodData = {
   body?: never
   path: {
     period: string
@@ -16369,7 +17281,7 @@ export type GetPeriodSummary1Data = {
   url: '/asset-depreciation/period/{period}'
 }
 
-export type GetPeriodSummary1Errors = {
+export type GetPeriodSummaryPeriodErrors = {
   /**
    * Bad Request
    */
@@ -16391,6 +17303,10 @@ export type GetPeriodSummary1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -16400,16 +17316,18 @@ export type GetPeriodSummary1Errors = {
   500: ResultVoid
 }
 
-export type GetPeriodSummary1Error = GetPeriodSummary1Errors[keyof GetPeriodSummary1Errors]
+export type GetPeriodSummaryPeriodError =
+  GetPeriodSummaryPeriodErrors[keyof GetPeriodSummaryPeriodErrors]
 
-export type GetPeriodSummary1Responses = {
+export type GetPeriodSummaryPeriodResponses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type GetPeriodSummary1Response = GetPeriodSummary1Responses[keyof GetPeriodSummary1Responses]
+export type GetPeriodSummaryPeriodResponse =
+  GetPeriodSummaryPeriodResponses[keyof GetPeriodSummaryPeriodResponses]
 
 export type TriggerDepreciationData = {
   body?: never
@@ -16441,6 +17359,10 @@ export type TriggerDepreciationErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -16496,6 +17418,10 @@ export type CalculateDepreciationErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -16548,6 +17474,10 @@ export type GetHistoryErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -16603,6 +17533,10 @@ export type GetHistoryPageErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -16655,6 +17589,10 @@ export type PreviewDepreciationErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -16711,6 +17649,10 @@ export type ListInventoriesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -16764,6 +17706,10 @@ export type CreateInventoryErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -16784,14 +17730,14 @@ export type CreateInventoryResponses = {
 
 export type CreateInventoryResponse = CreateInventoryResponses[keyof CreateInventoryResponses]
 
-export type GetStatistics4Data = {
+export type GetStatistics5Data = {
   body?: never
   path?: never
   query?: never
   url: '/asset-inventories/statistics'
 }
 
-export type GetStatistics4Errors = {
+export type GetStatistics5Errors = {
   /**
    * Bad Request
    */
@@ -16813,6 +17759,10 @@ export type GetStatistics4Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -16822,16 +17772,16 @@ export type GetStatistics4Errors = {
   500: ResultVoid
 }
 
-export type GetStatistics4Error = GetStatistics4Errors[keyof GetStatistics4Errors]
+export type GetStatistics5Error = GetStatistics5Errors[keyof GetStatistics5Errors]
 
-export type GetStatistics4Responses = {
+export type GetStatistics5Responses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type GetStatistics4Response = GetStatistics4Responses[keyof GetStatistics4Responses]
+export type GetStatistics5Response = GetStatistics5Responses[keyof GetStatistics5Responses]
 
 export type GetInventoryData = {
   body?: never
@@ -16863,6 +17813,10 @@ export type GetInventoryErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -16915,6 +17869,10 @@ export type CancelInventoryErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -16965,6 +17923,10 @@ export type CompleteInventoryErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -17022,6 +17984,10 @@ export type UpdateInventoryDetailErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -17073,6 +18039,10 @@ export type GetAllCategoriesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -17093,7 +18063,7 @@ export type GetAllCategoriesResponses = {
 
 export type GetAllCategoriesResponse = GetAllCategoriesResponses[keyof GetAllCategoriesResponses]
 
-export type CreateCategory1Data = {
+export type CreateCategoryCategories2Data = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -17104,7 +18074,7 @@ export type CreateCategory1Data = {
   url: '/asset/categories'
 }
 
-export type CreateCategory1Errors = {
+export type CreateCategoryCategories2Errors = {
   /**
    * Bad Request
    */
@@ -17126,6 +18096,10 @@ export type CreateCategory1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -17135,16 +18109,18 @@ export type CreateCategory1Errors = {
   500: ResultVoid
 }
 
-export type CreateCategory1Error = CreateCategory1Errors[keyof CreateCategory1Errors]
+export type CreateCategoryCategories2Error =
+  CreateCategoryCategories2Errors[keyof CreateCategoryCategories2Errors]
 
-export type CreateCategory1Responses = {
+export type CreateCategoryCategories2Responses = {
   /**
    * OK
    */
   200: ResultLong
 }
 
-export type CreateCategory1Response = CreateCategory1Responses[keyof CreateCategory1Responses]
+export type CreateCategoryCategories2Response =
+  CreateCategoryCategories2Responses[keyof CreateCategoryCategories2Responses]
 
 export type GetCategoryTreeData = {
   body?: never
@@ -17174,6 +18150,10 @@ export type GetCategoryTreeErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -17226,6 +18206,10 @@ export type DeleteCategoryErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -17276,6 +18260,10 @@ export type GetCategoryErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -17331,6 +18319,10 @@ export type UpdateCategoryErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -17389,6 +18381,10 @@ export type ListAssetsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -17441,6 +18437,10 @@ export type CreateAssetErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -17495,6 +18495,10 @@ export type BatchCreateAssetsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -17548,6 +18552,10 @@ export type BatchTransferAssetsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -17600,6 +18608,10 @@ export type GetAssetsByLocationErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -17655,6 +18667,10 @@ export type ExportAssetsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -17704,6 +18720,10 @@ export type ImportAssetsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -17752,6 +18772,10 @@ export type DownloadTemplateErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -17806,6 +18830,10 @@ export type CompleteMaintenanceErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -17855,6 +18883,10 @@ export type GetAssetStatisticsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -17912,6 +18944,10 @@ export type CreateMaintenanceErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -17963,6 +18999,10 @@ export type DeleteAssetErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -18013,6 +19053,10 @@ export type GetAssetErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -18069,6 +19113,10 @@ export type UpdateAssetErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -18120,6 +19168,10 @@ export type GetAssetHistoryErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -18170,6 +19222,10 @@ export type GetMaintenanceRecordsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -18223,6 +19279,10 @@ export type ScrapAssetErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -18279,6 +19339,10 @@ export type TransferAssetErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -18331,6 +19395,10 @@ export type BatchRecordErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -18387,6 +19455,10 @@ export type ListLeaveRequestsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -18440,6 +19512,10 @@ export type CreateLeaveRequestErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -18489,6 +19565,10 @@ export type PendingLeavesErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -18541,6 +19621,10 @@ export type ApproveLeaveErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -18591,6 +19675,10 @@ export type RejectLeaveErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -18653,6 +19741,10 @@ export type ListRecordsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -18705,6 +19797,10 @@ export type CreateRecordErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -18760,6 +19856,10 @@ export type GetByClassErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -18814,6 +19914,10 @@ export type ExportAttendanceErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -18862,6 +19966,10 @@ export type DeleteRecordErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -18918,6 +20026,10 @@ export type UpdateRecordErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -18938,7 +20050,7 @@ export type UpdateRecordResponses = {
 
 export type UpdateRecordResponse = UpdateRecordResponses[keyof UpdateRecordResponses]
 
-export type GetStatistics3Data = {
+export type GetStatistics4Data = {
   body?: never
   path?: never
   query: {
@@ -18950,7 +20062,7 @@ export type GetStatistics3Data = {
   url: '/attendance/statistics'
 }
 
-export type GetStatistics3Errors = {
+export type GetStatistics4Errors = {
   /**
    * Bad Request
    */
@@ -18972,6 +20084,10 @@ export type GetStatistics3Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -18981,16 +20097,16 @@ export type GetStatistics3Errors = {
   500: ResultVoid
 }
 
-export type GetStatistics3Error = GetStatistics3Errors[keyof GetStatistics3Errors]
+export type GetStatistics4Error = GetStatistics4Errors[keyof GetStatistics4Errors]
 
-export type GetStatistics3Responses = {
+export type GetStatistics4Responses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type GetStatistics3Response = GetStatistics3Responses[keyof GetStatistics3Responses]
+export type GetStatistics4Response = GetStatistics4Responses[keyof GetStatistics4Responses]
 
 export type GetStudentStatisticsData = {
   body?: never
@@ -19027,6 +20143,10 @@ export type GetStudentStatisticsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -19048,7 +20168,7 @@ export type GetStudentStatisticsResponses = {
 export type GetStudentStatisticsResponse =
   GetStudentStatisticsResponses[keyof GetStudentStatisticsResponses]
 
-export type List21Data = {
+export type ListAuditTrailData = {
   body?: never
   path?: never
   query?: {
@@ -19064,7 +20184,7 @@ export type List21Data = {
   url: '/audit-trail'
 }
 
-export type List21Errors = {
+export type ListAuditTrailErrors = {
   /**
    * Bad Request
    */
@@ -19086,6 +20206,10 @@ export type List21Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -19095,16 +20219,16 @@ export type List21Errors = {
   500: ResultVoid
 }
 
-export type List21Error = List21Errors[keyof List21Errors]
+export type ListAuditTrailError = ListAuditTrailErrors[keyof ListAuditTrailErrors]
 
-export type List21Responses = {
+export type ListAuditTrailResponses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type List21Response = List21Responses[keyof List21Responses]
+export type ListAuditTrailResponse = ListAuditTrailResponses[keyof ListAuditTrailResponses]
 
 export type GetByResourceData = {
   body?: never
@@ -19137,6 +20261,10 @@ export type GetByResourceErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -19187,6 +20315,10 @@ export type LoginErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -19235,6 +20367,10 @@ export type LogoutErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -19285,6 +20421,10 @@ export type GetCurrentUserErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -19333,6 +20473,10 @@ export type RefreshErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -19383,6 +20527,10 @@ export type ListAcademicYearsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -19431,6 +20579,10 @@ export type CreateAcademicYearErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -19481,6 +20633,10 @@ export type GetCurrentAcademicYearErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -19535,6 +20691,10 @@ export type DeleteAcademicYearErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -19587,6 +20747,10 @@ export type GetAcademicYearErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -19637,6 +20801,10 @@ export type UpdateAcademicYearErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -19689,6 +20857,10 @@ export type SetCurrentAcademicYearErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -19745,6 +20917,10 @@ export type ListEventsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -19793,6 +20969,10 @@ export type CreateEventErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -19845,6 +21025,10 @@ export type DeleteEventErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -19895,6 +21079,10 @@ export type GetEventErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -19947,6 +21135,10 @@ export type UpdateEventErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -19967,7 +21159,7 @@ export type UpdateEventResponses = {
 
 export type UpdateEventResponse = UpdateEventResponses[keyof UpdateEventResponses]
 
-export type List20Data = {
+export type ListPeriodConfigsData = {
   body?: never
   path?: never
   query: {
@@ -19976,7 +21168,7 @@ export type List20Data = {
   url: '/calendar/period-configs'
 }
 
-export type List20Errors = {
+export type ListPeriodConfigsErrors = {
   /**
    * Bad Request
    */
@@ -19998,6 +21190,10 @@ export type List20Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -20007,18 +21203,18 @@ export type List20Errors = {
   500: ResultVoid
 }
 
-export type List20Error = List20Errors[keyof List20Errors]
+export type ListPeriodConfigsError = ListPeriodConfigsErrors[keyof ListPeriodConfigsErrors]
 
-export type List20Responses = {
+export type ListPeriodConfigsResponses = {
   /**
    * OK
    */
   200: ResultListMapStringObject
 }
 
-export type List20Response = List20Responses[keyof List20Responses]
+export type ListPeriodConfigsResponse = ListPeriodConfigsResponses[keyof ListPeriodConfigsResponses]
 
-export type Create18Data = {
+export type CreatePeriodConfigsData = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -20029,7 +21225,7 @@ export type Create18Data = {
   url: '/calendar/period-configs'
 }
 
-export type Create18Errors = {
+export type CreatePeriodConfigsErrors = {
   /**
    * Bad Request
    */
@@ -20051,6 +21247,10 @@ export type Create18Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -20060,16 +21260,17 @@ export type Create18Errors = {
   500: ResultVoid
 }
 
-export type Create18Error = Create18Errors[keyof Create18Errors]
+export type CreatePeriodConfigsError = CreatePeriodConfigsErrors[keyof CreatePeriodConfigsErrors]
 
-export type Create18Responses = {
+export type CreatePeriodConfigsResponses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type Create18Response = Create18Responses[keyof Create18Responses]
+export type CreatePeriodConfigsResponse =
+  CreatePeriodConfigsResponses[keyof CreatePeriodConfigsResponses]
 
 export type InitFromPreviousData = {
   body: {
@@ -20104,6 +21305,10 @@ export type InitFromPreviousErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -20124,7 +21329,7 @@ export type InitFromPreviousResponses = {
 
 export type InitFromPreviousResponse = InitFromPreviousResponses[keyof InitFromPreviousResponses]
 
-export type Delete19Data = {
+export type DeletePeriodConfigsData = {
   body?: never
   path: {
     id: string
@@ -20133,7 +21338,7 @@ export type Delete19Data = {
   url: '/calendar/period-configs/{id}'
 }
 
-export type Delete19Errors = {
+export type DeletePeriodConfigsErrors = {
   /**
    * Bad Request
    */
@@ -20155,6 +21360,10 @@ export type Delete19Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -20164,18 +21373,19 @@ export type Delete19Errors = {
   500: ResultVoid
 }
 
-export type Delete19Error = Delete19Errors[keyof Delete19Errors]
+export type DeletePeriodConfigsError = DeletePeriodConfigsErrors[keyof DeletePeriodConfigsErrors]
 
-export type Delete19Responses = {
+export type DeletePeriodConfigsResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Delete19Response = Delete19Responses[keyof Delete19Responses]
+export type DeletePeriodConfigsResponse =
+  DeletePeriodConfigsResponses[keyof DeletePeriodConfigsResponses]
 
-export type GetById10Data = {
+export type GetByIdPeriodConfigsData = {
   body?: never
   path: {
     id: string
@@ -20184,7 +21394,7 @@ export type GetById10Data = {
   url: '/calendar/period-configs/{id}'
 }
 
-export type GetById10Errors = {
+export type GetByIdPeriodConfigsErrors = {
   /**
    * Bad Request
    */
@@ -20206,6 +21416,10 @@ export type GetById10Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -20215,18 +21429,19 @@ export type GetById10Errors = {
   500: ResultVoid
 }
 
-export type GetById10Error = GetById10Errors[keyof GetById10Errors]
+export type GetByIdPeriodConfigsError = GetByIdPeriodConfigsErrors[keyof GetByIdPeriodConfigsErrors]
 
-export type GetById10Responses = {
+export type GetByIdPeriodConfigsResponses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type GetById10Response = GetById10Responses[keyof GetById10Responses]
+export type GetByIdPeriodConfigsResponse =
+  GetByIdPeriodConfigsResponses[keyof GetByIdPeriodConfigsResponses]
 
-export type Update17Data = {
+export type UpdatePeriodConfigsData = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -20239,7 +21454,7 @@ export type Update17Data = {
   url: '/calendar/period-configs/{id}'
 }
 
-export type Update17Errors = {
+export type UpdatePeriodConfigsErrors = {
   /**
    * Bad Request
    */
@@ -20261,6 +21476,10 @@ export type Update17Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -20270,16 +21489,17 @@ export type Update17Errors = {
   500: ResultVoid
 }
 
-export type Update17Error = Update17Errors[keyof Update17Errors]
+export type UpdatePeriodConfigsError = UpdatePeriodConfigsErrors[keyof UpdatePeriodConfigsErrors]
 
-export type Update17Responses = {
+export type UpdatePeriodConfigsResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Update17Response = Update17Responses[keyof Update17Responses]
+export type UpdatePeriodConfigsResponse =
+  UpdatePeriodConfigsResponses[keyof UpdatePeriodConfigsResponses]
 
 export type ListSemestersData = {
   body?: never
@@ -20311,6 +21531,10 @@ export type ListSemestersErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -20361,6 +21585,10 @@ export type CreateSemesterErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -20409,6 +21637,10 @@ export type GetCurrentSemesterErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -20463,6 +21695,10 @@ export type GenerateSemesterCodeErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -20515,6 +21751,10 @@ export type DeleteSemesterErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -20565,6 +21805,10 @@ export type GetSemesterErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -20617,6 +21861,10 @@ export type UpdateSemesterErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -20668,6 +21916,10 @@ export type EndSemesterErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -20718,6 +21970,10 @@ export type ReactivateSemesterErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -20771,6 +22027,10 @@ export type SetCurrentSemesterErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -20823,6 +22083,10 @@ export type GetCalendarGridErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -20874,6 +22138,10 @@ export type GenerateWeeksErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -20924,6 +22192,10 @@ export type GetWeeksErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -20980,6 +22252,10 @@ export type UpdateWeekTypeErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -21029,6 +22305,10 @@ export type GetOverviewErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -21049,7 +22329,7 @@ export type GetOverviewResponses = {
 
 export type GetOverviewResponse = GetOverviewResponses[keyof GetOverviewResponses]
 
-export type GetStatistics2Data = {
+export type GetStatistics3Data = {
   body?: never
   path?: never
   query?: {
@@ -21058,7 +22338,7 @@ export type GetStatistics2Data = {
   url: '/dashboard/statistics'
 }
 
-export type GetStatistics2Errors = {
+export type GetStatistics3Errors = {
   /**
    * Bad Request
    */
@@ -21080,6 +22360,10 @@ export type GetStatistics2Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -21089,16 +22373,16 @@ export type GetStatistics2Errors = {
   500: ResultVoid
 }
 
-export type GetStatistics2Error = GetStatistics2Errors[keyof GetStatistics2Errors]
+export type GetStatistics3Error = GetStatistics3Errors[keyof GetStatistics3Errors]
 
-export type GetStatistics2Responses = {
+export type GetStatistics3Responses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type GetStatistics2Response = GetStatistics2Responses[keyof GetStatistics2Responses]
+export type GetStatistics3Response = GetStatistics3Responses[keyof GetStatistics3Responses]
 
 export type ListModulesData = {
   body?: never
@@ -21131,6 +22415,10 @@ export type ListModulesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -21151,14 +22439,14 @@ export type ListModulesResponses = {
 
 export type ListModulesResponse = ListModulesResponses[keyof ListModulesResponses]
 
-export type Create17Data = {
+export type CreateDataModulesData = {
   body: DataModulePo
   path?: never
   query?: never
   url: '/data-modules'
 }
 
-export type Create17Errors = {
+export type CreateDataModulesErrors = {
   /**
    * Bad Request
    */
@@ -21180,6 +22468,10 @@ export type Create17Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -21189,16 +22481,16 @@ export type Create17Errors = {
   500: ResultVoid
 }
 
-export type Create17Error = Create17Errors[keyof Create17Errors]
+export type CreateDataModulesError = CreateDataModulesErrors[keyof CreateDataModulesErrors]
 
-export type Create17Responses = {
+export type CreateDataModulesResponses = {
   /**
    * OK
    */
   200: ResultDataModulePo
 }
 
-export type Create17Response = Create17Responses[keyof Create17Responses]
+export type CreateDataModulesResponse = CreateDataModulesResponses[keyof CreateDataModulesResponses]
 
 export type ListModulesForRoleData = {
   body?: never
@@ -21231,6 +22523,10 @@ export type ListModulesForRoleErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -21284,6 +22580,10 @@ export type ListModulesGroupedErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -21305,7 +22605,7 @@ export type ListModulesGroupedResponses = {
 export type ListModulesGroupedResponse =
   ListModulesGroupedResponses[keyof ListModulesGroupedResponses]
 
-export type Delete18Data = {
+export type DeleteDataModulesData = {
   body?: never
   path: {
     id: string
@@ -21314,7 +22614,7 @@ export type Delete18Data = {
   url: '/data-modules/{id}'
 }
 
-export type Delete18Errors = {
+export type DeleteDataModulesErrors = {
   /**
    * Bad Request
    */
@@ -21336,6 +22636,10 @@ export type Delete18Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -21345,18 +22649,18 @@ export type Delete18Errors = {
   500: ResultVoid
 }
 
-export type Delete18Error = Delete18Errors[keyof Delete18Errors]
+export type DeleteDataModulesError = DeleteDataModulesErrors[keyof DeleteDataModulesErrors]
 
-export type Delete18Responses = {
+export type DeleteDataModulesResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Delete18Response = Delete18Responses[keyof Delete18Responses]
+export type DeleteDataModulesResponse = DeleteDataModulesResponses[keyof DeleteDataModulesResponses]
 
-export type Update16Data = {
+export type UpdateDataModulesData = {
   body: DataModulePo
   path: {
     id: string
@@ -21365,7 +22669,7 @@ export type Update16Data = {
   url: '/data-modules/{id}'
 }
 
-export type Update16Errors = {
+export type UpdateDataModulesErrors = {
   /**
    * Bad Request
    */
@@ -21387,6 +22691,10 @@ export type Update16Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -21396,25 +22704,25 @@ export type Update16Errors = {
   500: ResultVoid
 }
 
-export type Update16Error = Update16Errors[keyof Update16Errors]
+export type UpdateDataModulesError = UpdateDataModulesErrors[keyof UpdateDataModulesErrors]
 
-export type Update16Responses = {
+export type UpdateDataModulesResponses = {
   /**
    * OK
    */
   200: ResultDataModulePo
 }
 
-export type Update16Response = Update16Responses[keyof Update16Responses]
+export type UpdateDataModulesResponse = UpdateDataModulesResponses[keyof UpdateDataModulesResponses]
 
-export type GetAllUsers1Data = {
+export type GetAllUsers2Data = {
   body?: never
   path?: never
   query?: never
   url: '/domain/users'
 }
 
-export type GetAllUsers1Errors = {
+export type GetAllUsers2Errors = {
   /**
    * Bad Request
    */
@@ -21436,6 +22744,10 @@ export type GetAllUsers1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -21445,25 +22757,25 @@ export type GetAllUsers1Errors = {
   500: ResultVoid
 }
 
-export type GetAllUsers1Error = GetAllUsers1Errors[keyof GetAllUsers1Errors]
+export type GetAllUsers2Error = GetAllUsers2Errors[keyof GetAllUsers2Errors]
 
-export type GetAllUsers1Responses = {
+export type GetAllUsers2Responses = {
   /**
    * OK
    */
   200: ResultListUserDomainResponse
 }
 
-export type GetAllUsers1Response = GetAllUsers1Responses[keyof GetAllUsers1Responses]
+export type GetAllUsers2Response = GetAllUsers2Responses[keyof GetAllUsers2Responses]
 
-export type CreateUser1Data = {
+export type CreateUserUsers2Data = {
   body: CreateUserRequest
   path?: never
   query?: never
   url: '/domain/users'
 }
 
-export type CreateUser1Errors = {
+export type CreateUserUsers2Errors = {
   /**
    * Bad Request
    */
@@ -21485,6 +22797,10 @@ export type CreateUser1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -21494,25 +22810,25 @@ export type CreateUser1Errors = {
   500: ResultVoid
 }
 
-export type CreateUser1Error = CreateUser1Errors[keyof CreateUser1Errors]
+export type CreateUserUsers2Error = CreateUserUsers2Errors[keyof CreateUserUsers2Errors]
 
-export type CreateUser1Responses = {
+export type CreateUserUsers2Responses = {
   /**
    * OK
    */
   200: ResultUserDomainResponse
 }
 
-export type CreateUser1Response = CreateUser1Responses[keyof CreateUser1Responses]
+export type CreateUserUsers2Response = CreateUserUsers2Responses[keyof CreateUserUsers2Responses]
 
-export type DeleteUsers1Data = {
+export type DeleteUsersBatch2Data = {
   body: Array<string>
   path?: never
   query?: never
   url: '/domain/users/batch'
 }
 
-export type DeleteUsers1Errors = {
+export type DeleteUsersBatch2Errors = {
   /**
    * Bad Request
    */
@@ -21534,6 +22850,10 @@ export type DeleteUsers1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -21543,18 +22863,18 @@ export type DeleteUsers1Errors = {
   500: ResultVoid
 }
 
-export type DeleteUsers1Error = DeleteUsers1Errors[keyof DeleteUsers1Errors]
+export type DeleteUsersBatch2Error = DeleteUsersBatch2Errors[keyof DeleteUsersBatch2Errors]
 
-export type DeleteUsers1Responses = {
+export type DeleteUsersBatch2Responses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type DeleteUsers1Response = DeleteUsers1Responses[keyof DeleteUsers1Responses]
+export type DeleteUsersBatch2Response = DeleteUsersBatch2Responses[keyof DeleteUsersBatch2Responses]
 
-export type GetUsersByOrgUnit1Data = {
+export type GetUsersByOrgUnit2Data = {
   body?: never
   path: {
     /**
@@ -21566,7 +22886,7 @@ export type GetUsersByOrgUnit1Data = {
   url: '/domain/users/by-org-unit/{orgUnitId}'
 }
 
-export type GetUsersByOrgUnit1Errors = {
+export type GetUsersByOrgUnit2Errors = {
   /**
    * Bad Request
    */
@@ -21588,6 +22908,10 @@ export type GetUsersByOrgUnit1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -21597,19 +22921,19 @@ export type GetUsersByOrgUnit1Errors = {
   500: ResultVoid
 }
 
-export type GetUsersByOrgUnit1Error = GetUsersByOrgUnit1Errors[keyof GetUsersByOrgUnit1Errors]
+export type GetUsersByOrgUnit2Error = GetUsersByOrgUnit2Errors[keyof GetUsersByOrgUnit2Errors]
 
-export type GetUsersByOrgUnit1Responses = {
+export type GetUsersByOrgUnit2Responses = {
   /**
    * OK
    */
   200: ResultListUserDomainResponse
 }
 
-export type GetUsersByOrgUnit1Response =
-  GetUsersByOrgUnit1Responses[keyof GetUsersByOrgUnit1Responses]
+export type GetUsersByOrgUnit2Response =
+  GetUsersByOrgUnit2Responses[keyof GetUsersByOrgUnit2Responses]
 
-export type GetUserByUsername1Data = {
+export type GetUserByUsername2Data = {
   body?: never
   path: {
     /**
@@ -21621,7 +22945,7 @@ export type GetUserByUsername1Data = {
   url: '/domain/users/by-username/{username}'
 }
 
-export type GetUserByUsername1Errors = {
+export type GetUserByUsername2Errors = {
   /**
    * Bad Request
    */
@@ -21643,6 +22967,10 @@ export type GetUserByUsername1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -21652,19 +22980,19 @@ export type GetUserByUsername1Errors = {
   500: ResultVoid
 }
 
-export type GetUserByUsername1Error = GetUserByUsername1Errors[keyof GetUserByUsername1Errors]
+export type GetUserByUsername2Error = GetUserByUsername2Errors[keyof GetUserByUsername2Errors]
 
-export type GetUserByUsername1Responses = {
+export type GetUserByUsername2Responses = {
   /**
    * OK
    */
   200: ResultUserDomainResponse
 }
 
-export type GetUserByUsername1Response =
-  GetUserByUsername1Responses[keyof GetUserByUsername1Responses]
+export type GetUserByUsername2Response =
+  GetUserByUsername2Responses[keyof GetUserByUsername2Responses]
 
-export type ExistsUsername1Data = {
+export type ExistsUsernameExists2Data = {
   body?: never
   path?: never
   query: {
@@ -21680,7 +23008,7 @@ export type ExistsUsername1Data = {
   url: '/domain/users/exists'
 }
 
-export type ExistsUsername1Errors = {
+export type ExistsUsernameExists2Errors = {
   /**
    * Bad Request
    */
@@ -21702,6 +23030,10 @@ export type ExistsUsername1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -21711,16 +23043,18 @@ export type ExistsUsername1Errors = {
   500: ResultVoid
 }
 
-export type ExistsUsername1Error = ExistsUsername1Errors[keyof ExistsUsername1Errors]
+export type ExistsUsernameExists2Error =
+  ExistsUsernameExists2Errors[keyof ExistsUsernameExists2Errors]
 
-export type ExistsUsername1Responses = {
+export type ExistsUsernameExists2Responses = {
   /**
    * OK
    */
   200: ResultBoolean
 }
 
-export type ExistsUsername1Response = ExistsUsername1Responses[keyof ExistsUsername1Responses]
+export type ExistsUsernameExists2Response =
+  ExistsUsernameExists2Responses[keyof ExistsUsernameExists2Responses]
 
 export type GetUsersPageData = {
   body?: never
@@ -21780,6 +23114,10 @@ export type GetUsersPageErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -21800,7 +23138,7 @@ export type GetUsersPageResponses = {
 
 export type GetUsersPageResponse = GetUsersPageResponses[keyof GetUsersPageResponses]
 
-export type GetSimpleUserList1Data = {
+export type GetSimpleUserListSimple2Data = {
   body?: never
   path?: never
   query?: {
@@ -21812,7 +23150,7 @@ export type GetSimpleUserList1Data = {
   url: '/domain/users/simple'
 }
 
-export type GetSimpleUserList1Errors = {
+export type GetSimpleUserListSimple2Errors = {
   /**
    * Bad Request
    */
@@ -21834,6 +23172,10 @@ export type GetSimpleUserList1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -21843,19 +23185,20 @@ export type GetSimpleUserList1Errors = {
   500: ResultVoid
 }
 
-export type GetSimpleUserList1Error = GetSimpleUserList1Errors[keyof GetSimpleUserList1Errors]
+export type GetSimpleUserListSimple2Error =
+  GetSimpleUserListSimple2Errors[keyof GetSimpleUserListSimple2Errors]
 
-export type GetSimpleUserList1Responses = {
+export type GetSimpleUserListSimple2Responses = {
   /**
    * OK
    */
   200: ResultListSimpleUserResponse
 }
 
-export type GetSimpleUserList1Response =
-  GetSimpleUserList1Responses[keyof GetSimpleUserList1Responses]
+export type GetSimpleUserListSimple2Response =
+  GetSimpleUserListSimple2Responses[keyof GetSimpleUserListSimple2Responses]
 
-export type DeleteUser1Data = {
+export type DeleteUserUsers2Data = {
   body?: never
   path: {
     /**
@@ -21867,7 +23210,7 @@ export type DeleteUser1Data = {
   url: '/domain/users/{id}'
 }
 
-export type DeleteUser1Errors = {
+export type DeleteUserUsers2Errors = {
   /**
    * Bad Request
    */
@@ -21889,6 +23232,10 @@ export type DeleteUser1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -21898,18 +23245,18 @@ export type DeleteUser1Errors = {
   500: ResultVoid
 }
 
-export type DeleteUser1Error = DeleteUser1Errors[keyof DeleteUser1Errors]
+export type DeleteUserUsers2Error = DeleteUserUsers2Errors[keyof DeleteUserUsers2Errors]
 
-export type DeleteUser1Responses = {
+export type DeleteUserUsers2Responses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type DeleteUser1Response = DeleteUser1Responses[keyof DeleteUser1Responses]
+export type DeleteUserUsers2Response = DeleteUserUsers2Responses[keyof DeleteUserUsers2Responses]
 
-export type GetUser1Data = {
+export type GetUserUsers2Data = {
   body?: never
   path: {
     /**
@@ -21921,7 +23268,7 @@ export type GetUser1Data = {
   url: '/domain/users/{id}'
 }
 
-export type GetUser1Errors = {
+export type GetUserUsers2Errors = {
   /**
    * Bad Request
    */
@@ -21943,6 +23290,10 @@ export type GetUser1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -21952,18 +23303,18 @@ export type GetUser1Errors = {
   500: ResultVoid
 }
 
-export type GetUser1Error = GetUser1Errors[keyof GetUser1Errors]
+export type GetUserUsers2Error = GetUserUsers2Errors[keyof GetUserUsers2Errors]
 
-export type GetUser1Responses = {
+export type GetUserUsers2Responses = {
   /**
    * OK
    */
   200: ResultUserDomainResponse
 }
 
-export type GetUser1Response = GetUser1Responses[keyof GetUser1Responses]
+export type GetUserUsers2Response = GetUserUsers2Responses[keyof GetUserUsers2Responses]
 
-export type UpdateUser1Data = {
+export type UpdateUserUsers2Data = {
   body: UpdateUserRequest
   path: {
     /**
@@ -21975,7 +23326,7 @@ export type UpdateUser1Data = {
   url: '/domain/users/{id}'
 }
 
-export type UpdateUser1Errors = {
+export type UpdateUserUsers2Errors = {
   /**
    * Bad Request
    */
@@ -21997,6 +23348,10 @@ export type UpdateUser1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -22006,18 +23361,18 @@ export type UpdateUser1Errors = {
   500: ResultVoid
 }
 
-export type UpdateUser1Error = UpdateUser1Errors[keyof UpdateUser1Errors]
+export type UpdateUserUsers2Error = UpdateUserUsers2Errors[keyof UpdateUserUsers2Errors]
 
-export type UpdateUser1Responses = {
+export type UpdateUserUsers2Responses = {
   /**
    * OK
    */
   200: ResultUserDomainResponse
 }
 
-export type UpdateUser1Response = UpdateUser1Responses[keyof UpdateUser1Responses]
+export type UpdateUserUsers2Response = UpdateUserUsers2Responses[keyof UpdateUserUsers2Responses]
 
-export type BindWechat1Data = {
+export type BindWechat2Data = {
   body?: never
   path: {
     /**
@@ -22031,7 +23386,7 @@ export type BindWechat1Data = {
   url: '/domain/users/{id}/bind-wechat'
 }
 
-export type BindWechat1Errors = {
+export type BindWechat2Errors = {
   /**
    * Bad Request
    */
@@ -22053,6 +23408,10 @@ export type BindWechat1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -22062,18 +23421,18 @@ export type BindWechat1Errors = {
   500: ResultVoid
 }
 
-export type BindWechat1Error = BindWechat1Errors[keyof BindWechat1Errors]
+export type BindWechat2Error = BindWechat2Errors[keyof BindWechat2Errors]
 
-export type BindWechat1Responses = {
+export type BindWechat2Responses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type BindWechat1Response = BindWechat1Responses[keyof BindWechat1Responses]
+export type BindWechat2Response = BindWechat2Responses[keyof BindWechat2Responses]
 
-export type DisableUser1Data = {
+export type DisableUserDisable2Data = {
   body?: never
   path: {
     /**
@@ -22085,7 +23444,7 @@ export type DisableUser1Data = {
   url: '/domain/users/{id}/disable'
 }
 
-export type DisableUser1Errors = {
+export type DisableUserDisable2Errors = {
   /**
    * Bad Request
    */
@@ -22107,6 +23466,10 @@ export type DisableUser1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -22116,18 +23479,19 @@ export type DisableUser1Errors = {
   500: ResultVoid
 }
 
-export type DisableUser1Error = DisableUser1Errors[keyof DisableUser1Errors]
+export type DisableUserDisable2Error = DisableUserDisable2Errors[keyof DisableUserDisable2Errors]
 
-export type DisableUser1Responses = {
+export type DisableUserDisable2Responses = {
   /**
    * OK
    */
   200: ResultUserDomainResponse
 }
 
-export type DisableUser1Response = DisableUser1Responses[keyof DisableUser1Responses]
+export type DisableUserDisable2Response =
+  DisableUserDisable2Responses[keyof DisableUserDisable2Responses]
 
-export type EnableUser1Data = {
+export type EnableUserEnable2Data = {
   body?: never
   path: {
     /**
@@ -22139,7 +23503,7 @@ export type EnableUser1Data = {
   url: '/domain/users/{id}/enable'
 }
 
-export type EnableUser1Errors = {
+export type EnableUserEnable2Errors = {
   /**
    * Bad Request
    */
@@ -22161,6 +23525,10 @@ export type EnableUser1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -22170,18 +23538,18 @@ export type EnableUser1Errors = {
   500: ResultVoid
 }
 
-export type EnableUser1Error = EnableUser1Errors[keyof EnableUser1Errors]
+export type EnableUserEnable2Error = EnableUserEnable2Errors[keyof EnableUserEnable2Errors]
 
-export type EnableUser1Responses = {
+export type EnableUserEnable2Responses = {
   /**
    * OK
    */
   200: ResultUserDomainResponse
 }
 
-export type EnableUser1Response = EnableUser1Responses[keyof EnableUser1Responses]
+export type EnableUserEnable2Response = EnableUserEnable2Responses[keyof EnableUserEnable2Responses]
 
-export type ResetPassword1Data = {
+export type ResetPassword2Data = {
   body?: never
   path: {
     /**
@@ -22193,7 +23561,7 @@ export type ResetPassword1Data = {
   url: '/domain/users/{id}/reset-password'
 }
 
-export type ResetPassword1Errors = {
+export type ResetPassword2Errors = {
   /**
    * Bad Request
    */
@@ -22215,6 +23583,10 @@ export type ResetPassword1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -22224,16 +23596,16 @@ export type ResetPassword1Errors = {
   500: ResultVoid
 }
 
-export type ResetPassword1Error = ResetPassword1Errors[keyof ResetPassword1Errors]
+export type ResetPassword2Error = ResetPassword2Errors[keyof ResetPassword2Errors]
 
-export type ResetPassword1Responses = {
+export type ResetPassword2Responses = {
   /**
    * OK
    */
   200: ResultString
 }
 
-export type ResetPassword1Response = ResetPassword1Responses[keyof ResetPassword1Responses]
+export type ResetPassword2Response = ResetPassword2Responses[keyof ResetPassword2Responses]
 
 export type GetUserRoleIdsData = {
   body?: never
@@ -22268,6 +23640,10 @@ export type GetUserRoleIdsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -22323,6 +23699,10 @@ export type AssignRolesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -22343,7 +23723,7 @@ export type AssignRolesResponses = {
 
 export type AssignRolesResponse = AssignRolesResponses[keyof AssignRolesResponses]
 
-export type UnbindWechat1Data = {
+export type UnbindWechat2Data = {
   body?: never
   path: {
     /**
@@ -22355,7 +23735,7 @@ export type UnbindWechat1Data = {
   url: '/domain/users/{id}/unbind-wechat'
 }
 
-export type UnbindWechat1Errors = {
+export type UnbindWechat2Errors = {
   /**
    * Bad Request
    */
@@ -22377,6 +23757,10 @@ export type UnbindWechat1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -22386,16 +23770,16 @@ export type UnbindWechat1Errors = {
   500: ResultVoid
 }
 
-export type UnbindWechat1Error = UnbindWechat1Errors[keyof UnbindWechat1Errors]
+export type UnbindWechat2Error = UnbindWechat2Errors[keyof UnbindWechat2Errors]
 
-export type UnbindWechat1Responses = {
+export type UnbindWechat2Responses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type UnbindWechat1Response = UnbindWechat1Responses[keyof UnbindWechat1Responses]
+export type UnbindWechat2Response = UnbindWechat2Responses[keyof UnbindWechat2Responses]
 
 export type ListApplicationsData = {
   body?: never
@@ -22433,6 +23817,10 @@ export type ListApplicationsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -22487,6 +23875,10 @@ export type CreateApplicationErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -22539,6 +23931,10 @@ export type BatchAdmitErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -22593,6 +23989,10 @@ export type ExportApplicationsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -22641,6 +24041,10 @@ export type DeleteApplicationErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -22697,6 +24101,10 @@ export type UpdateApplicationErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -22747,6 +24155,10 @@ export type AdmitApplicationErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -22803,6 +24215,10 @@ export type RegisterApplicationErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -22855,6 +24271,10 @@ export type RejectApplicationErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -22875,7 +24295,7 @@ export type RejectApplicationResponses = {
 
 export type RejectApplicationResponse = RejectApplicationResponses[keyof RejectApplicationResponses]
 
-export type ListPlans1Data = {
+export type ListPlans2Data = {
   body?: never
   path?: never
   query?: {
@@ -22888,7 +24308,7 @@ export type ListPlans1Data = {
   url: '/enrollment/plans'
 }
 
-export type ListPlans1Errors = {
+export type ListPlans2Errors = {
   /**
    * Bad Request
    */
@@ -22910,6 +24330,10 @@ export type ListPlans1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -22919,18 +24343,18 @@ export type ListPlans1Errors = {
   500: ResultVoid
 }
 
-export type ListPlans1Error = ListPlans1Errors[keyof ListPlans1Errors]
+export type ListPlans2Error = ListPlans2Errors[keyof ListPlans2Errors]
 
-export type ListPlans1Responses = {
+export type ListPlans2Responses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type ListPlans1Response = ListPlans1Responses[keyof ListPlans1Responses]
+export type ListPlans2Response = ListPlans2Responses[keyof ListPlans2Responses]
 
-export type CreatePlan1Data = {
+export type CreatePlanPlans2Data = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -22941,7 +24365,7 @@ export type CreatePlan1Data = {
   url: '/enrollment/plans'
 }
 
-export type CreatePlan1Errors = {
+export type CreatePlanPlans2Errors = {
   /**
    * Bad Request
    */
@@ -22963,6 +24387,10 @@ export type CreatePlan1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -22972,16 +24400,16 @@ export type CreatePlan1Errors = {
   500: ResultVoid
 }
 
-export type CreatePlan1Error = CreatePlan1Errors[keyof CreatePlan1Errors]
+export type CreatePlanPlans2Error = CreatePlanPlans2Errors[keyof CreatePlanPlans2Errors]
 
-export type CreatePlan1Responses = {
+export type CreatePlanPlans2Responses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type CreatePlan1Response = CreatePlan1Responses[keyof CreatePlan1Responses]
+export type CreatePlanPlans2Response = CreatePlanPlans2Responses[keyof CreatePlanPlans2Responses]
 
 export type PlanStatisticsData = {
   body?: never
@@ -23014,6 +24442,10 @@ export type PlanStatisticsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -23034,7 +24466,7 @@ export type PlanStatisticsResponses = {
 
 export type PlanStatisticsResponse = PlanStatisticsResponses[keyof PlanStatisticsResponses]
 
-export type DeletePlan1Data = {
+export type DeletePlanPlans2Data = {
   body?: never
   path: {
     id: string
@@ -23043,7 +24475,7 @@ export type DeletePlan1Data = {
   url: '/enrollment/plans/{id}'
 }
 
-export type DeletePlan1Errors = {
+export type DeletePlanPlans2Errors = {
   /**
    * Bad Request
    */
@@ -23065,6 +24497,10 @@ export type DeletePlan1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -23074,18 +24510,18 @@ export type DeletePlan1Errors = {
   500: ResultVoid
 }
 
-export type DeletePlan1Error = DeletePlan1Errors[keyof DeletePlan1Errors]
+export type DeletePlanPlans2Error = DeletePlanPlans2Errors[keyof DeletePlanPlans2Errors]
 
-export type DeletePlan1Responses = {
+export type DeletePlanPlans2Responses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type DeletePlan1Response = DeletePlan1Responses[keyof DeletePlan1Responses]
+export type DeletePlanPlans2Response = DeletePlanPlans2Responses[keyof DeletePlanPlans2Responses]
 
-export type UpdatePlan1Data = {
+export type UpdatePlanPlans2Data = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -23098,7 +24534,7 @@ export type UpdatePlan1Data = {
   url: '/enrollment/plans/{id}'
 }
 
-export type UpdatePlan1Errors = {
+export type UpdatePlanPlans2Errors = {
   /**
    * Bad Request
    */
@@ -23120,6 +24556,10 @@ export type UpdatePlan1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -23129,18 +24569,18 @@ export type UpdatePlan1Errors = {
   500: ResultVoid
 }
 
-export type UpdatePlan1Error = UpdatePlan1Errors[keyof UpdatePlan1Errors]
+export type UpdatePlanPlans2Error = UpdatePlanPlans2Errors[keyof UpdatePlanPlans2Errors]
 
-export type UpdatePlan1Responses = {
+export type UpdatePlanPlans2Responses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type UpdatePlan1Response = UpdatePlan1Responses[keyof UpdatePlan1Responses]
+export type UpdatePlanPlans2Response = UpdatePlanPlans2Responses[keyof UpdatePlanPlans2Responses]
 
-export type PublishPlanData = {
+export type PublishPlanPublishData = {
   body?: never
   path: {
     id: string
@@ -23149,7 +24589,7 @@ export type PublishPlanData = {
   url: '/enrollment/plans/{id}/publish'
 }
 
-export type PublishPlanErrors = {
+export type PublishPlanPublishErrors = {
   /**
    * Bad Request
    */
@@ -23171,6 +24611,10 @@ export type PublishPlanErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -23180,16 +24624,17 @@ export type PublishPlanErrors = {
   500: ResultVoid
 }
 
-export type PublishPlanError = PublishPlanErrors[keyof PublishPlanErrors]
+export type PublishPlanPublishError = PublishPlanPublishErrors[keyof PublishPlanPublishErrors]
 
-export type PublishPlanResponses = {
+export type PublishPlanPublishResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type PublishPlanResponse = PublishPlanResponses[keyof PublishPlanResponses]
+export type PublishPlanPublishResponse =
+  PublishPlanPublishResponses[keyof PublishPlanPublishResponses]
 
 export type ListTypesData = {
   body?: never
@@ -23222,6 +24667,10 @@ export type ListTypesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -23242,14 +24691,14 @@ export type ListTypesResponses = {
 
 export type ListTypesResponse = ListTypesResponses[keyof ListTypesResponses]
 
-export type Create16Data = {
+export type CreateEntityEventTypesData = {
   body: EntityEventType
   path?: never
   query?: never
   url: '/entity-event-types'
 }
 
-export type Create16Errors = {
+export type CreateEntityEventTypesErrors = {
   /**
    * Bad Request
    */
@@ -23271,6 +24720,10 @@ export type Create16Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -23280,16 +24733,18 @@ export type Create16Errors = {
   500: ResultVoid
 }
 
-export type Create16Error = Create16Errors[keyof Create16Errors]
+export type CreateEntityEventTypesError =
+  CreateEntityEventTypesErrors[keyof CreateEntityEventTypesErrors]
 
-export type Create16Responses = {
+export type CreateEntityEventTypesResponses = {
   /**
    * OK
    */
   200: ResultEntityEventType
 }
 
-export type Create16Response = Create16Responses[keyof Create16Responses]
+export type CreateEntityEventTypesResponse =
+  CreateEntityEventTypesResponses[keyof CreateEntityEventTypesResponses]
 
 export type ListEnabledData = {
   body?: never
@@ -23320,6 +24775,10 @@ export type ListEnabledErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -23340,7 +24799,7 @@ export type ListEnabledResponses = {
 
 export type ListEnabledResponse = ListEnabledResponses[keyof ListEnabledResponses]
 
-export type Delete17Data = {
+export type DeleteEntityEventTypesData = {
   body?: never
   path: {
     id: string
@@ -23349,7 +24808,7 @@ export type Delete17Data = {
   url: '/entity-event-types/{id}'
 }
 
-export type Delete17Errors = {
+export type DeleteEntityEventTypesErrors = {
   /**
    * Bad Request
    */
@@ -23371,6 +24830,10 @@ export type Delete17Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -23380,18 +24843,20 @@ export type Delete17Errors = {
   500: ResultVoid
 }
 
-export type Delete17Error = Delete17Errors[keyof Delete17Errors]
+export type DeleteEntityEventTypesError =
+  DeleteEntityEventTypesErrors[keyof DeleteEntityEventTypesErrors]
 
-export type Delete17Responses = {
+export type DeleteEntityEventTypesResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Delete17Response = Delete17Responses[keyof Delete17Responses]
+export type DeleteEntityEventTypesResponse =
+  DeleteEntityEventTypesResponses[keyof DeleteEntityEventTypesResponses]
 
-export type Update15Data = {
+export type UpdateEntityEventTypesData = {
   body: EntityEventType
   path: {
     id: string
@@ -23400,7 +24865,7 @@ export type Update15Data = {
   url: '/entity-event-types/{id}'
 }
 
-export type Update15Errors = {
+export type UpdateEntityEventTypesErrors = {
   /**
    * Bad Request
    */
@@ -23422,6 +24887,10 @@ export type Update15Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -23431,16 +24900,18 @@ export type Update15Errors = {
   500: ResultVoid
 }
 
-export type Update15Error = Update15Errors[keyof Update15Errors]
+export type UpdateEntityEventTypesError =
+  UpdateEntityEventTypesErrors[keyof UpdateEntityEventTypesErrors]
 
-export type Update15Responses = {
+export type UpdateEntityEventTypesResponses = {
   /**
    * OK
    */
   200: ResultEntityEventType
 }
 
-export type Update15Response = Update15Responses[keyof Update15Responses]
+export type UpdateEntityEventTypesResponse =
+  UpdateEntityEventTypesResponses[keyof UpdateEntityEventTypesResponses]
 
 export type GetRelatedTimelineData = {
   body?: never
@@ -23475,6 +24946,10 @@ export type GetRelatedTimelineErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -23528,6 +25003,10 @@ export type GetSubjectStatsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -23583,6 +25062,10 @@ export type GetSubjectTimelineErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -23604,7 +25087,7 @@ export type GetSubjectTimelineResponses = {
 export type GetSubjectTimelineResponse =
   GetSubjectTimelineResponses[keyof GetSubjectTimelineResponses]
 
-export type List19Data = {
+export type ListEntityTypeConfigsData = {
   body?: never
   path?: never
   query: {
@@ -23615,7 +25098,7 @@ export type List19Data = {
   url: '/entity-type-configs'
 }
 
-export type List19Errors = {
+export type ListEntityTypeConfigsErrors = {
   /**
    * Bad Request
    */
@@ -23637,6 +25120,10 @@ export type List19Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -23646,18 +25133,20 @@ export type List19Errors = {
   500: ResultVoid
 }
 
-export type List19Error = List19Errors[keyof List19Errors]
+export type ListEntityTypeConfigsError =
+  ListEntityTypeConfigsErrors[keyof ListEntityTypeConfigsErrors]
 
-export type List19Responses = {
+export type ListEntityTypeConfigsResponses = {
   /**
    * OK
    */
   200: ResultListMapStringObject
 }
 
-export type List19Response = List19Responses[keyof List19Responses]
+export type ListEntityTypeConfigsResponse =
+  ListEntityTypeConfigsResponses[keyof ListEntityTypeConfigsResponses]
 
-export type Create15Data = {
+export type CreateEntityTypeConfigsData = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -23668,7 +25157,7 @@ export type Create15Data = {
   url: '/entity-type-configs'
 }
 
-export type Create15Errors = {
+export type CreateEntityTypeConfigsErrors = {
   /**
    * Bad Request
    */
@@ -23690,6 +25179,10 @@ export type Create15Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -23699,16 +25192,18 @@ export type Create15Errors = {
   500: ResultVoid
 }
 
-export type Create15Error = Create15Errors[keyof Create15Errors]
+export type CreateEntityTypeConfigsError =
+  CreateEntityTypeConfigsErrors[keyof CreateEntityTypeConfigsErrors]
 
-export type Create15Responses = {
+export type CreateEntityTypeConfigsResponses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type Create15Response = Create15Responses[keyof Create15Responses]
+export type CreateEntityTypeConfigsResponse =
+  CreateEntityTypeConfigsResponses[keyof CreateEntityTypeConfigsResponses]
 
 export type AllowedChildrenData = {
   body?: never
@@ -23741,6 +25236,10 @@ export type AllowedChildrenErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -23792,6 +25291,10 @@ export type CategoriesErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -23845,6 +25348,10 @@ export type DetailErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -23865,7 +25372,7 @@ export type DetailResponses = {
 
 export type DetailResponse = DetailResponses[keyof DetailResponses]
 
-export type Delete16Data = {
+export type DeleteEntityTypeConfigsData = {
   body?: never
   path: {
     id: string
@@ -23874,7 +25381,7 @@ export type Delete16Data = {
   url: '/entity-type-configs/{id}'
 }
 
-export type Delete16Errors = {
+export type DeleteEntityTypeConfigsErrors = {
   /**
    * Bad Request
    */
@@ -23896,6 +25403,10 @@ export type Delete16Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -23905,18 +25416,20 @@ export type Delete16Errors = {
   500: ResultVoid
 }
 
-export type Delete16Error = Delete16Errors[keyof Delete16Errors]
+export type DeleteEntityTypeConfigsError =
+  DeleteEntityTypeConfigsErrors[keyof DeleteEntityTypeConfigsErrors]
 
-export type Delete16Responses = {
+export type DeleteEntityTypeConfigsResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Delete16Response = Delete16Responses[keyof Delete16Responses]
+export type DeleteEntityTypeConfigsResponse =
+  DeleteEntityTypeConfigsResponses[keyof DeleteEntityTypeConfigsResponses]
 
-export type Update14Data = {
+export type UpdateEntityTypeConfigsData = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -23929,7 +25442,7 @@ export type Update14Data = {
   url: '/entity-type-configs/{id}'
 }
 
-export type Update14Errors = {
+export type UpdateEntityTypeConfigsErrors = {
   /**
    * Bad Request
    */
@@ -23951,6 +25464,10 @@ export type Update14Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -23960,16 +25477,18 @@ export type Update14Errors = {
   500: ResultVoid
 }
 
-export type Update14Error = Update14Errors[keyof Update14Errors]
+export type UpdateEntityTypeConfigsError =
+  UpdateEntityTypeConfigsErrors[keyof UpdateEntityTypeConfigsErrors]
 
-export type Update14Responses = {
+export type UpdateEntityTypeConfigsResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Update14Response = Update14Responses[keyof Update14Responses]
+export type UpdateEntityTypeConfigsResponse =
+  UpdateEntityTypeConfigsResponses[keyof UpdateEntityTypeConfigsResponses]
 
 export type AddCustomFieldData = {
   body: {
@@ -24005,6 +25524,10 @@ export type AddCustomFieldErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -24057,6 +25580,10 @@ export type RemoveCustomFieldErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -24111,6 +25638,10 @@ export type ResetFieldErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -24159,6 +25690,10 @@ export type LogErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -24212,6 +25747,10 @@ export type RecentErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -24232,7 +25771,7 @@ export type RecentResponses = {
 
 export type RecentResponse = RecentResponses[keyof RecentResponses]
 
-export type Resolve1Data = {
+export type Resolve2Data = {
   body?: never
   path: {
     id: string
@@ -24241,7 +25780,7 @@ export type Resolve1Data = {
   url: '/errors/{id}/resolve'
 }
 
-export type Resolve1Errors = {
+export type Resolve2Errors = {
   /**
    * Bad Request
    */
@@ -24263,6 +25802,10 @@ export type Resolve1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -24272,16 +25815,16 @@ export type Resolve1Errors = {
   500: ResultVoid
 }
 
-export type Resolve1Error = Resolve1Errors[keyof Resolve1Errors]
+export type Resolve2Error = Resolve2Errors[keyof Resolve2Errors]
 
-export type Resolve1Responses = {
+export type Resolve2Responses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Resolve1Response = Resolve1Responses[keyof Resolve1Responses]
+export type Resolve2Response = Resolve2Responses[keyof Resolve2Responses]
 
 export type GetBySubjectData = {
   body?: never
@@ -24319,6 +25862,10 @@ export type GetBySubjectErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -24374,6 +25921,10 @@ export type StatisticsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -24394,7 +25945,7 @@ export type StatisticsResponses = {
 
 export type StatisticsResponse = StatisticsResponses[keyof StatisticsResponses]
 
-export type List18Data = {
+export type ListTriggerPointsData = {
   body?: never
   path?: never
   query?: {
@@ -24403,7 +25954,7 @@ export type List18Data = {
   url: '/event/trigger-points'
 }
 
-export type List18Errors = {
+export type ListTriggerPointsErrors = {
   /**
    * Bad Request
    */
@@ -24425,6 +25976,10 @@ export type List18Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -24434,18 +25989,18 @@ export type List18Errors = {
   500: ResultVoid
 }
 
-export type List18Error = List18Errors[keyof List18Errors]
+export type ListTriggerPointsError = ListTriggerPointsErrors[keyof ListTriggerPointsErrors]
 
-export type List18Responses = {
+export type ListTriggerPointsResponses = {
   /**
    * OK
    */
   200: ResultListMapStringObject
 }
 
-export type List18Response = List18Responses[keyof List18Responses]
+export type ListTriggerPointsResponse = ListTriggerPointsResponses[keyof ListTriggerPointsResponses]
 
-export type Create14Data = {
+export type CreateTriggerPointsData = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -24456,7 +26011,7 @@ export type Create14Data = {
   url: '/event/trigger-points'
 }
 
-export type Create14Errors = {
+export type CreateTriggerPointsErrors = {
   /**
    * Bad Request
    */
@@ -24478,6 +26033,10 @@ export type Create14Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -24487,18 +26046,19 @@ export type Create14Errors = {
   500: ResultVoid
 }
 
-export type Create14Error = Create14Errors[keyof Create14Errors]
+export type CreateTriggerPointsError = CreateTriggerPointsErrors[keyof CreateTriggerPointsErrors]
 
-export type Create14Responses = {
+export type CreateTriggerPointsResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Create14Response = Create14Responses[keyof Create14Responses]
+export type CreateTriggerPointsResponse =
+  CreateTriggerPointsResponses[keyof CreateTriggerPointsResponses]
 
-export type Delete15Data = {
+export type DeleteTriggerPointsData = {
   body?: never
   path: {
     id: string
@@ -24507,7 +26067,7 @@ export type Delete15Data = {
   url: '/event/trigger-points/{id}'
 }
 
-export type Delete15Errors = {
+export type DeleteTriggerPointsErrors = {
   /**
    * Bad Request
    */
@@ -24529,6 +26089,10 @@ export type Delete15Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -24538,18 +26102,19 @@ export type Delete15Errors = {
   500: ResultVoid
 }
 
-export type Delete15Error = Delete15Errors[keyof Delete15Errors]
+export type DeleteTriggerPointsError = DeleteTriggerPointsErrors[keyof DeleteTriggerPointsErrors]
 
-export type Delete15Responses = {
+export type DeleteTriggerPointsResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Delete15Response = Delete15Responses[keyof Delete15Responses]
+export type DeleteTriggerPointsResponse =
+  DeleteTriggerPointsResponses[keyof DeleteTriggerPointsResponses]
 
-export type GetById9Data = {
+export type GetByIdTriggerPointsData = {
   body?: never
   path: {
     id: string
@@ -24558,7 +26123,7 @@ export type GetById9Data = {
   url: '/event/trigger-points/{id}'
 }
 
-export type GetById9Errors = {
+export type GetByIdTriggerPointsErrors = {
   /**
    * Bad Request
    */
@@ -24580,6 +26145,10 @@ export type GetById9Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -24589,18 +26158,19 @@ export type GetById9Errors = {
   500: ResultVoid
 }
 
-export type GetById9Error = GetById9Errors[keyof GetById9Errors]
+export type GetByIdTriggerPointsError = GetByIdTriggerPointsErrors[keyof GetByIdTriggerPointsErrors]
 
-export type GetById9Responses = {
+export type GetByIdTriggerPointsResponses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type GetById9Response = GetById9Responses[keyof GetById9Responses]
+export type GetByIdTriggerPointsResponse =
+  GetByIdTriggerPointsResponses[keyof GetByIdTriggerPointsResponses]
 
-export type Update13Data = {
+export type UpdateTriggerPointsData = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -24613,7 +26183,7 @@ export type Update13Data = {
   url: '/event/trigger-points/{id}'
 }
 
-export type Update13Errors = {
+export type UpdateTriggerPointsErrors = {
   /**
    * Bad Request
    */
@@ -24635,6 +26205,10 @@ export type Update13Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -24644,18 +26218,19 @@ export type Update13Errors = {
   500: ResultVoid
 }
 
-export type Update13Error = Update13Errors[keyof Update13Errors]
+export type UpdateTriggerPointsError = UpdateTriggerPointsErrors[keyof UpdateTriggerPointsErrors]
 
-export type Update13Responses = {
+export type UpdateTriggerPointsResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Update13Response = Update13Responses[keyof Update13Responses]
+export type UpdateTriggerPointsResponse =
+  UpdateTriggerPointsResponses[keyof UpdateTriggerPointsResponses]
 
-export type Disable1Data = {
+export type Disable2Data = {
   body?: never
   path: {
     id: string
@@ -24664,7 +26239,7 @@ export type Disable1Data = {
   url: '/event/trigger-points/{id}/disable'
 }
 
-export type Disable1Errors = {
+export type Disable2Errors = {
   /**
    * Bad Request
    */
@@ -24686,6 +26261,10 @@ export type Disable1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -24695,18 +26274,18 @@ export type Disable1Errors = {
   500: ResultVoid
 }
 
-export type Disable1Error = Disable1Errors[keyof Disable1Errors]
+export type Disable2Error = Disable2Errors[keyof Disable2Errors]
 
-export type Disable1Responses = {
+export type Disable2Responses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Disable1Response = Disable1Responses[keyof Disable1Responses]
+export type Disable2Response = Disable2Responses[keyof Disable2Responses]
 
-export type Enable1Data = {
+export type Enable2Data = {
   body?: never
   path: {
     id: string
@@ -24715,7 +26294,7 @@ export type Enable1Data = {
   url: '/event/trigger-points/{id}/enable'
 }
 
-export type Enable1Errors = {
+export type Enable2Errors = {
   /**
    * Bad Request
    */
@@ -24737,6 +26316,10 @@ export type Enable1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -24746,18 +26329,18 @@ export type Enable1Errors = {
   500: ResultVoid
 }
 
-export type Enable1Error = Enable1Errors[keyof Enable1Errors]
+export type Enable2Error = Enable2Errors[keyof Enable2Errors]
 
-export type Enable1Responses = {
+export type Enable2Responses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Enable1Response = Enable1Responses[keyof Enable1Responses]
+export type Enable2Response = Enable2Responses[keyof Enable2Responses]
 
-export type List17Data = {
+export type ListTriggersData = {
   body?: never
   path?: never
   query?: {
@@ -24767,7 +26350,7 @@ export type List17Data = {
   url: '/event/triggers'
 }
 
-export type List17Errors = {
+export type ListTriggersErrors = {
   /**
    * Bad Request
    */
@@ -24789,6 +26372,10 @@ export type List17Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -24798,18 +26385,18 @@ export type List17Errors = {
   500: ResultVoid
 }
 
-export type List17Error = List17Errors[keyof List17Errors]
+export type ListTriggersError = ListTriggersErrors[keyof ListTriggersErrors]
 
-export type List17Responses = {
+export type ListTriggersResponses = {
   /**
    * OK
    */
   200: ResultListMapStringObject
 }
 
-export type List17Response = List17Responses[keyof List17Responses]
+export type ListTriggersResponse = ListTriggersResponses[keyof ListTriggersResponses]
 
-export type Create13Data = {
+export type CreateTriggersData = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -24820,7 +26407,7 @@ export type Create13Data = {
   url: '/event/triggers'
 }
 
-export type Create13Errors = {
+export type CreateTriggersErrors = {
   /**
    * Bad Request
    */
@@ -24842,6 +26429,10 @@ export type Create13Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -24851,16 +26442,16 @@ export type Create13Errors = {
   500: ResultVoid
 }
 
-export type Create13Error = Create13Errors[keyof Create13Errors]
+export type CreateTriggersError = CreateTriggersErrors[keyof CreateTriggersErrors]
 
-export type Create13Responses = {
+export type CreateTriggersResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Create13Response = Create13Responses[keyof Create13Responses]
+export type CreateTriggersResponse = CreateTriggersResponses[keyof CreateTriggersResponses]
 
 export type TestData = {
   body: {
@@ -24895,6 +26486,10 @@ export type TestErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -24915,7 +26510,7 @@ export type TestResponses = {
 
 export type TestResponse = TestResponses[keyof TestResponses]
 
-export type Delete14Data = {
+export type DeleteTriggersData = {
   body?: never
   path: {
     id: string
@@ -24924,7 +26519,7 @@ export type Delete14Data = {
   url: '/event/triggers/{id}'
 }
 
-export type Delete14Errors = {
+export type DeleteTriggersErrors = {
   /**
    * Bad Request
    */
@@ -24946,6 +26541,10 @@ export type Delete14Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -24955,18 +26554,18 @@ export type Delete14Errors = {
   500: ResultVoid
 }
 
-export type Delete14Error = Delete14Errors[keyof Delete14Errors]
+export type DeleteTriggersError = DeleteTriggersErrors[keyof DeleteTriggersErrors]
 
-export type Delete14Responses = {
+export type DeleteTriggersResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Delete14Response = Delete14Responses[keyof Delete14Responses]
+export type DeleteTriggersResponse = DeleteTriggersResponses[keyof DeleteTriggersResponses]
 
-export type GetById8Data = {
+export type GetByIdTriggersData = {
   body?: never
   path: {
     id: string
@@ -24975,7 +26574,7 @@ export type GetById8Data = {
   url: '/event/triggers/{id}'
 }
 
-export type GetById8Errors = {
+export type GetByIdTriggersErrors = {
   /**
    * Bad Request
    */
@@ -24997,6 +26596,10 @@ export type GetById8Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -25006,18 +26609,18 @@ export type GetById8Errors = {
   500: ResultVoid
 }
 
-export type GetById8Error = GetById8Errors[keyof GetById8Errors]
+export type GetByIdTriggersError = GetByIdTriggersErrors[keyof GetByIdTriggersErrors]
 
-export type GetById8Responses = {
+export type GetByIdTriggersResponses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type GetById8Response = GetById8Responses[keyof GetById8Responses]
+export type GetByIdTriggersResponse = GetByIdTriggersResponses[keyof GetByIdTriggersResponses]
 
-export type Update12Data = {
+export type UpdateTriggersData = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -25030,7 +26633,7 @@ export type Update12Data = {
   url: '/event/triggers/{id}'
 }
 
-export type Update12Errors = {
+export type UpdateTriggersErrors = {
   /**
    * Bad Request
    */
@@ -25052,6 +26655,10 @@ export type Update12Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -25061,16 +26668,16 @@ export type Update12Errors = {
   500: ResultVoid
 }
 
-export type Update12Error = Update12Errors[keyof Update12Errors]
+export type UpdateTriggersError = UpdateTriggersErrors[keyof UpdateTriggersErrors]
 
-export type Update12Responses = {
+export type UpdateTriggersResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Update12Response = Update12Responses[keyof Update12Responses]
+export type UpdateTriggersResponse = UpdateTriggersResponses[keyof UpdateTriggersResponses]
 
 export type DisableData = {
   body?: never
@@ -25102,6 +26709,10 @@ export type DisableErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -25153,6 +26764,10 @@ export type EnableErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -25206,6 +26821,10 @@ export type ListGroupedErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -25226,7 +26845,7 @@ export type ListGroupedResponses = {
 
 export type ListGroupedResponse = ListGroupedResponses[keyof ListGroupedResponses]
 
-export type Create12Data = {
+export type CreateTypesData = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -25237,7 +26856,7 @@ export type Create12Data = {
   url: '/event/types'
 }
 
-export type Create12Errors = {
+export type CreateTypesErrors = {
   /**
    * Bad Request
    */
@@ -25259,6 +26878,10 @@ export type Create12Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -25268,16 +26891,16 @@ export type Create12Errors = {
   500: ResultVoid
 }
 
-export type Create12Error = Create12Errors[keyof Create12Errors]
+export type CreateTypesError = CreateTypesErrors[keyof CreateTypesErrors]
 
-export type Create12Responses = {
+export type CreateTypesResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Create12Response = Create12Responses[keyof Create12Responses]
+export type CreateTypesResponse = CreateTypesResponses[keyof CreateTypesResponses]
 
 export type ListCategoriesData = {
   body?: never
@@ -25308,6 +26931,10 @@ export type ListCategoriesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -25328,7 +26955,7 @@ export type ListCategoriesResponses = {
 
 export type ListCategoriesResponse = ListCategoriesResponses[keyof ListCategoriesResponses]
 
-export type CreateCategoryData = {
+export type CreateCategoryCategoriesData = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -25339,7 +26966,7 @@ export type CreateCategoryData = {
   url: '/event/types/categories'
 }
 
-export type CreateCategoryErrors = {
+export type CreateCategoryCategoriesErrors = {
   /**
    * Bad Request
    */
@@ -25361,6 +26988,10 @@ export type CreateCategoryErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -25370,18 +27001,20 @@ export type CreateCategoryErrors = {
   500: ResultVoid
 }
 
-export type CreateCategoryError = CreateCategoryErrors[keyof CreateCategoryErrors]
+export type CreateCategoryCategoriesError =
+  CreateCategoryCategoriesErrors[keyof CreateCategoryCategoriesErrors]
 
-export type CreateCategoryResponses = {
+export type CreateCategoryCategoriesResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type CreateCategoryResponse = CreateCategoryResponses[keyof CreateCategoryResponses]
+export type CreateCategoryCategoriesResponse =
+  CreateCategoryCategoriesResponses[keyof CreateCategoryCategoriesResponses]
 
-export type Delete13Data = {
+export type DeleteTypesData = {
   body?: never
   path: {
     id: string
@@ -25390,7 +27023,7 @@ export type Delete13Data = {
   url: '/event/types/{id}'
 }
 
-export type Delete13Errors = {
+export type DeleteTypesErrors = {
   /**
    * Bad Request
    */
@@ -25412,6 +27045,10 @@ export type Delete13Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -25421,18 +27058,18 @@ export type Delete13Errors = {
   500: ResultVoid
 }
 
-export type Delete13Error = Delete13Errors[keyof Delete13Errors]
+export type DeleteTypesError = DeleteTypesErrors[keyof DeleteTypesErrors]
 
-export type Delete13Responses = {
+export type DeleteTypesResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Delete13Response = Delete13Responses[keyof Delete13Responses]
+export type DeleteTypesResponse = DeleteTypesResponses[keyof DeleteTypesResponses]
 
-export type Update11Data = {
+export type UpdateTypesData = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -25445,7 +27082,7 @@ export type Update11Data = {
   url: '/event/types/{id}'
 }
 
-export type Update11Errors = {
+export type UpdateTypesErrors = {
   /**
    * Bad Request
    */
@@ -25467,6 +27104,10 @@ export type Update11Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -25476,16 +27117,16 @@ export type Update11Errors = {
   500: ResultVoid
 }
 
-export type Update11Error = Update11Errors[keyof Update11Errors]
+export type UpdateTypesError = UpdateTypesErrors[keyof UpdateTypesErrors]
 
-export type Update11Responses = {
+export type UpdateTypesResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Update11Response = Update11Responses[keyof Update11Responses]
+export type UpdateTypesResponse = UpdateTypesResponses[keyof UpdateTypesResponses]
 
 export type UploadData = {
   body?: {
@@ -25519,6 +27160,10 @@ export type UploadErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -25569,6 +27214,10 @@ export type SuggestScoreErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -25618,6 +27267,10 @@ export type ListAlertRulesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -25666,6 +27319,10 @@ export type CreateAlertRuleErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -25718,6 +27375,10 @@ export type DeleteAlertRuleErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -25768,6 +27429,10 @@ export type GetAlertRuleErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -25820,6 +27485,10 @@ export type UpdateAlertRuleErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -25871,6 +27540,10 @@ export type ListAlertsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -25891,7 +27564,7 @@ export type ListAlertsResponses = {
 
 export type ListAlertsResponse = ListAlertsResponses[keyof ListAlertsResponses]
 
-export type GetAlertData = {
+export type GetAlertAlertsData = {
   body?: never
   path: {
     id: string
@@ -25900,7 +27573,7 @@ export type GetAlertData = {
   url: '/inspection/alerts/{id}'
 }
 
-export type GetAlertErrors = {
+export type GetAlertAlertsErrors = {
   /**
    * Bad Request
    */
@@ -25922,6 +27595,10 @@ export type GetAlertErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -25931,16 +27608,16 @@ export type GetAlertErrors = {
   500: ResultVoid
 }
 
-export type GetAlertError = GetAlertErrors[keyof GetAlertErrors]
+export type GetAlertAlertsError = GetAlertAlertsErrors[keyof GetAlertAlertsErrors]
 
-export type GetAlertResponses = {
+export type GetAlertAlertsResponses = {
   /**
    * OK
    */
   200: ResultAlert
 }
 
-export type GetAlertResponse = GetAlertResponses[keyof GetAlertResponses]
+export type GetAlertAlertsResponse = GetAlertAlertsResponses[keyof GetAlertAlertsResponses]
 
 export type AcknowledgeAlertData = {
   body?: never
@@ -25972,6 +27649,10 @@ export type AcknowledgeAlertErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -26024,6 +27705,10 @@ export type DismissAlertErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -26074,6 +27759,10 @@ export type ResolveAlertErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -26127,6 +27816,10 @@ export type GetComparisonErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -26177,6 +27870,10 @@ export type GetCorrectiveSummariesErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -26233,6 +27930,10 @@ export type GetCorrectiveSummaryErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -26284,6 +27985,10 @@ export type GetCorrectiveSummaryLiveErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -26339,6 +28044,10 @@ export type GetDailyRankingErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -26390,6 +28099,10 @@ export type GetDailySummaryErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -26443,6 +28156,10 @@ export type GetDimensionBreakdownErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -26500,6 +28217,10 @@ export type GetHeatmapErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -26552,6 +28273,10 @@ export type GetInspectorPerformanceErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -26608,6 +28333,10 @@ export type GetInspectorSummariesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -26663,6 +28392,10 @@ export type GetIssueFlowErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -26715,6 +28448,10 @@ export type GetItemFrequenciesErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -26771,6 +28508,10 @@ export type GetParetoErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -26824,6 +28565,10 @@ export type GetPeriodSummaryErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -26873,6 +28618,10 @@ export type RebuildDailyErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -26921,6 +28670,10 @@ export type RebuildPeriodErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -26974,6 +28727,10 @@ export type GetTimingStatsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -27030,6 +28787,10 @@ export type GetTrendErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -27050,14 +28811,14 @@ export type GetTrendResponses = {
 
 export type GetTrendResponse = GetTrendResponses[keyof GetTrendResponses]
 
-export type Submit1Data = {
+export type SubmitAppealsData = {
   body: SubmitAppealRequest
   path?: never
   query?: never
   url: '/inspection/appeals'
 }
 
-export type Submit1Errors = {
+export type SubmitAppealsErrors = {
   /**
    * Bad Request
    */
@@ -27079,6 +28840,10 @@ export type Submit1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -27088,16 +28853,16 @@ export type Submit1Errors = {
   500: ResultVoid
 }
 
-export type Submit1Error = Submit1Errors[keyof Submit1Errors]
+export type SubmitAppealsError = SubmitAppealsErrors[keyof SubmitAppealsErrors]
 
-export type Submit1Responses = {
+export type SubmitAppealsResponses = {
   /**
    * OK
    */
   200: ResultInspAppeal
 }
 
-export type Submit1Response = Submit1Responses[keyof Submit1Responses]
+export type SubmitAppealsResponse = SubmitAppealsResponses[keyof SubmitAppealsResponses]
 
 export type ListByProjectData = {
   body?: never
@@ -27129,6 +28894,10 @@ export type ListByProjectErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -27179,6 +28948,10 @@ export type ListMyErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -27228,6 +29001,10 @@ export type ListPendingErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -27248,7 +29025,7 @@ export type ListPendingResponses = {
 
 export type ListPendingResponse = ListPendingResponses[keyof ListPendingResponses]
 
-export type GetById7Data = {
+export type GetByIdAppealsData = {
   body?: never
   path: {
     id: string
@@ -27257,7 +29034,7 @@ export type GetById7Data = {
   url: '/inspection/appeals/{id}'
 }
 
-export type GetById7Errors = {
+export type GetByIdAppealsErrors = {
   /**
    * Bad Request
    */
@@ -27279,6 +29056,10 @@ export type GetById7Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -27288,16 +29069,16 @@ export type GetById7Errors = {
   500: ResultVoid
 }
 
-export type GetById7Error = GetById7Errors[keyof GetById7Errors]
+export type GetByIdAppealsError = GetByIdAppealsErrors[keyof GetByIdAppealsErrors]
 
-export type GetById7Responses = {
+export type GetByIdAppealsResponses = {
   /**
    * OK
    */
   200: ResultInspAppeal
 }
 
-export type GetById7Response = GetById7Responses[keyof GetById7Responses]
+export type GetByIdAppealsResponse = GetByIdAppealsResponses[keyof GetByIdAppealsResponses]
 
 export type ApproveData = {
   body: ApproveAppealRequest
@@ -27329,6 +29110,10 @@ export type ApproveErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -27381,6 +29166,10 @@ export type RejectErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -27431,6 +29220,10 @@ export type WithdrawErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -27485,6 +29278,10 @@ export type ListByEntityErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -27536,6 +29333,10 @@ export type ListByActionErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -27592,6 +29393,10 @@ export type SearchErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -27643,6 +29448,10 @@ export type FindRecentErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -27691,6 +29500,10 @@ export type ListCatalogsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -27741,6 +29554,10 @@ export type CreateCatalogErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -27789,6 +29606,10 @@ export type GetCatalogTreeErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -27841,6 +29662,10 @@ export type DeleteCatalogErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -27891,6 +29716,10 @@ export type UpdateCatalogErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -27954,6 +29783,10 @@ export type ListCasesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -28002,6 +29835,10 @@ export type CreateCaseErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -28052,6 +29889,10 @@ export type ListMyCasesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -28100,6 +29941,10 @@ export type ListOverdueCasesErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -28151,6 +29996,10 @@ export type ReassignDepartedUserErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -28204,6 +30053,10 @@ export type GetSubtasksErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -28254,6 +30107,10 @@ export type CreateSubtaskErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -28307,6 +30164,10 @@ export type DeleteSubtaskErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -28358,6 +30219,10 @@ export type UpdateSubtaskErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -28411,6 +30276,10 @@ export type BlockSubtaskErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -28462,6 +30331,10 @@ export type CompleteSubtaskErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -28515,6 +30388,10 @@ export type StartSubtaskErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -28565,6 +30442,10 @@ export type DeleteCaseErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -28617,6 +30498,10 @@ export type GetCaseErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -28667,6 +30552,10 @@ export type AssignCaseErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -28719,6 +30608,10 @@ export type CloseCaseErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -28769,6 +30662,10 @@ export type EscalateCaseErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -28821,6 +30718,10 @@ export type RejectCaseErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -28871,6 +30772,10 @@ export type StartWorkErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -28923,6 +30828,10 @@ export type SubmitCorrectionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -28973,6 +30882,10 @@ export type VerifyCaseErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -29025,6 +30938,10 @@ export type CandidatesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -29045,14 +30962,14 @@ export type CandidatesResponses = {
 
 export type CandidatesResponse = CandidatesResponses[keyof CandidatesResponses]
 
-export type Confirm1Data = {
+export type Confirm2Data = {
   body: ConfirmRequest
   path?: never
   query?: never
   url: '/inspection/corrective/candidates/confirm'
 }
 
-export type Confirm1Errors = {
+export type Confirm2Errors = {
   /**
    * Bad Request
    */
@@ -29074,6 +30991,10 @@ export type Confirm1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -29083,16 +31004,16 @@ export type Confirm1Errors = {
   500: ResultVoid
 }
 
-export type Confirm1Error = Confirm1Errors[keyof Confirm1Errors]
+export type Confirm2Error = Confirm2Errors[keyof Confirm2Errors]
 
-export type Confirm1Responses = {
+export type Confirm2Responses = {
   /**
    * OK
    */
   200: ResultListLong
 }
 
-export type Confirm1Response = Confirm1Responses[keyof Confirm1Responses]
+export type Confirm2Response = Confirm2Responses[keyof Confirm2Responses]
 
 export type KpiData = {
   body?: never
@@ -29125,6 +31046,10 @@ export type KpiErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -29145,7 +31070,351 @@ export type KpiResponses = {
 
 export type KpiResponse = KpiResponses[keyof KpiResponses]
 
-export type GetPolicy2Data = {
+export type ListByModeData = {
+  body?: never
+  path: {
+    projectId: string
+  }
+  query?: never
+  url: '/inspection/corrective/projects/{projectId}/by-mode'
+}
+
+export type ListByModeErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type ListByModeError = ListByModeErrors[keyof ListByModeErrors]
+
+export type ListByModeResponses = {
+  /**
+   * OK
+   */
+  200: ResultListModeRuleView
+}
+
+export type ListByModeResponse = ListByModeResponses[keyof ListByModeResponses]
+
+export type DeleteByModeData = {
+  body?: never
+  path: {
+    projectId: string
+    mode: string
+  }
+  query?: never
+  url: '/inspection/corrective/projects/{projectId}/by-mode/{mode}'
+}
+
+export type DeleteByModeErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type DeleteByModeError = DeleteByModeErrors[keyof DeleteByModeErrors]
+
+export type DeleteByModeResponses = {
+  /**
+   * OK
+   */
+  200: ResultVoid
+}
+
+export type DeleteByModeResponse = DeleteByModeResponses[keyof DeleteByModeResponses]
+
+export type UpsertByModeData = {
+  body: {
+    [key: string]: {
+      [key: string]: unknown
+    }
+  }
+  path: {
+    projectId: string
+    mode: string
+  }
+  query?: never
+  url: '/inspection/corrective/projects/{projectId}/by-mode/{mode}'
+}
+
+export type UpsertByModeErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type UpsertByModeError = UpsertByModeErrors[keyof UpsertByModeErrors]
+
+export type UpsertByModeResponses = {
+  /**
+   * OK
+   */
+  200: ResultModeRuleView
+}
+
+export type UpsertByModeResponse = UpsertByModeResponses[keyof UpsertByModeResponses]
+
+export type ListItemOverridesData = {
+  body?: never
+  path: {
+    projectId: string
+  }
+  query?: never
+  url: '/inspection/corrective/projects/{projectId}/item-overrides'
+}
+
+export type ListItemOverridesErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type ListItemOverridesError = ListItemOverridesErrors[keyof ListItemOverridesErrors]
+
+export type ListItemOverridesResponses = {
+  /**
+   * OK
+   */
+  200: ResultListItemOverrideView
+}
+
+export type ListItemOverridesResponse = ListItemOverridesResponses[keyof ListItemOverridesResponses]
+
+export type DeleteItemOverrideData = {
+  body?: never
+  path: {
+    projectId: string
+    itemId: string
+  }
+  query?: never
+  url: '/inspection/corrective/projects/{projectId}/item-overrides/{itemId}'
+}
+
+export type DeleteItemOverrideErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type DeleteItemOverrideError = DeleteItemOverrideErrors[keyof DeleteItemOverrideErrors]
+
+export type DeleteItemOverrideResponses = {
+  /**
+   * OK
+   */
+  200: ResultVoid
+}
+
+export type DeleteItemOverrideResponse =
+  DeleteItemOverrideResponses[keyof DeleteItemOverrideResponses]
+
+export type UpsertItemOverrideData = {
+  body: {
+    [key: string]: {
+      [key: string]: unknown
+    }
+  }
+  path: {
+    projectId: string
+    itemId: string
+  }
+  query?: never
+  url: '/inspection/corrective/projects/{projectId}/item-overrides/{itemId}'
+}
+
+export type UpsertItemOverrideErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type UpsertItemOverrideError = UpsertItemOverrideErrors[keyof UpsertItemOverrideErrors]
+
+export type UpsertItemOverrideResponses = {
+  /**
+   * OK
+   */
+  200: ResultItemOverrideView
+}
+
+export type UpsertItemOverrideResponse =
+  UpsertItemOverrideResponses[keyof UpsertItemOverrideResponses]
+
+export type GetPolicyData = {
   body?: never
   path: {
     projectId: string
@@ -29154,7 +31423,7 @@ export type GetPolicy2Data = {
   url: '/inspection/corrective/projects/{projectId}/policy'
 }
 
-export type GetPolicy2Errors = {
+export type GetPolicyErrors = {
   /**
    * Bad Request
    */
@@ -29176,6 +31445,10 @@ export type GetPolicy2Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -29185,18 +31458,18 @@ export type GetPolicy2Errors = {
   500: ResultVoid
 }
 
-export type GetPolicy2Error = GetPolicy2Errors[keyof GetPolicy2Errors]
+export type GetPolicyError = GetPolicyErrors[keyof GetPolicyErrors]
 
-export type GetPolicy2Responses = {
+export type GetPolicyResponses = {
   /**
    * OK
    */
   200: ResultPolicyView
 }
 
-export type GetPolicy2Response = GetPolicy2Responses[keyof GetPolicy2Responses]
+export type GetPolicyResponse = GetPolicyResponses[keyof GetPolicyResponses]
 
-export type UpdatePolicy2Data = {
+export type UpdatePolicyData = {
   body: PolicyView
   path: {
     projectId: string
@@ -29205,7 +31478,7 @@ export type UpdatePolicy2Data = {
   url: '/inspection/corrective/projects/{projectId}/policy'
 }
 
-export type UpdatePolicy2Errors = {
+export type UpdatePolicyErrors = {
   /**
    * Bad Request
    */
@@ -29227,6 +31500,10 @@ export type UpdatePolicy2Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -29236,16 +31513,71 @@ export type UpdatePolicy2Errors = {
   500: ResultVoid
 }
 
-export type UpdatePolicy2Error = UpdatePolicy2Errors[keyof UpdatePolicy2Errors]
+export type UpdatePolicyError = UpdatePolicyErrors[keyof UpdatePolicyErrors]
 
-export type UpdatePolicy2Responses = {
+export type UpdatePolicyResponses = {
   /**
    * OK
    */
   200: ResultPolicyView
 }
 
-export type UpdatePolicy2Response = UpdatePolicy2Responses[keyof UpdatePolicy2Responses]
+export type UpdatePolicyResponse = UpdatePolicyResponses[keyof UpdatePolicyResponses]
+
+export type ListProjectItemsData = {
+  body?: never
+  path: {
+    projectId: string
+  }
+  query?: never
+  url: '/inspection/corrective/projects/{projectId}/template-items'
+}
+
+export type ListProjectItemsErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type ListProjectItemsError = ListProjectItemsErrors[keyof ListProjectItemsErrors]
+
+export type ListProjectItemsResponses = {
+  /**
+   * OK
+   */
+  200: ResultListProjectItemView
+}
+
+export type ListProjectItemsResponse = ListProjectItemsResponses[keyof ListProjectItemsResponses]
 
 export type RecurrenceData = {
   body?: never
@@ -29279,6 +31611,10 @@ export type RecurrenceErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -29298,6 +31634,59 @@ export type RecurrenceResponses = {
 }
 
 export type RecurrenceResponse = RecurrenceResponses[keyof RecurrenceResponses]
+
+export type SimulateData = {
+  body: SimulateRequest
+  path?: never
+  query?: never
+  url: '/inspection/corrective/simulate'
+}
+
+export type SimulateErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type SimulateError = SimulateErrors[keyof SimulateErrors]
+
+export type SimulateResponses = {
+  /**
+   * OK
+   */
+  200: ResultSimulateView
+}
+
+export type SimulateResponse = SimulateResponses[keyof SimulateResponses]
 
 export type GetItemOverrideData = {
   body?: never
@@ -29329,6 +31718,10 @@ export type GetItemOverrideErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -29381,6 +31774,10 @@ export type UpdateItemOverrideErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -29430,6 +31827,10 @@ export type ExportAppealsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -29482,6 +31883,10 @@ export type ExportAuditErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -29533,6 +31938,10 @@ export type ExportCorrectiveErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -29587,6 +31996,10 @@ export type ExportRankingErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -29635,6 +32048,10 @@ export type ListSchemesErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -29685,6 +32102,10 @@ export type CreateSchemeErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -29733,6 +32154,10 @@ export type CloneFromPresetErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -29785,6 +32210,10 @@ export type DeleteSchemeErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -29835,6 +32264,10 @@ export type GetSchemeErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -29887,6 +32320,10 @@ export type UpdateSchemeErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -29907,14 +32344,14 @@ export type UpdateSchemeResponses = {
 
 export type UpdateSchemeResponse = UpdateSchemeResponses[keyof UpdateSchemeResponses]
 
-export type List16Data = {
+export type ListHolidayCalendarsData = {
   body?: never
   path?: never
   query?: never
   url: '/inspection/holiday-calendars'
 }
 
-export type List16Errors = {
+export type ListHolidayCalendarsErrors = {
   /**
    * Bad Request
    */
@@ -29936,6 +32373,10 @@ export type List16Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -29945,25 +32386,26 @@ export type List16Errors = {
   500: ResultVoid
 }
 
-export type List16Error = List16Errors[keyof List16Errors]
+export type ListHolidayCalendarsError = ListHolidayCalendarsErrors[keyof ListHolidayCalendarsErrors]
 
-export type List16Responses = {
+export type ListHolidayCalendarsResponses = {
   /**
    * OK
    */
   200: ResultListHolidayCalendar
 }
 
-export type List16Response = List16Responses[keyof List16Responses]
+export type ListHolidayCalendarsResponse =
+  ListHolidayCalendarsResponses[keyof ListHolidayCalendarsResponses]
 
-export type Create11Data = {
+export type CreateHolidayCalendarsData = {
   body: CreateHolidayCalendarRequest
   path?: never
   query?: never
   url: '/inspection/holiday-calendars'
 }
 
-export type Create11Errors = {
+export type CreateHolidayCalendarsErrors = {
   /**
    * Bad Request
    */
@@ -29985,6 +32427,10 @@ export type Create11Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -29994,16 +32440,18 @@ export type Create11Errors = {
   500: ResultVoid
 }
 
-export type Create11Error = Create11Errors[keyof Create11Errors]
+export type CreateHolidayCalendarsError =
+  CreateHolidayCalendarsErrors[keyof CreateHolidayCalendarsErrors]
 
-export type Create11Responses = {
+export type CreateHolidayCalendarsResponses = {
   /**
    * OK
    */
   200: ResultHolidayCalendar
 }
 
-export type Create11Response = Create11Responses[keyof Create11Responses]
+export type CreateHolidayCalendarsResponse =
+  CreateHolidayCalendarsResponses[keyof CreateHolidayCalendarsResponses]
 
 export type FindByYearData = {
   body?: never
@@ -30035,6 +32483,10 @@ export type FindByYearErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -30085,6 +32537,10 @@ export type FindDefaultErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -30105,7 +32561,7 @@ export type FindDefaultResponses = {
 
 export type FindDefaultResponse = FindDefaultResponses[keyof FindDefaultResponses]
 
-export type Delete12Data = {
+export type DeleteHolidayCalendarsData = {
   body?: never
   path: {
     id: string
@@ -30114,7 +32570,7 @@ export type Delete12Data = {
   url: '/inspection/holiday-calendars/{id}'
 }
 
-export type Delete12Errors = {
+export type DeleteHolidayCalendarsErrors = {
   /**
    * Bad Request
    */
@@ -30136,6 +32592,10 @@ export type Delete12Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -30145,16 +32605,18 @@ export type Delete12Errors = {
   500: ResultVoid
 }
 
-export type Delete12Error = Delete12Errors[keyof Delete12Errors]
+export type DeleteHolidayCalendarsError =
+  DeleteHolidayCalendarsErrors[keyof DeleteHolidayCalendarsErrors]
 
-export type Delete12Responses = {
+export type DeleteHolidayCalendarsResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Delete12Response = Delete12Responses[keyof Delete12Responses]
+export type DeleteHolidayCalendarsResponse =
+  DeleteHolidayCalendarsResponses[keyof DeleteHolidayCalendarsResponses]
 
 export type FindByIdData = {
   body?: never
@@ -30187,6 +32649,10 @@ export type FindByIdErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -30207,7 +32673,7 @@ export type FindByIdResponses = {
 
 export type FindByIdResponse = FindByIdResponses[keyof FindByIdResponses]
 
-export type Update10Data = {
+export type UpdateHolidayCalendarsData = {
   body: UpdateHolidayCalendarRequest
   path: {
     id: string
@@ -30216,7 +32682,7 @@ export type Update10Data = {
   url: '/inspection/holiday-calendars/{id}'
 }
 
-export type Update10Errors = {
+export type UpdateHolidayCalendarsErrors = {
   /**
    * Bad Request
    */
@@ -30238,6 +32704,10 @@ export type Update10Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -30247,16 +32717,240 @@ export type Update10Errors = {
   500: ResultVoid
 }
 
-export type Update10Error = Update10Errors[keyof Update10Errors]
+export type UpdateHolidayCalendarsError =
+  UpdateHolidayCalendarsErrors[keyof UpdateHolidayCalendarsErrors]
 
-export type Update10Responses = {
+export type UpdateHolidayCalendarsResponses = {
   /**
    * OK
    */
   200: ResultHolidayCalendar
 }
 
-export type Update10Response = Update10Responses[keyof Update10Responses]
+export type UpdateHolidayCalendarsResponse =
+  UpdateHolidayCalendarsResponses[keyof UpdateHolidayCalendarsResponses]
+
+export type ListIndicatorResultsData = {
+  body?: never
+  path?: never
+  query: {
+    indicatorId: string
+    targetId?: string
+    periodKey?: string
+    status?: 'DRAFT' | 'PUBLISHED' | 'SUPERSEDED'
+  }
+  url: '/inspection/indicator-results'
+}
+
+export type ListIndicatorResultsErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type ListIndicatorResultsError = ListIndicatorResultsErrors[keyof ListIndicatorResultsErrors]
+
+export type ListIndicatorResultsResponses = {
+  /**
+   * OK
+   */
+  200: ResultListIndicatorResult
+}
+
+export type ListIndicatorResultsResponse =
+  ListIndicatorResultsResponses[keyof ListIndicatorResultsResponses]
+
+export type ManualEvaluateData = {
+  body: ManualEvaluateRequest
+  path?: never
+  query?: never
+  url: '/inspection/indicator-results/manual-evaluate'
+}
+
+export type ManualEvaluateErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type ManualEvaluateError = ManualEvaluateErrors[keyof ManualEvaluateErrors]
+
+export type ManualEvaluateResponses = {
+  /**
+   * OK
+   */
+  200: ResultListIndicatorResult
+}
+
+export type ManualEvaluateResponse = ManualEvaluateResponses[keyof ManualEvaluateResponses]
+
+export type HistoryData = {
+  body?: never
+  path: {
+    id: string
+  }
+  query?: never
+  url: '/inspection/indicator-results/{id}/history'
+}
+
+export type HistoryErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type HistoryError = HistoryErrors[keyof HistoryErrors]
+
+export type HistoryResponses = {
+  /**
+   * OK
+   */
+  200: ResultListIndicatorResult
+}
+
+export type HistoryResponse = HistoryResponses[keyof HistoryResponses]
+
+export type PublishData = {
+  body?: never
+  path: {
+    id: string
+  }
+  query?: never
+  url: '/inspection/indicator-results/{id}/publish'
+}
+
+export type PublishErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type PublishError = PublishErrors[keyof PublishErrors]
+
+export type PublishResponses = {
+  /**
+   * OK
+   */
+  200: ResultIndicatorResult
+}
+
+export type PublishResponse = PublishResponses[keyof PublishResponses]
 
 export type GetScoresData = {
   body?: never
@@ -30290,6 +32984,10 @@ export type GetScoresErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -30344,6 +33042,10 @@ export type ComputeScoresErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -30395,6 +33097,10 @@ export type GetIndicatorTreeErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -30443,6 +33149,10 @@ export type CreateCompositeIndicatorErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -30495,6 +33205,10 @@ export type CreateLeafIndicatorErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -30516,7 +33230,7 @@ export type CreateLeafIndicatorResponses = {
 export type CreateLeafIndicatorResponse =
   CreateLeafIndicatorResponses[keyof CreateLeafIndicatorResponses]
 
-export type DeleteIndicator1Data = {
+export type DeleteIndicatorIndicatorsData = {
   body?: never
   path: {
     id: string
@@ -30525,7 +33239,7 @@ export type DeleteIndicator1Data = {
   url: '/inspection/indicators/{id}'
 }
 
-export type DeleteIndicator1Errors = {
+export type DeleteIndicatorIndicatorsErrors = {
   /**
    * Bad Request
    */
@@ -30547,6 +33261,10 @@ export type DeleteIndicator1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -30556,16 +33274,18 @@ export type DeleteIndicator1Errors = {
   500: ResultVoid
 }
 
-export type DeleteIndicator1Error = DeleteIndicator1Errors[keyof DeleteIndicator1Errors]
+export type DeleteIndicatorIndicatorsError =
+  DeleteIndicatorIndicatorsErrors[keyof DeleteIndicatorIndicatorsErrors]
 
-export type DeleteIndicator1Responses = {
+export type DeleteIndicatorIndicatorsResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type DeleteIndicator1Response = DeleteIndicator1Responses[keyof DeleteIndicator1Responses]
+export type DeleteIndicatorIndicatorsResponse =
+  DeleteIndicatorIndicatorsResponses[keyof DeleteIndicatorIndicatorsResponses]
 
 export type GetIndicatorData = {
   body?: never
@@ -30597,6 +33317,10 @@ export type GetIndicatorErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -30649,6 +33373,10 @@ export type UpdateIndicatorErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -30669,14 +33397,14 @@ export type UpdateIndicatorResponses = {
 
 export type UpdateIndicatorResponse = UpdateIndicatorResponses[keyof UpdateIndicatorResponses]
 
-export type List15Data = {
+export type ListIssueCategoriesData = {
   body?: never
   path?: never
   query?: never
   url: '/inspection/issue-categories'
 }
 
-export type List15Errors = {
+export type ListIssueCategoriesErrors = {
   /**
    * Bad Request
    */
@@ -30698,6 +33426,10 @@ export type List15Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -30707,29 +33439,26 @@ export type List15Errors = {
   500: ResultVoid
 }
 
-export type List15Error = List15Errors[keyof List15Errors]
+export type ListIssueCategoriesError = ListIssueCategoriesErrors[keyof ListIssueCategoriesErrors]
 
-export type List15Responses = {
+export type ListIssueCategoriesResponses = {
   /**
    * OK
    */
   200: ResultListIssueCategory
 }
 
-export type List15Response = List15Responses[keyof List15Responses]
+export type ListIssueCategoriesResponse =
+  ListIssueCategoriesResponses[keyof ListIssueCategoriesResponses]
 
-export type Create10Data = {
-  body: {
-    [key: string]: {
-      [key: string]: unknown
-    }
-  }
+export type CreateIssueCategoriesData = {
+  body: CreateIssueCategoryRequest
   path?: never
   query?: never
   url: '/inspection/issue-categories'
 }
 
-export type Create10Errors = {
+export type CreateIssueCategoriesErrors = {
   /**
    * Bad Request
    */
@@ -30751,6 +33480,10 @@ export type Create10Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -30760,16 +33493,18 @@ export type Create10Errors = {
   500: ResultVoid
 }
 
-export type Create10Error = Create10Errors[keyof Create10Errors]
+export type CreateIssueCategoriesError =
+  CreateIssueCategoriesErrors[keyof CreateIssueCategoriesErrors]
 
-export type Create10Responses = {
+export type CreateIssueCategoriesResponses = {
   /**
    * OK
    */
   200: ResultIssueCategory
 }
 
-export type Create10Response = Create10Responses[keyof Create10Responses]
+export type CreateIssueCategoriesResponse =
+  CreateIssueCategoriesResponses[keyof CreateIssueCategoriesResponses]
 
 export type RootsData = {
   body?: never
@@ -30800,6 +33535,10 @@ export type RootsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -30820,7 +33559,7 @@ export type RootsResponses = {
 
 export type RootsResponse = RootsResponses[keyof RootsResponses]
 
-export type Delete11Data = {
+export type DeleteIssueCategoriesData = {
   body?: never
   path: {
     id: string
@@ -30829,7 +33568,7 @@ export type Delete11Data = {
   url: '/inspection/issue-categories/{id}'
 }
 
-export type Delete11Errors = {
+export type DeleteIssueCategoriesErrors = {
   /**
    * Bad Request
    */
@@ -30851,6 +33590,10 @@ export type Delete11Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -30860,18 +33603,20 @@ export type Delete11Errors = {
   500: ResultVoid
 }
 
-export type Delete11Error = Delete11Errors[keyof Delete11Errors]
+export type DeleteIssueCategoriesError =
+  DeleteIssueCategoriesErrors[keyof DeleteIssueCategoriesErrors]
 
-export type Delete11Responses = {
+export type DeleteIssueCategoriesResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Delete11Response = Delete11Responses[keyof Delete11Responses]
+export type DeleteIssueCategoriesResponse =
+  DeleteIssueCategoriesResponses[keyof DeleteIssueCategoriesResponses]
 
-export type GetById6Data = {
+export type GetByIdIssueCategoriesData = {
   body?: never
   path: {
     id: string
@@ -30880,7 +33625,7 @@ export type GetById6Data = {
   url: '/inspection/issue-categories/{id}'
 }
 
-export type GetById6Errors = {
+export type GetByIdIssueCategoriesErrors = {
   /**
    * Bad Request
    */
@@ -30902,6 +33647,10 @@ export type GetById6Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -30911,23 +33660,21 @@ export type GetById6Errors = {
   500: ResultVoid
 }
 
-export type GetById6Error = GetById6Errors[keyof GetById6Errors]
+export type GetByIdIssueCategoriesError =
+  GetByIdIssueCategoriesErrors[keyof GetByIdIssueCategoriesErrors]
 
-export type GetById6Responses = {
+export type GetByIdIssueCategoriesResponses = {
   /**
    * OK
    */
   200: ResultIssueCategory
 }
 
-export type GetById6Response = GetById6Responses[keyof GetById6Responses]
+export type GetByIdIssueCategoriesResponse =
+  GetByIdIssueCategoriesResponses[keyof GetByIdIssueCategoriesResponses]
 
-export type Update9Data = {
-  body: {
-    [key: string]: {
-      [key: string]: unknown
-    }
-  }
+export type UpdateIssueCategoriesData = {
+  body: UpdateIssueCategoryRequest
   path: {
     id: string
   }
@@ -30935,7 +33682,7 @@ export type Update9Data = {
   url: '/inspection/issue-categories/{id}'
 }
 
-export type Update9Errors = {
+export type UpdateIssueCategoriesErrors = {
   /**
    * Bad Request
    */
@@ -30957,6 +33704,10 @@ export type Update9Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -30966,16 +33717,18 @@ export type Update9Errors = {
   500: ResultVoid
 }
 
-export type Update9Error = Update9Errors[keyof Update9Errors]
+export type UpdateIssueCategoriesError =
+  UpdateIssueCategoriesErrors[keyof UpdateIssueCategoriesErrors]
 
-export type Update9Responses = {
+export type UpdateIssueCategoriesResponses = {
   /**
    * OK
    */
   200: ResultIssueCategory
 }
 
-export type Update9Response = Update9Responses[keyof Update9Responses]
+export type UpdateIssueCategoriesResponse =
+  UpdateIssueCategoriesResponses[keyof UpdateIssueCategoriesResponses]
 
 export type ChildrenData = {
   body?: never
@@ -31007,6 +33760,10 @@ export type ChildrenErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -31059,6 +33816,10 @@ export type DeleteItemErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -31109,6 +33870,10 @@ export type UpdateItemErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -31162,6 +33927,10 @@ export type ListLibraryItemsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -31211,6 +33980,10 @@ export type CreateLibraryItemErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -31231,14 +34004,14 @@ export type CreateLibraryItemResponses = {
 
 export type CreateLibraryItemResponse = CreateLibraryItemResponses[keyof CreateLibraryItemResponses]
 
-export type GetCategories1Data = {
+export type GetCategories2Data = {
   body?: never
   path?: never
   query?: never
   url: '/inspection/library-items/categories'
 }
 
-export type GetCategories1Errors = {
+export type GetCategories2Errors = {
   /**
    * Bad Request
    */
@@ -31260,6 +34033,10 @@ export type GetCategories1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -31269,16 +34046,16 @@ export type GetCategories1Errors = {
   500: ResultVoid
 }
 
-export type GetCategories1Error = GetCategories1Errors[keyof GetCategories1Errors]
+export type GetCategories2Error = GetCategories2Errors[keyof GetCategories2Errors]
 
-export type GetCategories1Responses = {
+export type GetCategories2Responses = {
   /**
    * OK
    */
   200: ResultListString
 }
 
-export type GetCategories1Response = GetCategories1Responses[keyof GetCategories1Responses]
+export type GetCategories2Response = GetCategories2Responses[keyof GetCategories2Responses]
 
 export type CreateItemFromLibraryData = {
   body: CreateFromLibraryRequest
@@ -31310,6 +34087,10 @@ export type CreateItemFromLibraryErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -31364,6 +34145,10 @@ export type DeleteLibraryItemErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -31414,6 +34199,10 @@ export type GetLibraryItemErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -31466,6 +34255,10 @@ export type UpdateLibraryItemErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -31517,6 +34310,10 @@ export type SyncToTemplatesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -31537,7 +34334,7 @@ export type SyncToTemplatesResponses = {
 
 export type SyncToTemplatesResponse = SyncToTemplatesResponses[keyof SyncToTemplatesResponses]
 
-export type List14Data = {
+export type ListObservationsData = {
   body?: never
   path?: never
   query?: {
@@ -31552,7 +34349,7 @@ export type List14Data = {
   url: '/inspection/observations'
 }
 
-export type List14Errors = {
+export type ListObservationsErrors = {
   /**
    * Bad Request
    */
@@ -31574,6 +34371,10 @@ export type List14Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -31583,16 +34384,16 @@ export type List14Errors = {
   500: ResultVoid
 }
 
-export type List14Error = List14Errors[keyof List14Errors]
+export type ListObservationsError = ListObservationsErrors[keyof ListObservationsErrors]
 
-export type List14Responses = {
+export type ListObservationsResponses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type List14Response = List14Responses[keyof List14Responses]
+export type ListObservationsResponse = ListObservationsResponses[keyof ListObservationsResponses]
 
 export type BySubmissionData = {
   body?: never
@@ -31625,6 +34426,10 @@ export type BySubmissionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -31644,6 +34449,62 @@ export type BySubmissionResponses = {
 }
 
 export type BySubmissionResponse = BySubmissionResponses[keyof BySubmissionResponses]
+
+export type GetOrgScoresData = {
+  body?: never
+  path?: never
+  query: {
+    projectId: string
+    cycleDate: string
+  }
+  url: '/inspection/org-scores'
+}
+
+export type GetOrgScoresErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type GetOrgScoresError = GetOrgScoresErrors[keyof GetOrgScoresErrors]
+
+export type GetOrgScoresResponses = {
+  /**
+   * OK
+   */
+  200: ResultListOrgScoreView
+}
+
+export type GetOrgScoresResponse = GetOrgScoresResponses[keyof GetOrgScoresResponses]
 
 export type ListPlansData = {
   body?: never
@@ -31676,6 +34537,10 @@ export type ListPlansErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -31696,14 +34561,14 @@ export type ListPlansResponses = {
 
 export type ListPlansResponse = ListPlansResponses[keyof ListPlansResponses]
 
-export type CreatePlanData = {
+export type CreatePlanPlansData = {
   body: CreatePlanRequest
   path?: never
   query?: never
   url: '/inspection/plans'
 }
 
-export type CreatePlanErrors = {
+export type CreatePlanPlansErrors = {
   /**
    * Bad Request
    */
@@ -31725,6 +34590,10 @@ export type CreatePlanErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -31734,18 +34603,18 @@ export type CreatePlanErrors = {
   500: ResultVoid
 }
 
-export type CreatePlanError = CreatePlanErrors[keyof CreatePlanErrors]
+export type CreatePlanPlansError = CreatePlanPlansErrors[keyof CreatePlanPlansErrors]
 
-export type CreatePlanResponses = {
+export type CreatePlanPlansResponses = {
   /**
    * OK
    */
   200: ResultInspectionPlan
 }
 
-export type CreatePlanResponse = CreatePlanResponses[keyof CreatePlanResponses]
+export type CreatePlanPlansResponse = CreatePlanPlansResponses[keyof CreatePlanPlansResponses]
 
-export type DeletePlanData = {
+export type DeletePlanPlansData = {
   body?: never
   path: {
     id: string
@@ -31754,7 +34623,7 @@ export type DeletePlanData = {
   url: '/inspection/plans/{id}'
 }
 
-export type DeletePlanErrors = {
+export type DeletePlanPlansErrors = {
   /**
    * Bad Request
    */
@@ -31776,6 +34645,10 @@ export type DeletePlanErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -31785,18 +34658,18 @@ export type DeletePlanErrors = {
   500: ResultVoid
 }
 
-export type DeletePlanError = DeletePlanErrors[keyof DeletePlanErrors]
+export type DeletePlanPlansError = DeletePlanPlansErrors[keyof DeletePlanPlansErrors]
 
-export type DeletePlanResponses = {
+export type DeletePlanPlansResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type DeletePlanResponse = DeletePlanResponses[keyof DeletePlanResponses]
+export type DeletePlanPlansResponse = DeletePlanPlansResponses[keyof DeletePlanPlansResponses]
 
-export type GetPlanData = {
+export type GetPlanPlansData = {
   body?: never
   path: {
     id: string
@@ -31805,7 +34678,7 @@ export type GetPlanData = {
   url: '/inspection/plans/{id}'
 }
 
-export type GetPlanErrors = {
+export type GetPlanPlansErrors = {
   /**
    * Bad Request
    */
@@ -31827,6 +34700,10 @@ export type GetPlanErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -31836,18 +34713,18 @@ export type GetPlanErrors = {
   500: ResultVoid
 }
 
-export type GetPlanError = GetPlanErrors[keyof GetPlanErrors]
+export type GetPlanPlansError = GetPlanPlansErrors[keyof GetPlanPlansErrors]
 
-export type GetPlanResponses = {
+export type GetPlanPlansResponses = {
   /**
    * OK
    */
   200: ResultInspectionPlan
 }
 
-export type GetPlanResponse = GetPlanResponses[keyof GetPlanResponses]
+export type GetPlanPlansResponse = GetPlanPlansResponses[keyof GetPlanPlansResponses]
 
-export type UpdatePlanData = {
+export type UpdatePlanPlansData = {
   body: UpdatePlanRequest
   path: {
     id: string
@@ -31856,7 +34733,7 @@ export type UpdatePlanData = {
   url: '/inspection/plans/{id}'
 }
 
-export type UpdatePlanErrors = {
+export type UpdatePlanPlansErrors = {
   /**
    * Bad Request
    */
@@ -31878,6 +34755,10 @@ export type UpdatePlanErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -31887,16 +34768,16 @@ export type UpdatePlanErrors = {
   500: ResultVoid
 }
 
-export type UpdatePlanError = UpdatePlanErrors[keyof UpdatePlanErrors]
+export type UpdatePlanPlansError = UpdatePlanPlansErrors[keyof UpdatePlanPlansErrors]
 
-export type UpdatePlanResponses = {
+export type UpdatePlanPlansResponses = {
   /**
    * OK
    */
   200: ResultInspectionPlan
 }
 
-export type UpdatePlanResponse = UpdatePlanResponses[keyof UpdatePlanResponses]
+export type UpdatePlanPlansResponse = UpdatePlanPlansResponses[keyof UpdatePlanPlansResponses]
 
 export type DisablePlanData = {
   body?: never
@@ -31928,6 +34809,10 @@ export type DisablePlanErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -31980,6 +34865,10 @@ export type EnablePlanErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -32030,6 +34919,10 @@ export type TriggerOnDemandPlanErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -32083,6 +34976,10 @@ export type ListProjectsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -32132,6 +35029,10 @@ export type CreateProjectErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -32180,6 +35081,10 @@ export type PreviewTargetCountErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -32234,6 +35139,10 @@ export type GetTargetPersonsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -32284,6 +35193,10 @@ export type ListProjectsWithStatsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -32338,6 +35251,10 @@ export type DeleteProjectErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -32388,6 +35305,10 @@ export type GetProjectErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -32440,6 +35361,10 @@ export type UpdateProjectErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -32459,111 +35384,6 @@ export type UpdateProjectResponses = {
 }
 
 export type UpdateProjectResponse = UpdateProjectResponses[keyof UpdateProjectResponses]
-
-export type GetAdvancedScoringData = {
-  body?: never
-  path: {
-    id: string
-  }
-  query?: never
-  url: '/inspection/projects/{id}/advanced-scoring'
-}
-
-export type GetAdvancedScoringErrors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
-  /**
-   * Unsupported Media Type
-   */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type GetAdvancedScoringError = GetAdvancedScoringErrors[keyof GetAdvancedScoringErrors]
-
-export type GetAdvancedScoringResponses = {
-  /**
-   * OK
-   */
-  200: ResultObject
-}
-
-export type GetAdvancedScoringResponse =
-  GetAdvancedScoringResponses[keyof GetAdvancedScoringResponses]
-
-export type UpdateAdvancedScoringData = {
-  body: AdvancedScoringRequest
-  path: {
-    id: string
-  }
-  query?: never
-  url: '/inspection/projects/{id}/advanced-scoring'
-}
-
-export type UpdateAdvancedScoringErrors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
-  /**
-   * Unsupported Media Type
-   */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type UpdateAdvancedScoringError =
-  UpdateAdvancedScoringErrors[keyof UpdateAdvancedScoringErrors]
-
-export type UpdateAdvancedScoringResponses = {
-  /**
-   * OK
-   */
-  200: ResultObject
-}
-
-export type UpdateAdvancedScoringResponse =
-  UpdateAdvancedScoringResponses[keyof UpdateAdvancedScoringResponses]
 
 export type ArchiveProjectData = {
   body?: never
@@ -32596,6 +35416,10 @@ export type ArchiveProjectErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -32615,6 +35439,61 @@ export type ArchiveProjectResponses = {
 }
 
 export type ArchiveProjectResponse = ArchiveProjectResponses[keyof ArchiveProjectResponses]
+
+export type CloneProjectData = {
+  body: CloneProjectRequest
+  path: {
+    id: string
+  }
+  query?: never
+  url: '/inspection/projects/{id}/clone'
+}
+
+export type CloneProjectErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type CloneProjectError = CloneProjectErrors[keyof CloneProjectErrors]
+
+export type CloneProjectResponses = {
+  /**
+   * OK
+   */
+  200: ResultInspProject
+}
+
+export type CloneProjectResponse = CloneProjectResponses[keyof CloneProjectResponses]
 
 export type CompleteProjectData = {
   body?: never
@@ -32646,6 +35525,10 @@ export type CompleteProjectErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -32697,6 +35580,10 @@ export type UpdateOperationalConfigErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -32753,6 +35640,10 @@ export type GradeScoreErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -32804,6 +35695,10 @@ export type PauseProjectErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -32854,6 +35749,10 @@ export type UpdatePolicyConfigErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -32907,6 +35806,10 @@ export type PublishProjectErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -32957,6 +35860,10 @@ export type ResumeProjectErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -33009,6 +35916,10 @@ export type ListProjectScoresErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -33059,6 +35970,10 @@ export type GetTemplateVersionStatusErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -33113,6 +36028,10 @@ export type UpgradeTemplateVersionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -33166,6 +36085,10 @@ export type ListInspectorsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -33217,6 +36140,10 @@ export type AddInspectorErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -33236,6 +36163,61 @@ export type AddInspectorResponses = {
 }
 
 export type AddInspectorResponse = AddInspectorResponses[keyof AddInspectorResponses]
+
+export type BatchAssignTasksData = {
+  body: BatchAssignRequest
+  path: {
+    projectId: string
+  }
+  query?: never
+  url: '/inspection/projects/{projectId}/inspectors/batch-assign'
+}
+
+export type BatchAssignTasksErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type BatchAssignTasksError = BatchAssignTasksErrors[keyof BatchAssignTasksErrors]
+
+export type BatchAssignTasksResponses = {
+  /**
+   * OK
+   */
+  200: ResultBatchAssignResponse
+}
+
+export type BatchAssignTasksResponse = BatchAssignTasksResponses[keyof BatchAssignTasksResponses]
 
 export type RemoveInspectorData = {
   body?: never
@@ -33269,6 +36251,10 @@ export type RemoveInspectorErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -33288,6 +36274,179 @@ export type RemoveInspectorResponses = {
 }
 
 export type RemoveInspectorResponse = RemoveInspectorResponses[keyof RemoveInspectorResponses]
+
+export type RemoveInspectorRoleData = {
+  body?: never
+  path: {
+    projectId: string
+    userId: string
+    role: 'INSPECTOR' | 'REVIEWER' | 'LEAD'
+  }
+  query?: never
+  url: '/inspection/projects/{projectId}/inspectors/{userId}/roles/{role}'
+}
+
+export type RemoveInspectorRoleErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type RemoveInspectorRoleError = RemoveInspectorRoleErrors[keyof RemoveInspectorRoleErrors]
+
+export type RemoveInspectorRoleResponses = {
+  /**
+   * OK
+   */
+  200: ResultVoid
+}
+
+export type RemoveInspectorRoleResponse =
+  RemoveInspectorRoleResponses[keyof RemoveInspectorRoleResponses]
+
+export type AddInspectorRoleData = {
+  body?: never
+  path: {
+    projectId: string
+    userId: string
+    role: 'INSPECTOR' | 'REVIEWER' | 'LEAD'
+  }
+  query?: {
+    userName?: string
+  }
+  url: '/inspection/projects/{projectId}/inspectors/{userId}/roles/{role}'
+}
+
+export type AddInspectorRoleErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type AddInspectorRoleError = AddInspectorRoleErrors[keyof AddInspectorRoleErrors]
+
+export type AddInspectorRoleResponses = {
+  /**
+   * OK
+   */
+  200: ResultProjectInspector
+}
+
+export type AddInspectorRoleResponse = AddInspectorRoleResponses[keyof AddInspectorRoleResponses]
+
+export type GetPeopleWorkbenchData = {
+  body?: never
+  path: {
+    projectId: string
+  }
+  query?: never
+  url: '/inspection/projects/{projectId}/people-workbench'
+}
+
+export type GetPeopleWorkbenchErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type GetPeopleWorkbenchError = GetPeopleWorkbenchErrors[keyof GetPeopleWorkbenchErrors]
+
+export type GetPeopleWorkbenchResponses = {
+  /**
+   * OK
+   */
+  200: ResultPeopleWorkbenchView
+}
+
+export type GetPeopleWorkbenchResponse =
+  GetPeopleWorkbenchResponses[keyof GetPeopleWorkbenchResponses]
 
 export type GetByProjectData = {
   body?: never
@@ -33320,6 +36479,10 @@ export type GetByProjectErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -33340,14 +36503,14 @@ export type GetByProjectResponses = {
 
 export type GetByProjectResponse = GetByProjectResponses[keyof GetByProjectResponses]
 
-export type Create9Data = {
+export type CreateRatingLinksData = {
   body: CreateLinkRequest
   path?: never
   query?: never
   url: '/inspection/rating-links'
 }
 
-export type Create9Errors = {
+export type CreateRatingLinksErrors = {
   /**
    * Bad Request
    */
@@ -33369,6 +36532,10 @@ export type Create9Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -33378,16 +36545,16 @@ export type Create9Errors = {
   500: ResultVoid
 }
 
-export type Create9Error = Create9Errors[keyof Create9Errors]
+export type CreateRatingLinksError = CreateRatingLinksErrors[keyof CreateRatingLinksErrors]
 
-export type Create9Responses = {
+export type CreateRatingLinksResponses = {
   /**
    * OK
    */
   200: ResultInspRatingLink
 }
 
-export type Create9Response = Create9Responses[keyof Create9Responses]
+export type CreateRatingLinksResponse = CreateRatingLinksResponses[keyof CreateRatingLinksResponses]
 
 export type ManualCalculateData = {
   body: CalculateRequest
@@ -33418,6 +36585,10 @@ export type ManualCalculateErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -33438,7 +36609,7 @@ export type ManualCalculateResponses = {
 
 export type ManualCalculateResponse = ManualCalculateResponses[keyof ManualCalculateResponses]
 
-export type Delete10Data = {
+export type DeleteRatingLinksData = {
   body?: never
   path: {
     id: string
@@ -33447,7 +36618,7 @@ export type Delete10Data = {
   url: '/inspection/rating-links/{id}'
 }
 
-export type Delete10Errors = {
+export type DeleteRatingLinksErrors = {
   /**
    * Bad Request
    */
@@ -33469,6 +36640,10 @@ export type Delete10Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -33478,18 +36653,18 @@ export type Delete10Errors = {
   500: ResultVoid
 }
 
-export type Delete10Error = Delete10Errors[keyof Delete10Errors]
+export type DeleteRatingLinksError = DeleteRatingLinksErrors[keyof DeleteRatingLinksErrors]
 
-export type Delete10Responses = {
+export type DeleteRatingLinksResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Delete10Response = Delete10Responses[keyof Delete10Responses]
+export type DeleteRatingLinksResponse = DeleteRatingLinksResponses[keyof DeleteRatingLinksResponses]
 
-export type GetById5Data = {
+export type GetByIdRatingLinksData = {
   body?: never
   path: {
     id: string
@@ -33498,7 +36673,7 @@ export type GetById5Data = {
   url: '/inspection/rating-links/{id}'
 }
 
-export type GetById5Errors = {
+export type GetByIdRatingLinksErrors = {
   /**
    * Bad Request
    */
@@ -33520,6 +36695,10 @@ export type GetById5Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -33529,18 +36708,19 @@ export type GetById5Errors = {
   500: ResultVoid
 }
 
-export type GetById5Error = GetById5Errors[keyof GetById5Errors]
+export type GetByIdRatingLinksError = GetByIdRatingLinksErrors[keyof GetByIdRatingLinksErrors]
 
-export type GetById5Responses = {
+export type GetByIdRatingLinksResponses = {
   /**
    * OK
    */
   200: ResultInspRatingLink
 }
 
-export type GetById5Response = GetById5Responses[keyof GetById5Responses]
+export type GetByIdRatingLinksResponse =
+  GetByIdRatingLinksResponses[keyof GetByIdRatingLinksResponses]
 
-export type Update8Data = {
+export type UpdateRatingLinksData = {
   body: UpdateLinkRequest
   path: {
     id: string
@@ -33549,7 +36729,7 @@ export type Update8Data = {
   url: '/inspection/rating-links/{id}'
 }
 
-export type Update8Errors = {
+export type UpdateRatingLinksErrors = {
   /**
    * Bad Request
    */
@@ -33571,6 +36751,10 @@ export type Update8Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -33580,16 +36764,16 @@ export type Update8Errors = {
   500: ResultVoid
 }
 
-export type Update8Error = Update8Errors[keyof Update8Errors]
+export type UpdateRatingLinksError = UpdateRatingLinksErrors[keyof UpdateRatingLinksErrors]
 
-export type Update8Responses = {
+export type UpdateRatingLinksResponses = {
   /**
    * OK
    */
   200: ResultInspRatingLink
 }
 
-export type Update8Response = Update8Responses[keyof Update8Responses]
+export type UpdateRatingLinksResponse = UpdateRatingLinksResponses[keyof UpdateRatingLinksResponses]
 
 export type MyInspectionsData = {
   body?: never
@@ -33622,6 +36806,10 @@ export type MyInspectionsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -33674,6 +36862,10 @@ export type MyRecurringErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -33725,6 +36917,10 @@ export type MySummaryErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -33775,6 +36971,10 @@ export type MyTrendsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -33829,6 +37029,10 @@ export type ListResponseSetsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -33877,6 +37081,10 @@ export type CreateResponseSetErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -33929,6 +37137,10 @@ export type DeleteResponseSetErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -33979,6 +37191,10 @@ export type GetResponseSetErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -34031,6 +37247,10 @@ export type UpdateResponseSetErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -34082,6 +37302,10 @@ export type ListOptionsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -34132,6 +37356,10 @@ export type AddOptionErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -34185,6 +37413,10 @@ export type DeleteOptionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -34237,6 +37469,10 @@ export type UpdateOptionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -34257,14 +37493,14 @@ export type UpdateOptionResponses = {
 
 export type UpdateOptionResponse = UpdateOptionResponses[keyof UpdateOptionResponses]
 
-export type ListPolicies1Data = {
+export type ListPoliciesScoringPoliciesData = {
   body?: never
   path?: never
   query?: never
   url: '/inspection/scoring-policies'
 }
 
-export type ListPolicies1Errors = {
+export type ListPoliciesScoringPoliciesErrors = {
   /**
    * Bad Request
    */
@@ -34286,6 +37522,10 @@ export type ListPolicies1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -34295,25 +37535,27 @@ export type ListPolicies1Errors = {
   500: ResultVoid
 }
 
-export type ListPolicies1Error = ListPolicies1Errors[keyof ListPolicies1Errors]
+export type ListPoliciesScoringPoliciesError =
+  ListPoliciesScoringPoliciesErrors[keyof ListPoliciesScoringPoliciesErrors]
 
-export type ListPolicies1Responses = {
+export type ListPoliciesScoringPoliciesResponses = {
   /**
    * OK
    */
   200: ResultListScoringPolicy
 }
 
-export type ListPolicies1Response = ListPolicies1Responses[keyof ListPolicies1Responses]
+export type ListPoliciesScoringPoliciesResponse =
+  ListPoliciesScoringPoliciesResponses[keyof ListPoliciesScoringPoliciesResponses]
 
-export type CreatePolicy1Data = {
+export type CreatePolicyScoringPoliciesData = {
   body: CreatePolicyRequest
   path?: never
   query?: never
   url: '/inspection/scoring-policies'
 }
 
-export type CreatePolicy1Errors = {
+export type CreatePolicyScoringPoliciesErrors = {
   /**
    * Bad Request
    */
@@ -34335,6 +37577,10 @@ export type CreatePolicy1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -34344,18 +37590,20 @@ export type CreatePolicy1Errors = {
   500: ResultVoid
 }
 
-export type CreatePolicy1Error = CreatePolicy1Errors[keyof CreatePolicy1Errors]
+export type CreatePolicyScoringPoliciesError =
+  CreatePolicyScoringPoliciesErrors[keyof CreatePolicyScoringPoliciesErrors]
 
-export type CreatePolicy1Responses = {
+export type CreatePolicyScoringPoliciesResponses = {
   /**
    * OK
    */
   200: ResultScoringPolicy
 }
 
-export type CreatePolicy1Response = CreatePolicy1Responses[keyof CreatePolicy1Responses]
+export type CreatePolicyScoringPoliciesResponse =
+  CreatePolicyScoringPoliciesResponses[keyof CreatePolicyScoringPoliciesResponses]
 
-export type DeletePolicy1Data = {
+export type DeletePolicyScoringPoliciesData = {
   body?: never
   path: {
     id: string
@@ -34364,7 +37612,7 @@ export type DeletePolicy1Data = {
   url: '/inspection/scoring-policies/{id}'
 }
 
-export type DeletePolicy1Errors = {
+export type DeletePolicyScoringPoliciesErrors = {
   /**
    * Bad Request
    */
@@ -34386,6 +37634,10 @@ export type DeletePolicy1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -34395,18 +37647,20 @@ export type DeletePolicy1Errors = {
   500: ResultVoid
 }
 
-export type DeletePolicy1Error = DeletePolicy1Errors[keyof DeletePolicy1Errors]
+export type DeletePolicyScoringPoliciesError =
+  DeletePolicyScoringPoliciesErrors[keyof DeletePolicyScoringPoliciesErrors]
 
-export type DeletePolicy1Responses = {
+export type DeletePolicyScoringPoliciesResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type DeletePolicy1Response = DeletePolicy1Responses[keyof DeletePolicy1Responses]
+export type DeletePolicyScoringPoliciesResponse =
+  DeletePolicyScoringPoliciesResponses[keyof DeletePolicyScoringPoliciesResponses]
 
-export type GetPolicy1Data = {
+export type GetPolicyScoringPoliciesData = {
   body?: never
   path: {
     id: string
@@ -34415,7 +37669,7 @@ export type GetPolicy1Data = {
   url: '/inspection/scoring-policies/{id}'
 }
 
-export type GetPolicy1Errors = {
+export type GetPolicyScoringPoliciesErrors = {
   /**
    * Bad Request
    */
@@ -34437,6 +37691,10 @@ export type GetPolicy1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -34446,18 +37704,20 @@ export type GetPolicy1Errors = {
   500: ResultVoid
 }
 
-export type GetPolicy1Error = GetPolicy1Errors[keyof GetPolicy1Errors]
+export type GetPolicyScoringPoliciesError =
+  GetPolicyScoringPoliciesErrors[keyof GetPolicyScoringPoliciesErrors]
 
-export type GetPolicy1Responses = {
+export type GetPolicyScoringPoliciesResponses = {
   /**
    * OK
    */
   200: ResultScoringPolicy
 }
 
-export type GetPolicy1Response = GetPolicy1Responses[keyof GetPolicy1Responses]
+export type GetPolicyScoringPoliciesResponse =
+  GetPolicyScoringPoliciesResponses[keyof GetPolicyScoringPoliciesResponses]
 
-export type UpdatePolicy1Data = {
+export type UpdatePolicyScoringPoliciesData = {
   body: UpdatePolicyRequest
   path: {
     id: string
@@ -34466,7 +37726,7 @@ export type UpdatePolicy1Data = {
   url: '/inspection/scoring-policies/{id}'
 }
 
-export type UpdatePolicy1Errors = {
+export type UpdatePolicyScoringPoliciesErrors = {
   /**
    * Bad Request
    */
@@ -34488,6 +37748,10 @@ export type UpdatePolicy1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -34497,16 +37761,18 @@ export type UpdatePolicy1Errors = {
   500: ResultVoid
 }
 
-export type UpdatePolicy1Error = UpdatePolicy1Errors[keyof UpdatePolicy1Errors]
+export type UpdatePolicyScoringPoliciesError =
+  UpdatePolicyScoringPoliciesErrors[keyof UpdatePolicyScoringPoliciesErrors]
 
-export type UpdatePolicy1Responses = {
+export type UpdatePolicyScoringPoliciesResponses = {
   /**
    * OK
    */
   200: ResultScoringPolicy
 }
 
-export type UpdatePolicy1Response = UpdatePolicy1Responses[keyof UpdatePolicy1Responses]
+export type UpdatePolicyScoringPoliciesResponse =
+  UpdatePolicyScoringPoliciesResponses[keyof UpdatePolicyScoringPoliciesResponses]
 
 export type ListCalcRulesData = {
   body?: never
@@ -34538,6 +37804,10 @@ export type ListCalcRulesErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -34589,6 +37859,10 @@ export type CreateCalcRuleErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -34642,6 +37916,10 @@ export type DeleteCalcRuleErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -34694,6 +37972,10 @@ export type UpdateCalcRuleErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -34714,7 +37996,7 @@ export type UpdateCalcRuleResponses = {
 
 export type UpdateCalcRuleResponse = UpdateCalcRuleResponses[keyof UpdateCalcRuleResponses]
 
-export type ListGradeBands1Data = {
+export type ListGradeBands2Data = {
   body?: never
   path: {
     id: string
@@ -34723,7 +38005,7 @@ export type ListGradeBands1Data = {
   url: '/inspection/scoring-policies/{id}/grade-bands'
 }
 
-export type ListGradeBands1Errors = {
+export type ListGradeBands2Errors = {
   /**
    * Bad Request
    */
@@ -34745,6 +38027,10 @@ export type ListGradeBands1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -34754,18 +38040,18 @@ export type ListGradeBands1Errors = {
   500: ResultVoid
 }
 
-export type ListGradeBands1Error = ListGradeBands1Errors[keyof ListGradeBands1Errors]
+export type ListGradeBands2Error = ListGradeBands2Errors[keyof ListGradeBands2Errors]
 
-export type ListGradeBands1Responses = {
+export type ListGradeBands2Responses = {
   /**
    * OK
    */
   200: ResultListPolicyGradeBand
 }
 
-export type ListGradeBands1Response = ListGradeBands1Responses[keyof ListGradeBands1Responses]
+export type ListGradeBands2Response = ListGradeBands2Responses[keyof ListGradeBands2Responses]
 
-export type CreateGradeBand1Data = {
+export type CreateGradeBandGradeBands2Data = {
   body: GradeBandRequest
   path: {
     id: string
@@ -34774,7 +38060,7 @@ export type CreateGradeBand1Data = {
   url: '/inspection/scoring-policies/{id}/grade-bands'
 }
 
-export type CreateGradeBand1Errors = {
+export type CreateGradeBandGradeBands2Errors = {
   /**
    * Bad Request
    */
@@ -34796,6 +38082,10 @@ export type CreateGradeBand1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -34805,18 +38095,20 @@ export type CreateGradeBand1Errors = {
   500: ResultVoid
 }
 
-export type CreateGradeBand1Error = CreateGradeBand1Errors[keyof CreateGradeBand1Errors]
+export type CreateGradeBandGradeBands2Error =
+  CreateGradeBandGradeBands2Errors[keyof CreateGradeBandGradeBands2Errors]
 
-export type CreateGradeBand1Responses = {
+export type CreateGradeBandGradeBands2Responses = {
   /**
    * OK
    */
   200: ResultPolicyGradeBand
 }
 
-export type CreateGradeBand1Response = CreateGradeBand1Responses[keyof CreateGradeBand1Responses]
+export type CreateGradeBandGradeBands2Response =
+  CreateGradeBandGradeBands2Responses[keyof CreateGradeBandGradeBands2Responses]
 
-export type DeleteGradeBand1Data = {
+export type DeleteGradeBandGradeBands2Data = {
   body?: never
   path: {
     id: string
@@ -34826,7 +38118,7 @@ export type DeleteGradeBand1Data = {
   url: '/inspection/scoring-policies/{id}/grade-bands/{bandId}'
 }
 
-export type DeleteGradeBand1Errors = {
+export type DeleteGradeBandGradeBands2Errors = {
   /**
    * Bad Request
    */
@@ -34848,6 +38140,10 @@ export type DeleteGradeBand1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -34857,18 +38153,20 @@ export type DeleteGradeBand1Errors = {
   500: ResultVoid
 }
 
-export type DeleteGradeBand1Error = DeleteGradeBand1Errors[keyof DeleteGradeBand1Errors]
+export type DeleteGradeBandGradeBands2Error =
+  DeleteGradeBandGradeBands2Errors[keyof DeleteGradeBandGradeBands2Errors]
 
-export type DeleteGradeBand1Responses = {
+export type DeleteGradeBandGradeBands2Responses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type DeleteGradeBand1Response = DeleteGradeBand1Responses[keyof DeleteGradeBand1Responses]
+export type DeleteGradeBandGradeBands2Response =
+  DeleteGradeBandGradeBands2Responses[keyof DeleteGradeBandGradeBands2Responses]
 
-export type UpdateGradeBand1Data = {
+export type UpdateGradeBandGradeBands2Data = {
   body: GradeBandRequest
   path: {
     id: string
@@ -34878,7 +38176,7 @@ export type UpdateGradeBand1Data = {
   url: '/inspection/scoring-policies/{id}/grade-bands/{bandId}'
 }
 
-export type UpdateGradeBand1Errors = {
+export type UpdateGradeBandGradeBands2Errors = {
   /**
    * Bad Request
    */
@@ -34900,6 +38198,10 @@ export type UpdateGradeBand1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -34909,16 +38211,18 @@ export type UpdateGradeBand1Errors = {
   500: ResultVoid
 }
 
-export type UpdateGradeBand1Error = UpdateGradeBand1Errors[keyof UpdateGradeBand1Errors]
+export type UpdateGradeBandGradeBands2Error =
+  UpdateGradeBandGradeBands2Errors[keyof UpdateGradeBandGradeBands2Errors]
 
-export type UpdateGradeBand1Responses = {
+export type UpdateGradeBandGradeBands2Responses = {
   /**
    * OK
    */
   200: ResultPolicyGradeBand
 }
 
-export type UpdateGradeBand1Response = UpdateGradeBand1Responses[keyof UpdateGradeBand1Responses]
+export type UpdateGradeBandGradeBands2Response =
+  UpdateGradeBandGradeBands2Responses[keyof UpdateGradeBandGradeBands2Responses]
 
 export type ListPresetsData = {
   body?: never
@@ -34950,6 +38254,10 @@ export type ListPresetsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -35002,6 +38310,10 @@ export type CreatePresetErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -35052,6 +38364,10 @@ export type DeletePresetErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -35104,6 +38420,10 @@ export type UpdatePresetErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -35155,6 +38475,10 @@ export type ApplyPresetErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -35175,14 +38499,16 @@ export type ApplyPresetResponses = {
 
 export type ApplyPresetResponse = ApplyPresetResponses[keyof ApplyPresetResponses]
 
-export type ListProfiles1Data = {
+export type ListProfilesScoringProfilesData = {
   body?: never
   path?: never
-  query?: never
+  query: {
+    projectId: string
+  }
   url: '/inspection/scoring-profiles'
 }
 
-export type ListProfiles1Errors = {
+export type ListProfilesScoringProfilesErrors = {
   /**
    * Bad Request
    */
@@ -35204,6 +38530,10 @@ export type ListProfiles1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -35213,25 +38543,27 @@ export type ListProfiles1Errors = {
   500: ResultVoid
 }
 
-export type ListProfiles1Error = ListProfiles1Errors[keyof ListProfiles1Errors]
+export type ListProfilesScoringProfilesError =
+  ListProfilesScoringProfilesErrors[keyof ListProfilesScoringProfilesErrors]
 
-export type ListProfiles1Responses = {
+export type ListProfilesScoringProfilesResponses = {
   /**
    * OK
    */
   200: ResultListScoringProfile
 }
 
-export type ListProfiles1Response = ListProfiles1Responses[keyof ListProfiles1Responses]
+export type ListProfilesScoringProfilesResponse =
+  ListProfilesScoringProfilesResponses[keyof ListProfilesScoringProfilesResponses]
 
-export type CreateProfile1Data = {
+export type CreateProfileScoringProfilesData = {
   body: CreateProfileRequest
   path?: never
   query?: never
   url: '/inspection/scoring-profiles'
 }
 
-export type CreateProfile1Errors = {
+export type CreateProfileScoringProfilesErrors = {
   /**
    * Bad Request
    */
@@ -35253,6 +38585,10 @@ export type CreateProfile1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -35262,27 +38598,30 @@ export type CreateProfile1Errors = {
   500: ResultVoid
 }
 
-export type CreateProfile1Error = CreateProfile1Errors[keyof CreateProfile1Errors]
+export type CreateProfileScoringProfilesError =
+  CreateProfileScoringProfilesErrors[keyof CreateProfileScoringProfilesErrors]
 
-export type CreateProfile1Responses = {
+export type CreateProfileScoringProfilesResponses = {
   /**
    * OK
    */
   200: ResultScoringProfile
 }
 
-export type CreateProfile1Response = CreateProfile1Responses[keyof CreateProfile1Responses]
+export type CreateProfileScoringProfilesResponse =
+  CreateProfileScoringProfilesResponses[keyof CreateProfileScoringProfilesResponses]
 
-export type GetProfileBySectionData = {
+export type GetProfileByProjectAndSectionData = {
   body?: never
-  path: {
+  path?: never
+  query: {
+    projectId: string
     sectionId: string
   }
-  query?: never
-  url: '/inspection/scoring-profiles/by-section/{sectionId}'
+  url: '/inspection/scoring-profiles/by-project-section'
 }
 
-export type GetProfileBySectionErrors = {
+export type GetProfileByProjectAndSectionErrors = {
   /**
    * Bad Request
    */
@@ -35304,57 +38643,9 @@ export type GetProfileBySectionErrors = {
    */
   405: ResultVoid
   /**
-   * Unsupported Media Type
+   * Conflict
    */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type GetProfileBySectionError = GetProfileBySectionErrors[keyof GetProfileBySectionErrors]
-
-export type GetProfileBySectionResponses = {
-  /**
-   * OK
-   */
-  200: ResultScoringProfile
-}
-
-export type GetProfileBySectionResponse =
-  GetProfileBySectionResponses[keyof GetProfileBySectionResponses]
-
-export type GetProfileByTemplateLegacyData = {
-  body?: never
-  path: {
-    templateId: string
-  }
-  query?: never
-  url: '/inspection/scoring-profiles/by-template/{templateId}'
-}
-
-export type GetProfileByTemplateLegacyErrors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -35365,20 +38656,20 @@ export type GetProfileByTemplateLegacyErrors = {
   500: ResultVoid
 }
 
-export type GetProfileByTemplateLegacyError =
-  GetProfileByTemplateLegacyErrors[keyof GetProfileByTemplateLegacyErrors]
+export type GetProfileByProjectAndSectionError =
+  GetProfileByProjectAndSectionErrors[keyof GetProfileByProjectAndSectionErrors]
 
-export type GetProfileByTemplateLegacyResponses = {
+export type GetProfileByProjectAndSectionResponses = {
   /**
    * OK
    */
   200: ResultScoringProfile
 }
 
-export type GetProfileByTemplateLegacyResponse =
-  GetProfileByTemplateLegacyResponses[keyof GetProfileByTemplateLegacyResponses]
+export type GetProfileByProjectAndSectionResponse =
+  GetProfileByProjectAndSectionResponses[keyof GetProfileByProjectAndSectionResponses]
 
-export type DeleteProfile1Data = {
+export type DeleteProfileScoringProfilesData = {
   body?: never
   path: {
     id: string
@@ -35387,7 +38678,7 @@ export type DeleteProfile1Data = {
   url: '/inspection/scoring-profiles/{id}'
 }
 
-export type DeleteProfile1Errors = {
+export type DeleteProfileScoringProfilesErrors = {
   /**
    * Bad Request
    */
@@ -35409,6 +38700,10 @@ export type DeleteProfile1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -35418,18 +38713,20 @@ export type DeleteProfile1Errors = {
   500: ResultVoid
 }
 
-export type DeleteProfile1Error = DeleteProfile1Errors[keyof DeleteProfile1Errors]
+export type DeleteProfileScoringProfilesError =
+  DeleteProfileScoringProfilesErrors[keyof DeleteProfileScoringProfilesErrors]
 
-export type DeleteProfile1Responses = {
+export type DeleteProfileScoringProfilesResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type DeleteProfile1Response = DeleteProfile1Responses[keyof DeleteProfile1Responses]
+export type DeleteProfileScoringProfilesResponse =
+  DeleteProfileScoringProfilesResponses[keyof DeleteProfileScoringProfilesResponses]
 
-export type GetProfile1Data = {
+export type GetProfileScoringProfilesData = {
   body?: never
   path: {
     id: string
@@ -35438,7 +38735,7 @@ export type GetProfile1Data = {
   url: '/inspection/scoring-profiles/{id}'
 }
 
-export type GetProfile1Errors = {
+export type GetProfileScoringProfilesErrors = {
   /**
    * Bad Request
    */
@@ -35460,6 +38757,10 @@ export type GetProfile1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -35469,18 +38770,20 @@ export type GetProfile1Errors = {
   500: ResultVoid
 }
 
-export type GetProfile1Error = GetProfile1Errors[keyof GetProfile1Errors]
+export type GetProfileScoringProfilesError =
+  GetProfileScoringProfilesErrors[keyof GetProfileScoringProfilesErrors]
 
-export type GetProfile1Responses = {
+export type GetProfileScoringProfilesResponses = {
   /**
    * OK
    */
   200: ResultScoringProfile
 }
 
-export type GetProfile1Response = GetProfile1Responses[keyof GetProfile1Responses]
+export type GetProfileScoringProfilesResponse =
+  GetProfileScoringProfilesResponses[keyof GetProfileScoringProfilesResponses]
 
-export type UpdateProfile1Data = {
+export type UpdateProfileScoringProfilesData = {
   body: UpdateProfileRequest
   path: {
     id: string
@@ -35489,7 +38792,7 @@ export type UpdateProfile1Data = {
   url: '/inspection/scoring-profiles/{id}'
 }
 
-export type UpdateProfile1Errors = {
+export type UpdateProfileScoringProfilesErrors = {
   /**
    * Bad Request
    */
@@ -35511,56 +38814,9 @@ export type UpdateProfile1Errors = {
    */
   405: ResultVoid
   /**
-   * Unsupported Media Type
+   * Conflict
    */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type UpdateProfile1Error = UpdateProfile1Errors[keyof UpdateProfile1Errors]
-
-export type UpdateProfile1Responses = {
-  /**
-   * OK
-   */
-  200: ResultScoringProfile
-}
-
-export type UpdateProfile1Response = UpdateProfile1Responses[keyof UpdateProfile1Responses]
-
-export type UpdateAdvancedSettingsData = {
-  body: UpdateAdvancedSettingsRequest
-  path: {
-    id: string
-  }
-  query?: never
-  url: '/inspection/scoring-profiles/{id}/advanced-settings'
-}
-
-export type UpdateAdvancedSettingsErrors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -35571,20 +38827,20 @@ export type UpdateAdvancedSettingsErrors = {
   500: ResultVoid
 }
 
-export type UpdateAdvancedSettingsError =
-  UpdateAdvancedSettingsErrors[keyof UpdateAdvancedSettingsErrors]
+export type UpdateProfileScoringProfilesError =
+  UpdateProfileScoringProfilesErrors[keyof UpdateProfileScoringProfilesErrors]
 
-export type UpdateAdvancedSettingsResponses = {
+export type UpdateProfileScoringProfilesResponses = {
   /**
    * OK
    */
   200: ResultScoringProfile
 }
 
-export type UpdateAdvancedSettingsResponse =
-  UpdateAdvancedSettingsResponses[keyof UpdateAdvancedSettingsResponses]
+export type UpdateProfileScoringProfilesResponse =
+  UpdateProfileScoringProfilesResponses[keyof UpdateProfileScoringProfilesResponses]
 
-export type ListRules1Data = {
+export type ListRulesCalculationRulesData = {
   body?: never
   path: {
     id: string
@@ -35593,7 +38849,7 @@ export type ListRules1Data = {
   url: '/inspection/scoring-profiles/{id}/calculation-rules'
 }
 
-export type ListRules1Errors = {
+export type ListRulesCalculationRulesErrors = {
   /**
    * Bad Request
    */
@@ -35615,6 +38871,10 @@ export type ListRules1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -35624,18 +38884,20 @@ export type ListRules1Errors = {
   500: ResultVoid
 }
 
-export type ListRules1Error = ListRules1Errors[keyof ListRules1Errors]
+export type ListRulesCalculationRulesError =
+  ListRulesCalculationRulesErrors[keyof ListRulesCalculationRulesErrors]
 
-export type ListRules1Responses = {
+export type ListRulesCalculationRulesResponses = {
   /**
    * OK
    */
   200: ResultListCalculationRule
 }
 
-export type ListRules1Response = ListRules1Responses[keyof ListRules1Responses]
+export type ListRulesCalculationRulesResponse =
+  ListRulesCalculationRulesResponses[keyof ListRulesCalculationRulesResponses]
 
-export type CreateRule1Data = {
+export type CreateRuleCalculationRulesData = {
   body: CreateRuleRequest
   path: {
     id: string
@@ -35644,7 +38906,7 @@ export type CreateRule1Data = {
   url: '/inspection/scoring-profiles/{id}/calculation-rules'
 }
 
-export type CreateRule1Errors = {
+export type CreateRuleCalculationRulesErrors = {
   /**
    * Bad Request
    */
@@ -35666,6 +38928,10 @@ export type CreateRule1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -35675,18 +38941,20 @@ export type CreateRule1Errors = {
   500: ResultVoid
 }
 
-export type CreateRule1Error = CreateRule1Errors[keyof CreateRule1Errors]
+export type CreateRuleCalculationRulesError =
+  CreateRuleCalculationRulesErrors[keyof CreateRuleCalculationRulesErrors]
 
-export type CreateRule1Responses = {
+export type CreateRuleCalculationRulesResponses = {
   /**
    * OK
    */
   200: ResultCalculationRule
 }
 
-export type CreateRule1Response = CreateRule1Responses[keyof CreateRule1Responses]
+export type CreateRuleCalculationRulesResponse =
+  CreateRuleCalculationRulesResponses[keyof CreateRuleCalculationRulesResponses]
 
-export type DeleteRule1Data = {
+export type DeleteRuleCalculationRulesData = {
   body?: never
   path: {
     id: string
@@ -35696,7 +38964,7 @@ export type DeleteRule1Data = {
   url: '/inspection/scoring-profiles/{id}/calculation-rules/{ruleId}'
 }
 
-export type DeleteRule1Errors = {
+export type DeleteRuleCalculationRulesErrors = {
   /**
    * Bad Request
    */
@@ -35718,6 +38986,10 @@ export type DeleteRule1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -35727,18 +38999,20 @@ export type DeleteRule1Errors = {
   500: ResultVoid
 }
 
-export type DeleteRule1Error = DeleteRule1Errors[keyof DeleteRule1Errors]
+export type DeleteRuleCalculationRulesError =
+  DeleteRuleCalculationRulesErrors[keyof DeleteRuleCalculationRulesErrors]
 
-export type DeleteRule1Responses = {
+export type DeleteRuleCalculationRulesResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type DeleteRule1Response = DeleteRule1Responses[keyof DeleteRule1Responses]
+export type DeleteRuleCalculationRulesResponse =
+  DeleteRuleCalculationRulesResponses[keyof DeleteRuleCalculationRulesResponses]
 
-export type UpdateRule1Data = {
+export type UpdateRuleCalculationRulesData = {
   body: UpdateRuleRequest
   path: {
     id: string
@@ -35748,7 +39022,7 @@ export type UpdateRule1Data = {
   url: '/inspection/scoring-profiles/{id}/calculation-rules/{ruleId}'
 }
 
-export type UpdateRule1Errors = {
+export type UpdateRuleCalculationRulesErrors = {
   /**
    * Bad Request
    */
@@ -35770,6 +39044,10 @@ export type UpdateRule1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -35779,16 +39057,18 @@ export type UpdateRule1Errors = {
   500: ResultVoid
 }
 
-export type UpdateRule1Error = UpdateRule1Errors[keyof UpdateRule1Errors]
+export type UpdateRuleCalculationRulesError =
+  UpdateRuleCalculationRulesErrors[keyof UpdateRuleCalculationRulesErrors]
 
-export type UpdateRule1Responses = {
+export type UpdateRuleCalculationRulesResponses = {
   /**
    * OK
    */
   200: ResultCalculationRule
 }
 
-export type UpdateRule1Response = UpdateRule1Responses[keyof UpdateRule1Responses]
+export type UpdateRuleCalculationRulesResponse =
+  UpdateRuleCalculationRulesResponses[keyof UpdateRuleCalculationRulesResponses]
 
 export type ListDimensionsData = {
   body?: never
@@ -35820,6 +39100,10 @@ export type ListDimensionsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -35872,6 +39156,10 @@ export type CreateDimensionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -35922,6 +39210,10 @@ export type SyncDimensionsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -35975,6 +39267,10 @@ export type DeleteDimensionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -36027,6 +39323,10 @@ export type UpdateDimensionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -36077,6 +39377,10 @@ export type ListEscalationPoliciesErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -36130,6 +39434,10 @@ export type CreateEscalationPolicyErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -36185,6 +39493,10 @@ export type DeleteEscalationPolicyErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -36239,6 +39551,10 @@ export type UpdateEscalationPolicyErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -36292,6 +39608,10 @@ export type ListGradeBandsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -36312,7 +39632,7 @@ export type ListGradeBandsResponses = {
 
 export type ListGradeBandsResponse = ListGradeBandsResponses[keyof ListGradeBandsResponses]
 
-export type CreateGradeBandData = {
+export type CreateGradeBandGradeBandsData = {
   body: CreateGradeBandRequest
   path: {
     id: string
@@ -36321,7 +39641,7 @@ export type CreateGradeBandData = {
   url: '/inspection/scoring-profiles/{id}/grade-bands'
 }
 
-export type CreateGradeBandErrors = {
+export type CreateGradeBandGradeBandsErrors = {
   /**
    * Bad Request
    */
@@ -36343,6 +39663,10 @@ export type CreateGradeBandErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -36352,18 +39676,20 @@ export type CreateGradeBandErrors = {
   500: ResultVoid
 }
 
-export type CreateGradeBandError = CreateGradeBandErrors[keyof CreateGradeBandErrors]
+export type CreateGradeBandGradeBandsError =
+  CreateGradeBandGradeBandsErrors[keyof CreateGradeBandGradeBandsErrors]
 
-export type CreateGradeBandResponses = {
+export type CreateGradeBandGradeBandsResponses = {
   /**
    * OK
    */
   200: ResultGradeBand
 }
 
-export type CreateGradeBandResponse = CreateGradeBandResponses[keyof CreateGradeBandResponses]
+export type CreateGradeBandGradeBandsResponse =
+  CreateGradeBandGradeBandsResponses[keyof CreateGradeBandGradeBandsResponses]
 
-export type DeleteGradeBandData = {
+export type DeleteGradeBandGradeBandsData = {
   body?: never
   path: {
     id: string
@@ -36373,7 +39699,7 @@ export type DeleteGradeBandData = {
   url: '/inspection/scoring-profiles/{id}/grade-bands/{bandId}'
 }
 
-export type DeleteGradeBandErrors = {
+export type DeleteGradeBandGradeBandsErrors = {
   /**
    * Bad Request
    */
@@ -36395,6 +39721,10 @@ export type DeleteGradeBandErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -36404,18 +39734,20 @@ export type DeleteGradeBandErrors = {
   500: ResultVoid
 }
 
-export type DeleteGradeBandError = DeleteGradeBandErrors[keyof DeleteGradeBandErrors]
+export type DeleteGradeBandGradeBandsError =
+  DeleteGradeBandGradeBandsErrors[keyof DeleteGradeBandGradeBandsErrors]
 
-export type DeleteGradeBandResponses = {
+export type DeleteGradeBandGradeBandsResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type DeleteGradeBandResponse = DeleteGradeBandResponses[keyof DeleteGradeBandResponses]
+export type DeleteGradeBandGradeBandsResponse =
+  DeleteGradeBandGradeBandsResponses[keyof DeleteGradeBandGradeBandsResponses]
 
-export type UpdateGradeBandData = {
+export type UpdateGradeBandGradeBandsData = {
   body: UpdateGradeBandRequest
   path: {
     id: string
@@ -36425,7 +39757,7 @@ export type UpdateGradeBandData = {
   url: '/inspection/scoring-profiles/{id}/grade-bands/{bandId}'
 }
 
-export type UpdateGradeBandErrors = {
+export type UpdateGradeBandGradeBandsErrors = {
   /**
    * Bad Request
    */
@@ -36447,6 +39779,10 @@ export type UpdateGradeBandErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -36456,18 +39792,20 @@ export type UpdateGradeBandErrors = {
   500: ResultVoid
 }
 
-export type UpdateGradeBandError = UpdateGradeBandErrors[keyof UpdateGradeBandErrors]
+export type UpdateGradeBandGradeBandsError =
+  UpdateGradeBandGradeBandsErrors[keyof UpdateGradeBandGradeBandsErrors]
 
-export type UpdateGradeBandResponses = {
+export type UpdateGradeBandGradeBandsResponses = {
   /**
    * OK
    */
   200: ResultGradeBand
 }
 
-export type UpdateGradeBandResponse = UpdateGradeBandResponses[keyof UpdateGradeBandResponses]
+export type UpdateGradeBandGradeBandsResponse =
+  UpdateGradeBandGradeBandsResponses[keyof UpdateGradeBandGradeBandsResponses]
 
-export type ListVersions1Data = {
+export type ListVersionsData = {
   body?: never
   path: {
     id: string
@@ -36476,7 +39814,7 @@ export type ListVersions1Data = {
   url: '/inspection/scoring-profiles/{id}/versions'
 }
 
-export type ListVersions1Errors = {
+export type ListVersionsErrors = {
   /**
    * Bad Request
    */
@@ -36498,6 +39836,10 @@ export type ListVersions1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -36507,16 +39849,16 @@ export type ListVersions1Errors = {
   500: ResultVoid
 }
 
-export type ListVersions1Error = ListVersions1Errors[keyof ListVersions1Errors]
+export type ListVersionsError = ListVersionsErrors[keyof ListVersionsErrors]
 
-export type ListVersions1Responses = {
+export type ListVersionsResponses = {
   /**
    * OK
    */
   200: ResultListScoringProfileVersion
 }
 
-export type ListVersions1Response = ListVersions1Responses[keyof ListVersions1Responses]
+export type ListVersionsResponse = ListVersionsResponses[keyof ListVersionsResponses]
 
 export type PublishVersionData = {
   body: PublishVersionRequest
@@ -36549,6 +39891,10 @@ export type PublishVersionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -36569,7 +39915,7 @@ export type PublishVersionResponses = {
 
 export type PublishVersionResponse = PublishVersionResponses[keyof PublishVersionResponses]
 
-export type GetVersion1Data = {
+export type GetVersionVersions2Data = {
   body?: never
   path: {
     id: string
@@ -36579,7 +39925,7 @@ export type GetVersion1Data = {
   url: '/inspection/scoring-profiles/{id}/versions/{version}'
 }
 
-export type GetVersion1Errors = {
+export type GetVersionVersions2Errors = {
   /**
    * Bad Request
    */
@@ -36601,6 +39947,10 @@ export type GetVersion1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -36610,16 +39960,17 @@ export type GetVersion1Errors = {
   500: ResultVoid
 }
 
-export type GetVersion1Error = GetVersion1Errors[keyof GetVersion1Errors]
+export type GetVersionVersions2Error = GetVersionVersions2Errors[keyof GetVersionVersions2Errors]
 
-export type GetVersion1Responses = {
+export type GetVersionVersions2Responses = {
   /**
    * OK
    */
   200: ResultScoringProfileVersion
 }
 
-export type GetVersion1Response = GetVersion1Responses[keyof GetVersion1Responses]
+export type GetVersionVersions2Response =
+  GetVersionVersions2Responses[keyof GetVersionVersions2Responses]
 
 export type CreateChildSectionData = {
   body: CreateChildSectionRequest
@@ -36649,6 +40000,10 @@ export type CreateChildSectionErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -36702,6 +40057,10 @@ export type ListChildrenErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -36750,6 +40109,10 @@ export type ReorderSectionsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -36802,6 +40165,10 @@ export type GetSectionTreeErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -36852,6 +40219,10 @@ export type DeleteSectionErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -36904,6 +40275,10 @@ export type GetSectionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -36955,6 +40330,10 @@ export type UpdateSectionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -37005,6 +40384,10 @@ export type UpdateScoringConfigErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -37058,6 +40441,10 @@ export type UpdateStatusErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -37108,6 +40495,10 @@ export type ListItemsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -37160,6 +40551,10 @@ export type CreateItemErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -37210,6 +40605,10 @@ export type ReorderItemsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -37263,6 +40662,10 @@ export type ListSubmissionsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -37311,6 +40714,10 @@ export type CreateSubmissionErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -37363,6 +40770,10 @@ export type DeleteDetailErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -37414,6 +40825,10 @@ export type FlagDetailErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -37464,6 +40879,10 @@ export type UpdateDetailRemarkErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -37517,6 +40936,10 @@ export type UpdateDetailResponseErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -37569,6 +40992,10 @@ export type UnflagDetailErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -37619,6 +41046,10 @@ export type DeleteEvidenceErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -37671,6 +41102,10 @@ export type GetSubmissionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -37692,7 +41127,7 @@ export type GetSubmissionResponses = {
 export type GetSubmissionResponse = GetSubmissionResponses[keyof GetSubmissionResponses]
 
 export type CompleteSubmissionData = {
-  body?: CompleteSubmissionRequest
+  body?: never
   path: {
     id: string
   }
@@ -37721,6 +41156,10 @@ export type CompleteSubmissionErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -37774,6 +41213,10 @@ export type SaveFormDataErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -37824,6 +41267,10 @@ export type LockSubmissionErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -37876,6 +41323,10 @@ export type RecalculateScoreErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -37926,6 +41377,10 @@ export type SkipSubmissionErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -37978,6 +41433,10 @@ export type StartFillingErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -38028,6 +41487,10 @@ export type UnlockSubmissionErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -38080,6 +41543,10 @@ export type ListDetailsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -38131,6 +41598,10 @@ export type CreateDetailErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -38181,6 +41652,10 @@ export type ListFlaggedDetailsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -38234,6 +41709,10 @@ export type ListEvidenceErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -38285,6 +41764,10 @@ export type AddEvidenceErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -38333,6 +41816,10 @@ export type PullErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -38383,6 +41870,10 @@ export type PushErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -38403,7 +41894,7 @@ export type PushResponses = {
 
 export type PushResponse = PushResponses[keyof PushResponses]
 
-export type ListTasks1Data = {
+export type ListTasks2Data = {
   body?: never
   path?: never
   query?: {
@@ -38412,7 +41903,7 @@ export type ListTasks1Data = {
   url: '/inspection/tasks'
 }
 
-export type ListTasks1Errors = {
+export type ListTasks2Errors = {
   /**
    * Bad Request
    */
@@ -38434,6 +41925,10 @@ export type ListTasks1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -38443,25 +41938,25 @@ export type ListTasks1Errors = {
   500: ResultVoid
 }
 
-export type ListTasks1Error = ListTasks1Errors[keyof ListTasks1Errors]
+export type ListTasks2Error = ListTasks2Errors[keyof ListTasks2Errors]
 
-export type ListTasks1Responses = {
+export type ListTasks2Responses = {
   /**
    * OK
    */
   200: ResultListInspTask
 }
 
-export type ListTasks1Response = ListTasks1Responses[keyof ListTasks1Responses]
+export type ListTasks2Response = ListTasks2Responses[keyof ListTasks2Responses]
 
-export type CreateTask1Data = {
+export type CreateTaskTasks2Data = {
   body: CreateTaskRequest
   path?: never
   query?: never
   url: '/inspection/tasks'
 }
 
-export type CreateTask1Errors = {
+export type CreateTaskTasks2Errors = {
   /**
    * Bad Request
    */
@@ -38483,6 +41978,10 @@ export type CreateTask1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -38492,16 +41991,16 @@ export type CreateTask1Errors = {
   500: ResultVoid
 }
 
-export type CreateTask1Error = CreateTask1Errors[keyof CreateTask1Errors]
+export type CreateTaskTasks2Error = CreateTaskTasks2Errors[keyof CreateTaskTasks2Errors]
 
-export type CreateTask1Responses = {
+export type CreateTaskTasks2Responses = {
   /**
    * OK
    */
   200: ResultInspTask
 }
 
-export type CreateTask1Response = CreateTask1Responses[keyof CreateTask1Responses]
+export type CreateTaskTasks2Response = CreateTaskTasks2Responses[keyof CreateTaskTasks2Responses]
 
 export type CreateAdHocData = {
   body: AdHocRequest
@@ -38531,6 +42030,10 @@ export type CreateAdHocErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -38580,6 +42083,10 @@ export type ListAdHocAllowedProjectsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -38632,6 +42139,10 @@ export type ListAvailableTasksErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -38681,6 +42192,10 @@ export type CreateCrossAuditErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -38733,6 +42248,10 @@ export type GetTaskTypeKpiErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -38781,6 +42300,10 @@ export type ListMyTasksErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -38833,6 +42356,10 @@ export type GetInspectionModeErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -38883,6 +42410,10 @@ export type UpdateInspectionModeErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -38936,6 +42467,10 @@ export type ReassignDepartedInspectorErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -38987,6 +42522,10 @@ export type CreateSelfCheckErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -39007,7 +42546,7 @@ export type CreateSelfCheckResponses = {
 
 export type CreateSelfCheckResponse = CreateSelfCheckResponses[keyof CreateSelfCheckResponses]
 
-export type GetTask1Data = {
+export type GetTaskTasks2Data = {
   body?: never
   path: {
     id: string
@@ -39016,7 +42555,7 @@ export type GetTask1Data = {
   url: '/inspection/tasks/{id}'
 }
 
-export type GetTask1Errors = {
+export type GetTaskTasks2Errors = {
   /**
    * Bad Request
    */
@@ -39038,6 +42577,10 @@ export type GetTask1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -39047,16 +42590,16 @@ export type GetTask1Errors = {
   500: ResultVoid
 }
 
-export type GetTask1Error = GetTask1Errors[keyof GetTask1Errors]
+export type GetTaskTasks2Error = GetTaskTasks2Errors[keyof GetTaskTasks2Errors]
 
-export type GetTask1Responses = {
+export type GetTaskTasks2Responses = {
   /**
    * OK
    */
   200: ResultInspTask
 }
 
-export type GetTask1Response = GetTask1Responses[keyof GetTask1Responses]
+export type GetTaskTasks2Response = GetTaskTasks2Responses[keyof GetTaskTasks2Responses]
 
 export type AssignTaskData = {
   body: AssignTaskRequest
@@ -39088,6 +42631,10 @@ export type AssignTaskErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -39140,6 +42687,10 @@ export type CancelTaskErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -39190,6 +42741,10 @@ export type ClaimTaskErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -39242,6 +42797,10 @@ export type ExtendDeadlineErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -39292,6 +42851,10 @@ export type PublishTaskErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -39344,6 +42907,10 @@ export type RejectTaskErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -39394,6 +42961,10 @@ export type RepopulateSubmissionsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -39448,6 +43019,10 @@ export type ReviewTaskErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -39498,6 +43073,10 @@ export type StartTaskErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -39550,6 +43129,10 @@ export type SubmitTaskErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -39600,6 +43183,10 @@ export type WithdrawTaskErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -39656,6 +43243,10 @@ export type ListRootSectionsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -39704,6 +43295,10 @@ export type CreateRootSectionErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -39755,6 +43350,10 @@ export type GetRootSectionUsageErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -39808,6 +43407,10 @@ export type DeleteRootSectionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -39858,6 +43461,10 @@ export type GetRootSectionErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -39910,6 +43517,10 @@ export type UpdateRootSectionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -39960,6 +43571,10 @@ export type ArchiveRootSectionErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -40013,6 +43628,10 @@ export type DeprecateRootSectionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -40064,6 +43683,10 @@ export type DuplicateRootSectionErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -40117,6 +43740,10 @@ export type ExportRootSectionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -40168,6 +43795,10 @@ export type PublishRootSectionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -40189,7 +43820,7 @@ export type PublishRootSectionResponses = {
 export type PublishRootSectionResponse =
   PublishRootSectionResponses[keyof PublishRootSectionResponses]
 
-export type ListVersionsData = {
+export type ListVersions2Data = {
   body?: never
   path: {
     id: string
@@ -40198,7 +43829,7 @@ export type ListVersionsData = {
   url: '/inspection/templates/{id}/versions'
 }
 
-export type ListVersionsErrors = {
+export type ListVersions2Errors = {
   /**
    * Bad Request
    */
@@ -40220,6 +43851,10 @@ export type ListVersionsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -40229,18 +43864,18 @@ export type ListVersionsErrors = {
   500: ResultVoid
 }
 
-export type ListVersionsError = ListVersionsErrors[keyof ListVersionsErrors]
+export type ListVersions2Error = ListVersions2Errors[keyof ListVersions2Errors]
 
-export type ListVersionsResponses = {
+export type ListVersions2Responses = {
   /**
    * OK
    */
   200: ResultListTemplateVersion
 }
 
-export type ListVersionsResponse = ListVersionsResponses[keyof ListVersionsResponses]
+export type ListVersions2Response = ListVersions2Responses[keyof ListVersions2Responses]
 
-export type GetVersionData = {
+export type GetVersionVersionsData = {
   body?: never
   path: {
     id: string
@@ -40250,7 +43885,7 @@ export type GetVersionData = {
   url: '/inspection/templates/{id}/versions/{version}'
 }
 
-export type GetVersionErrors = {
+export type GetVersionVersionsErrors = {
   /**
    * Bad Request
    */
@@ -40272,6 +43907,10 @@ export type GetVersionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -40281,16 +43920,17 @@ export type GetVersionErrors = {
   500: ResultVoid
 }
 
-export type GetVersionError = GetVersionErrors[keyof GetVersionErrors]
+export type GetVersionVersionsError = GetVersionVersionsErrors[keyof GetVersionVersionsErrors]
 
-export type GetVersionResponses = {
+export type GetVersionVersionsResponses = {
   /**
    * OK
    */
   200: ResultTemplateVersion
 }
 
-export type GetVersionResponse = GetVersionResponses[keyof GetVersionResponses]
+export type GetVersionVersionsResponse =
+  GetVersionVersionsResponses[keyof GetVersionVersionsResponses]
 
 export type ListBySubmissionData = {
   body?: never
@@ -40322,6 +43962,10 @@ export type ListBySubmissionErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -40371,6 +44015,10 @@ export type CreateViolationRecordErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -40425,6 +44073,10 @@ export type ListByUserErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -40475,6 +44127,10 @@ export type DeleteViolationRecordErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -40529,6 +44185,10 @@ export type GetViolationRecordErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -40581,6 +44241,10 @@ export type UpdateViolationRecordErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -40632,6 +44296,10 @@ export type AllMenusErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -40680,6 +44348,10 @@ export type MyMenusErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -40730,6 +44402,10 @@ export type DryRunErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -40750,14 +44426,14 @@ export type DryRunResponses = {
 
 export type DryRunResponse = DryRunResponses[keyof DryRunResponses]
 
-export type List13Data = {
+export type ListGroupsData = {
   body?: never
   path?: never
   query?: never
   url: '/message/groups'
 }
 
-export type List13Errors = {
+export type ListGroupsErrors = {
   /**
    * Bad Request
    */
@@ -40779,6 +44455,10 @@ export type List13Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -40788,25 +44468,25 @@ export type List13Errors = {
   500: ResultVoid
 }
 
-export type List13Error = List13Errors[keyof List13Errors]
+export type ListGroupsError = ListGroupsErrors[keyof ListGroupsErrors]
 
-export type List13Responses = {
+export type ListGroupsResponses = {
   /**
    * OK
    */
   200: ResultListMapStringObject
 }
 
-export type List13Response = List13Responses[keyof List13Responses]
+export type ListGroupsResponse = ListGroupsResponses[keyof ListGroupsResponses]
 
-export type Create8Data = {
+export type CreateGroupsData = {
   body: CreateRequest
   path?: never
   query?: never
   url: '/message/groups'
 }
 
-export type Create8Errors = {
+export type CreateGroupsErrors = {
   /**
    * Bad Request
    */
@@ -40828,6 +44508,10 @@ export type Create8Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -40837,18 +44521,18 @@ export type Create8Errors = {
   500: ResultVoid
 }
 
-export type Create8Error = Create8Errors[keyof Create8Errors]
+export type CreateGroupsError = CreateGroupsErrors[keyof CreateGroupsErrors]
 
-export type Create8Responses = {
+export type CreateGroupsResponses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type Create8Response = Create8Responses[keyof Create8Responses]
+export type CreateGroupsResponse = CreateGroupsResponses[keyof CreateGroupsResponses]
 
-export type Delete9Data = {
+export type DeleteGroupsData = {
   body?: never
   path: {
     id: string
@@ -40857,7 +44541,7 @@ export type Delete9Data = {
   url: '/message/groups/{id}'
 }
 
-export type Delete9Errors = {
+export type DeleteGroupsErrors = {
   /**
    * Bad Request
    */
@@ -40879,6 +44563,10 @@ export type Delete9Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -40888,18 +44576,18 @@ export type Delete9Errors = {
   500: ResultVoid
 }
 
-export type Delete9Error = Delete9Errors[keyof Delete9Errors]
+export type DeleteGroupsError = DeleteGroupsErrors[keyof DeleteGroupsErrors]
 
-export type Delete9Responses = {
+export type DeleteGroupsResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Delete9Response = Delete9Responses[keyof Delete9Responses]
+export type DeleteGroupsResponse = DeleteGroupsResponses[keyof DeleteGroupsResponses]
 
-export type Get1Data = {
+export type GetGroupsData = {
   body?: never
   path: {
     id: string
@@ -40908,7 +44596,7 @@ export type Get1Data = {
   url: '/message/groups/{id}'
 }
 
-export type Get1Errors = {
+export type GetGroupsErrors = {
   /**
    * Bad Request
    */
@@ -40930,6 +44618,10 @@ export type Get1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -40939,18 +44631,18 @@ export type Get1Errors = {
   500: ResultVoid
 }
 
-export type Get1Error = Get1Errors[keyof Get1Errors]
+export type GetGroupsError = GetGroupsErrors[keyof GetGroupsErrors]
 
-export type Get1Responses = {
+export type GetGroupsResponses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type Get1Response = Get1Responses[keyof Get1Responses]
+export type GetGroupsResponse = GetGroupsResponses[keyof GetGroupsResponses]
 
-export type Update7Data = {
+export type UpdateGroupsData = {
   body: UpdateRequest
   path: {
     id: string
@@ -40959,7 +44651,7 @@ export type Update7Data = {
   url: '/message/groups/{id}'
 }
 
-export type Update7Errors = {
+export type UpdateGroupsErrors = {
   /**
    * Bad Request
    */
@@ -40981,6 +44673,10 @@ export type Update7Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -40990,16 +44686,16 @@ export type Update7Errors = {
   500: ResultVoid
 }
 
-export type Update7Error = Update7Errors[keyof Update7Errors]
+export type UpdateGroupsError = UpdateGroupsErrors[keyof UpdateGroupsErrors]
 
-export type Update7Responses = {
+export type UpdateGroupsResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Update7Response = Update7Responses[keyof Update7Responses]
+export type UpdateGroupsResponse = UpdateGroupsResponses[keyof UpdateGroupsResponses]
 
 export type MembersData = {
   body?: never
@@ -41032,6 +44728,10 @@ export type MembersErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -41052,7 +44752,7 @@ export type MembersResponses = {
 
 export type MembersResponse = MembersResponses[keyof MembersResponses]
 
-export type AddMembers1Data = {
+export type AddMembers2Data = {
   body: MemberRequest
   path: {
     id: string
@@ -41061,7 +44761,7 @@ export type AddMembers1Data = {
   url: '/message/groups/{id}/members'
 }
 
-export type AddMembers1Errors = {
+export type AddMembers2Errors = {
   /**
    * Bad Request
    */
@@ -41083,6 +44783,10 @@ export type AddMembers1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -41092,18 +44796,18 @@ export type AddMembers1Errors = {
   500: ResultVoid
 }
 
-export type AddMembers1Error = AddMembers1Errors[keyof AddMembers1Errors]
+export type AddMembers2Error = AddMembers2Errors[keyof AddMembers2Errors]
 
-export type AddMembers1Responses = {
+export type AddMembers2Responses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type AddMembers1Response = AddMembers1Responses[keyof AddMembers1Responses]
+export type AddMembers2Response = AddMembers2Responses[keyof AddMembers2Responses]
 
-export type RemoveMember1Data = {
+export type RemoveMemberMembers2Data = {
   body?: never
   path: {
     id: string
@@ -41113,7 +44817,7 @@ export type RemoveMember1Data = {
   url: '/message/groups/{id}/members/{userId}'
 }
 
-export type RemoveMember1Errors = {
+export type RemoveMemberMembers2Errors = {
   /**
    * Bad Request
    */
@@ -41135,6 +44839,10 @@ export type RemoveMember1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -41144,16 +44852,17 @@ export type RemoveMember1Errors = {
   500: ResultVoid
 }
 
-export type RemoveMember1Error = RemoveMember1Errors[keyof RemoveMember1Errors]
+export type RemoveMemberMembers2Error = RemoveMemberMembers2Errors[keyof RemoveMemberMembers2Errors]
 
-export type RemoveMember1Responses = {
+export type RemoveMemberMembers2Responses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type RemoveMember1Response = RemoveMember1Responses[keyof RemoveMember1Responses]
+export type RemoveMemberMembers2Response =
+  RemoveMemberMembers2Responses[keyof RemoveMemberMembers2Responses]
 
 export type MyPreferencesData = {
   body?: never
@@ -41183,6 +44892,10 @@ export type MyPreferencesErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -41233,6 +44946,10 @@ export type UpsertErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -41253,7 +44970,7 @@ export type UpsertResponses = {
 
 export type UpsertResponse = UpsertResponses[keyof UpsertResponses]
 
-export type Delete8Data = {
+export type DeletePreferencesData = {
   body?: never
   path: {
     id: string
@@ -41262,7 +44979,7 @@ export type Delete8Data = {
   url: '/message/preferences/{id}'
 }
 
-export type Delete8Errors = {
+export type DeletePreferencesErrors = {
   /**
    * Bad Request
    */
@@ -41284,6 +45001,10 @@ export type Delete8Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -41293,16 +45014,16 @@ export type Delete8Errors = {
   500: ResultVoid
 }
 
-export type Delete8Error = Delete8Errors[keyof Delete8Errors]
+export type DeletePreferencesError = DeletePreferencesErrors[keyof DeletePreferencesErrors]
 
-export type Delete8Responses = {
+export type DeletePreferencesResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Delete8Response = Delete8Responses[keyof Delete8Responses]
+export type DeletePreferencesResponse = DeletePreferencesResponses[keyof DeletePreferencesResponses]
 
 export type ListRulesData = {
   body?: never
@@ -41333,6 +45054,10 @@ export type ListRulesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -41353,14 +45078,14 @@ export type ListRulesResponses = {
 
 export type ListRulesResponse = ListRulesResponses[keyof ListRulesResponses]
 
-export type CreateRuleData = {
+export type CreateRuleRulesData = {
   body: CreateSubscriptionRuleRequest
   path?: never
   query?: never
   url: '/msg/config/rules'
 }
 
-export type CreateRuleErrors = {
+export type CreateRuleRulesErrors = {
   /**
    * Bad Request
    */
@@ -41382,6 +45107,10 @@ export type CreateRuleErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -41391,16 +45120,16 @@ export type CreateRuleErrors = {
   500: ResultVoid
 }
 
-export type CreateRuleError = CreateRuleErrors[keyof CreateRuleErrors]
+export type CreateRuleRulesError = CreateRuleRulesErrors[keyof CreateRuleRulesErrors]
 
-export type CreateRuleResponses = {
+export type CreateRuleRulesResponses = {
   /**
    * OK
    */
   200: ResultMsgSubscriptionRule
 }
 
-export type CreateRuleResponse = CreateRuleResponses[keyof CreateRuleResponses]
+export type CreateRuleRulesResponse = CreateRuleRulesResponses[keyof CreateRuleRulesResponses]
 
 export type PreviewRuleData = {
   body: PreviewRuleRequest
@@ -41431,6 +45160,10 @@ export type PreviewRuleErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -41451,7 +45184,7 @@ export type PreviewRuleResponses = {
 
 export type PreviewRuleResponse = PreviewRuleResponses[keyof PreviewRuleResponses]
 
-export type DeleteRuleData = {
+export type DeleteRuleRulesData = {
   body?: never
   path: {
     id: string
@@ -41460,7 +45193,7 @@ export type DeleteRuleData = {
   url: '/msg/config/rules/{id}'
 }
 
-export type DeleteRuleErrors = {
+export type DeleteRuleRulesErrors = {
   /**
    * Bad Request
    */
@@ -41482,6 +45215,10 @@ export type DeleteRuleErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -41491,18 +45228,18 @@ export type DeleteRuleErrors = {
   500: ResultVoid
 }
 
-export type DeleteRuleError = DeleteRuleErrors[keyof DeleteRuleErrors]
+export type DeleteRuleRulesError = DeleteRuleRulesErrors[keyof DeleteRuleRulesErrors]
 
-export type DeleteRuleResponses = {
+export type DeleteRuleRulesResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type DeleteRuleResponse = DeleteRuleResponses[keyof DeleteRuleResponses]
+export type DeleteRuleRulesResponse = DeleteRuleRulesResponses[keyof DeleteRuleRulesResponses]
 
-export type UpdateRuleData = {
+export type UpdateRuleRulesData = {
   body: CreateSubscriptionRuleRequest
   path: {
     id: string
@@ -41511,7 +45248,7 @@ export type UpdateRuleData = {
   url: '/msg/config/rules/{id}'
 }
 
-export type UpdateRuleErrors = {
+export type UpdateRuleRulesErrors = {
   /**
    * Bad Request
    */
@@ -41533,6 +45270,10 @@ export type UpdateRuleErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -41542,16 +45283,16 @@ export type UpdateRuleErrors = {
   500: ResultVoid
 }
 
-export type UpdateRuleError = UpdateRuleErrors[keyof UpdateRuleErrors]
+export type UpdateRuleRulesError = UpdateRuleRulesErrors[keyof UpdateRuleRulesErrors]
 
-export type UpdateRuleResponses = {
+export type UpdateRuleRulesResponses = {
   /**
    * OK
    */
   200: ResultMsgSubscriptionRule
 }
 
-export type UpdateRuleResponse = UpdateRuleResponses[keyof UpdateRuleResponses]
+export type UpdateRuleRulesResponse = UpdateRuleRulesResponses[keyof UpdateRuleRulesResponses]
 
 export type SendManualData = {
   body: SendManualRequest
@@ -41581,6 +45322,10 @@ export type SendManualErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -41631,6 +45376,10 @@ export type ListTemplatesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -41679,6 +45428,10 @@ export type CreateTemplateErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -41731,6 +45484,10 @@ export type DeleteTemplateErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -41781,6 +45538,10 @@ export type UpdateTemplateErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -41836,6 +45597,10 @@ export type GetMyNotificationsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -41886,6 +45651,10 @@ export type MarkAllReadErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -41934,6 +45703,10 @@ export type GetUnreadCountErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -41986,6 +45759,10 @@ export type DeleteMessageErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -42037,6 +45814,10 @@ export type MarkReadErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -42057,14 +45838,14 @@ export type MarkReadResponses = {
 
 export type MarkReadResponse = MarkReadResponses[keyof MarkReadResponses]
 
-export type GetMyClasses1Data = {
+export type GetMyClasses2Data = {
   body?: never
   path?: never
   query?: never
   url: '/my-class/classes'
 }
 
-export type GetMyClasses1Errors = {
+export type GetMyClasses2Errors = {
   /**
    * Bad Request
    */
@@ -42086,6 +45867,10 @@ export type GetMyClasses1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -42095,16 +45880,16 @@ export type GetMyClasses1Errors = {
   500: ResultVoid
 }
 
-export type GetMyClasses1Error = GetMyClasses1Errors[keyof GetMyClasses1Errors]
+export type GetMyClasses2Error = GetMyClasses2Errors[keyof GetMyClasses2Errors]
 
-export type GetMyClasses1Responses = {
+export type GetMyClasses2Responses = {
   /**
    * OK
    */
   200: ResultListMyClassDto
 }
 
-export type GetMyClasses1Response = GetMyClasses1Responses[keyof GetMyClasses1Responses]
+export type GetMyClasses2Response = GetMyClasses2Responses[keyof GetMyClasses2Responses]
 
 export type GetDormitoryDistributionData = {
   body?: never
@@ -42136,6 +45921,10 @@ export type GetDormitoryDistributionErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -42189,6 +45978,10 @@ export type GetClassOverviewErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -42244,6 +46037,10 @@ export type GetClassStudentsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -42264,7 +46061,7 @@ export type GetClassStudentsResponses = {
 
 export type GetClassStudentsResponse = GetClassStudentsResponses[keyof GetClassStudentsResponses]
 
-export type List12Data = {
+export type ListMyTodosData = {
   body?: never
   path?: never
   query?: {
@@ -42273,7 +46070,7 @@ export type List12Data = {
   url: '/my-todos'
 }
 
-export type List12Errors = {
+export type ListMyTodosErrors = {
   /**
    * Bad Request
    */
@@ -42295,6 +46092,10 @@ export type List12Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -42304,16 +46105,16 @@ export type List12Errors = {
   500: ResultVoid
 }
 
-export type List12Error = List12Errors[keyof List12Errors]
+export type ListMyTodosError = ListMyTodosErrors[keyof ListMyTodosErrors]
 
-export type List12Responses = {
+export type ListMyTodosResponses = {
   /**
    * OK
    */
   200: ResultListTodoItem
 }
 
-export type List12Response = List12Responses[keyof List12Responses]
+export type ListMyTodosResponse = ListMyTodosResponses[keyof ListMyTodosResponses]
 
 export type CountsData = {
   body?: never
@@ -42343,6 +46144,10 @@ export type CountsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -42393,6 +46198,10 @@ export type GetMyClassesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -42441,6 +46250,10 @@ export type GetSummaryErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -42493,6 +46306,10 @@ export type GetTodayScheduleErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -42541,6 +46358,10 @@ export type GetSubstituteTasksErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -42592,6 +46413,10 @@ export type GetAllOrgTypesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -42641,6 +46466,10 @@ export type CreateOrgTypeErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -42689,6 +46518,10 @@ export type GetCategoriesErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -42741,6 +46574,10 @@ export type GetOrgTypeByCodeErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -42789,6 +46626,10 @@ export type GetEnabledOrgTypesErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -42840,6 +46681,10 @@ export type GetInspectableTypesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -42889,6 +46734,10 @@ export type GetOrgTypeTreeErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -42941,6 +46790,10 @@ export type DeleteOrgTypeErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -42991,6 +46844,10 @@ export type GetOrgTypeByIdErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -43043,6 +46900,10 @@ export type UpdateOrgTypeErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -43093,6 +46954,10 @@ export type DisableOrgTypeErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -43145,6 +47010,10 @@ export type EnableOrgTypeErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -43193,6 +47062,10 @@ export type GetAllErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -43243,6 +47116,10 @@ export type CreateOrgUnitErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -43263,7 +47140,7 @@ export type CreateOrgUnitResponses = {
 
 export type CreateOrgUnitResponse = CreateOrgUnitResponses[keyof CreateOrgUnitResponses]
 
-export type GetAllowedChildTypes1Data = {
+export type GetAllowedChildTypes2Data = {
   body?: never
   path: {
     /**
@@ -43275,7 +47152,7 @@ export type GetAllowedChildTypes1Data = {
   url: '/org-units/allowed-child-types/{parentTypeCode}'
 }
 
-export type GetAllowedChildTypes1Errors = {
+export type GetAllowedChildTypes2Errors = {
   /**
    * Bad Request
    */
@@ -43297,6 +47174,10 @@ export type GetAllowedChildTypes1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -43306,18 +47187,18 @@ export type GetAllowedChildTypes1Errors = {
   500: ResultVoid
 }
 
-export type GetAllowedChildTypes1Error =
-  GetAllowedChildTypes1Errors[keyof GetAllowedChildTypes1Errors]
+export type GetAllowedChildTypes2Error =
+  GetAllowedChildTypes2Errors[keyof GetAllowedChildTypes2Errors]
 
-export type GetAllowedChildTypes1Responses = {
+export type GetAllowedChildTypes2Responses = {
   /**
    * OK
    */
   200: ResultListOrgType
 }
 
-export type GetAllowedChildTypes1Response =
-  GetAllowedChildTypes1Responses[keyof GetAllowedChildTypes1Responses]
+export type GetAllowedChildTypes2Response =
+  GetAllowedChildTypes2Responses[keyof GetAllowedChildTypes2Responses]
 
 export type GetByTypeData = {
   body?: never
@@ -43352,6 +47233,10 @@ export type GetByTypeErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -43402,6 +47287,10 @@ export type RepairTreePathsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -43450,6 +47339,10 @@ export type GetOrgUnitTreeErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -43505,6 +47398,10 @@ export type DeleteOrgUnitErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -43558,6 +47455,10 @@ export type GetOrgUnitErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -43613,6 +47514,10 @@ export type UpdateOrgUnitErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -43633,7 +47538,7 @@ export type UpdateOrgUnitResponses = {
 
 export type UpdateOrgUnitResponse = UpdateOrgUnitResponses[keyof UpdateOrgUnitResponses]
 
-export type GetChildren1Data = {
+export type GetChildren2Data = {
   body?: never
   path: {
     /**
@@ -43645,7 +47550,7 @@ export type GetChildren1Data = {
   url: '/org-units/{id}/children'
 }
 
-export type GetChildren1Errors = {
+export type GetChildren2Errors = {
   /**
    * Bad Request
    */
@@ -43667,6 +47572,10 @@ export type GetChildren1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -43676,16 +47585,16 @@ export type GetChildren1Errors = {
   500: ResultVoid
 }
 
-export type GetChildren1Error = GetChildren1Errors[keyof GetChildren1Errors]
+export type GetChildren2Error = GetChildren2Errors[keyof GetChildren2Errors]
 
-export type GetChildren1Responses = {
+export type GetChildren2Responses = {
   /**
    * OK
    */
   200: ResultListOrgUnitDto
 }
 
-export type GetChildren1Response = GetChildren1Responses[keyof GetChildren1Responses]
+export type GetChildren2Response = GetChildren2Responses[keyof GetChildren2Responses]
 
 export type DissolveOrgUnitData = {
   body: ReasonRequest
@@ -43720,6 +47629,10 @@ export type DissolveOrgUnitErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -43775,6 +47688,10 @@ export type FreezeOrgUnitErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -43794,6 +47711,64 @@ export type FreezeOrgUnitResponses = {
 }
 
 export type FreezeOrgUnitResponse = FreezeOrgUnitResponses[keyof FreezeOrgUnitResponses]
+
+export type GetImpactData = {
+  body?: never
+  path: {
+    /**
+     * Organization unit ID
+     */
+    id: string
+  }
+  query?: never
+  url: '/org-units/{id}/impact'
+}
+
+export type GetImpactErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type GetImpactError = GetImpactErrors[keyof GetImpactErrors]
+
+export type GetImpactResponses = {
+  /**
+   * OK
+   */
+  200: ResultMapStringObject
+}
+
+export type GetImpactResponse = GetImpactResponses[keyof GetImpactResponses]
 
 export type GetBelongingMembersData = {
   body?: never
@@ -43828,6 +47803,10 @@ export type GetBelongingMembersErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -43884,6 +47863,10 @@ export type GetMembersRecursiveErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -43905,7 +47888,7 @@ export type GetMembersRecursiveResponses = {
 export type GetMembersRecursiveResponse =
   GetMembersRecursiveResponses[keyof GetMembersRecursiveResponses]
 
-export type RemoveMemberData = {
+export type RemoveMemberMembersData = {
   body?: never
   path: {
     /**
@@ -43921,7 +47904,7 @@ export type RemoveMemberData = {
   url: '/org-units/{id}/members/{userId}'
 }
 
-export type RemoveMemberErrors = {
+export type RemoveMemberMembersErrors = {
   /**
    * Bad Request
    */
@@ -43943,6 +47926,10 @@ export type RemoveMemberErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -43952,16 +47939,17 @@ export type RemoveMemberErrors = {
   500: ResultVoid
 }
 
-export type RemoveMemberError = RemoveMemberErrors[keyof RemoveMemberErrors]
+export type RemoveMemberMembersError = RemoveMemberMembersErrors[keyof RemoveMemberMembersErrors]
 
-export type RemoveMemberResponses = {
+export type RemoveMemberMembersResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type RemoveMemberResponse = RemoveMemberResponses[keyof RemoveMemberResponses]
+export type RemoveMemberMembersResponse =
+  RemoveMemberMembersResponses[keyof RemoveMemberMembersResponses]
 
 export type AddMemberData = {
   body?: never
@@ -44000,6 +47988,10 @@ export type AddMemberErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -44055,6 +48047,10 @@ export type SplitOrgUnitErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -44109,6 +48105,10 @@ export type GetOrgStatisticsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -44162,6 +48162,10 @@ export type UnfreezeOrgUnitErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -44221,6 +48225,10 @@ export type MergeOrgUnitErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -44273,6 +48281,10 @@ export type ListPermissionsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -44322,6 +48334,10 @@ export type CreatePermissionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -44370,6 +48386,10 @@ export type GetPermissionTreeErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -44422,6 +48442,10 @@ export type DeletePermissionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -44472,6 +48496,10 @@ export type GetPermissionErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -44524,6 +48552,10 @@ export type UpdatePermissionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -44572,6 +48604,10 @@ export type DependencyGraphErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -44622,6 +48658,10 @@ export type MessagingHealthErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -44670,6 +48710,10 @@ export type MetricsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -44720,6 +48764,10 @@ export type OverviewErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -44768,6 +48816,10 @@ export type PoliciesErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -44822,6 +48874,10 @@ export type DatascopeResolveErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -44874,6 +48930,10 @@ export type PolicyCheckErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -44928,6 +48988,10 @@ export type RelationFindErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -44977,6 +49041,10 @@ export type ResetErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -45025,6 +49093,10 @@ export type SeedDemoErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -45079,6 +49151,10 @@ export type TargetModeResolveErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -45132,6 +49208,10 @@ export type TriggerFireErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -45181,6 +49261,10 @@ export type SubscriptionRulesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -45229,6 +49313,10 @@ export type TargetModesErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -45281,6 +49369,10 @@ export type TenantPluginsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -45332,6 +49424,10 @@ export type ReadTenantConfigErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -45389,6 +49485,10 @@ export type WriteTenantConfigErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -45440,6 +49540,10 @@ export type DisableForTenantErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -45493,6 +49597,10 @@ export type EnableForTenantErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -45542,6 +49650,10 @@ export type TriggerPointsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -45562,7 +49674,7 @@ export type TriggerPointsResponses = {
 
 export type TriggerPointsResponse = TriggerPointsResponses[keyof TriggerPointsResponses]
 
-export type Disable3Data = {
+export type Disable4Data = {
   body?: never
   path: {
     code: string
@@ -45571,7 +49683,7 @@ export type Disable3Data = {
   url: '/plugin-platform/{code}/disable'
 }
 
-export type Disable3Errors = {
+export type Disable4Errors = {
   /**
    * Bad Request
    */
@@ -45593,6 +49705,10 @@ export type Disable3Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -45602,18 +49718,18 @@ export type Disable3Errors = {
   500: ResultVoid
 }
 
-export type Disable3Error = Disable3Errors[keyof Disable3Errors]
+export type Disable4Error = Disable4Errors[keyof Disable4Errors]
 
-export type Disable3Responses = {
+export type Disable4Responses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type Disable3Response = Disable3Responses[keyof Disable3Responses]
+export type Disable4Response = Disable4Responses[keyof Disable4Responses]
 
-export type Enable3Data = {
+export type Enable4Data = {
   body?: never
   path: {
     code: string
@@ -45622,7 +49738,7 @@ export type Enable3Data = {
   url: '/plugin-platform/{code}/enable'
 }
 
-export type Enable3Errors = {
+export type Enable4Errors = {
   /**
    * Bad Request
    */
@@ -45644,6 +49760,10 @@ export type Enable3Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -45653,16 +49773,16 @@ export type Enable3Errors = {
   500: ResultVoid
 }
 
-export type Enable3Error = Enable3Errors[keyof Enable3Errors]
+export type Enable4Error = Enable4Errors[keyof Enable4Errors]
 
-export type Enable3Responses = {
+export type Enable4Responses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type Enable3Response = Enable3Responses[keyof Enable3Responses]
+export type Enable4Response = Enable4Responses[keyof Enable4Responses]
 
 export type HealthData = {
   body?: never
@@ -45694,6 +49814,10 @@ export type HealthErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -45746,6 +49870,10 @@ export type UninstallErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -45766,14 +49894,14 @@ export type UninstallResponses = {
 
 export type UninstallResponse = UninstallResponses[keyof UninstallResponses]
 
-export type CreateConfig1Data = {
+export type CreateConfigConfigs2Data = {
   body: CreateRatingConfigRequest
   path?: never
   query?: never
   url: '/ratings/configs'
 }
 
-export type CreateConfig1Errors = {
+export type CreateConfigConfigs2Errors = {
   /**
    * Bad Request
    */
@@ -45795,6 +49923,10 @@ export type CreateConfig1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -45804,16 +49936,17 @@ export type CreateConfig1Errors = {
   500: ResultVoid
 }
 
-export type CreateConfig1Error = CreateConfig1Errors[keyof CreateConfig1Errors]
+export type CreateConfigConfigs2Error = CreateConfigConfigs2Errors[keyof CreateConfigConfigs2Errors]
 
-export type CreateConfig1Responses = {
+export type CreateConfigConfigs2Responses = {
   /**
    * OK
    */
   200: ResultRatingConfigResponse
 }
 
-export type CreateConfig1Response = CreateConfig1Responses[keyof CreateConfig1Responses]
+export type CreateConfigConfigs2Response =
+  CreateConfigConfigs2Responses[keyof CreateConfigConfigs2Responses]
 
 export type GetConfigsByPlanData = {
   body?: never
@@ -45846,6 +49979,10 @@ export type GetConfigsByPlanErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -45866,7 +50003,7 @@ export type GetConfigsByPlanResponses = {
 
 export type GetConfigsByPlanResponse = GetConfigsByPlanResponses[keyof GetConfigsByPlanResponses]
 
-export type DeleteConfig1Data = {
+export type DeleteConfigConfigs2Data = {
   body?: never
   path: {
     id: string
@@ -45875,7 +50012,7 @@ export type DeleteConfig1Data = {
   url: '/ratings/configs/{id}'
 }
 
-export type DeleteConfig1Errors = {
+export type DeleteConfigConfigs2Errors = {
   /**
    * Bad Request
    */
@@ -45897,6 +50034,10 @@ export type DeleteConfig1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -45906,16 +50047,17 @@ export type DeleteConfig1Errors = {
   500: ResultVoid
 }
 
-export type DeleteConfig1Error = DeleteConfig1Errors[keyof DeleteConfig1Errors]
+export type DeleteConfigConfigs2Error = DeleteConfigConfigs2Errors[keyof DeleteConfigConfigs2Errors]
 
-export type DeleteConfig1Responses = {
+export type DeleteConfigConfigs2Responses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type DeleteConfig1Response = DeleteConfig1Responses[keyof DeleteConfig1Responses]
+export type DeleteConfigConfigs2Response =
+  DeleteConfigConfigs2Responses[keyof DeleteConfigConfigs2Responses]
 
 export type GetConfigData = {
   body?: never
@@ -45948,6 +50090,10 @@ export type GetConfigErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -45968,7 +50114,7 @@ export type GetConfigResponses = {
 
 export type GetConfigResponse = GetConfigResponses[keyof GetConfigResponses]
 
-export type UpdateConfig1Data = {
+export type UpdateConfigConfigs2Data = {
   body: UpdateRatingConfigRequest
   path: {
     id: string
@@ -45977,7 +50123,7 @@ export type UpdateConfig1Data = {
   url: '/ratings/configs/{id}'
 }
 
-export type UpdateConfig1Errors = {
+export type UpdateConfigConfigs2Errors = {
   /**
    * Bad Request
    */
@@ -45999,6 +50145,10 @@ export type UpdateConfig1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -46008,16 +50158,17 @@ export type UpdateConfig1Errors = {
   500: ResultVoid
 }
 
-export type UpdateConfig1Error = UpdateConfig1Errors[keyof UpdateConfig1Errors]
+export type UpdateConfigConfigs2Error = UpdateConfigConfigs2Errors[keyof UpdateConfigConfigs2Errors]
 
-export type UpdateConfig1Responses = {
+export type UpdateConfigConfigs2Responses = {
   /**
    * OK
    */
   200: ResultRatingConfigResponse
 }
 
-export type UpdateConfig1Response = UpdateConfig1Responses[keyof UpdateConfig1Responses]
+export type UpdateConfigConfigs2Response =
+  UpdateConfigConfigs2Responses[keyof UpdateConfigConfigs2Responses]
 
 export type ToggleConfigEnabledData = {
   body?: never
@@ -46051,6 +50202,10 @@ export type ToggleConfigEnabledErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -46104,6 +50259,10 @@ export type BatchApproveResultsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -46153,6 +50312,10 @@ export type BatchPublishResultsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -46204,6 +50367,10 @@ export type GetResultsByClassErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -46252,6 +50419,10 @@ export type GetPendingResultsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -46303,6 +50474,10 @@ export type GetResultErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -46357,6 +50532,10 @@ export type ApproveResultErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -46407,6 +50586,10 @@ export type PublishResultErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -46461,6 +50644,10 @@ export type RejectResultErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -46512,6 +50699,10 @@ export type RevokeResultErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -46532,7 +50723,7 @@ export type RevokeResultResponses = {
 
 export type RevokeResultResponse = RevokeResultResponses[keyof RevokeResultResponses]
 
-export type List11Data = {
+export type ListRelationTypesData = {
   body?: never
   path?: never
   query?: {
@@ -46544,7 +50735,7 @@ export type List11Data = {
   url: '/relation-types'
 }
 
-export type List11Errors = {
+export type ListRelationTypesErrors = {
   /**
    * Bad Request
    */
@@ -46566,6 +50757,10 @@ export type List11Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -46575,16 +50770,16 @@ export type List11Errors = {
   500: ResultVoid
 }
 
-export type List11Error = List11Errors[keyof List11Errors]
+export type ListRelationTypesError = ListRelationTypesErrors[keyof ListRelationTypesErrors]
 
-export type List11Responses = {
+export type ListRelationTypesResponses = {
   /**
    * OK
    */
   200: ResultListMapStringObject
 }
 
-export type List11Response = List11Responses[keyof List11Responses]
+export type ListRelationTypesResponse = ListRelationTypesResponses[keyof ListRelationTypesResponses]
 
 export type ListByTierData = {
   body?: never
@@ -46616,6 +50811,10 @@ export type ListByTierErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -46669,6 +50868,10 @@ export type ListRolesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -46717,6 +50920,10 @@ export type CreateRoleErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -46769,6 +50976,10 @@ export type GetModulesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -46817,6 +51028,10 @@ export type GetScopesErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -46869,6 +51084,10 @@ export type GetModulesV5Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -46917,6 +51136,10 @@ export type GetScopesV5Errors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -46969,6 +51192,10 @@ export type DeleteRoleErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -47019,6 +51246,10 @@ export type GetRoleErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -47071,6 +51302,10 @@ export type UpdateRoleErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -47121,6 +51356,10 @@ export type SetRolePermissionsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -47175,6 +51414,10 @@ export type RemovePermissionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -47227,6 +51470,10 @@ export type AddPermissionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -47277,6 +51524,10 @@ export type GetPermissionsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -47329,6 +51580,10 @@ export type SavePermissionsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -47380,6 +51635,10 @@ export type GetPermissionsV5Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -47430,6 +51689,10 @@ export type SavePermissionsV5Errors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -47483,6 +51746,10 @@ export type ListExecutionsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -47535,6 +51802,10 @@ export type TriggerExecutionErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -47584,6 +51855,10 @@ export type ListPoliciesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -47604,14 +51879,14 @@ export type ListPoliciesResponses = {
 
 export type ListPoliciesResponse = ListPoliciesResponses[keyof ListPoliciesResponses]
 
-export type CreatePolicyData = {
+export type CreatePolicyPoliciesData = {
   body: CreatePolicyRequest
   path?: never
   query?: never
   url: '/schedule/policies'
 }
 
-export type CreatePolicyErrors = {
+export type CreatePolicyPoliciesErrors = {
   /**
    * Bad Request
    */
@@ -47633,6 +51908,10 @@ export type CreatePolicyErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -47642,18 +51921,19 @@ export type CreatePolicyErrors = {
   500: ResultVoid
 }
 
-export type CreatePolicyError = CreatePolicyErrors[keyof CreatePolicyErrors]
+export type CreatePolicyPoliciesError = CreatePolicyPoliciesErrors[keyof CreatePolicyPoliciesErrors]
 
-export type CreatePolicyResponses = {
+export type CreatePolicyPoliciesResponses = {
   /**
    * OK
    */
   200: ResultPolicyResponse
 }
 
-export type CreatePolicyResponse = CreatePolicyResponses[keyof CreatePolicyResponses]
+export type CreatePolicyPoliciesResponse =
+  CreatePolicyPoliciesResponses[keyof CreatePolicyPoliciesResponses]
 
-export type DeletePolicyData = {
+export type DeletePolicyPoliciesData = {
   body?: never
   path: {
     id: string
@@ -47662,7 +51942,7 @@ export type DeletePolicyData = {
   url: '/schedule/policies/{id}'
 }
 
-export type DeletePolicyErrors = {
+export type DeletePolicyPoliciesErrors = {
   /**
    * Bad Request
    */
@@ -47684,6 +51964,10 @@ export type DeletePolicyErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -47693,18 +51977,19 @@ export type DeletePolicyErrors = {
   500: ResultVoid
 }
 
-export type DeletePolicyError = DeletePolicyErrors[keyof DeletePolicyErrors]
+export type DeletePolicyPoliciesError = DeletePolicyPoliciesErrors[keyof DeletePolicyPoliciesErrors]
 
-export type DeletePolicyResponses = {
+export type DeletePolicyPoliciesResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type DeletePolicyResponse = DeletePolicyResponses[keyof DeletePolicyResponses]
+export type DeletePolicyPoliciesResponse =
+  DeletePolicyPoliciesResponses[keyof DeletePolicyPoliciesResponses]
 
-export type GetPolicyData = {
+export type GetPolicyPoliciesData = {
   body?: never
   path: {
     id: string
@@ -47713,7 +51998,7 @@ export type GetPolicyData = {
   url: '/schedule/policies/{id}'
 }
 
-export type GetPolicyErrors = {
+export type GetPolicyPoliciesErrors = {
   /**
    * Bad Request
    */
@@ -47735,6 +52020,10 @@ export type GetPolicyErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -47744,18 +52033,18 @@ export type GetPolicyErrors = {
   500: ResultVoid
 }
 
-export type GetPolicyError = GetPolicyErrors[keyof GetPolicyErrors]
+export type GetPolicyPoliciesError = GetPolicyPoliciesErrors[keyof GetPolicyPoliciesErrors]
 
-export type GetPolicyResponses = {
+export type GetPolicyPoliciesResponses = {
   /**
    * OK
    */
   200: ResultPolicyResponse
 }
 
-export type GetPolicyResponse = GetPolicyResponses[keyof GetPolicyResponses]
+export type GetPolicyPoliciesResponse = GetPolicyPoliciesResponses[keyof GetPolicyPoliciesResponses]
 
-export type UpdatePolicyData = {
+export type UpdatePolicyPoliciesData = {
   body: CreatePolicyRequest
   path: {
     id: string
@@ -47764,7 +52053,7 @@ export type UpdatePolicyData = {
   url: '/schedule/policies/{id}'
 }
 
-export type UpdatePolicyErrors = {
+export type UpdatePolicyPoliciesErrors = {
   /**
    * Bad Request
    */
@@ -47786,6 +52075,10 @@ export type UpdatePolicyErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -47795,16 +52088,17 @@ export type UpdatePolicyErrors = {
   500: ResultVoid
 }
 
-export type UpdatePolicyError = UpdatePolicyErrors[keyof UpdatePolicyErrors]
+export type UpdatePolicyPoliciesError = UpdatePolicyPoliciesErrors[keyof UpdatePolicyPoliciesErrors]
 
-export type UpdatePolicyResponses = {
+export type UpdatePolicyPoliciesResponses = {
   /**
    * OK
    */
   200: ResultPolicyResponse
 }
 
-export type UpdatePolicyResponse = UpdatePolicyResponses[keyof UpdatePolicyResponses]
+export type UpdatePolicyPoliciesResponse =
+  UpdatePolicyPoliciesResponses[keyof UpdatePolicyPoliciesResponses]
 
 export type DisablePolicyData = {
   body?: never
@@ -47836,6 +52130,10 @@ export type DisablePolicyErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -47888,6 +52186,10 @@ export type EnablePolicyErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -47936,6 +52238,10 @@ export type GetAllModulesErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -47986,6 +52292,10 @@ export type GetTopLevelModulesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -48035,6 +52345,10 @@ export type GetModuleTreeErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -48087,6 +52401,10 @@ export type GetChildModulesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -48136,6 +52454,10 @@ export type GetAllConfigsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -48156,14 +52478,14 @@ export type GetAllConfigsResponses = {
 
 export type GetAllConfigsResponse = GetAllConfigsResponses[keyof GetAllConfigsResponses]
 
-export type CreateConfigData = {
+export type CreateConfigConfigsData = {
   body: SystemConfigPo
   path?: never
   query?: never
   url: '/system/configs'
 }
 
-export type CreateConfigErrors = {
+export type CreateConfigConfigsErrors = {
   /**
    * Bad Request
    */
@@ -48185,6 +52507,10 @@ export type CreateConfigErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -48194,16 +52520,17 @@ export type CreateConfigErrors = {
   500: ResultVoid
 }
 
-export type CreateConfigError = CreateConfigErrors[keyof CreateConfigErrors]
+export type CreateConfigConfigsError = CreateConfigConfigsErrors[keyof CreateConfigConfigsErrors]
 
-export type CreateConfigResponses = {
+export type CreateConfigConfigsResponses = {
   /**
    * OK
    */
   200: ResultSystemConfigPo
 }
 
-export type CreateConfigResponse = CreateConfigResponses[keyof CreateConfigResponses]
+export type CreateConfigConfigsResponse =
+  CreateConfigConfigsResponses[keyof CreateConfigConfigsResponses]
 
 export type BatchUpdateConfigsData = {
   body: {
@@ -48235,6 +52562,10 @@ export type BatchUpdateConfigsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -48288,6 +52619,10 @@ export type GetConfigByKeyErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -48339,6 +52674,10 @@ export type GetPublicConfigsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -48359,7 +52698,7 @@ export type GetPublicConfigsResponses = {
 
 export type GetPublicConfigsResponse = GetPublicConfigsResponses[keyof GetPublicConfigsResponses]
 
-export type DeleteConfigData = {
+export type DeleteConfigConfigsData = {
   body?: never
   path: {
     id: string
@@ -48368,7 +52707,7 @@ export type DeleteConfigData = {
   url: '/system/configs/{id}'
 }
 
-export type DeleteConfigErrors = {
+export type DeleteConfigConfigsErrors = {
   /**
    * Bad Request
    */
@@ -48390,6 +52729,10 @@ export type DeleteConfigErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -48399,18 +52742,19 @@ export type DeleteConfigErrors = {
   500: ResultVoid
 }
 
-export type DeleteConfigError = DeleteConfigErrors[keyof DeleteConfigErrors]
+export type DeleteConfigConfigsError = DeleteConfigConfigsErrors[keyof DeleteConfigConfigsErrors]
 
-export type DeleteConfigResponses = {
+export type DeleteConfigConfigsResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type DeleteConfigResponse = DeleteConfigResponses[keyof DeleteConfigResponses]
+export type DeleteConfigConfigsResponse =
+  DeleteConfigConfigsResponses[keyof DeleteConfigConfigsResponses]
 
-export type UpdateConfigData = {
+export type UpdateConfigConfigsData = {
   body: SystemConfigPo
   path: {
     id: string
@@ -48419,7 +52763,7 @@ export type UpdateConfigData = {
   url: '/system/configs/{id}'
 }
 
-export type UpdateConfigErrors = {
+export type UpdateConfigConfigsErrors = {
   /**
    * Bad Request
    */
@@ -48441,6 +52785,10 @@ export type UpdateConfigErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -48450,16 +52798,17 @@ export type UpdateConfigErrors = {
   500: ResultVoid
 }
 
-export type UpdateConfigError = UpdateConfigErrors[keyof UpdateConfigErrors]
+export type UpdateConfigConfigsError = UpdateConfigConfigsErrors[keyof UpdateConfigConfigsErrors]
 
-export type UpdateConfigResponses = {
+export type UpdateConfigConfigsResponses = {
   /**
    * OK
    */
   200: ResultSystemConfigPo
 }
 
-export type UpdateConfigResponse = UpdateConfigResponses[keyof UpdateConfigResponses]
+export type UpdateConfigConfigsResponse =
+  UpdateConfigConfigsResponses[keyof UpdateConfigConfigsResponses]
 
 export type CheckSyncData = {
   body?: never
@@ -48490,6 +52839,10 @@ export type CheckSyncErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -48510,7 +52863,60 @@ export type CheckSyncResponses = {
 
 export type CheckSyncResponse = CheckSyncResponses[keyof CheckSyncResponses]
 
-export type ListProfilesData = {
+export type RefreshCasbinData = {
+  body?: never
+  path?: never
+  query?: never
+  url: '/system/permission-sync/refresh-casbin'
+}
+
+export type RefreshCasbinErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type RefreshCasbinError = RefreshCasbinErrors[keyof RefreshCasbinErrors]
+
+export type RefreshCasbinResponses = {
+  /**
+   * OK
+   */
+  200: ResultMapStringObject
+}
+
+export type RefreshCasbinResponse = RefreshCasbinResponses[keyof RefreshCasbinResponses]
+
+export type ListProfilesTeacherProfilesData = {
   body?: never
   path?: never
   query?: {
@@ -48524,7 +52930,7 @@ export type ListProfilesData = {
   url: '/teacher-profiles'
 }
 
-export type ListProfilesErrors = {
+export type ListProfilesTeacherProfilesErrors = {
   /**
    * Bad Request
    */
@@ -48546,6 +52952,10 @@ export type ListProfilesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -48555,18 +52965,20 @@ export type ListProfilesErrors = {
   500: ResultVoid
 }
 
-export type ListProfilesError = ListProfilesErrors[keyof ListProfilesErrors]
+export type ListProfilesTeacherProfilesError =
+  ListProfilesTeacherProfilesErrors[keyof ListProfilesTeacherProfilesErrors]
 
-export type ListProfilesResponses = {
+export type ListProfilesTeacherProfilesResponses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type ListProfilesResponse = ListProfilesResponses[keyof ListProfilesResponses]
+export type ListProfilesTeacherProfilesResponse =
+  ListProfilesTeacherProfilesResponses[keyof ListProfilesTeacherProfilesResponses]
 
-export type CreateProfileData = {
+export type CreateProfileTeacherProfilesData = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -48577,7 +52989,7 @@ export type CreateProfileData = {
   url: '/teacher-profiles'
 }
 
-export type CreateProfileErrors = {
+export type CreateProfileTeacherProfilesErrors = {
   /**
    * Bad Request
    */
@@ -48599,6 +53011,10 @@ export type CreateProfileErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -48608,16 +53024,18 @@ export type CreateProfileErrors = {
   500: ResultVoid
 }
 
-export type CreateProfileError = CreateProfileErrors[keyof CreateProfileErrors]
+export type CreateProfileTeacherProfilesError =
+  CreateProfileTeacherProfilesErrors[keyof CreateProfileTeacherProfilesErrors]
 
-export type CreateProfileResponses = {
+export type CreateProfileTeacherProfilesResponses = {
   /**
    * OK
    */
   200: ResultLong
 }
 
-export type CreateProfileResponse = CreateProfileResponses[keyof CreateProfileResponses]
+export type CreateProfileTeacherProfilesResponse =
+  CreateProfileTeacherProfilesResponses[keyof CreateProfileTeacherProfilesResponses]
 
 export type GetAvailableForCourseData = {
   body?: never
@@ -48649,6 +53067,10 @@ export type GetAvailableForCourseErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -48703,6 +53125,10 @@ export type GetByUserIdErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -48723,7 +53149,7 @@ export type GetByUserIdResponses = {
 
 export type GetByUserIdResponse = GetByUserIdResponses[keyof GetByUserIdResponses]
 
-export type DeleteProfileData = {
+export type DeleteProfileTeacherProfilesData = {
   body?: never
   path: {
     id: string
@@ -48732,7 +53158,7 @@ export type DeleteProfileData = {
   url: '/teacher-profiles/{id}'
 }
 
-export type DeleteProfileErrors = {
+export type DeleteProfileTeacherProfilesErrors = {
   /**
    * Bad Request
    */
@@ -48754,6 +53180,10 @@ export type DeleteProfileErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -48763,18 +53193,20 @@ export type DeleteProfileErrors = {
   500: ResultVoid
 }
 
-export type DeleteProfileError = DeleteProfileErrors[keyof DeleteProfileErrors]
+export type DeleteProfileTeacherProfilesError =
+  DeleteProfileTeacherProfilesErrors[keyof DeleteProfileTeacherProfilesErrors]
 
-export type DeleteProfileResponses = {
+export type DeleteProfileTeacherProfilesResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type DeleteProfileResponse = DeleteProfileResponses[keyof DeleteProfileResponses]
+export type DeleteProfileTeacherProfilesResponse =
+  DeleteProfileTeacherProfilesResponses[keyof DeleteProfileTeacherProfilesResponses]
 
-export type GetProfileData = {
+export type GetProfileTeacherProfilesData = {
   body?: never
   path: {
     id: string
@@ -48783,7 +53215,7 @@ export type GetProfileData = {
   url: '/teacher-profiles/{id}'
 }
 
-export type GetProfileErrors = {
+export type GetProfileTeacherProfilesErrors = {
   /**
    * Bad Request
    */
@@ -48805,6 +53237,10 @@ export type GetProfileErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -48814,18 +53250,20 @@ export type GetProfileErrors = {
   500: ResultVoid
 }
 
-export type GetProfileError = GetProfileErrors[keyof GetProfileErrors]
+export type GetProfileTeacherProfilesError =
+  GetProfileTeacherProfilesErrors[keyof GetProfileTeacherProfilesErrors]
 
-export type GetProfileResponses = {
+export type GetProfileTeacherProfilesResponses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type GetProfileResponse = GetProfileResponses[keyof GetProfileResponses]
+export type GetProfileTeacherProfilesResponse =
+  GetProfileTeacherProfilesResponses[keyof GetProfileTeacherProfilesResponses]
 
-export type UpdateProfileData = {
+export type UpdateProfileTeacherProfilesData = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -48838,7 +53276,7 @@ export type UpdateProfileData = {
   url: '/teacher-profiles/{id}'
 }
 
-export type UpdateProfileErrors = {
+export type UpdateProfileTeacherProfilesErrors = {
   /**
    * Bad Request
    */
@@ -48860,6 +53298,10 @@ export type UpdateProfileErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -48869,16 +53311,18 @@ export type UpdateProfileErrors = {
   500: ResultVoid
 }
 
-export type UpdateProfileError = UpdateProfileErrors[keyof UpdateProfileErrors]
+export type UpdateProfileTeacherProfilesError =
+  UpdateProfileTeacherProfilesErrors[keyof UpdateProfileTeacherProfilesErrors]
 
-export type UpdateProfileResponses = {
+export type UpdateProfileTeacherProfilesResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type UpdateProfileResponse = UpdateProfileResponses[keyof UpdateProfileResponses]
+export type UpdateProfileTeacherProfilesResponse =
+  UpdateProfileTeacherProfilesResponses[keyof UpdateProfileTeacherProfilesResponses]
 
 export type GetCoursesData = {
   body?: never
@@ -48910,6 +53354,10 @@ export type GetCoursesErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -48966,6 +53414,10 @@ export type AddCourseErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -49017,6 +53469,10 @@ export type RemoveCourseErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -49071,6 +53527,10 @@ export type ListAdjustmentsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -49123,6 +53583,10 @@ export type CreateAdjustmentErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -49177,6 +53641,10 @@ export type MyApplicationsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -49229,6 +53697,10 @@ export type PendingApprovalsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -49279,6 +53751,10 @@ export type GetAdjustmentErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -49331,6 +53807,10 @@ export type ApproveAdjustmentErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -49382,6 +53862,10 @@ export type CancelAdjustmentErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -49432,6 +53916,10 @@ export type ExecuteAdjustmentErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -49488,6 +53976,10 @@ export type RejectAdjustmentErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -49508,7 +54000,7 @@ export type RejectAdjustmentResponses = {
 
 export type RejectAdjustmentResponse = RejectAdjustmentResponses[keyof RejectAdjustmentResponses]
 
-export type List10Data = {
+export type ListClassAssignmentsData = {
   body?: never
   path?: never
   query: {
@@ -49518,7 +54010,7 @@ export type List10Data = {
   url: '/teaching/class-assignments'
 }
 
-export type List10Errors = {
+export type ListClassAssignmentsErrors = {
   /**
    * Bad Request
    */
@@ -49540,6 +54032,10 @@ export type List10Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -49549,18 +54045,19 @@ export type List10Errors = {
   500: ResultVoid
 }
 
-export type List10Error = List10Errors[keyof List10Errors]
+export type ListClassAssignmentsError = ListClassAssignmentsErrors[keyof ListClassAssignmentsErrors]
 
-export type List10Responses = {
+export type ListClassAssignmentsResponses = {
   /**
    * OK
    */
   200: ResultListClassCourseAssignment
 }
 
-export type List10Response = List10Responses[keyof List10Responses]
+export type ListClassAssignmentsResponse =
+  ListClassAssignmentsResponses[keyof ListClassAssignmentsResponses]
 
-export type Create7Data = {
+export type CreateClassAssignmentsData = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -49571,7 +54068,7 @@ export type Create7Data = {
   url: '/teaching/class-assignments'
 }
 
-export type Create7Errors = {
+export type CreateClassAssignmentsErrors = {
   /**
    * Bad Request
    */
@@ -49593,6 +54090,10 @@ export type Create7Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -49602,16 +54103,18 @@ export type Create7Errors = {
   500: ResultVoid
 }
 
-export type Create7Error = Create7Errors[keyof Create7Errors]
+export type CreateClassAssignmentsError =
+  CreateClassAssignmentsErrors[keyof CreateClassAssignmentsErrors]
 
-export type Create7Responses = {
+export type CreateClassAssignmentsResponses = {
   /**
    * OK
    */
   200: ResultClassCourseAssignment
 }
 
-export type Create7Response = Create7Responses[keyof Create7Responses]
+export type CreateClassAssignmentsResponse =
+  CreateClassAssignmentsResponses[keyof CreateClassAssignmentsResponses]
 
 export type BatchConfirmData = {
   body: {
@@ -49646,6 +54149,10 @@ export type BatchConfirmErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -49666,7 +54173,7 @@ export type BatchConfirmResponses = {
 
 export type BatchConfirmResponse = BatchConfirmResponses[keyof BatchConfirmResponses]
 
-export type Delete7Data = {
+export type DeleteClassAssignmentsData = {
   body?: never
   path: {
     id: string
@@ -49675,7 +54182,7 @@ export type Delete7Data = {
   url: '/teaching/class-assignments/{id}'
 }
 
-export type Delete7Errors = {
+export type DeleteClassAssignmentsErrors = {
   /**
    * Bad Request
    */
@@ -49697,6 +54204,10 @@ export type Delete7Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -49706,18 +54217,20 @@ export type Delete7Errors = {
   500: ResultVoid
 }
 
-export type Delete7Error = Delete7Errors[keyof Delete7Errors]
+export type DeleteClassAssignmentsError =
+  DeleteClassAssignmentsErrors[keyof DeleteClassAssignmentsErrors]
 
-export type Delete7Responses = {
+export type DeleteClassAssignmentsResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Delete7Response = Delete7Responses[keyof Delete7Responses]
+export type DeleteClassAssignmentsResponse =
+  DeleteClassAssignmentsResponses[keyof DeleteClassAssignmentsResponses]
 
-export type List9Data = {
+export type ListConflictsData = {
   body?: never
   path?: never
   query: {
@@ -49727,7 +54240,7 @@ export type List9Data = {
   url: '/teaching/conflicts'
 }
 
-export type List9Errors = {
+export type ListConflictsErrors = {
   /**
    * Bad Request
    */
@@ -49749,6 +54262,10 @@ export type List9Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -49758,16 +54275,16 @@ export type List9Errors = {
   500: ResultVoid
 }
 
-export type List9Error = List9Errors[keyof List9Errors]
+export type ListConflictsError = ListConflictsErrors[keyof ListConflictsErrors]
 
-export type List9Responses = {
+export type ListConflictsResponses = {
   /**
    * OK
    */
   200: ResultListScheduleConflictRecord
 }
 
-export type List9Response = List9Responses[keyof List9Responses]
+export type ListConflictsResponse = ListConflictsResponses[keyof ListConflictsResponses]
 
 export type DetectData = {
   body?: never
@@ -49799,6 +54316,10 @@ export type DetectErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -49850,6 +54371,10 @@ export type FeasibilityCheckErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -49904,6 +54429,10 @@ export type IgnoreErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -49957,6 +54486,10 @@ export type ResolveErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -49977,7 +54510,7 @@ export type ResolveResponses = {
 
 export type ResolveResponse = ResolveResponses[keyof ResolveResponses]
 
-export type List8Data = {
+export type ListConstraintsData = {
   body?: never
   path?: never
   query: {
@@ -49988,7 +54521,7 @@ export type List8Data = {
   url: '/teaching/constraints'
 }
 
-export type List8Errors = {
+export type ListConstraintsErrors = {
   /**
    * Bad Request
    */
@@ -50010,6 +54543,10 @@ export type List8Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -50019,18 +54556,18 @@ export type List8Errors = {
   500: ResultVoid
 }
 
-export type List8Error = List8Errors[keyof List8Errors]
+export type ListConstraintsError = ListConstraintsErrors[keyof ListConstraintsErrors]
 
-export type List8Responses = {
+export type ListConstraintsResponses = {
   /**
    * OK
    */
   200: ResultListSchedulingConstraint
 }
 
-export type List8Response = List8Responses[keyof List8Responses]
+export type ListConstraintsResponse = ListConstraintsResponses[keyof ListConstraintsResponses]
 
-export type Create6Data = {
+export type CreateConstraintsData = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -50041,7 +54578,7 @@ export type Create6Data = {
   url: '/teaching/constraints'
 }
 
-export type Create6Errors = {
+export type CreateConstraintsErrors = {
   /**
    * Bad Request
    */
@@ -50063,6 +54600,10 @@ export type Create6Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -50072,16 +54613,16 @@ export type Create6Errors = {
   500: ResultVoid
 }
 
-export type Create6Error = Create6Errors[keyof Create6Errors]
+export type CreateConstraintsError = CreateConstraintsErrors[keyof CreateConstraintsErrors]
 
-export type Create6Responses = {
+export type CreateConstraintsResponses = {
   /**
    * OK
    */
   200: ResultSchedulingConstraint
 }
 
-export type Create6Response = Create6Responses[keyof Create6Responses]
+export type CreateConstraintsResponse = CreateConstraintsResponses[keyof CreateConstraintsResponses]
 
 export type GetTimeMatrixData = {
   body?: never
@@ -50116,6 +54657,10 @@ export type GetTimeMatrixErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -50136,7 +54681,7 @@ export type GetTimeMatrixResponses = {
 
 export type GetTimeMatrixResponse = GetTimeMatrixResponses[keyof GetTimeMatrixResponses]
 
-export type Delete6Data = {
+export type DeleteConstraintsData = {
   body?: never
   path: {
     id: string
@@ -50145,7 +54690,7 @@ export type Delete6Data = {
   url: '/teaching/constraints/{id}'
 }
 
-export type Delete6Errors = {
+export type DeleteConstraintsErrors = {
   /**
    * Bad Request
    */
@@ -50167,6 +54712,10 @@ export type Delete6Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -50176,18 +54725,18 @@ export type Delete6Errors = {
   500: ResultVoid
 }
 
-export type Delete6Error = Delete6Errors[keyof Delete6Errors]
+export type DeleteConstraintsError = DeleteConstraintsErrors[keyof DeleteConstraintsErrors]
 
-export type Delete6Responses = {
+export type DeleteConstraintsResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Delete6Response = Delete6Responses[keyof Delete6Responses]
+export type DeleteConstraintsResponse = DeleteConstraintsResponses[keyof DeleteConstraintsResponses]
 
-export type Update6Data = {
+export type UpdateConstraintsData = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -50200,7 +54749,7 @@ export type Update6Data = {
   url: '/teaching/constraints/{id}'
 }
 
-export type Update6Errors = {
+export type UpdateConstraintsErrors = {
   /**
    * Bad Request
    */
@@ -50222,6 +54771,10 @@ export type Update6Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -50231,18 +54784,18 @@ export type Update6Errors = {
   500: ResultVoid
 }
 
-export type Update6Error = Update6Errors[keyof Update6Errors]
+export type UpdateConstraintsError = UpdateConstraintsErrors[keyof UpdateConstraintsErrors]
 
-export type Update6Responses = {
+export type UpdateConstraintsResponses = {
   /**
    * OK
    */
   200: ResultSchedulingConstraint
 }
 
-export type Update6Response = Update6Responses[keyof Update6Responses]
+export type UpdateConstraintsResponse = UpdateConstraintsResponses[keyof UpdateConstraintsResponses]
 
-export type Disable2Data = {
+export type Disable3Data = {
   body?: never
   path: {
     id: string
@@ -50251,7 +54804,7 @@ export type Disable2Data = {
   url: '/teaching/constraints/{id}/disable'
 }
 
-export type Disable2Errors = {
+export type Disable3Errors = {
   /**
    * Bad Request
    */
@@ -50273,6 +54826,10 @@ export type Disable2Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -50282,18 +54839,18 @@ export type Disable2Errors = {
   500: ResultVoid
 }
 
-export type Disable2Error = Disable2Errors[keyof Disable2Errors]
+export type Disable3Error = Disable3Errors[keyof Disable3Errors]
 
-export type Disable2Responses = {
+export type Disable3Responses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Disable2Response = Disable2Responses[keyof Disable2Responses]
+export type Disable3Response = Disable3Responses[keyof Disable3Responses]
 
-export type Enable2Data = {
+export type Enable3Data = {
   body?: never
   path: {
     id: string
@@ -50302,7 +54859,7 @@ export type Enable2Data = {
   url: '/teaching/constraints/{id}/enable'
 }
 
-export type Enable2Errors = {
+export type Enable3Errors = {
   /**
    * Bad Request
    */
@@ -50324,6 +54881,10 @@ export type Enable2Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -50333,18 +54894,18 @@ export type Enable2Errors = {
   500: ResultVoid
 }
 
-export type Enable2Error = Enable2Errors[keyof Enable2Errors]
+export type Enable3Error = Enable3Errors[keyof Enable3Errors]
 
-export type Enable2Responses = {
+export type Enable3Responses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Enable2Response = Enable2Responses[keyof Enable2Responses]
+export type Enable3Response = Enable3Responses[keyof Enable3Responses]
 
-export type List7Data = {
+export type ListEvaluationsData = {
   body?: never
   path?: never
   query?: {
@@ -50354,7 +54915,7 @@ export type List7Data = {
   url: '/teaching/evaluations'
 }
 
-export type List7Errors = {
+export type ListEvaluationsErrors = {
   /**
    * Bad Request
    */
@@ -50376,6 +54937,10 @@ export type List7Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -50385,25 +54950,25 @@ export type List7Errors = {
   500: ResultVoid
 }
 
-export type List7Error = List7Errors[keyof List7Errors]
+export type ListEvaluationsError = ListEvaluationsErrors[keyof ListEvaluationsErrors]
 
-export type List7Responses = {
+export type ListEvaluationsResponses = {
   /**
    * OK
    */
   200: ResultListCourseEvaluationPo
 }
 
-export type List7Response = List7Responses[keyof List7Responses]
+export type ListEvaluationsResponse = ListEvaluationsResponses[keyof ListEvaluationsResponses]
 
-export type Create5Data = {
+export type CreateEvaluationsData = {
   body: CourseEvaluationPo
   path?: never
   query?: never
   url: '/teaching/evaluations'
 }
 
-export type Create5Errors = {
+export type CreateEvaluationsErrors = {
   /**
    * Bad Request
    */
@@ -50425,6 +54990,10 @@ export type Create5Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -50434,18 +55003,18 @@ export type Create5Errors = {
   500: ResultVoid
 }
 
-export type Create5Error = Create5Errors[keyof Create5Errors]
+export type CreateEvaluationsError = CreateEvaluationsErrors[keyof CreateEvaluationsErrors]
 
-export type Create5Responses = {
+export type CreateEvaluationsResponses = {
   /**
    * OK
    */
   200: ResultCourseEvaluationPo
 }
 
-export type Create5Response = Create5Responses[keyof Create5Responses]
+export type CreateEvaluationsResponse = CreateEvaluationsResponses[keyof CreateEvaluationsResponses]
 
-export type Delete5Data = {
+export type DeleteEvaluationsData = {
   body?: never
   path: {
     id: string
@@ -50454,7 +55023,7 @@ export type Delete5Data = {
   url: '/teaching/evaluations/{id}'
 }
 
-export type Delete5Errors = {
+export type DeleteEvaluationsErrors = {
   /**
    * Bad Request
    */
@@ -50476,6 +55045,10 @@ export type Delete5Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -50485,18 +55058,18 @@ export type Delete5Errors = {
   500: ResultVoid
 }
 
-export type Delete5Error = Delete5Errors[keyof Delete5Errors]
+export type DeleteEvaluationsError = DeleteEvaluationsErrors[keyof DeleteEvaluationsErrors]
 
-export type Delete5Responses = {
+export type DeleteEvaluationsResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Delete5Response = Delete5Responses[keyof Delete5Responses]
+export type DeleteEvaluationsResponse = DeleteEvaluationsResponses[keyof DeleteEvaluationsResponses]
 
-export type GetData = {
+export type GetEvaluationsData = {
   body?: never
   path: {
     id: string
@@ -50505,7 +55078,7 @@ export type GetData = {
   url: '/teaching/evaluations/{id}'
 }
 
-export type GetErrors = {
+export type GetEvaluationsErrors = {
   /**
    * Bad Request
    */
@@ -50527,6 +55100,10 @@ export type GetErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -50536,18 +55113,18 @@ export type GetErrors = {
   500: ResultVoid
 }
 
-export type GetError = GetErrors[keyof GetErrors]
+export type GetEvaluationsError = GetEvaluationsErrors[keyof GetEvaluationsErrors]
 
-export type GetResponses = {
+export type GetEvaluationsResponses = {
   /**
    * OK
    */
   200: ResultCourseEvaluationPo
 }
 
-export type GetResponse = GetResponses[keyof GetResponses]
+export type GetEvaluationsResponse = GetEvaluationsResponses[keyof GetEvaluationsResponses]
 
-export type Update5Data = {
+export type UpdateEvaluationsData = {
   body: CourseEvaluationPo
   path: {
     id: string
@@ -50556,7 +55133,7 @@ export type Update5Data = {
   url: '/teaching/evaluations/{id}'
 }
 
-export type Update5Errors = {
+export type UpdateEvaluationsErrors = {
   /**
    * Bad Request
    */
@@ -50578,6 +55155,10 @@ export type Update5Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -50587,16 +55168,16 @@ export type Update5Errors = {
   500: ResultVoid
 }
 
-export type Update5Error = Update5Errors[keyof Update5Errors]
+export type UpdateEvaluationsError = UpdateEvaluationsErrors[keyof UpdateEvaluationsErrors]
 
-export type Update5Responses = {
+export type UpdateEvaluationsResponses = {
   /**
    * OK
    */
   200: ResultCourseEvaluationPo
 }
 
-export type Update5Response = Update5Responses[keyof Update5Responses]
+export type UpdateEvaluationsResponse = UpdateEvaluationsResponses[keyof UpdateEvaluationsResponses]
 
 export type CloseData = {
   body?: never
@@ -50628,6 +55209,10 @@ export type CloseErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -50680,6 +55265,10 @@ export type ListIndicatorsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -50731,6 +55320,10 @@ export type CreateIndicatorErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -50751,7 +55344,7 @@ export type CreateIndicatorResponses = {
 
 export type CreateIndicatorResponse = CreateIndicatorResponses[keyof CreateIndicatorResponses]
 
-export type DeleteIndicatorData = {
+export type DeleteIndicatorIndicators2Data = {
   body?: never
   path: {
     id: string
@@ -50761,7 +55354,7 @@ export type DeleteIndicatorData = {
   url: '/teaching/evaluations/{id}/indicators/{indicatorId}'
 }
 
-export type DeleteIndicatorErrors = {
+export type DeleteIndicatorIndicators2Errors = {
   /**
    * Bad Request
    */
@@ -50783,6 +55376,10 @@ export type DeleteIndicatorErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -50792,16 +55389,18 @@ export type DeleteIndicatorErrors = {
   500: ResultVoid
 }
 
-export type DeleteIndicatorError = DeleteIndicatorErrors[keyof DeleteIndicatorErrors]
+export type DeleteIndicatorIndicators2Error =
+  DeleteIndicatorIndicators2Errors[keyof DeleteIndicatorIndicators2Errors]
 
-export type DeleteIndicatorResponses = {
+export type DeleteIndicatorIndicators2Responses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type DeleteIndicatorResponse = DeleteIndicatorResponses[keyof DeleteIndicatorResponses]
+export type DeleteIndicatorIndicators2Response =
+  DeleteIndicatorIndicators2Responses[keyof DeleteIndicatorIndicators2Responses]
 
 export type MyPendingData = {
   body?: never
@@ -50834,6 +55433,10 @@ export type MyPendingErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -50854,7 +55457,7 @@ export type MyPendingResponses = {
 
 export type MyPendingResponse = MyPendingResponses[keyof MyPendingResponses]
 
-export type SubmitData = {
+export type SubmitResponsesData = {
   body: EvaluationResponsePo
   path: {
     id: string
@@ -50863,7 +55466,7 @@ export type SubmitData = {
   url: '/teaching/evaluations/{id}/responses'
 }
 
-export type SubmitErrors = {
+export type SubmitResponsesErrors = {
   /**
    * Bad Request
    */
@@ -50885,6 +55488,10 @@ export type SubmitErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -50894,18 +55501,18 @@ export type SubmitErrors = {
   500: ResultVoid
 }
 
-export type SubmitError = SubmitErrors[keyof SubmitErrors]
+export type SubmitResponsesError = SubmitResponsesErrors[keyof SubmitResponsesErrors]
 
-export type SubmitResponses = {
+export type SubmitResponsesResponses = {
   /**
    * OK
    */
   200: ResultEvaluationResponsePo
 }
 
-export type SubmitResponse = SubmitResponses[keyof SubmitResponses]
+export type SubmitResponsesResponse = SubmitResponsesResponses[keyof SubmitResponsesResponses]
 
-export type Start1Data = {
+export type Start2Data = {
   body?: never
   path: {
     id: string
@@ -50914,7 +55521,7 @@ export type Start1Data = {
   url: '/teaching/evaluations/{id}/start'
 }
 
-export type Start1Errors = {
+export type Start2Errors = {
   /**
    * Bad Request
    */
@@ -50936,6 +55543,10 @@ export type Start1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -50945,16 +55556,16 @@ export type Start1Errors = {
   500: ResultVoid
 }
 
-export type Start1Error = Start1Errors[keyof Start1Errors]
+export type Start2Error = Start2Errors[keyof Start2Errors]
 
-export type Start1Responses = {
+export type Start2Responses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Start1Response = Start1Responses[keyof Start1Responses]
+export type Start2Response = Start2Responses[keyof Start2Responses]
 
 export type TaskSummaryData = {
   body?: never
@@ -50987,6 +55598,10 @@ export type TaskSummaryErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -51043,6 +55658,10 @@ export type AssignRoomsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -51063,7 +55682,7 @@ export type AssignRoomsResponses = {
 
 export type AssignRoomsResponse = AssignRoomsResponses[keyof AssignRoomsResponses]
 
-export type ListBatches1Data = {
+export type ListBatches2Data = {
   body?: never
   path?: never
   query?: {
@@ -51076,7 +55695,7 @@ export type ListBatches1Data = {
   url: '/teaching/examinations/batches'
 }
 
-export type ListBatches1Errors = {
+export type ListBatches2Errors = {
   /**
    * Bad Request
    */
@@ -51098,6 +55717,10 @@ export type ListBatches1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -51107,18 +55730,18 @@ export type ListBatches1Errors = {
   500: ResultVoid
 }
 
-export type ListBatches1Error = ListBatches1Errors[keyof ListBatches1Errors]
+export type ListBatches2Error = ListBatches2Errors[keyof ListBatches2Errors]
 
-export type ListBatches1Responses = {
+export type ListBatches2Responses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type ListBatches1Response = ListBatches1Responses[keyof ListBatches1Responses]
+export type ListBatches2Response = ListBatches2Responses[keyof ListBatches2Responses]
 
-export type CreateBatch1Data = {
+export type CreateBatchBatches2Data = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -51129,7 +55752,7 @@ export type CreateBatch1Data = {
   url: '/teaching/examinations/batches'
 }
 
-export type CreateBatch1Errors = {
+export type CreateBatchBatches2Errors = {
   /**
    * Bad Request
    */
@@ -51151,6 +55774,10 @@ export type CreateBatch1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -51160,16 +55787,17 @@ export type CreateBatch1Errors = {
   500: ResultVoid
 }
 
-export type CreateBatch1Error = CreateBatch1Errors[keyof CreateBatch1Errors]
+export type CreateBatchBatches2Error = CreateBatchBatches2Errors[keyof CreateBatchBatches2Errors]
 
-export type CreateBatch1Responses = {
+export type CreateBatchBatches2Responses = {
   /**
    * OK
    */
   200: ResultExamBatchPo
 }
 
-export type CreateBatch1Response = CreateBatch1Responses[keyof CreateBatch1Responses]
+export type CreateBatchBatches2Response =
+  CreateBatchBatches2Responses[keyof CreateBatchBatches2Responses]
 
 export type ListArrangementsData = {
   body?: never
@@ -51201,6 +55829,10 @@ export type ListArrangementsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -51257,6 +55889,10 @@ export type CreateArrangementErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -51308,6 +55944,10 @@ export type DeleteArrangementErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -51365,6 +56005,10 @@ export type UpdateArrangementErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -51416,6 +56060,10 @@ export type DetectConflictsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -51436,7 +56084,7 @@ export type DetectConflictsResponses = {
 
 export type DetectConflictsResponse = DetectConflictsResponses[keyof DetectConflictsResponses]
 
-export type DeleteBatch1Data = {
+export type DeleteBatchBatches2Data = {
   body?: never
   path: {
     id: string
@@ -51445,7 +56093,7 @@ export type DeleteBatch1Data = {
   url: '/teaching/examinations/batches/{id}'
 }
 
-export type DeleteBatch1Errors = {
+export type DeleteBatchBatches2Errors = {
   /**
    * Bad Request
    */
@@ -51467,6 +56115,10 @@ export type DeleteBatch1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -51476,18 +56128,19 @@ export type DeleteBatch1Errors = {
   500: ResultVoid
 }
 
-export type DeleteBatch1Error = DeleteBatch1Errors[keyof DeleteBatch1Errors]
+export type DeleteBatchBatches2Error = DeleteBatchBatches2Errors[keyof DeleteBatchBatches2Errors]
 
-export type DeleteBatch1Responses = {
+export type DeleteBatchBatches2Responses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type DeleteBatch1Response = DeleteBatch1Responses[keyof DeleteBatch1Responses]
+export type DeleteBatchBatches2Response =
+  DeleteBatchBatches2Responses[keyof DeleteBatchBatches2Responses]
 
-export type GetBatch1Data = {
+export type GetBatchBatches2Data = {
   body?: never
   path: {
     id: string
@@ -51496,7 +56149,7 @@ export type GetBatch1Data = {
   url: '/teaching/examinations/batches/{id}'
 }
 
-export type GetBatch1Errors = {
+export type GetBatchBatches2Errors = {
   /**
    * Bad Request
    */
@@ -51518,6 +56171,10 @@ export type GetBatch1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -51527,18 +56184,18 @@ export type GetBatch1Errors = {
   500: ResultVoid
 }
 
-export type GetBatch1Error = GetBatch1Errors[keyof GetBatch1Errors]
+export type GetBatchBatches2Error = GetBatchBatches2Errors[keyof GetBatchBatches2Errors]
 
-export type GetBatch1Responses = {
+export type GetBatchBatches2Responses = {
   /**
    * OK
    */
   200: ResultExamBatchPo
 }
 
-export type GetBatch1Response = GetBatch1Responses[keyof GetBatch1Responses]
+export type GetBatchBatches2Response = GetBatchBatches2Responses[keyof GetBatchBatches2Responses]
 
-export type UpdateBatch1Data = {
+export type UpdateBatchBatches2Data = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -51551,7 +56208,7 @@ export type UpdateBatch1Data = {
   url: '/teaching/examinations/batches/{id}'
 }
 
-export type UpdateBatch1Errors = {
+export type UpdateBatchBatches2Errors = {
   /**
    * Bad Request
    */
@@ -51573,6 +56230,10 @@ export type UpdateBatch1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -51582,18 +56243,19 @@ export type UpdateBatch1Errors = {
   500: ResultVoid
 }
 
-export type UpdateBatch1Error = UpdateBatch1Errors[keyof UpdateBatch1Errors]
+export type UpdateBatchBatches2Error = UpdateBatchBatches2Errors[keyof UpdateBatchBatches2Errors]
 
-export type UpdateBatch1Responses = {
+export type UpdateBatchBatches2Responses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type UpdateBatch1Response = UpdateBatch1Responses[keyof UpdateBatch1Responses]
+export type UpdateBatchBatches2Response =
+  UpdateBatchBatches2Responses[keyof UpdateBatchBatches2Responses]
 
-export type PublishBatch1Data = {
+export type PublishBatchPublish2Data = {
   body?: never
   path: {
     id: string
@@ -51602,7 +56264,7 @@ export type PublishBatch1Data = {
   url: '/teaching/examinations/batches/{id}/publish'
 }
 
-export type PublishBatch1Errors = {
+export type PublishBatchPublish2Errors = {
   /**
    * Bad Request
    */
@@ -51624,6 +56286,10 @@ export type PublishBatch1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -51633,16 +56299,17 @@ export type PublishBatch1Errors = {
   500: ResultVoid
 }
 
-export type PublishBatch1Error = PublishBatch1Errors[keyof PublishBatch1Errors]
+export type PublishBatchPublish2Error = PublishBatchPublish2Errors[keyof PublishBatchPublish2Errors]
 
-export type PublishBatch1Responses = {
+export type PublishBatchPublish2Responses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type PublishBatch1Response = PublishBatch1Responses[keyof PublishBatch1Responses]
+export type PublishBatchPublish2Response =
+  PublishBatchPublish2Responses[keyof PublishBatchPublish2Responses]
 
 export type AssignInvigilatorsData = {
   body: {
@@ -51678,6 +56345,10 @@ export type AssignInvigilatorsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -51735,6 +56406,10 @@ export type ListBatchesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -51755,7 +56430,7 @@ export type ListBatchesResponses = {
 
 export type ListBatchesResponse = ListBatchesResponses[keyof ListBatchesResponses]
 
-export type CreateBatchData = {
+export type CreateBatchBatchesData = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -51766,7 +56441,7 @@ export type CreateBatchData = {
   url: '/teaching/grades/batches'
 }
 
-export type CreateBatchErrors = {
+export type CreateBatchBatchesErrors = {
   /**
    * Bad Request
    */
@@ -51788,6 +56463,10 @@ export type CreateBatchErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -51797,16 +56476,17 @@ export type CreateBatchErrors = {
   500: ResultVoid
 }
 
-export type CreateBatchError = CreateBatchErrors[keyof CreateBatchErrors]
+export type CreateBatchBatchesError = CreateBatchBatchesErrors[keyof CreateBatchBatchesErrors]
 
-export type CreateBatchResponses = {
+export type CreateBatchBatchesResponses = {
   /**
    * OK
    */
   200: ResultGradeBatchPo
 }
 
-export type CreateBatchResponse = CreateBatchResponses[keyof CreateBatchResponses]
+export type CreateBatchBatchesResponse =
+  CreateBatchBatchesResponses[keyof CreateBatchBatchesResponses]
 
 export type BatchRecordGradesData = {
   body: {
@@ -51842,6 +56522,10 @@ export type BatchRecordGradesErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -51893,6 +56577,10 @@ export type ListGradesByBatchErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -51949,6 +56637,10 @@ export type RecordGradeErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -52002,6 +56694,10 @@ export type ImportGradesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -52053,6 +56749,10 @@ export type DownloadImportTemplateErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -52072,7 +56772,7 @@ export type DownloadImportTemplateResponses = {
   200: unknown
 }
 
-export type DeleteBatchData = {
+export type DeleteBatchBatchesData = {
   body?: never
   path: {
     id: string
@@ -52081,7 +56781,7 @@ export type DeleteBatchData = {
   url: '/teaching/grades/batches/{id}'
 }
 
-export type DeleteBatchErrors = {
+export type DeleteBatchBatchesErrors = {
   /**
    * Bad Request
    */
@@ -52103,6 +56803,10 @@ export type DeleteBatchErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -52112,18 +56816,19 @@ export type DeleteBatchErrors = {
   500: ResultVoid
 }
 
-export type DeleteBatchError = DeleteBatchErrors[keyof DeleteBatchErrors]
+export type DeleteBatchBatchesError = DeleteBatchBatchesErrors[keyof DeleteBatchBatchesErrors]
 
-export type DeleteBatchResponses = {
+export type DeleteBatchBatchesResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type DeleteBatchResponse = DeleteBatchResponses[keyof DeleteBatchResponses]
+export type DeleteBatchBatchesResponse =
+  DeleteBatchBatchesResponses[keyof DeleteBatchBatchesResponses]
 
-export type GetBatchData = {
+export type GetBatchBatchesData = {
   body?: never
   path: {
     id: string
@@ -52132,7 +56837,7 @@ export type GetBatchData = {
   url: '/teaching/grades/batches/{id}'
 }
 
-export type GetBatchErrors = {
+export type GetBatchBatchesErrors = {
   /**
    * Bad Request
    */
@@ -52154,6 +56859,10 @@ export type GetBatchErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -52163,18 +56872,18 @@ export type GetBatchErrors = {
   500: ResultVoid
 }
 
-export type GetBatchError = GetBatchErrors[keyof GetBatchErrors]
+export type GetBatchBatchesError = GetBatchBatchesErrors[keyof GetBatchBatchesErrors]
 
-export type GetBatchResponses = {
+export type GetBatchBatchesResponses = {
   /**
    * OK
    */
   200: ResultGradeBatchPo
 }
 
-export type GetBatchResponse = GetBatchResponses[keyof GetBatchResponses]
+export type GetBatchBatchesResponse = GetBatchBatchesResponses[keyof GetBatchBatchesResponses]
 
-export type UpdateBatchData = {
+export type UpdateBatchBatchesData = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -52187,7 +56896,7 @@ export type UpdateBatchData = {
   url: '/teaching/grades/batches/{id}'
 }
 
-export type UpdateBatchErrors = {
+export type UpdateBatchBatchesErrors = {
   /**
    * Bad Request
    */
@@ -52209,6 +56918,10 @@ export type UpdateBatchErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -52218,16 +56931,17 @@ export type UpdateBatchErrors = {
   500: ResultVoid
 }
 
-export type UpdateBatchError = UpdateBatchErrors[keyof UpdateBatchErrors]
+export type UpdateBatchBatchesError = UpdateBatchBatchesErrors[keyof UpdateBatchBatchesErrors]
 
-export type UpdateBatchResponses = {
+export type UpdateBatchBatchesResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type UpdateBatchResponse = UpdateBatchResponses[keyof UpdateBatchResponses]
+export type UpdateBatchBatchesResponse =
+  UpdateBatchBatchesResponses[keyof UpdateBatchBatchesResponses]
 
 export type ApproveBatchData = {
   body?: never
@@ -52260,6 +56974,10 @@ export type ApproveBatchErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -52280,7 +56998,7 @@ export type ApproveBatchResponses = {
 
 export type ApproveBatchResponse = ApproveBatchResponses[keyof ApproveBatchResponses]
 
-export type PublishBatchData = {
+export type PublishBatchPublishData = {
   body?: never
   path: {
     id: string
@@ -52289,7 +57007,7 @@ export type PublishBatchData = {
   url: '/teaching/grades/batches/{id}/publish'
 }
 
-export type PublishBatchErrors = {
+export type PublishBatchPublishErrors = {
   /**
    * Bad Request
    */
@@ -52311,6 +57029,10 @@ export type PublishBatchErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -52320,16 +57042,17 @@ export type PublishBatchErrors = {
   500: ResultVoid
 }
 
-export type PublishBatchError = PublishBatchErrors[keyof PublishBatchErrors]
+export type PublishBatchPublishError = PublishBatchPublishErrors[keyof PublishBatchPublishErrors]
 
-export type PublishBatchResponses = {
+export type PublishBatchPublishResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type PublishBatchResponse = PublishBatchResponses[keyof PublishBatchResponses]
+export type PublishBatchPublishResponse =
+  PublishBatchPublishResponses[keyof PublishBatchPublishResponses]
 
 export type SubmitBatchData = {
   body?: never
@@ -52361,6 +57084,10 @@ export type SubmitBatchErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -52410,6 +57137,10 @@ export type GetGradesByClassErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -52465,6 +57196,10 @@ export type GetGradesByStudentErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -52519,6 +57254,10 @@ export type CalculateOverallErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -52572,6 +57311,10 @@ export type ExportGradesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -52622,6 +57365,10 @@ export type GetRankingErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -52642,7 +57389,7 @@ export type GetRankingResponses = {
 
 export type GetRankingResponse = GetRankingResponses[keyof GetRankingResponses]
 
-export type GetStatistics1Data = {
+export type GetStatistics2Data = {
   body?: never
   path?: never
   query?: {
@@ -52653,7 +57400,7 @@ export type GetStatistics1Data = {
   url: '/teaching/grades/statistics'
 }
 
-export type GetStatistics1Errors = {
+export type GetStatistics2Errors = {
   /**
    * Bad Request
    */
@@ -52675,6 +57422,10 @@ export type GetStatistics1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -52684,16 +57435,16 @@ export type GetStatistics1Errors = {
   500: ResultVoid
 }
 
-export type GetStatistics1Error = GetStatistics1Errors[keyof GetStatistics1Errors]
+export type GetStatistics2Error = GetStatistics2Errors[keyof GetStatistics2Errors]
 
-export type GetStatistics1Responses = {
+export type GetStatistics2Responses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type GetStatistics1Response = GetStatistics1Responses[keyof GetStatistics1Responses]
+export type GetStatistics2Response = GetStatistics2Responses[keyof GetStatistics2Responses]
 
 export type GetWeightConfigsData = {
   body?: never
@@ -52726,6 +57477,10 @@ export type GetWeightConfigsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -52779,6 +57534,10 @@ export type SaveWeightConfigsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -52835,6 +57594,10 @@ export type UpdateGradeErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -52855,7 +57618,7 @@ export type UpdateGradeResponses = {
 
 export type UpdateGradeResponse = UpdateGradeResponses[keyof UpdateGradeResponses]
 
-export type ListInstances1Data = {
+export type ListInstances2Data = {
   body?: never
   path?: never
   query: {
@@ -52869,7 +57632,7 @@ export type ListInstances1Data = {
   url: '/teaching/instances'
 }
 
-export type ListInstances1Errors = {
+export type ListInstances2Errors = {
   /**
    * Bad Request
    */
@@ -52891,6 +57654,10 @@ export type ListInstances1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -52900,16 +57667,16 @@ export type ListInstances1Errors = {
   500: ResultVoid
 }
 
-export type ListInstances1Error = ListInstances1Errors[keyof ListInstances1Errors]
+export type ListInstances2Error = ListInstances2Errors[keyof ListInstances2Errors]
 
-export type ListInstances1Responses = {
+export type ListInstances2Responses = {
   /**
    * OK
    */
   200: ResultListMapStringObject
 }
 
-export type ListInstances1Response = ListInstances1Responses[keyof ListInstances1Responses]
+export type ListInstances2Response = ListInstances2Responses[keyof ListInstances2Responses]
 
 export type ApplyEventData = {
   body: {
@@ -52943,6 +57710,10 @@ export type ApplyEventErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -52996,6 +57767,10 @@ export type GenerateInstancesErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -53052,6 +57827,10 @@ export type CancelInstanceErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -53102,6 +57881,10 @@ export type RestoreInstanceErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -53158,6 +57941,10 @@ export type SubstituteTeacherErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -53178,7 +57965,7 @@ export type SubstituteTeacherResponses = {
 
 export type SubstituteTeacherResponse = SubstituteTeacherResponses[keyof SubstituteTeacherResponses]
 
-export type List6Data = {
+export type ListOfferingsData = {
   body?: never
   path?: never
   query: {
@@ -53187,7 +57974,7 @@ export type List6Data = {
   url: '/teaching/offerings'
 }
 
-export type List6Errors = {
+export type ListOfferingsErrors = {
   /**
    * Bad Request
    */
@@ -53209,6 +57996,10 @@ export type List6Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -53218,18 +58009,18 @@ export type List6Errors = {
   500: ResultVoid
 }
 
-export type List6Error = List6Errors[keyof List6Errors]
+export type ListOfferingsError = ListOfferingsErrors[keyof ListOfferingsErrors]
 
-export type List6Responses = {
+export type ListOfferingsResponses = {
   /**
    * OK
    */
   200: ResultListMapStringObject
 }
 
-export type List6Response = List6Responses[keyof List6Responses]
+export type ListOfferingsResponse = ListOfferingsResponses[keyof ListOfferingsResponses]
 
-export type Create4Data = {
+export type CreateOfferingsData = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -53240,7 +58031,7 @@ export type Create4Data = {
   url: '/teaching/offerings'
 }
 
-export type Create4Errors = {
+export type CreateOfferingsErrors = {
   /**
    * Bad Request
    */
@@ -53262,6 +58053,10 @@ export type Create4Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -53271,18 +58066,18 @@ export type Create4Errors = {
   500: ResultVoid
 }
 
-export type Create4Error = Create4Errors[keyof Create4Errors]
+export type CreateOfferingsError = CreateOfferingsErrors[keyof CreateOfferingsErrors]
 
-export type Create4Responses = {
+export type CreateOfferingsResponses = {
   /**
    * OK
    */
   200: ResultSemesterOffering
 }
 
-export type Create4Response = Create4Responses[keyof Create4Responses]
+export type CreateOfferingsResponse = CreateOfferingsResponses[keyof CreateOfferingsResponses]
 
-export type GenerateTasks1Data = {
+export type GenerateTasks2Data = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -53293,7 +58088,7 @@ export type GenerateTasks1Data = {
   url: '/teaching/offerings/generate-tasks'
 }
 
-export type GenerateTasks1Errors = {
+export type GenerateTasks2Errors = {
   /**
    * Bad Request
    */
@@ -53315,6 +58110,10 @@ export type GenerateTasks1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -53324,16 +58123,16 @@ export type GenerateTasks1Errors = {
   500: ResultVoid
 }
 
-export type GenerateTasks1Error = GenerateTasks1Errors[keyof GenerateTasks1Errors]
+export type GenerateTasks2Error = GenerateTasks2Errors[keyof GenerateTasks2Errors]
 
-export type GenerateTasks1Responses = {
+export type GenerateTasks2Responses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type GenerateTasks1Response = GenerateTasks1Responses[keyof GenerateTasks1Responses]
+export type GenerateTasks2Response = GenerateTasks2Responses[keyof GenerateTasks2Responses]
 
 export type ImportFromPlanData = {
   body: {
@@ -53368,6 +58167,10 @@ export type ImportFromPlanErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -53388,7 +58191,7 @@ export type ImportFromPlanResponses = {
 
 export type ImportFromPlanResponse = ImportFromPlanResponses[keyof ImportFromPlanResponses]
 
-export type Delete4Data = {
+export type DeleteOfferingsData = {
   body?: never
   path: {
     id: string
@@ -53397,7 +58200,7 @@ export type Delete4Data = {
   url: '/teaching/offerings/{id}'
 }
 
-export type Delete4Errors = {
+export type DeleteOfferingsErrors = {
   /**
    * Bad Request
    */
@@ -53419,6 +58222,10 @@ export type Delete4Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -53428,18 +58235,18 @@ export type Delete4Errors = {
   500: ResultVoid
 }
 
-export type Delete4Error = Delete4Errors[keyof Delete4Errors]
+export type DeleteOfferingsError = DeleteOfferingsErrors[keyof DeleteOfferingsErrors]
 
-export type Delete4Responses = {
+export type DeleteOfferingsResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Delete4Response = Delete4Responses[keyof Delete4Responses]
+export type DeleteOfferingsResponse = DeleteOfferingsResponses[keyof DeleteOfferingsResponses]
 
-export type Update4Data = {
+export type UpdateOfferingsData = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -53452,7 +58259,7 @@ export type Update4Data = {
   url: '/teaching/offerings/{id}'
 }
 
-export type Update4Errors = {
+export type UpdateOfferingsErrors = {
   /**
    * Bad Request
    */
@@ -53474,6 +58281,10 @@ export type Update4Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -53483,16 +58294,16 @@ export type Update4Errors = {
   500: ResultVoid
 }
 
-export type Update4Error = Update4Errors[keyof Update4Errors]
+export type UpdateOfferingsError = UpdateOfferingsErrors[keyof UpdateOfferingsErrors]
 
-export type Update4Responses = {
+export type UpdateOfferingsResponses = {
   /**
    * OK
    */
   200: ResultSemesterOffering
 }
 
-export type Update4Response = Update4Responses[keyof Update4Responses]
+export type UpdateOfferingsResponse = UpdateOfferingsResponses[keyof UpdateOfferingsResponses]
 
 export type ConfirmData = {
   body?: never
@@ -53525,6 +58336,10 @@ export type ConfirmErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -53545,7 +58360,7 @@ export type ConfirmResponses = {
 
 export type ConfirmResponse = ConfirmResponses[keyof ConfirmResponses]
 
-export type List5Data = {
+export type ListProgressData = {
   body?: never
   path?: never
   query: {
@@ -53557,7 +58372,7 @@ export type List5Data = {
   url: '/teaching/progress'
 }
 
-export type List5Errors = {
+export type ListProgressErrors = {
   /**
    * Bad Request
    */
@@ -53579,6 +58394,10 @@ export type List5Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -53588,25 +58407,25 @@ export type List5Errors = {
   500: ResultVoid
 }
 
-export type List5Error = List5Errors[keyof List5Errors]
+export type ListProgressError = ListProgressErrors[keyof ListProgressErrors]
 
-export type List5Responses = {
+export type ListProgressResponses = {
   /**
    * OK
    */
   200: ResultListTeachingProgressPo
 }
 
-export type List5Response = List5Responses[keyof List5Responses]
+export type ListProgressResponse = ListProgressResponses[keyof ListProgressResponses]
 
-export type Create3Data = {
+export type CreateProgressData = {
   body: TeachingProgressPo
   path?: never
   query?: never
   url: '/teaching/progress'
 }
 
-export type Create3Errors = {
+export type CreateProgressErrors = {
   /**
    * Bad Request
    */
@@ -53628,6 +58447,10 @@ export type Create3Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -53637,16 +58460,16 @@ export type Create3Errors = {
   500: ResultVoid
 }
 
-export type Create3Error = Create3Errors[keyof Create3Errors]
+export type CreateProgressError = CreateProgressErrors[keyof CreateProgressErrors]
 
-export type Create3Responses = {
+export type CreateProgressResponses = {
   /**
    * OK
    */
   200: ResultTeachingProgressPo
 }
 
-export type Create3Response = Create3Responses[keyof Create3Responses]
+export type CreateProgressResponse = CreateProgressResponses[keyof CreateProgressResponses]
 
 export type ListByTaskData = {
   body?: never
@@ -53678,6 +58501,10 @@ export type ListByTaskErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -53730,6 +58557,10 @@ export type SummaryErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -53750,7 +58581,7 @@ export type SummaryResponses = {
 
 export type SummaryResponse = SummaryResponses[keyof SummaryResponses]
 
-export type Delete3Data = {
+export type DeleteProgressData = {
   body?: never
   path: {
     id: string
@@ -53759,7 +58590,7 @@ export type Delete3Data = {
   url: '/teaching/progress/{id}'
 }
 
-export type Delete3Errors = {
+export type DeleteProgressErrors = {
   /**
    * Bad Request
    */
@@ -53781,6 +58612,10 @@ export type Delete3Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -53790,18 +58625,18 @@ export type Delete3Errors = {
   500: ResultVoid
 }
 
-export type Delete3Error = Delete3Errors[keyof Delete3Errors]
+export type DeleteProgressError = DeleteProgressErrors[keyof DeleteProgressErrors]
 
-export type Delete3Responses = {
+export type DeleteProgressResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Delete3Response = Delete3Responses[keyof Delete3Responses]
+export type DeleteProgressResponse = DeleteProgressResponses[keyof DeleteProgressResponses]
 
-export type Update3Data = {
+export type UpdateProgressData = {
   body: TeachingProgressPo
   path: {
     id: string
@@ -53810,7 +58645,7 @@ export type Update3Data = {
   url: '/teaching/progress/{id}'
 }
 
-export type Update3Errors = {
+export type UpdateProgressErrors = {
   /**
    * Bad Request
    */
@@ -53832,6 +58667,10 @@ export type Update3Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -53841,16 +58680,16 @@ export type Update3Errors = {
   500: ResultVoid
 }
 
-export type Update3Error = Update3Errors[keyof Update3Errors]
+export type UpdateProgressError = UpdateProgressErrors[keyof UpdateProgressErrors]
 
-export type Update3Responses = {
+export type UpdateProgressResponses = {
   /**
    * OK
    */
   200: ResultTeachingProgressPo
 }
 
-export type Update3Response = Update3Responses[keyof Update3Responses]
+export type UpdateProgressResponse = UpdateProgressResponses[keyof UpdateProgressResponses]
 
 export type GetScheduleConfigData = {
   body?: never
@@ -53882,6 +58721,10 @@ export type GetScheduleConfigErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -53936,6 +58779,10 @@ export type SaveScheduleConfigErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -53988,6 +58835,10 @@ export type ListSchedulePlansErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -54042,6 +58893,10 @@ export type CreateSchedulePlanErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -54094,6 +58949,10 @@ export type DeleteSchedulePlanErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -54145,6 +59004,10 @@ export type GetSchedulePlanErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -54201,6 +59064,10 @@ export type UpdateSchedulePlanErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -54252,6 +59119,10 @@ export type ArchiveSchedulePlanErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -54305,6 +59176,10 @@ export type PublishSchedulePlanErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -54357,6 +59232,10 @@ export type CheckReadinessErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -54405,6 +59284,10 @@ export type GetTeachersGroupedByDeptErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -54460,6 +59343,10 @@ export type ListSchedulesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -54512,6 +59399,10 @@ export type CreateScheduleErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -54566,6 +59457,10 @@ export type AutoScheduleErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -54618,6 +59513,10 @@ export type BatchLockErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -54672,6 +59571,10 @@ export type GetSchedulesByClassErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -54725,6 +59628,10 @@ export type GetSchedulesByClassroomErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -54781,6 +59688,10 @@ export type GetSchedulesByTeacherErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -54836,6 +59747,10 @@ export type CheckMoveConflictErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -54887,6 +59802,10 @@ export type ExportClassScheduleErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -54937,6 +59856,10 @@ export type ExportTeacherScheduleErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -54990,6 +59913,10 @@ export type ResetScheduleErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -55041,6 +59968,10 @@ export type DeleteScheduleErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -55091,6 +60022,10 @@ export type GetScheduleErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -55147,6 +60082,10 @@ export type UpdateScheduleErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -55202,6 +60141,10 @@ export type MoveEntryErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -55253,6 +60196,10 @@ export type ToggleLockErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -55303,6 +60250,10 @@ export type ClearSelfStudyErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -55356,6 +60307,10 @@ export type FillSelfStudyErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -55412,6 +60367,10 @@ export type HoursStatisticsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -55466,6 +60425,10 @@ export type ListTasksErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -55486,7 +60449,7 @@ export type ListTasksResponses = {
 
 export type ListTasksResponse = ListTasksResponses[keyof ListTasksResponses]
 
-export type CreateTaskData = {
+export type CreateTaskTasksData = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -55497,7 +60460,7 @@ export type CreateTaskData = {
   url: '/teaching/tasks'
 }
 
-export type CreateTaskErrors = {
+export type CreateTaskTasksErrors = {
   /**
    * Bad Request
    */
@@ -55519,6 +60482,10 @@ export type CreateTaskErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -55528,16 +60495,16 @@ export type CreateTaskErrors = {
   500: ResultVoid
 }
 
-export type CreateTaskError = CreateTaskErrors[keyof CreateTaskErrors]
+export type CreateTaskTasksError = CreateTaskTasksErrors[keyof CreateTaskTasksErrors]
 
-export type CreateTaskResponses = {
+export type CreateTaskTasksResponses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type CreateTaskResponse = CreateTaskResponses[keyof CreateTaskResponses]
+export type CreateTaskTasksResponse = CreateTaskTasksResponses[keyof CreateTaskTasksResponses]
 
 export type BatchCreateTasksData = {
   body: {
@@ -55571,6 +60538,10 @@ export type BatchCreateTasksErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -55623,6 +60594,10 @@ export type DeleteTaskErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -55643,7 +60618,7 @@ export type DeleteTaskResponses = {
 
 export type DeleteTaskResponse = DeleteTaskResponses[keyof DeleteTaskResponses]
 
-export type GetTaskData = {
+export type GetTaskTasksData = {
   body?: never
   path: {
     id: string
@@ -55652,7 +60627,7 @@ export type GetTaskData = {
   url: '/teaching/tasks/{id}'
 }
 
-export type GetTaskErrors = {
+export type GetTaskTasksErrors = {
   /**
    * Bad Request
    */
@@ -55674,6 +60649,10 @@ export type GetTaskErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -55683,16 +60662,16 @@ export type GetTaskErrors = {
   500: ResultVoid
 }
 
-export type GetTaskError = GetTaskErrors[keyof GetTaskErrors]
+export type GetTaskTasksError = GetTaskTasksErrors[keyof GetTaskTasksErrors]
 
-export type GetTaskResponses = {
+export type GetTaskTasksResponses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type GetTaskResponse = GetTaskResponses[keyof GetTaskResponses]
+export type GetTaskTasksResponse = GetTaskTasksResponses[keyof GetTaskTasksResponses]
 
 export type UpdateTaskData = {
   body: {
@@ -55728,6 +60707,10 @@ export type UpdateTaskErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -55784,6 +60767,10 @@ export type AssignTeachersErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -55839,6 +60826,10 @@ export type UpdateTaskStatusErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -55891,6 +60882,10 @@ export type RemoveTeacherErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -55911,7 +60906,7 @@ export type RemoveTeacherResponses = {
 
 export type RemoveTeacherResponse = RemoveTeacherResponses[keyof RemoveTeacherResponses]
 
-export type List4Data = {
+export type ListTeacherPreferencesData = {
   body?: never
   path?: never
   query: {
@@ -55922,7 +60917,7 @@ export type List4Data = {
   url: '/teaching/teacher-preferences'
 }
 
-export type List4Errors = {
+export type ListTeacherPreferencesErrors = {
   /**
    * Bad Request
    */
@@ -55944,6 +60939,10 @@ export type List4Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -55953,25 +60952,27 @@ export type List4Errors = {
   500: ResultVoid
 }
 
-export type List4Error = List4Errors[keyof List4Errors]
+export type ListTeacherPreferencesError =
+  ListTeacherPreferencesErrors[keyof ListTeacherPreferencesErrors]
 
-export type List4Responses = {
+export type ListTeacherPreferencesResponses = {
   /**
    * OK
    */
   200: ResultListTeacherPreferencePo
 }
 
-export type List4Response = List4Responses[keyof List4Responses]
+export type ListTeacherPreferencesResponse =
+  ListTeacherPreferencesResponses[keyof ListTeacherPreferencesResponses]
 
-export type Create2Data = {
+export type CreateTeacherPreferencesData = {
   body: TeacherPreferencePo
   path?: never
   query?: never
   url: '/teaching/teacher-preferences'
 }
 
-export type Create2Errors = {
+export type CreateTeacherPreferencesErrors = {
   /**
    * Bad Request
    */
@@ -55993,6 +60994,10 @@ export type Create2Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -56002,18 +61007,20 @@ export type Create2Errors = {
   500: ResultVoid
 }
 
-export type Create2Error = Create2Errors[keyof Create2Errors]
+export type CreateTeacherPreferencesError =
+  CreateTeacherPreferencesErrors[keyof CreateTeacherPreferencesErrors]
 
-export type Create2Responses = {
+export type CreateTeacherPreferencesResponses = {
   /**
    * OK
    */
   200: ResultTeacherPreferencePo
 }
 
-export type Create2Response = Create2Responses[keyof Create2Responses]
+export type CreateTeacherPreferencesResponse =
+  CreateTeacherPreferencesResponses[keyof CreateTeacherPreferencesResponses]
 
-export type Delete2Data = {
+export type DeleteTeacherPreferencesData = {
   body?: never
   path: {
     id: string
@@ -56022,7 +61029,7 @@ export type Delete2Data = {
   url: '/teaching/teacher-preferences/{id}'
 }
 
-export type Delete2Errors = {
+export type DeleteTeacherPreferencesErrors = {
   /**
    * Bad Request
    */
@@ -56044,6 +61051,10 @@ export type Delete2Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -56053,18 +61064,20 @@ export type Delete2Errors = {
   500: ResultVoid
 }
 
-export type Delete2Error = Delete2Errors[keyof Delete2Errors]
+export type DeleteTeacherPreferencesError =
+  DeleteTeacherPreferencesErrors[keyof DeleteTeacherPreferencesErrors]
 
-export type Delete2Responses = {
+export type DeleteTeacherPreferencesResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Delete2Response = Delete2Responses[keyof Delete2Responses]
+export type DeleteTeacherPreferencesResponse =
+  DeleteTeacherPreferencesResponses[keyof DeleteTeacherPreferencesResponses]
 
-export type Update2Data = {
+export type UpdateTeacherPreferencesData = {
   body: TeacherPreferencePo
   path: {
     id: string
@@ -56073,7 +61086,7 @@ export type Update2Data = {
   url: '/teaching/teacher-preferences/{id}'
 }
 
-export type Update2Errors = {
+export type UpdateTeacherPreferencesErrors = {
   /**
    * Bad Request
    */
@@ -56095,6 +61108,10 @@ export type Update2Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -56104,18 +61121,20 @@ export type Update2Errors = {
   500: ResultVoid
 }
 
-export type Update2Error = Update2Errors[keyof Update2Errors]
+export type UpdateTeacherPreferencesError =
+  UpdateTeacherPreferencesErrors[keyof UpdateTeacherPreferencesErrors]
 
-export type Update2Responses = {
+export type UpdateTeacherPreferencesResponses = {
   /**
    * OK
    */
   200: ResultTeacherPreferencePo
 }
 
-export type Update2Response = Update2Responses[keyof Update2Responses]
+export type UpdateTeacherPreferencesResponse =
+  UpdateTeacherPreferencesResponses[keyof UpdateTeacherPreferencesResponses]
 
-export type List3Data = {
+export type ListTeachingClassesData = {
   body?: never
   path?: never
   query: {
@@ -56124,7 +61143,7 @@ export type List3Data = {
   url: '/teaching/teaching-classes'
 }
 
-export type List3Errors = {
+export type ListTeachingClassesErrors = {
   /**
    * Bad Request
    */
@@ -56146,6 +61165,10 @@ export type List3Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -56155,18 +61178,19 @@ export type List3Errors = {
   500: ResultVoid
 }
 
-export type List3Error = List3Errors[keyof List3Errors]
+export type ListTeachingClassesError = ListTeachingClassesErrors[keyof ListTeachingClassesErrors]
 
-export type List3Responses = {
+export type ListTeachingClassesResponses = {
   /**
    * OK
    */
   200: ResultListTeachingClass
 }
 
-export type List3Response = List3Responses[keyof List3Responses]
+export type ListTeachingClassesResponse =
+  ListTeachingClassesResponses[keyof ListTeachingClassesResponses]
 
-export type Create1Data = {
+export type CreateTeachingClassesData = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -56177,7 +61201,7 @@ export type Create1Data = {
   url: '/teaching/teaching-classes'
 }
 
-export type Create1Errors = {
+export type CreateTeachingClassesErrors = {
   /**
    * Bad Request
    */
@@ -56199,6 +61223,10 @@ export type Create1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -56208,18 +61236,20 @@ export type Create1Errors = {
   500: ResultVoid
 }
 
-export type Create1Error = Create1Errors[keyof Create1Errors]
+export type CreateTeachingClassesError =
+  CreateTeachingClassesErrors[keyof CreateTeachingClassesErrors]
 
-export type Create1Responses = {
+export type CreateTeachingClassesResponses = {
   /**
    * OK
    */
   200: ResultTeachingClass
 }
 
-export type Create1Response = Create1Responses[keyof Create1Responses]
+export type CreateTeachingClassesResponse =
+  CreateTeachingClassesResponses[keyof CreateTeachingClassesResponses]
 
-export type Delete1Data = {
+export type DeleteTeachingClassesData = {
   body?: never
   path: {
     id: string
@@ -56228,7 +61258,7 @@ export type Delete1Data = {
   url: '/teaching/teaching-classes/{id}'
 }
 
-export type Delete1Errors = {
+export type DeleteTeachingClassesErrors = {
   /**
    * Bad Request
    */
@@ -56250,6 +61280,10 @@ export type Delete1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -56259,18 +61293,20 @@ export type Delete1Errors = {
   500: ResultVoid
 }
 
-export type Delete1Error = Delete1Errors[keyof Delete1Errors]
+export type DeleteTeachingClassesError =
+  DeleteTeachingClassesErrors[keyof DeleteTeachingClassesErrors]
 
-export type Delete1Responses = {
+export type DeleteTeachingClassesResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type Delete1Response = Delete1Responses[keyof Delete1Responses]
+export type DeleteTeachingClassesResponse =
+  DeleteTeachingClassesResponses[keyof DeleteTeachingClassesResponses]
 
-export type GetById4Data = {
+export type GetByIdTeachingClassesData = {
   body?: never
   path: {
     id: string
@@ -56279,7 +61315,7 @@ export type GetById4Data = {
   url: '/teaching/teaching-classes/{id}'
 }
 
-export type GetById4Errors = {
+export type GetByIdTeachingClassesErrors = {
   /**
    * Bad Request
    */
@@ -56301,6 +61337,10 @@ export type GetById4Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -56310,18 +61350,20 @@ export type GetById4Errors = {
   500: ResultVoid
 }
 
-export type GetById4Error = GetById4Errors[keyof GetById4Errors]
+export type GetByIdTeachingClassesError =
+  GetByIdTeachingClassesErrors[keyof GetByIdTeachingClassesErrors]
 
-export type GetById4Responses = {
+export type GetByIdTeachingClassesResponses = {
   /**
    * OK
    */
   200: ResultTeachingClass
 }
 
-export type GetById4Response = GetById4Responses[keyof GetById4Responses]
+export type GetByIdTeachingClassesResponse =
+  GetByIdTeachingClassesResponses[keyof GetByIdTeachingClassesResponses]
 
-export type Update1Data = {
+export type UpdateTeachingClassesData = {
   body: {
     [key: string]: {
       [key: string]: unknown
@@ -56334,7 +61376,7 @@ export type Update1Data = {
   url: '/teaching/teaching-classes/{id}'
 }
 
-export type Update1Errors = {
+export type UpdateTeachingClassesErrors = {
   /**
    * Bad Request
    */
@@ -56356,6 +61398,10 @@ export type Update1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -56365,16 +61411,18 @@ export type Update1Errors = {
   500: ResultVoid
 }
 
-export type Update1Error = Update1Errors[keyof Update1Errors]
+export type UpdateTeachingClassesError =
+  UpdateTeachingClassesErrors[keyof UpdateTeachingClassesErrors]
 
-export type Update1Responses = {
+export type UpdateTeachingClassesResponses = {
   /**
    * OK
    */
   200: ResultTeachingClass
 }
 
-export type Update1Response = Update1Responses[keyof Update1Responses]
+export type UpdateTeachingClassesResponse =
+  UpdateTeachingClassesResponses[keyof UpdateTeachingClassesResponses]
 
 export type RemoveMembersData = {
   body?: never
@@ -56406,6 +61454,10 @@ export type RemoveMembersErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -56457,6 +61509,10 @@ export type GetMembersErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -56513,6 +61569,10 @@ export type AddMembersErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -56563,6 +61623,10 @@ export type GetMappingsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -56617,6 +61681,10 @@ export type GenerateMappingsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -56670,6 +61738,10 @@ export type GenerateExamsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -56722,6 +61794,10 @@ export type GenerateGradeBatchErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -56777,6 +61853,10 @@ export type GenerateOfferingsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -56829,6 +61909,10 @@ export type GenerateTasksErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -56883,6 +61967,10 @@ export type InitializeSemesterErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -56935,6 +62023,10 @@ export type GetStatsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -56955,14 +62047,14 @@ export type GetStatsResponses = {
 
 export type GetStatsResponse = GetStatsResponses[keyof GetStatsResponses]
 
-export type List2Data = {
+export type ListTenantsData = {
   body?: never
   path?: never
   query?: never
   url: '/tenants'
 }
 
-export type List2Errors = {
+export type ListTenantsErrors = {
   /**
    * Bad Request
    */
@@ -56984,6 +62076,10 @@ export type List2Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -56993,25 +62089,25 @@ export type List2Errors = {
   500: ResultVoid
 }
 
-export type List2Error = List2Errors[keyof List2Errors]
+export type ListTenantsError = ListTenantsErrors[keyof ListTenantsErrors]
 
-export type List2Responses = {
+export type ListTenantsResponses = {
   /**
    * OK
    */
   200: ResultListTenantPo
 }
 
-export type List2Response = List2Responses[keyof List2Responses]
+export type ListTenantsResponse = ListTenantsResponses[keyof ListTenantsResponses]
 
-export type CreateData = {
+export type CreateTenantsData = {
   body: TenantPo
   path?: never
   query?: never
   url: '/tenants'
 }
 
-export type CreateErrors = {
+export type CreateTenantsErrors = {
   /**
    * Bad Request
    */
@@ -57033,6 +62129,10 @@ export type CreateErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -57042,18 +62142,18 @@ export type CreateErrors = {
   500: ResultVoid
 }
 
-export type CreateError = CreateErrors[keyof CreateErrors]
+export type CreateTenantsError = CreateTenantsErrors[keyof CreateTenantsErrors]
 
-export type CreateResponses = {
+export type CreateTenantsResponses = {
   /**
    * OK
    */
   200: ResultTenantPo
 }
 
-export type CreateResponse = CreateResponses[keyof CreateResponses]
+export type CreateTenantsResponse = CreateTenantsResponses[keyof CreateTenantsResponses]
 
-export type DeleteData = {
+export type DeleteTenantsData = {
   body?: never
   path: {
     id: string
@@ -57062,7 +62162,7 @@ export type DeleteData = {
   url: '/tenants/{id}'
 }
 
-export type DeleteErrors = {
+export type DeleteTenantsErrors = {
   /**
    * Bad Request
    */
@@ -57084,6 +62184,10 @@ export type DeleteErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -57093,18 +62197,18 @@ export type DeleteErrors = {
   500: ResultVoid
 }
 
-export type DeleteError = DeleteErrors[keyof DeleteErrors]
+export type DeleteTenantsError = DeleteTenantsErrors[keyof DeleteTenantsErrors]
 
-export type DeleteResponses = {
+export type DeleteTenantsResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type DeleteResponse = DeleteResponses[keyof DeleteResponses]
+export type DeleteTenantsResponse = DeleteTenantsResponses[keyof DeleteTenantsResponses]
 
-export type GetById3Data = {
+export type GetByIdTenantsData = {
   body?: never
   path: {
     id: string
@@ -57113,7 +62217,7 @@ export type GetById3Data = {
   url: '/tenants/{id}'
 }
 
-export type GetById3Errors = {
+export type GetByIdTenantsErrors = {
   /**
    * Bad Request
    */
@@ -57135,6 +62239,10 @@ export type GetById3Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -57144,18 +62252,18 @@ export type GetById3Errors = {
   500: ResultVoid
 }
 
-export type GetById3Error = GetById3Errors[keyof GetById3Errors]
+export type GetByIdTenantsError = GetByIdTenantsErrors[keyof GetByIdTenantsErrors]
 
-export type GetById3Responses = {
+export type GetByIdTenantsResponses = {
   /**
    * OK
    */
   200: ResultTenantPo
 }
 
-export type GetById3Response = GetById3Responses[keyof GetById3Responses]
+export type GetByIdTenantsResponse = GetByIdTenantsResponses[keyof GetByIdTenantsResponses]
 
-export type UpdateData = {
+export type UpdateTenantsData = {
   body: TenantPo
   path: {
     id: string
@@ -57164,7 +62272,7 @@ export type UpdateData = {
   url: '/tenants/{id}'
 }
 
-export type UpdateErrors = {
+export type UpdateTenantsErrors = {
   /**
    * Bad Request
    */
@@ -57186,6 +62294,10 @@ export type UpdateErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -57195,16 +62307,16 @@ export type UpdateErrors = {
   500: ResultVoid
 }
 
-export type UpdateError = UpdateErrors[keyof UpdateErrors]
+export type UpdateTenantsError = UpdateTenantsErrors[keyof UpdateTenantsErrors]
 
-export type UpdateResponses = {
+export type UpdateTenantsResponses = {
   /**
    * OK
    */
   200: ResultTenantPo
 }
 
-export type UpdateResponse = UpdateResponses[keyof UpdateResponses]
+export type UpdateTenantsResponse = UpdateTenantsResponses[keyof UpdateTenantsResponses]
 
 export type GetStudentsData = {
   body?: never
@@ -57260,6 +62372,10 @@ export type GetStudentsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -57308,6 +62424,10 @@ export type CreateStudentErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -57358,6 +62478,10 @@ export type DeleteStudentsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -57406,6 +62530,10 @@ export type GetStudentsByClassErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -57461,6 +62589,10 @@ export type GetStudentByNoErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -57540,6 +62672,10 @@ export type GetClassesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -57589,6 +62725,10 @@ export type CreateClassErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -57637,6 +62777,10 @@ export type BatchDeleteClassesErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -57690,6 +62834,10 @@ export type CheckClassCodeExistsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -57742,6 +62890,10 @@ export type GetClassByCodeErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -57792,6 +62944,10 @@ export type GetGraduatingClassesErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -57844,6 +63000,10 @@ export type GetClassesByHeadTeacherErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -57898,6 +63058,10 @@ export type DeleteClassErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -57948,6 +63112,10 @@ export type GetClassErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -58000,6 +63168,10 @@ export type UpdateClassErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -58051,6 +63223,10 @@ export type ActivateClassErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -58101,6 +63277,10 @@ export type AssignDeputyHeadTeacherErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -58155,6 +63335,10 @@ export type DissolveClassErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -58206,6 +63390,10 @@ export type GraduateClassErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -58256,6 +63444,10 @@ export type AssignHeadTeacherErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -58311,6 +63503,10 @@ export type EndTeacherAssignmentErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -58361,6 +63557,10 @@ export type GetAllCohortsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -58410,6 +63610,10 @@ export type CreateCohortErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -58458,6 +63662,10 @@ export type GetActiveCohortsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -58513,6 +63721,10 @@ export type GetByStatusErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -58566,6 +63778,10 @@ export type GetByEnrollmentYearErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -58622,6 +63838,10 @@ export type DeleteCohortErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -58675,6 +63895,10 @@ export type GetCohortErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -58730,6 +63954,10 @@ export type UpdateCohortErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -58783,6 +64011,10 @@ export type ActivateCohortErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -58838,6 +64070,10 @@ export type GraduateCohortErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -58891,6 +64127,10 @@ export type AssignLeadersErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -58946,6 +64186,10 @@ export type StopEnrollmentErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -58999,6 +64243,10 @@ export type CountActiveByClassErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -59054,6 +64302,10 @@ export type CountByClassErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -59112,6 +64364,10 @@ export type ExistsStudentNoErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -59175,6 +64431,10 @@ export type ListStatusChangesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -59228,6 +64488,10 @@ export type DeleteStudentErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -59283,6 +64547,10 @@ export type GetStudentErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -59337,6 +64605,10 @@ export type UpdateStudentErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -59390,6 +64662,10 @@ export type GraduateStudentErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -59450,6 +64726,10 @@ export type ResumeStudentErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -59470,7 +64750,7 @@ export type ResumeStudentResponses = {
 
 export type ResumeStudentResponse = ResumeStudentResponses[keyof ResumeStudentResponses]
 
-export type UpdateStatus1Data = {
+export type UpdateStatus2Data = {
   body?: never
   path: {
     /**
@@ -59491,7 +64771,7 @@ export type UpdateStatus1Data = {
   url: '/user_student/{id}/status'
 }
 
-export type UpdateStatus1Errors = {
+export type UpdateStatus2Errors = {
   /**
    * Bad Request
    */
@@ -59513,6 +64793,10 @@ export type UpdateStatus1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -59522,16 +64806,16 @@ export type UpdateStatus1Errors = {
   500: ResultVoid
 }
 
-export type UpdateStatus1Error = UpdateStatus1Errors[keyof UpdateStatus1Errors]
+export type UpdateStatus2Error = UpdateStatus2Errors[keyof UpdateStatus2Errors]
 
-export type UpdateStatus1Responses = {
+export type UpdateStatus2Responses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type UpdateStatus1Response = UpdateStatus1Responses[keyof UpdateStatus1Responses]
+export type UpdateStatus2Response = UpdateStatus2Responses[keyof UpdateStatus2Responses]
 
 export type GetStudentStatusChangesData = {
   body?: never
@@ -59566,6 +64850,10 @@ export type GetStudentStatusChangesErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -59628,6 +64916,10 @@ export type SuspendStudentErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -59686,6 +64978,10 @@ export type TransferClassErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -59746,6 +65042,10 @@ export type WithdrawStudentErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -59795,6 +65095,10 @@ export type GetAllUsersErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -59815,14 +65119,14 @@ export type GetAllUsersResponses = {
 
 export type GetAllUsersResponse = GetAllUsersResponses[keyof GetAllUsersResponses]
 
-export type CreateUserData = {
+export type CreateUserUsersData = {
   body: CreateUserRequest
   path?: never
   query?: never
   url: '/users'
 }
 
-export type CreateUserErrors = {
+export type CreateUserUsersErrors = {
   /**
    * Bad Request
    */
@@ -59844,6 +65148,10 @@ export type CreateUserErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -59853,25 +65161,25 @@ export type CreateUserErrors = {
   500: ResultVoid
 }
 
-export type CreateUserError = CreateUserErrors[keyof CreateUserErrors]
+export type CreateUserUsersError = CreateUserUsersErrors[keyof CreateUserUsersErrors]
 
-export type CreateUserResponses = {
+export type CreateUserUsersResponses = {
   /**
    * OK
    */
   200: ResultUserDomainResponse
 }
 
-export type CreateUserResponse = CreateUserResponses[keyof CreateUserResponses]
+export type CreateUserUsersResponse = CreateUserUsersResponses[keyof CreateUserUsersResponses]
 
-export type DeleteUsersData = {
+export type DeleteUsersBatchData = {
   body: Array<string>
   path?: never
   query?: never
   url: '/users/batch'
 }
 
-export type DeleteUsersErrors = {
+export type DeleteUsersBatchErrors = {
   /**
    * Bad Request
    */
@@ -59893,6 +65201,10 @@ export type DeleteUsersErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -59902,16 +65214,16 @@ export type DeleteUsersErrors = {
   500: ResultVoid
 }
 
-export type DeleteUsersError = DeleteUsersErrors[keyof DeleteUsersErrors]
+export type DeleteUsersBatchError = DeleteUsersBatchErrors[keyof DeleteUsersBatchErrors]
 
-export type DeleteUsersResponses = {
+export type DeleteUsersBatchResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type DeleteUsersResponse = DeleteUsersResponses[keyof DeleteUsersResponses]
+export type DeleteUsersBatchResponse = DeleteUsersBatchResponses[keyof DeleteUsersBatchResponses]
 
 export type GetUsersByOrgUnitData = {
   body?: never
@@ -59955,6 +65267,10 @@ export type GetUsersByOrgUnitErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -60010,6 +65326,10 @@ export type GetUserByUsernameErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -60030,7 +65350,7 @@ export type GetUserByUsernameResponses = {
 
 export type GetUserByUsernameResponse = GetUserByUsernameResponses[keyof GetUserByUsernameResponses]
 
-export type ExistsUsernameData = {
+export type ExistsUsernameExistsData = {
   body?: never
   path?: never
   query: {
@@ -60046,7 +65366,7 @@ export type ExistsUsernameData = {
   url: '/users/exists'
 }
 
-export type ExistsUsernameErrors = {
+export type ExistsUsernameExistsErrors = {
   /**
    * Bad Request
    */
@@ -60068,6 +65388,10 @@ export type ExistsUsernameErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -60077,16 +65401,17 @@ export type ExistsUsernameErrors = {
   500: ResultVoid
 }
 
-export type ExistsUsernameError = ExistsUsernameErrors[keyof ExistsUsernameErrors]
+export type ExistsUsernameExistsError = ExistsUsernameExistsErrors[keyof ExistsUsernameExistsErrors]
 
-export type ExistsUsernameResponses = {
+export type ExistsUsernameExistsResponses = {
   /**
    * OK
    */
   200: ResultBoolean
 }
 
-export type ExistsUsernameResponse = ExistsUsernameResponses[keyof ExistsUsernameResponses]
+export type ExistsUsernameExistsResponse =
+  ExistsUsernameExistsResponses[keyof ExistsUsernameExistsResponses]
 
 export type GetMyPermissionsData = {
   body?: never
@@ -60116,6 +65441,10 @@ export type GetMyPermissionsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -60165,6 +65494,10 @@ export type GetMyRolesErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -60244,6 +65577,10 @@ export type GetUserPageErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -60264,7 +65601,7 @@ export type GetUserPageResponses = {
 
 export type GetUserPageResponse = GetUserPageResponses[keyof GetUserPageResponses]
 
-export type GetSimpleUserListData = {
+export type GetSimpleUserListSimpleData = {
   body?: never
   path?: never
   query?: {
@@ -60276,7 +65613,7 @@ export type GetSimpleUserListData = {
   url: '/users/simple'
 }
 
-export type GetSimpleUserListErrors = {
+export type GetSimpleUserListSimpleErrors = {
   /**
    * Bad Request
    */
@@ -60298,6 +65635,10 @@ export type GetSimpleUserListErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -60307,16 +65648,18 @@ export type GetSimpleUserListErrors = {
   500: ResultVoid
 }
 
-export type GetSimpleUserListError = GetSimpleUserListErrors[keyof GetSimpleUserListErrors]
+export type GetSimpleUserListSimpleError =
+  GetSimpleUserListSimpleErrors[keyof GetSimpleUserListSimpleErrors]
 
-export type GetSimpleUserListResponses = {
+export type GetSimpleUserListSimpleResponses = {
   /**
    * OK
    */
   200: ResultListSimpleUserResponse
 }
 
-export type GetSimpleUserListResponse = GetSimpleUserListResponses[keyof GetSimpleUserListResponses]
+export type GetSimpleUserListSimpleResponse =
+  GetSimpleUserListSimpleResponses[keyof GetSimpleUserListSimpleResponses]
 
 export type GetUsersWithDepartmentsData = {
   body?: never
@@ -60351,6 +65694,10 @@ export type GetUsersWithDepartmentsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -60408,6 +65755,10 @@ export type GetUsersWithOrgUnitsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -60429,7 +65780,7 @@ export type GetUsersWithOrgUnitsResponses = {
 export type GetUsersWithOrgUnitsResponse =
   GetUsersWithOrgUnitsResponses[keyof GetUsersWithOrgUnitsResponses]
 
-export type DeleteUserData = {
+export type DeleteUserUsersData = {
   body?: never
   path: {
     /**
@@ -60441,7 +65792,7 @@ export type DeleteUserData = {
   url: '/users/{id}'
 }
 
-export type DeleteUserErrors = {
+export type DeleteUserUsersErrors = {
   /**
    * Bad Request
    */
@@ -60463,6 +65814,10 @@ export type DeleteUserErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -60472,18 +65827,18 @@ export type DeleteUserErrors = {
   500: ResultVoid
 }
 
-export type DeleteUserError = DeleteUserErrors[keyof DeleteUserErrors]
+export type DeleteUserUsersError = DeleteUserUsersErrors[keyof DeleteUserUsersErrors]
 
-export type DeleteUserResponses = {
+export type DeleteUserUsersResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type DeleteUserResponse = DeleteUserResponses[keyof DeleteUserResponses]
+export type DeleteUserUsersResponse = DeleteUserUsersResponses[keyof DeleteUserUsersResponses]
 
-export type GetUserData = {
+export type GetUserUsersData = {
   body?: never
   path: {
     /**
@@ -60495,7 +65850,7 @@ export type GetUserData = {
   url: '/users/{id}'
 }
 
-export type GetUserErrors = {
+export type GetUserUsersErrors = {
   /**
    * Bad Request
    */
@@ -60517,6 +65872,10 @@ export type GetUserErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -60526,18 +65885,18 @@ export type GetUserErrors = {
   500: ResultVoid
 }
 
-export type GetUserError = GetUserErrors[keyof GetUserErrors]
+export type GetUserUsersError = GetUserUsersErrors[keyof GetUserUsersErrors]
 
-export type GetUserResponses = {
+export type GetUserUsersResponses = {
   /**
    * OK
    */
   200: ResultUserDomainResponse
 }
 
-export type GetUserResponse = GetUserResponses[keyof GetUserResponses]
+export type GetUserUsersResponse = GetUserUsersResponses[keyof GetUserUsersResponses]
 
-export type UpdateUserData = {
+export type UpdateUserUsersData = {
   body: UpdateUserRequest
   path: {
     /**
@@ -60549,7 +65908,7 @@ export type UpdateUserData = {
   url: '/users/{id}'
 }
 
-export type UpdateUserErrors = {
+export type UpdateUserUsersErrors = {
   /**
    * Bad Request
    */
@@ -60571,6 +65930,10 @@ export type UpdateUserErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -60580,16 +65943,16 @@ export type UpdateUserErrors = {
   500: ResultVoid
 }
 
-export type UpdateUserError = UpdateUserErrors[keyof UpdateUserErrors]
+export type UpdateUserUsersError = UpdateUserUsersErrors[keyof UpdateUserUsersErrors]
 
-export type UpdateUserResponses = {
+export type UpdateUserUsersResponses = {
   /**
    * OK
    */
   200: ResultUserDomainResponse
 }
 
-export type UpdateUserResponse = UpdateUserResponses[keyof UpdateUserResponses]
+export type UpdateUserUsersResponse = UpdateUserUsersResponses[keyof UpdateUserUsersResponses]
 
 export type BindWechatData = {
   body?: never
@@ -60627,6 +65990,10 @@ export type BindWechatErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -60647,7 +66014,7 @@ export type BindWechatResponses = {
 
 export type BindWechatResponse = BindWechatResponses[keyof BindWechatResponses]
 
-export type DisableUserData = {
+export type DisableUserDisableData = {
   body?: never
   path: {
     /**
@@ -60659,7 +66026,7 @@ export type DisableUserData = {
   url: '/users/{id}/disable'
 }
 
-export type DisableUserErrors = {
+export type DisableUserDisableErrors = {
   /**
    * Bad Request
    */
@@ -60681,6 +66048,10 @@ export type DisableUserErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -60690,18 +66061,19 @@ export type DisableUserErrors = {
   500: ResultVoid
 }
 
-export type DisableUserError = DisableUserErrors[keyof DisableUserErrors]
+export type DisableUserDisableError = DisableUserDisableErrors[keyof DisableUserDisableErrors]
 
-export type DisableUserResponses = {
+export type DisableUserDisableResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type DisableUserResponse = DisableUserResponses[keyof DisableUserResponses]
+export type DisableUserDisableResponse =
+  DisableUserDisableResponses[keyof DisableUserDisableResponses]
 
-export type EnableUserData = {
+export type EnableUserEnableData = {
   body?: never
   path: {
     /**
@@ -60713,7 +66085,7 @@ export type EnableUserData = {
   url: '/users/{id}/enable'
 }
 
-export type EnableUserErrors = {
+export type EnableUserEnableErrors = {
   /**
    * Bad Request
    */
@@ -60735,6 +66107,10 @@ export type EnableUserErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -60744,16 +66120,16 @@ export type EnableUserErrors = {
   500: ResultVoid
 }
 
-export type EnableUserError = EnableUserErrors[keyof EnableUserErrors]
+export type EnableUserEnableError = EnableUserEnableErrors[keyof EnableUserEnableErrors]
 
-export type EnableUserResponses = {
+export type EnableUserEnableResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type EnableUserResponse = EnableUserResponses[keyof EnableUserResponses]
+export type EnableUserEnableResponse = EnableUserEnableResponses[keyof EnableUserEnableResponses]
 
 export type ResetPasswordData = {
   body?: never
@@ -60788,6 +66164,10 @@ export type ResetPasswordErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -60842,6 +66222,10 @@ export type ResetPasswordSafeErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -60902,6 +66286,10 @@ export type UpdateUserStatusErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -60956,6 +66344,10 @@ export type UnbindWechatErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -61006,6 +66398,10 @@ export type GetUserPermissionsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -61059,6 +66455,10 @@ export type GetUserRolesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -61109,6 +66509,10 @@ export type SetUserRolesErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -61165,6 +66569,10 @@ export type RemoveRoleErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -61216,6 +66624,10 @@ export type AssignRoleErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -61269,6 +66681,10 @@ export type AssignRoleWithScopeErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -61319,6 +66735,10 @@ export type CreatePlaceErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -61367,6 +66787,10 @@ export type GetAllowedChildTypesForRootErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -61422,6 +66846,10 @@ export type GetOccupantsForPlacesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -61475,6 +66903,10 @@ export type GetPlaceByCodeErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -61527,6 +66959,10 @@ export type GetOccupantHistoryByOccupantErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -61578,6 +67014,10 @@ export type GetRootChildrenErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -61626,6 +67066,10 @@ export type GetStatisticsErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -61678,6 +67122,10 @@ export type GetPlaceTreeErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -61728,6 +67176,10 @@ export type GetPlaceTreeByTypeErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -61781,6 +67233,10 @@ export type DeletePlaceErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -61831,6 +67287,10 @@ export type GetPlaceByIdErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -61883,6 +67343,10 @@ export type UpdatePlaceErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -61934,6 +67398,10 @@ export type BatchCheckInErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -61984,6 +67452,10 @@ export type CheckInErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -62037,6 +67509,10 @@ export type CheckOutErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -62087,6 +67563,10 @@ export type GetOccupantHistoryErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -62140,6 +67620,10 @@ export type GetOccupantsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -62190,6 +67674,10 @@ export type ChangeStatusErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -62242,6 +67730,10 @@ export type SwapPositionsErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -62292,6 +67784,10 @@ export type GetAllowedChildTypesErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -62344,6 +67840,10 @@ export type GetChildrenErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -62399,6 +67899,10 @@ export type ListInstancesErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -62449,6 +67953,10 @@ export type InstanceTasksErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -62501,6 +68009,10 @@ export type MyHistoricTasksErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -62521,14 +68033,14 @@ export type MyHistoricTasksResponses = {
 
 export type MyHistoricTasksResponse = MyHistoricTasksResponses[keyof MyHistoricTasksResponses]
 
-export type List1Data = {
+export type ListProcessDefinitionsData = {
   body?: never
   path?: never
   query?: never
   url: '/workflow/process-definitions'
 }
 
-export type List1Errors = {
+export type ListProcessDefinitionsErrors = {
   /**
    * Bad Request
    */
@@ -62550,6 +68062,10 @@ export type List1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -62559,16 +68075,18 @@ export type List1Errors = {
   500: ResultVoid
 }
 
-export type List1Error = List1Errors[keyof List1Errors]
+export type ListProcessDefinitionsError =
+  ListProcessDefinitionsErrors[keyof ListProcessDefinitionsErrors]
 
-export type List1Responses = {
+export type ListProcessDefinitionsResponses = {
   /**
    * OK
    */
   200: ResultListMapStringObject
 }
 
-export type List1Response = List1Responses[keyof List1Responses]
+export type ListProcessDefinitionsResponse =
+  ListProcessDefinitionsResponses[keyof ListProcessDefinitionsResponses]
 
 export type DeployData = {
   body?: {
@@ -62602,6 +68120,10 @@ export type DeployErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -62656,6 +68178,10 @@ export type DeleteDeploymentErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -62676,7 +68202,7 @@ export type DeleteDeploymentResponses = {
 
 export type DeleteDeploymentResponse = DeleteDeploymentResponses[keyof DeleteDeploymentResponses]
 
-export type GetById2Data = {
+export type GetByIdProcessDefinitionsData = {
   body?: never
   path: {
     id: string
@@ -62685,7 +68211,7 @@ export type GetById2Data = {
   url: '/workflow/process-definitions/{id}'
 }
 
-export type GetById2Errors = {
+export type GetByIdProcessDefinitionsErrors = {
   /**
    * Bad Request
    */
@@ -62707,6 +68233,10 @@ export type GetById2Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -62716,16 +68246,18 @@ export type GetById2Errors = {
   500: ResultVoid
 }
 
-export type GetById2Error = GetById2Errors[keyof GetById2Errors]
+export type GetByIdProcessDefinitionsError =
+  GetByIdProcessDefinitionsErrors[keyof GetByIdProcessDefinitionsErrors]
 
-export type GetById2Responses = {
+export type GetByIdProcessDefinitionsResponses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type GetById2Response = GetById2Responses[keyof GetById2Responses]
+export type GetByIdProcessDefinitionsResponse =
+  GetByIdProcessDefinitionsResponses[keyof GetByIdProcessDefinitionsResponses]
 
 export type ActivateData = {
   body?: never
@@ -62757,6 +68289,10 @@ export type ActivateErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -62809,6 +68345,10 @@ export type SuspendErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -62829,7 +68369,7 @@ export type SuspendResponses = {
 
 export type SuspendResponse = SuspendResponses[keyof SuspendResponses]
 
-export type ListData = {
+export type ListProcessInstancesData = {
   body?: never
   path?: never
   query?: {
@@ -62840,7 +68380,7 @@ export type ListData = {
   url: '/workflow/process-instances'
 }
 
-export type ListErrors = {
+export type ListProcessInstancesErrors = {
   /**
    * Bad Request
    */
@@ -62862,6 +68402,10 @@ export type ListErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -62871,16 +68415,17 @@ export type ListErrors = {
   500: ResultVoid
 }
 
-export type ListError = ListErrors[keyof ListErrors]
+export type ListProcessInstancesError = ListProcessInstancesErrors[keyof ListProcessInstancesErrors]
 
-export type ListResponses = {
+export type ListProcessInstancesResponses = {
   /**
    * OK
    */
   200: ResultListMapStringObject
 }
 
-export type ListResponse = ListResponses[keyof ListResponses]
+export type ListProcessInstancesResponse =
+  ListProcessInstancesResponses[keyof ListProcessInstancesResponses]
 
 export type StartData = {
   body: StartRequest
@@ -62911,6 +68456,10 @@ export type StartErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -62931,7 +68480,7 @@ export type StartResponses = {
 
 export type StartResponse = StartResponses[keyof StartResponses]
 
-export type GetById1Data = {
+export type GetByIdProcessInstancesData = {
   body?: never
   path: {
     id: string
@@ -62940,7 +68489,7 @@ export type GetById1Data = {
   url: '/workflow/process-instances/{id}'
 }
 
-export type GetById1Errors = {
+export type GetByIdProcessInstancesErrors = {
   /**
    * Bad Request
    */
@@ -62962,6 +68511,10 @@ export type GetById1Errors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -62971,16 +68524,18 @@ export type GetById1Errors = {
   500: ResultVoid
 }
 
-export type GetById1Error = GetById1Errors[keyof GetById1Errors]
+export type GetByIdProcessInstancesError =
+  GetByIdProcessInstancesErrors[keyof GetByIdProcessInstancesErrors]
 
-export type GetById1Responses = {
+export type GetByIdProcessInstancesResponses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type GetById1Response = GetById1Responses[keyof GetById1Responses]
+export type GetByIdProcessInstancesResponse =
+  GetByIdProcessInstancesResponses[keyof GetByIdProcessInstancesResponses]
 
 export type CancelData = {
   body?: CancelRequest
@@ -63012,6 +68567,10 @@ export type CancelErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -63062,6 +68621,10 @@ export type MyTasksErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -63082,7 +68645,7 @@ export type MyTasksResponses = {
 
 export type MyTasksResponse = MyTasksResponses[keyof MyTasksResponses]
 
-export type GetByIdData = {
+export type GetByIdTasksData = {
   body?: never
   path: {
     id: string
@@ -63091,7 +68654,7 @@ export type GetByIdData = {
   url: '/workflow/tasks/{id}'
 }
 
-export type GetByIdErrors = {
+export type GetByIdTasksErrors = {
   /**
    * Bad Request
    */
@@ -63113,6 +68676,10 @@ export type GetByIdErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -63122,16 +68689,16 @@ export type GetByIdErrors = {
   500: ResultVoid
 }
 
-export type GetByIdError = GetByIdErrors[keyof GetByIdErrors]
+export type GetByIdTasksError = GetByIdTasksErrors[keyof GetByIdTasksErrors]
 
-export type GetByIdResponses = {
+export type GetByIdTasksResponses = {
   /**
    * OK
    */
   200: ResultMapStringObject
 }
 
-export type GetByIdResponse = GetByIdResponses[keyof GetByIdResponses]
+export type GetByIdTasksResponse = GetByIdTasksResponses[keyof GetByIdTasksResponses]
 
 export type ClaimData = {
   body?: never
@@ -63163,6 +68730,10 @@ export type ClaimErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */
@@ -63215,6 +68786,10 @@ export type CompleteErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -63266,6 +68841,10 @@ export type DelegateErrors = {
    */
   405: ResultVoid
   /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
    * Unsupported Media Type
    */
   415: ResultVoid
@@ -63316,6 +68895,10 @@ export type UnclaimErrors = {
    * Method Not Allowed
    */
   405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
   /**
    * Unsupported Media Type
    */

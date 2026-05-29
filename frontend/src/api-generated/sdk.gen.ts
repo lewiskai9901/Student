@@ -30,12 +30,15 @@ import type {
   AddInspectorData,
   AddInspectorErrors,
   AddInspectorResponses,
+  AddInspectorRoleData,
+  AddInspectorRoleErrors,
+  AddInspectorRoleResponses,
   AddMemberData,
   AddMemberErrors,
   AddMemberResponses,
-  AddMembers1Data,
-  AddMembers1Errors,
-  AddMembers1Responses,
+  AddMembers2Data,
+  AddMembers2Errors,
+  AddMembers2Responses,
   AddMembersData,
   AddMembersErrors,
   AddMembersResponses,
@@ -63,12 +66,12 @@ import type {
   ApplyPresetData,
   ApplyPresetErrors,
   ApplyPresetResponses,
-  Approve1Data,
-  Approve1Errors,
-  Approve1Responses,
   Approve2Data,
   Approve2Errors,
   Approve2Responses,
+  Approve3Data,
+  Approve3Errors,
+  Approve3Responses,
   ApproveAdjustmentData,
   ApproveAdjustmentErrors,
   ApproveAdjustmentResponses,
@@ -138,6 +141,9 @@ import type {
   BatchApproveResultsData,
   BatchApproveResultsErrors,
   BatchApproveResultsResponses,
+  BatchAssignTasksData,
+  BatchAssignTasksErrors,
+  BatchAssignTasksResponses,
   BatchCheckInData,
   BatchCheckInErrors,
   BatchCheckInResponses,
@@ -186,9 +192,9 @@ import type {
   BatchUpdateConfigsData,
   BatchUpdateConfigsErrors,
   BatchUpdateConfigsResponses,
-  BindWechat1Data,
-  BindWechat1Errors,
-  BindWechat1Responses,
+  BindWechat2Data,
+  BindWechat2Errors,
+  BindWechat2Responses,
   BindWechatData,
   BindWechatErrors,
   BindWechatResponses,
@@ -213,12 +219,12 @@ import type {
   CalculateOverallData,
   CalculateOverallErrors,
   CalculateOverallResponses,
-  Cancel1Data,
-  Cancel1Errors,
-  Cancel1Responses,
   Cancel2Data,
   Cancel2Errors,
   Cancel2Responses,
+  Cancel3Data,
+  Cancel3Errors,
+  Cancel3Responses,
   CancelAdjustmentData,
   CancelAdjustmentErrors,
   CancelAdjustmentResponses,
@@ -285,6 +291,9 @@ import type {
   CloneFromPresetData,
   CloneFromPresetErrors,
   CloneFromPresetResponses,
+  CloneProjectData,
+  CloneProjectErrors,
+  CloneProjectResponses,
   CloseCaseData,
   CloseCaseErrors,
   CloseCaseResponses,
@@ -312,9 +321,9 @@ import type {
   ComputeScoresData,
   ComputeScoresErrors,
   ComputeScoresResponses,
-  Confirm1Data,
-  Confirm1Errors,
-  Confirm1Responses,
+  Confirm2Data,
+  Confirm2Errors,
+  Confirm2Responses,
   ConfirmData,
   ConfirmErrors,
   ConfirmResponses,
@@ -339,66 +348,12 @@ import type {
   CountUnreadData,
   CountUnreadErrors,
   CountUnreadResponses,
-  Create10Data,
-  Create10Errors,
-  Create10Responses,
-  Create11Data,
-  Create11Errors,
-  Create11Responses,
-  Create12Data,
-  Create12Errors,
-  Create12Responses,
-  Create13Data,
-  Create13Errors,
-  Create13Responses,
-  Create14Data,
-  Create14Errors,
-  Create14Responses,
-  Create15Data,
-  Create15Errors,
-  Create15Responses,
-  Create16Data,
-  Create16Errors,
-  Create16Responses,
-  Create17Data,
-  Create17Errors,
-  Create17Responses,
-  Create18Data,
-  Create18Errors,
-  Create18Responses,
-  Create19Data,
-  Create19Errors,
-  Create19Responses,
-  Create1Data,
-  Create1Errors,
-  Create1Responses,
-  Create2Data,
-  Create2Errors,
-  Create2Responses,
-  Create3Data,
-  Create3Errors,
-  Create3Responses,
-  Create4Data,
-  Create4Errors,
-  Create4Responses,
-  Create5Data,
-  Create5Errors,
-  Create5Responses,
-  Create6Data,
-  Create6Errors,
-  Create6Responses,
-  Create7Data,
-  Create7Errors,
-  Create7Responses,
-  Create8Data,
-  Create8Errors,
-  Create8Responses,
-  Create9Data,
-  Create9Errors,
-  Create9Responses,
   CreateAcademicYearData,
   CreateAcademicYearErrors,
   CreateAcademicYearResponses,
+  CreateAccessRelationsData,
+  CreateAccessRelationsErrors,
+  CreateAccessRelationsResponses,
   CreateAdHocData,
   CreateAdHocErrors,
   CreateAdHocResponses,
@@ -420,12 +375,12 @@ import type {
   CreateAssetData,
   CreateAssetErrors,
   CreateAssetResponses,
-  CreateBatch1Data,
-  CreateBatch1Errors,
-  CreateBatch1Responses,
-  CreateBatchData,
-  CreateBatchErrors,
-  CreateBatchResponses,
+  CreateBatchBatches2Data,
+  CreateBatchBatches2Errors,
+  CreateBatchBatches2Responses,
+  CreateBatchBatchesData,
+  CreateBatchBatchesErrors,
+  CreateBatchBatchesResponses,
   CreateBorrowData,
   CreateBorrowErrors,
   CreateBorrowResponses,
@@ -438,15 +393,18 @@ import type {
   CreateCatalogData,
   CreateCatalogErrors,
   CreateCatalogResponses,
-  CreateCategory1Data,
-  CreateCategory1Errors,
-  CreateCategory1Responses,
-  CreateCategoryData,
-  CreateCategoryErrors,
-  CreateCategoryResponses,
+  CreateCategoryCategories2Data,
+  CreateCategoryCategories2Errors,
+  CreateCategoryCategories2Responses,
+  CreateCategoryCategoriesData,
+  CreateCategoryCategoriesErrors,
+  CreateCategoryCategoriesResponses,
   CreateChildSectionData,
   CreateChildSectionErrors,
   CreateChildSectionResponses,
+  CreateClassAssignmentsData,
+  CreateClassAssignmentsErrors,
+  CreateClassAssignmentsResponses,
   CreateClassData,
   CreateClassErrors,
   CreateClassResponses,
@@ -456,19 +414,24 @@ import type {
   CreateCompositeIndicatorData,
   CreateCompositeIndicatorErrors,
   CreateCompositeIndicatorResponses,
-  CreateConfig1Data,
-  CreateConfig1Errors,
-  CreateConfig1Responses,
-  CreateConfigData,
-  CreateConfigErrors,
-  CreateConfigResponses,
+  CreateConfigConfigs2Data,
+  CreateConfigConfigs2Errors,
+  CreateConfigConfigs2Responses,
+  CreateConfigConfigsData,
+  CreateConfigConfigsErrors,
+  CreateConfigConfigsResponses,
+  CreateConstraintsData,
+  CreateConstraintsErrors,
+  CreateConstraintsResponses,
   CreateCourseData,
   CreateCourseErrors,
   CreateCourseResponses,
   CreateCrossAuditData,
   CreateCrossAuditErrors,
   CreateCrossAuditResponses,
-  CreateData,
+  CreateDataModulesData,
+  CreateDataModulesErrors,
+  CreateDataModulesResponses,
   CreateDetailData,
   CreateDetailErrors,
   CreateDetailResponses,
@@ -478,25 +441,42 @@ import type {
   CreateDirectionData,
   CreateDirectionErrors,
   CreateDirectionResponses,
-  CreateErrors,
+  CreateEntityEventTypesData,
+  CreateEntityEventTypesErrors,
+  CreateEntityEventTypesResponses,
+  CreateEntityTypeConfigsData,
+  CreateEntityTypeConfigsErrors,
+  CreateEntityTypeConfigsResponses,
   CreateEscalationPolicyData,
   CreateEscalationPolicyErrors,
   CreateEscalationPolicyResponses,
+  CreateEvaluationsData,
+  CreateEvaluationsErrors,
+  CreateEvaluationsResponses,
   CreateEventData,
   CreateEventErrors,
   CreateEventResponses,
-  CreateGradeBand1Data,
-  CreateGradeBand1Errors,
-  CreateGradeBand1Responses,
-  CreateGradeBandData,
-  CreateGradeBandErrors,
-  CreateGradeBandResponses,
+  CreateGradeBandGradeBands2Data,
+  CreateGradeBandGradeBands2Errors,
+  CreateGradeBandGradeBands2Responses,
+  CreateGradeBandGradeBandsData,
+  CreateGradeBandGradeBandsErrors,
+  CreateGradeBandGradeBandsResponses,
+  CreateGroupsData,
+  CreateGroupsErrors,
+  CreateGroupsResponses,
+  CreateHolidayCalendarsData,
+  CreateHolidayCalendarsErrors,
+  CreateHolidayCalendarsResponses,
   CreateIndicatorData,
   CreateIndicatorErrors,
   CreateIndicatorResponses,
   CreateInventoryData,
   CreateInventoryErrors,
   CreateInventoryResponses,
+  CreateIssueCategoriesData,
+  CreateIssueCategoriesErrors,
+  CreateIssueCategoriesResponses,
   CreateItemData,
   CreateItemErrors,
   CreateItemFromLibraryData,
@@ -518,49 +498,60 @@ import type {
   CreateMajorData,
   CreateMajorErrors,
   CreateMajorResponses,
+  CreateOfferingsData,
+  CreateOfferingsErrors,
+  CreateOfferingsResponses,
   CreateOrgTypeData,
   CreateOrgTypeErrors,
   CreateOrgTypeResponses,
   CreateOrgUnitData,
   CreateOrgUnitErrors,
   CreateOrgUnitResponses,
+  CreatePeriodConfigsData,
+  CreatePeriodConfigsErrors,
+  CreatePeriodConfigsResponses,
   CreatePermissionData,
   CreatePermissionErrors,
   CreatePermissionResponses,
   CreatePlaceData,
   CreatePlaceErrors,
   CreatePlaceResponses,
-  CreatePlan1Data,
-  CreatePlan1Errors,
-  CreatePlan1Responses,
-  CreatePlan2Data,
-  CreatePlan2Errors,
-  CreatePlan2Responses,
-  CreatePlanData,
-  CreatePlanErrors,
-  CreatePlanResponses,
-  CreatePolicy1Data,
-  CreatePolicy1Errors,
-  CreatePolicy1Responses,
-  CreatePolicyData,
-  CreatePolicyErrors,
-  CreatePolicyResponses,
+  CreatePlanCurriculumPlansData,
+  CreatePlanCurriculumPlansErrors,
+  CreatePlanCurriculumPlansResponses,
+  CreatePlanPlans2Data,
+  CreatePlanPlans2Errors,
+  CreatePlanPlans2Responses,
+  CreatePlanPlansData,
+  CreatePlanPlansErrors,
+  CreatePlanPlansResponses,
+  CreatePolicyPoliciesData,
+  CreatePolicyPoliciesErrors,
+  CreatePolicyPoliciesResponses,
+  CreatePolicyScoringPoliciesData,
+  CreatePolicyScoringPoliciesErrors,
+  CreatePolicyScoringPoliciesResponses,
   CreatePresetData,
   CreatePresetErrors,
   CreatePresetResponses,
-  CreateProfile1Data,
-  CreateProfile1Errors,
-  CreateProfile1Responses,
-  CreateProfileData,
-  CreateProfileErrors,
-  CreateProfileResponses,
+  CreateProfileScoringProfilesData,
+  CreateProfileScoringProfilesErrors,
+  CreateProfileScoringProfilesResponses,
+  CreateProfileTeacherProfilesData,
+  CreateProfileTeacherProfilesErrors,
+  CreateProfileTeacherProfilesResponses,
+  CreateProgressData,
+  CreateProgressErrors,
+  CreateProgressResponses,
   CreateProjectData,
   CreateProjectErrors,
   CreateProjectResponses,
+  CreateRatingLinksData,
+  CreateRatingLinksErrors,
+  CreateRatingLinksResponses,
   CreateRecordData,
   CreateRecordErrors,
   CreateRecordResponses,
-  CreateResponses,
   CreateResponseSetData,
   CreateResponseSetErrors,
   CreateResponseSetResponses,
@@ -570,15 +561,15 @@ import type {
   CreateRootSectionData,
   CreateRootSectionErrors,
   CreateRootSectionResponses,
-  CreateRule1Data,
-  CreateRule1Errors,
-  CreateRule1Responses,
-  CreateRule2Data,
-  CreateRule2Errors,
-  CreateRule2Responses,
-  CreateRuleData,
-  CreateRuleErrors,
-  CreateRuleResponses,
+  CreateRuleCalculationRulesData,
+  CreateRuleCalculationRulesErrors,
+  CreateRuleCalculationRulesResponses,
+  CreateRuleRules2Data,
+  CreateRuleRules2Errors,
+  CreateRuleRules2Responses,
+  CreateRuleRulesData,
+  CreateRuleRulesErrors,
+  CreateRuleRulesResponses,
   CreateScheduleData,
   CreateScheduleErrors,
   CreateSchedulePlanData,
@@ -603,21 +594,39 @@ import type {
   CreateSubtaskData,
   CreateSubtaskErrors,
   CreateSubtaskResponses,
-  CreateTask1Data,
-  CreateTask1Errors,
-  CreateTask1Responses,
-  CreateTaskData,
-  CreateTaskErrors,
-  CreateTaskResponses,
+  CreateTaskTasks2Data,
+  CreateTaskTasks2Errors,
+  CreateTaskTasks2Responses,
+  CreateTaskTasksData,
+  CreateTaskTasksErrors,
+  CreateTaskTasksResponses,
+  CreateTeacherPreferencesData,
+  CreateTeacherPreferencesErrors,
+  CreateTeacherPreferencesResponses,
+  CreateTeachingClassesData,
+  CreateTeachingClassesErrors,
+  CreateTeachingClassesResponses,
   CreateTemplateData,
   CreateTemplateErrors,
   CreateTemplateResponses,
-  CreateUser1Data,
-  CreateUser1Errors,
-  CreateUser1Responses,
-  CreateUserData,
-  CreateUserErrors,
-  CreateUserResponses,
+  CreateTenantsData,
+  CreateTenantsErrors,
+  CreateTenantsResponses,
+  CreateTriggerPointsData,
+  CreateTriggerPointsErrors,
+  CreateTriggerPointsResponses,
+  CreateTriggersData,
+  CreateTriggersErrors,
+  CreateTriggersResponses,
+  CreateTypesData,
+  CreateTypesErrors,
+  CreateTypesResponses,
+  CreateUserUsers2Data,
+  CreateUserUsers2Errors,
+  CreateUserUsers2Responses,
+  CreateUserUsersData,
+  CreateUserUsersErrors,
+  CreateUserUsersResponses,
   CreateViolationRecordData,
   CreateViolationRecordErrors,
   CreateViolationRecordResponses,
@@ -627,69 +636,12 @@ import type {
   DelegateData,
   DelegateErrors,
   DelegateResponses,
-  Delete10Data,
-  Delete10Errors,
-  Delete10Responses,
-  Delete11Data,
-  Delete11Errors,
-  Delete11Responses,
-  Delete12Data,
-  Delete12Errors,
-  Delete12Responses,
-  Delete13Data,
-  Delete13Errors,
-  Delete13Responses,
-  Delete14Data,
-  Delete14Errors,
-  Delete14Responses,
-  Delete15Data,
-  Delete15Errors,
-  Delete15Responses,
-  Delete16Data,
-  Delete16Errors,
-  Delete16Responses,
-  Delete17Data,
-  Delete17Errors,
-  Delete17Responses,
-  Delete18Data,
-  Delete18Errors,
-  Delete18Responses,
-  Delete19Data,
-  Delete19Errors,
-  Delete19Responses,
-  Delete1Data,
-  Delete1Errors,
-  Delete1Responses,
-  Delete20Data,
-  Delete20Errors,
-  Delete20Responses,
-  Delete2Data,
-  Delete2Errors,
-  Delete2Responses,
-  Delete3Data,
-  Delete3Errors,
-  Delete3Responses,
-  Delete4Data,
-  Delete4Errors,
-  Delete4Responses,
-  Delete5Data,
-  Delete5Errors,
-  Delete5Responses,
-  Delete6Data,
-  Delete6Errors,
-  Delete6Responses,
-  Delete7Data,
-  Delete7Errors,
-  Delete7Responses,
-  Delete8Data,
-  Delete8Errors,
-  Delete8Responses,
-  Delete9Data,
-  Delete9Errors,
-  Delete9Responses,
   DeleteAcademicYearData,
   DeleteAcademicYearErrors,
   DeleteAcademicYearResponses,
+  DeleteAccessRelationsData,
+  DeleteAccessRelationsErrors,
+  DeleteAccessRelationsResponses,
   DeleteAlertRuleData,
   DeleteAlertRuleErrors,
   DeleteAlertRuleResponses,
@@ -702,12 +654,15 @@ import type {
   DeleteAssetData,
   DeleteAssetErrors,
   DeleteAssetResponses,
-  DeleteBatch1Data,
-  DeleteBatch1Errors,
-  DeleteBatch1Responses,
-  DeleteBatchData,
-  DeleteBatchErrors,
-  DeleteBatchResponses,
+  DeleteBatchBatches2Data,
+  DeleteBatchBatches2Errors,
+  DeleteBatchBatches2Responses,
+  DeleteBatchBatchesData,
+  DeleteBatchBatchesErrors,
+  DeleteBatchBatchesResponses,
+  DeleteByModeData,
+  DeleteByModeErrors,
+  DeleteByModeResponses,
   DeleteCalcRuleData,
   DeleteCalcRuleErrors,
   DeleteCalcRuleResponses,
@@ -720,22 +675,30 @@ import type {
   DeleteCategoryData,
   DeleteCategoryErrors,
   DeleteCategoryResponses,
+  DeleteClassAssignmentsData,
+  DeleteClassAssignmentsErrors,
+  DeleteClassAssignmentsResponses,
   DeleteClassData,
   DeleteClassErrors,
   DeleteClassResponses,
   DeleteCohortData,
   DeleteCohortErrors,
   DeleteCohortResponses,
-  DeleteConfig1Data,
-  DeleteConfig1Errors,
-  DeleteConfig1Responses,
-  DeleteConfigData,
-  DeleteConfigErrors,
-  DeleteConfigResponses,
+  DeleteConfigConfigs2Data,
+  DeleteConfigConfigs2Errors,
+  DeleteConfigConfigs2Responses,
+  DeleteConfigConfigsData,
+  DeleteConfigConfigsErrors,
+  DeleteConfigConfigsResponses,
+  DeleteConstraintsData,
+  DeleteConstraintsErrors,
+  DeleteConstraintsResponses,
   DeleteCourseData,
   DeleteCourseErrors,
   DeleteCourseResponses,
-  DeleteData,
+  DeleteDataModulesData,
+  DeleteDataModulesErrors,
+  DeleteDataModulesResponses,
   DeleteDeploymentData,
   DeleteDeploymentErrors,
   DeleteDeploymentResponses,
@@ -748,33 +711,53 @@ import type {
   DeleteDirectionData,
   DeleteDirectionErrors,
   DeleteDirectionResponses,
-  DeleteErrors,
+  DeleteEntityEventTypesData,
+  DeleteEntityEventTypesErrors,
+  DeleteEntityEventTypesResponses,
+  DeleteEntityTypeConfigsData,
+  DeleteEntityTypeConfigsErrors,
+  DeleteEntityTypeConfigsResponses,
   DeleteEscalationPolicyData,
   DeleteEscalationPolicyErrors,
   DeleteEscalationPolicyResponses,
+  DeleteEvaluationsData,
+  DeleteEvaluationsErrors,
+  DeleteEvaluationsResponses,
   DeleteEventData,
   DeleteEventErrors,
   DeleteEventResponses,
   DeleteEvidenceData,
   DeleteEvidenceErrors,
   DeleteEvidenceResponses,
-  DeleteGradeBand1Data,
-  DeleteGradeBand1Errors,
-  DeleteGradeBand1Responses,
-  DeleteGradeBandData,
-  DeleteGradeBandErrors,
-  DeleteGradeBandResponses,
+  DeleteGradeBandGradeBands2Data,
+  DeleteGradeBandGradeBands2Errors,
+  DeleteGradeBandGradeBands2Responses,
+  DeleteGradeBandGradeBandsData,
+  DeleteGradeBandGradeBandsErrors,
+  DeleteGradeBandGradeBandsResponses,
   DeleteGradeMajorDirectionData,
   DeleteGradeMajorDirectionErrors,
   DeleteGradeMajorDirectionResponses,
-  DeleteIndicator1Data,
-  DeleteIndicator1Errors,
-  DeleteIndicator1Responses,
-  DeleteIndicatorData,
-  DeleteIndicatorErrors,
-  DeleteIndicatorResponses,
+  DeleteGroupsData,
+  DeleteGroupsErrors,
+  DeleteGroupsResponses,
+  DeleteHolidayCalendarsData,
+  DeleteHolidayCalendarsErrors,
+  DeleteHolidayCalendarsResponses,
+  DeleteIndicatorIndicators2Data,
+  DeleteIndicatorIndicators2Errors,
+  DeleteIndicatorIndicators2Responses,
+  DeleteIndicatorIndicatorsData,
+  DeleteIndicatorIndicatorsErrors,
+  DeleteIndicatorIndicatorsResponses,
+  DeleteIssueCategoriesData,
+  DeleteIssueCategoriesErrors,
+  DeleteIssueCategoriesResponses,
   DeleteItemData,
   DeleteItemErrors,
+  DeleteItemOverrideData,
+  DeleteItemOverrideErrors,
+  DeleteItemOverrideResponses,
   DeleteItemResponses,
   DeleteLibraryItemData,
   DeleteLibraryItemErrors,
@@ -785,6 +768,9 @@ import type {
   DeleteMessageData,
   DeleteMessageErrors,
   DeleteMessageResponses,
+  DeleteOfferingsData,
+  DeleteOfferingsErrors,
+  DeleteOfferingsResponses,
   DeleteOptionData,
   DeleteOptionErrors,
   DeleteOptionResponses,
@@ -794,43 +780,54 @@ import type {
   DeleteOrgUnitData,
   DeleteOrgUnitErrors,
   DeleteOrgUnitResponses,
+  DeletePeriodConfigsData,
+  DeletePeriodConfigsErrors,
+  DeletePeriodConfigsResponses,
   DeletePermissionData,
   DeletePermissionErrors,
   DeletePermissionResponses,
   DeletePlaceData,
   DeletePlaceErrors,
   DeletePlaceResponses,
-  DeletePlan1Data,
-  DeletePlan1Errors,
-  DeletePlan1Responses,
-  DeletePlan2Data,
-  DeletePlan2Errors,
-  DeletePlan2Responses,
-  DeletePlanData,
-  DeletePlanErrors,
-  DeletePlanResponses,
-  DeletePolicy1Data,
-  DeletePolicy1Errors,
-  DeletePolicy1Responses,
-  DeletePolicyData,
-  DeletePolicyErrors,
-  DeletePolicyResponses,
+  DeletePlanCurriculumPlansData,
+  DeletePlanCurriculumPlansErrors,
+  DeletePlanCurriculumPlansResponses,
+  DeletePlanPlans2Data,
+  DeletePlanPlans2Errors,
+  DeletePlanPlans2Responses,
+  DeletePlanPlansData,
+  DeletePlanPlansErrors,
+  DeletePlanPlansResponses,
+  DeletePolicyPoliciesData,
+  DeletePolicyPoliciesErrors,
+  DeletePolicyPoliciesResponses,
+  DeletePolicyScoringPoliciesData,
+  DeletePolicyScoringPoliciesErrors,
+  DeletePolicyScoringPoliciesResponses,
+  DeletePreferencesData,
+  DeletePreferencesErrors,
+  DeletePreferencesResponses,
   DeletePresetData,
   DeletePresetErrors,
   DeletePresetResponses,
-  DeleteProfile1Data,
-  DeleteProfile1Errors,
-  DeleteProfile1Responses,
-  DeleteProfileData,
-  DeleteProfileErrors,
-  DeleteProfileResponses,
+  DeleteProfileScoringProfilesData,
+  DeleteProfileScoringProfilesErrors,
+  DeleteProfileScoringProfilesResponses,
+  DeleteProfileTeacherProfilesData,
+  DeleteProfileTeacherProfilesErrors,
+  DeleteProfileTeacherProfilesResponses,
+  DeleteProgressData,
+  DeleteProgressErrors,
+  DeleteProgressResponses,
   DeleteProjectData,
   DeleteProjectErrors,
   DeleteProjectResponses,
+  DeleteRatingLinksData,
+  DeleteRatingLinksErrors,
+  DeleteRatingLinksResponses,
   DeleteRecordData,
   DeleteRecordErrors,
   DeleteRecordResponses,
-  DeleteResponses,
   DeleteResponseSetData,
   DeleteResponseSetErrors,
   DeleteResponseSetResponses,
@@ -840,15 +837,15 @@ import type {
   DeleteRootSectionData,
   DeleteRootSectionErrors,
   DeleteRootSectionResponses,
-  DeleteRule1Data,
-  DeleteRule1Errors,
-  DeleteRule1Responses,
-  DeleteRule2Data,
-  DeleteRule2Errors,
-  DeleteRule2Responses,
-  DeleteRuleData,
-  DeleteRuleErrors,
-  DeleteRuleResponses,
+  DeleteRuleCalculationRulesData,
+  DeleteRuleCalculationRulesErrors,
+  DeleteRuleCalculationRulesResponses,
+  DeleteRuleRules2Data,
+  DeleteRuleRules2Errors,
+  DeleteRuleRules2Responses,
+  DeleteRuleRulesData,
+  DeleteRuleRulesErrors,
+  DeleteRuleRulesResponses,
   DeleteScheduleData,
   DeleteScheduleErrors,
   DeleteSchedulePlanData,
@@ -876,21 +873,39 @@ import type {
   DeleteTaskData,
   DeleteTaskErrors,
   DeleteTaskResponses,
+  DeleteTeacherPreferencesData,
+  DeleteTeacherPreferencesErrors,
+  DeleteTeacherPreferencesResponses,
+  DeleteTeachingClassesData,
+  DeleteTeachingClassesErrors,
+  DeleteTeachingClassesResponses,
   DeleteTemplateData,
   DeleteTemplateErrors,
   DeleteTemplateResponses,
-  DeleteUser1Data,
-  DeleteUser1Errors,
-  DeleteUser1Responses,
-  DeleteUserData,
-  DeleteUserErrors,
-  DeleteUserResponses,
-  DeleteUsers1Data,
-  DeleteUsers1Errors,
-  DeleteUsers1Responses,
-  DeleteUsersData,
-  DeleteUsersErrors,
-  DeleteUsersResponses,
+  DeleteTenantsData,
+  DeleteTenantsErrors,
+  DeleteTenantsResponses,
+  DeleteTriggerPointsData,
+  DeleteTriggerPointsErrors,
+  DeleteTriggerPointsResponses,
+  DeleteTriggersData,
+  DeleteTriggersErrors,
+  DeleteTriggersResponses,
+  DeleteTypesData,
+  DeleteTypesErrors,
+  DeleteTypesResponses,
+  DeleteUsersBatch2Data,
+  DeleteUsersBatch2Errors,
+  DeleteUsersBatch2Responses,
+  DeleteUsersBatchData,
+  DeleteUsersBatchErrors,
+  DeleteUsersBatchResponses,
+  DeleteUserUsers2Data,
+  DeleteUserUsers2Errors,
+  DeleteUserUsers2Responses,
+  DeleteUserUsersData,
+  DeleteUserUsersErrors,
+  DeleteUserUsersResponses,
   DeleteViolationRecordData,
   DeleteViolationRecordErrors,
   DeleteViolationRecordResponses,
@@ -915,15 +930,15 @@ import type {
   DetectData,
   DetectErrors,
   DetectResponses,
-  Disable1Data,
-  Disable1Errors,
-  Disable1Responses,
   Disable2Data,
   Disable2Errors,
   Disable2Responses,
   Disable3Data,
   Disable3Errors,
   Disable3Responses,
+  Disable4Data,
+  Disable4Errors,
+  Disable4Responses,
   DisableData,
   DisableErrors,
   DisableForTenantData,
@@ -939,12 +954,12 @@ import type {
   DisablePolicyErrors,
   DisablePolicyResponses,
   DisableResponses,
-  DisableUser1Data,
-  DisableUser1Errors,
-  DisableUser1Responses,
-  DisableUserData,
-  DisableUserErrors,
-  DisableUserResponses,
+  DisableUserDisable2Data,
+  DisableUserDisable2Errors,
+  DisableUserDisable2Responses,
+  DisableUserDisableData,
+  DisableUserDisableErrors,
+  DisableUserDisableResponses,
   DismissAlertData,
   DismissAlertErrors,
   DismissAlertResponses,
@@ -969,15 +984,15 @@ import type {
   DuplicateRootSectionData,
   DuplicateRootSectionErrors,
   DuplicateRootSectionResponses,
-  Enable1Data,
-  Enable1Errors,
-  Enable1Responses,
   Enable2Data,
   Enable2Errors,
   Enable2Responses,
   Enable3Data,
   Enable3Errors,
   Enable3Responses,
+  Enable4Data,
+  Enable4Errors,
+  Enable4Responses,
   EnableData,
   EnableErrors,
   EnableForTenantData,
@@ -993,12 +1008,12 @@ import type {
   EnablePolicyErrors,
   EnablePolicyResponses,
   EnableResponses,
-  EnableUser1Data,
-  EnableUser1Errors,
-  EnableUser1Responses,
-  EnableUserData,
-  EnableUserErrors,
-  EnableUserResponses,
+  EnableUserEnable2Data,
+  EnableUserEnable2Errors,
+  EnableUserEnable2Responses,
+  EnableUserEnableData,
+  EnableUserEnableErrors,
+  EnableUserEnableResponses,
   EndSemesterData,
   EndSemesterErrors,
   EndSemesterResponses,
@@ -1014,12 +1029,12 @@ import type {
   ExistsStudentNoData,
   ExistsStudentNoErrors,
   ExistsStudentNoResponses,
-  ExistsUsername1Data,
-  ExistsUsername1Errors,
-  ExistsUsername1Responses,
-  ExistsUsernameData,
-  ExistsUsernameErrors,
-  ExistsUsernameResponses,
+  ExistsUsernameExists2Data,
+  ExistsUsernameExists2Errors,
+  ExistsUsernameExists2Responses,
+  ExistsUsernameExistsData,
+  ExistsUsernameExistsErrors,
+  ExistsUsernameExistsResponses,
   ExportAppealsData,
   ExportAppealsErrors,
   ExportAppealsResponses,
@@ -1119,18 +1134,15 @@ import type {
   GenerateSemesterCodeData,
   GenerateSemesterCodeErrors,
   GenerateSemesterCodeResponses,
-  GenerateTasks1Data,
-  GenerateTasks1Errors,
-  GenerateTasks1Responses,
+  GenerateTasks2Data,
+  GenerateTasks2Errors,
+  GenerateTasks2Responses,
   GenerateTasksData,
   GenerateTasksErrors,
   GenerateTasksResponses,
   GenerateWeeksData,
   GenerateWeeksErrors,
   GenerateWeeksResponses,
-  Get1Data,
-  Get1Errors,
-  Get1Responses,
   GetAcademicYearData,
   GetAcademicYearErrors,
   GetAcademicYearResponses,
@@ -1140,15 +1152,12 @@ import type {
   GetAdjustmentData,
   GetAdjustmentErrors,
   GetAdjustmentResponses,
-  GetAdvancedScoringData,
-  GetAdvancedScoringErrors,
-  GetAdvancedScoringResponses,
-  GetAlert1Data,
-  GetAlert1Errors,
-  GetAlert1Responses,
-  GetAlertData,
-  GetAlertErrors,
-  GetAlertResponses,
+  GetAlertAlertsData,
+  GetAlertAlertsErrors,
+  GetAlertAlertsResponses,
+  GetAlertAssetAlertsData,
+  GetAlertAssetAlertsErrors,
+  GetAlertAssetAlertsResponses,
   GetAlertRuleData,
   GetAlertRuleErrors,
   GetAlertRuleResponses,
@@ -1175,9 +1184,9 @@ import type {
   GetAllOrgTypesData,
   GetAllOrgTypesErrors,
   GetAllOrgTypesResponses,
-  GetAllowedChildTypes1Data,
-  GetAllowedChildTypes1Errors,
-  GetAllowedChildTypes1Responses,
+  GetAllowedChildTypes2Data,
+  GetAllowedChildTypes2Errors,
+  GetAllowedChildTypes2Responses,
   GetAllowedChildTypesData,
   GetAllowedChildTypesErrors,
   GetAllowedChildTypesForRootData,
@@ -1185,9 +1194,9 @@ import type {
   GetAllowedChildTypesForRootResponses,
   GetAllowedChildTypesResponses,
   GetAllResponses,
-  GetAllUsers1Data,
-  GetAllUsers1Errors,
-  GetAllUsers1Responses,
+  GetAllUsers2Data,
+  GetAllUsers2Errors,
+  GetAllUsers2Responses,
   GetAllUsersData,
   GetAllUsersErrors,
   GetAllUsersResponses,
@@ -1212,12 +1221,12 @@ import type {
   GetAvailableForCourseData,
   GetAvailableForCourseErrors,
   GetAvailableForCourseResponses,
-  GetBatch1Data,
-  GetBatch1Errors,
-  GetBatch1Responses,
-  GetBatchData,
-  GetBatchErrors,
-  GetBatchResponses,
+  GetBatchBatches2Data,
+  GetBatchBatches2Errors,
+  GetBatchBatches2Responses,
+  GetBatchBatchesData,
+  GetBatchBatchesErrors,
+  GetBatchBatchesResponses,
   GetBelongingMembersData,
   GetBelongingMembersErrors,
   GetBelongingMembersResponses,
@@ -1230,42 +1239,42 @@ import type {
   GetByEnrollmentYearData,
   GetByEnrollmentYearErrors,
   GetByEnrollmentYearResponses,
-  GetById10Data,
-  GetById10Errors,
-  GetById10Responses,
-  GetById11Data,
-  GetById11Errors,
-  GetById11Responses,
-  GetById1Data,
-  GetById1Errors,
-  GetById1Responses,
-  GetById2Data,
-  GetById2Errors,
-  GetById2Responses,
-  GetById3Data,
-  GetById3Errors,
-  GetById3Responses,
-  GetById4Data,
-  GetById4Errors,
-  GetById4Responses,
-  GetById5Data,
-  GetById5Errors,
-  GetById5Responses,
-  GetById6Data,
-  GetById6Errors,
-  GetById6Responses,
-  GetById7Data,
-  GetById7Errors,
-  GetById7Responses,
-  GetById8Data,
-  GetById8Errors,
-  GetById8Responses,
-  GetById9Data,
-  GetById9Errors,
-  GetById9Responses,
-  GetByIdData,
-  GetByIdErrors,
-  GetByIdResponses,
+  GetByIdAppealsData,
+  GetByIdAppealsErrors,
+  GetByIdAppealsResponses,
+  GetByIdGradeMajorDirectionsData,
+  GetByIdGradeMajorDirectionsErrors,
+  GetByIdGradeMajorDirectionsResponses,
+  GetByIdIssueCategoriesData,
+  GetByIdIssueCategoriesErrors,
+  GetByIdIssueCategoriesResponses,
+  GetByIdPeriodConfigsData,
+  GetByIdPeriodConfigsErrors,
+  GetByIdPeriodConfigsResponses,
+  GetByIdProcessDefinitionsData,
+  GetByIdProcessDefinitionsErrors,
+  GetByIdProcessDefinitionsResponses,
+  GetByIdProcessInstancesData,
+  GetByIdProcessInstancesErrors,
+  GetByIdProcessInstancesResponses,
+  GetByIdRatingLinksData,
+  GetByIdRatingLinksErrors,
+  GetByIdRatingLinksResponses,
+  GetByIdTasksData,
+  GetByIdTasksErrors,
+  GetByIdTasksResponses,
+  GetByIdTeachingClassesData,
+  GetByIdTeachingClassesErrors,
+  GetByIdTeachingClassesResponses,
+  GetByIdTenantsData,
+  GetByIdTenantsErrors,
+  GetByIdTenantsResponses,
+  GetByIdTriggerPointsData,
+  GetByIdTriggerPointsErrors,
+  GetByIdTriggerPointsResponses,
+  GetByIdTriggersData,
+  GetByIdTriggersErrors,
+  GetByIdTriggersResponses,
   GetByProjectData,
   GetByProjectErrors,
   GetByProjectResponses,
@@ -1296,9 +1305,9 @@ import type {
   GetCatalogTreeData,
   GetCatalogTreeErrors,
   GetCatalogTreeResponses,
-  GetCategories1Data,
-  GetCategories1Errors,
-  GetCategories1Responses,
+  GetCategories2Data,
+  GetCategories2Errors,
+  GetCategories2Responses,
   GetCategoriesData,
   GetCategoriesErrors,
   GetCategoriesResponses,
@@ -1311,9 +1320,9 @@ import type {
   GetChildModulesData,
   GetChildModulesErrors,
   GetChildModulesResponses,
-  GetChildren1Data,
-  GetChildren1Errors,
-  GetChildren1Responses,
+  GetChildren2Data,
+  GetChildren2Errors,
+  GetChildren2Responses,
   GetChildrenData,
   GetChildrenErrors,
   GetChildrenResponses,
@@ -1383,7 +1392,6 @@ import type {
   GetDailySummaryData,
   GetDailySummaryErrors,
   GetDailySummaryResponses,
-  GetData,
   GetDimensionBreakdownData,
   GetDimensionBreakdownErrors,
   GetDimensionBreakdownResponses,
@@ -1405,7 +1413,9 @@ import type {
   GetEnabledOrgTypesData,
   GetEnabledOrgTypesErrors,
   GetEnabledOrgTypesResponses,
-  GetErrors,
+  GetEvaluationsData,
+  GetEvaluationsErrors,
+  GetEvaluationsResponses,
   GetEventData,
   GetEventErrors,
   GetEventResponses,
@@ -1418,6 +1428,9 @@ import type {
   GetGraduatingClassesData,
   GetGraduatingClassesErrors,
   GetGraduatingClassesResponses,
+  GetGroupsData,
+  GetGroupsErrors,
+  GetGroupsResponses,
   GetHeatmapData,
   GetHeatmapErrors,
   GetHeatmapResponses,
@@ -1427,6 +1440,9 @@ import type {
   GetHistoryPageErrors,
   GetHistoryPageResponses,
   GetHistoryResponses,
+  GetImpactData,
+  GetImpactErrors,
+  GetImpactResponses,
   GetIndicatorData,
   GetIndicatorErrors,
   GetIndicatorResponses,
@@ -1499,9 +1515,9 @@ import type {
   GetMyBorrowsData,
   GetMyBorrowsErrors,
   GetMyBorrowsResponses,
-  GetMyClasses1Data,
-  GetMyClasses1Errors,
-  GetMyClasses1Responses,
+  GetMyClasses2Data,
+  GetMyClasses2Errors,
+  GetMyClasses2Responses,
   GetMyClassesData,
   GetMyClassesErrors,
   GetMyClassesResponses,
@@ -1526,6 +1542,9 @@ import type {
   GetOccupantsForPlacesErrors,
   GetOccupantsForPlacesResponses,
   GetOccupantsResponses,
+  GetOrgScoresData,
+  GetOrgScoresErrors,
+  GetOrgScoresResponses,
   GetOrgStatisticsData,
   GetOrgStatisticsErrors,
   GetOrgStatisticsResponses,
@@ -1559,11 +1578,14 @@ import type {
   GetPendingResultsData,
   GetPendingResultsErrors,
   GetPendingResultsResponses,
-  GetPeriodSummary1Data,
-  GetPeriodSummary1Errors,
-  GetPeriodSummary1Responses,
+  GetPeopleWorkbenchData,
+  GetPeopleWorkbenchErrors,
+  GetPeopleWorkbenchResponses,
   GetPeriodSummaryData,
   GetPeriodSummaryErrors,
+  GetPeriodSummaryPeriodData,
+  GetPeriodSummaryPeriodErrors,
+  GetPeriodSummaryPeriodResponses,
   GetPeriodSummaryResponses,
   GetPermissionData,
   GetPermissionErrors,
@@ -1589,33 +1611,30 @@ import type {
   GetPlaceTreeData,
   GetPlaceTreeErrors,
   GetPlaceTreeResponses,
-  GetPlan1Data,
-  GetPlan1Errors,
-  GetPlan1Responses,
-  GetPlanData,
-  GetPlanErrors,
-  GetPlanResponses,
-  GetPolicy1Data,
-  GetPolicy1Errors,
-  GetPolicy1Responses,
-  GetPolicy2Data,
-  GetPolicy2Errors,
-  GetPolicy2Responses,
+  GetPlanCurriculumPlansData,
+  GetPlanCurriculumPlansErrors,
+  GetPlanCurriculumPlansResponses,
+  GetPlanPlansData,
+  GetPlanPlansErrors,
+  GetPlanPlansResponses,
   GetPolicyData,
   GetPolicyErrors,
+  GetPolicyPoliciesData,
+  GetPolicyPoliciesErrors,
+  GetPolicyPoliciesResponses,
   GetPolicyResponses,
-  GetProfile1Data,
-  GetProfile1Errors,
-  GetProfile1Responses,
-  GetProfileBySectionData,
-  GetProfileBySectionErrors,
-  GetProfileBySectionResponses,
-  GetProfileByTemplateLegacyData,
-  GetProfileByTemplateLegacyErrors,
-  GetProfileByTemplateLegacyResponses,
-  GetProfileData,
-  GetProfileErrors,
-  GetProfileResponses,
+  GetPolicyScoringPoliciesData,
+  GetPolicyScoringPoliciesErrors,
+  GetPolicyScoringPoliciesResponses,
+  GetProfileByProjectAndSectionData,
+  GetProfileByProjectAndSectionErrors,
+  GetProfileByProjectAndSectionResponses,
+  GetProfileScoringProfilesData,
+  GetProfileScoringProfilesErrors,
+  GetProfileScoringProfilesResponses,
+  GetProfileTeacherProfilesData,
+  GetProfileTeacherProfilesErrors,
+  GetProfileTeacherProfilesResponses,
   GetProjectData,
   GetProjectErrors,
   GetProjectResponses,
@@ -1631,7 +1650,6 @@ import type {
   GetResourceTimelineData,
   GetResourceTimelineErrors,
   GetResourceTimelineResponses,
-  GetResponses,
   GetResponseSetData,
   GetResponseSetErrors,
   GetResponseSetResponses,
@@ -1692,15 +1710,12 @@ import type {
   GetSemesterData,
   GetSemesterErrors,
   GetSemesterResponses,
-  GetSimpleUserList1Data,
-  GetSimpleUserList1Errors,
-  GetSimpleUserList1Responses,
-  GetSimpleUserListData,
-  GetSimpleUserListErrors,
-  GetSimpleUserListResponses,
-  GetStatistics1Data,
-  GetStatistics1Errors,
-  GetStatistics1Responses,
+  GetSimpleUserListSimple2Data,
+  GetSimpleUserListSimple2Errors,
+  GetSimpleUserListSimple2Responses,
+  GetSimpleUserListSimpleData,
+  GetSimpleUserListSimpleErrors,
+  GetSimpleUserListSimpleResponses,
   GetStatistics2Data,
   GetStatistics2Errors,
   GetStatistics2Responses,
@@ -1716,12 +1731,15 @@ import type {
   GetStatistics6Data,
   GetStatistics6Errors,
   GetStatistics6Responses,
+  GetStatistics7Data,
+  GetStatistics7Errors,
+  GetStatistics7Responses,
   GetStatisticsData,
   GetStatisticsErrors,
   GetStatisticsResponses,
-  GetStats1Data,
-  GetStats1Errors,
-  GetStats1Responses,
+  GetStats2Data,
+  GetStats2Errors,
+  GetStats2Responses,
   GetStatsData,
   GetStatsErrors,
   GetStatsResponses,
@@ -1764,12 +1782,12 @@ import type {
   GetTargetPersonsData,
   GetTargetPersonsErrors,
   GetTargetPersonsResponses,
-  GetTask1Data,
-  GetTask1Errors,
-  GetTask1Responses,
-  GetTaskData,
-  GetTaskErrors,
-  GetTaskResponses,
+  GetTaskTasks2Data,
+  GetTaskTasks2Errors,
+  GetTaskTasks2Responses,
+  GetTaskTasksData,
+  GetTaskTasksErrors,
+  GetTaskTasksResponses,
   GetTaskTypeKpiData,
   GetTaskTypeKpiErrors,
   GetTaskTypeKpiResponses,
@@ -1803,36 +1821,30 @@ import type {
   GetUnreadCountData,
   GetUnreadCountErrors,
   GetUnreadCountResponses,
-  GetUser1Data,
-  GetUser1Errors,
-  GetUser1Responses,
   GetUserActivityData,
   GetUserActivityErrors,
   GetUserActivityResponses,
-  GetUserByUsername1Data,
-  GetUserByUsername1Errors,
-  GetUserByUsername1Responses,
+  GetUserByUsername2Data,
+  GetUserByUsername2Errors,
+  GetUserByUsername2Responses,
   GetUserByUsernameData,
   GetUserByUsernameErrors,
   GetUserByUsernameResponses,
-  GetUserData,
-  GetUserErrors,
   GetUserPageData,
   GetUserPageErrors,
   GetUserPageResponses,
   GetUserPermissionsData,
   GetUserPermissionsErrors,
   GetUserPermissionsResponses,
-  GetUserResponses,
   GetUserRoleIdsData,
   GetUserRoleIdsErrors,
   GetUserRoleIdsResponses,
   GetUserRolesData,
   GetUserRolesErrors,
   GetUserRolesResponses,
-  GetUsersByOrgUnit1Data,
-  GetUsersByOrgUnit1Errors,
-  GetUsersByOrgUnit1Responses,
+  GetUsersByOrgUnit2Data,
+  GetUsersByOrgUnit2Errors,
+  GetUsersByOrgUnit2Responses,
   GetUsersByOrgUnitData,
   GetUsersByOrgUnitErrors,
   GetUsersByOrgUnitResponses,
@@ -1845,12 +1857,18 @@ import type {
   GetUsersWithOrgUnitsData,
   GetUsersWithOrgUnitsErrors,
   GetUsersWithOrgUnitsResponses,
-  GetVersion1Data,
-  GetVersion1Errors,
-  GetVersion1Responses,
-  GetVersionData,
-  GetVersionErrors,
-  GetVersionResponses,
+  GetUserUsers2Data,
+  GetUserUsers2Errors,
+  GetUserUsers2Responses,
+  GetUserUsersData,
+  GetUserUsersErrors,
+  GetUserUsersResponses,
+  GetVersionVersions2Data,
+  GetVersionVersions2Errors,
+  GetVersionVersions2Responses,
+  GetVersionVersionsData,
+  GetVersionVersionsErrors,
+  GetVersionVersionsResponses,
   GetViolationRecordData,
   GetViolationRecordErrors,
   GetViolationRecordResponses,
@@ -1881,6 +1899,9 @@ import type {
   HealthData,
   HealthErrors,
   HealthResponses,
+  HistoryData,
+  HistoryErrors,
+  HistoryResponses,
   HoursStatisticsData,
   HoursStatisticsErrors,
   HoursStatisticsResponses,
@@ -1911,69 +1932,6 @@ import type {
   KpiData,
   KpiErrors,
   KpiResponses,
-  List10Data,
-  List10Errors,
-  List10Responses,
-  List11Data,
-  List11Errors,
-  List11Responses,
-  List12Data,
-  List12Errors,
-  List12Responses,
-  List13Data,
-  List13Errors,
-  List13Responses,
-  List14Data,
-  List14Errors,
-  List14Responses,
-  List15Data,
-  List15Errors,
-  List15Responses,
-  List16Data,
-  List16Errors,
-  List16Responses,
-  List17Data,
-  List17Errors,
-  List17Responses,
-  List18Data,
-  List18Errors,
-  List18Responses,
-  List19Data,
-  List19Errors,
-  List19Responses,
-  List1Data,
-  List1Errors,
-  List1Responses,
-  List20Data,
-  List20Errors,
-  List20Responses,
-  List21Data,
-  List21Errors,
-  List21Responses,
-  List2Data,
-  List2Errors,
-  List2Responses,
-  List3Data,
-  List3Errors,
-  List3Responses,
-  List4Data,
-  List4Errors,
-  List4Responses,
-  List5Data,
-  List5Errors,
-  List5Responses,
-  List6Data,
-  List6Errors,
-  List6Responses,
-  List7Data,
-  List7Errors,
-  List7Responses,
-  List8Data,
-  List8Errors,
-  List8Responses,
-  List9Data,
-  List9Errors,
-  List9Responses,
   ListAcademicYearsData,
   ListAcademicYearsErrors,
   ListAcademicYearsResponses,
@@ -2001,12 +1959,15 @@ import type {
   ListAssetsData,
   ListAssetsErrors,
   ListAssetsResponses,
+  ListAuditTrailData,
+  ListAuditTrailErrors,
+  ListAuditTrailResponses,
   ListAvailableTasksData,
   ListAvailableTasksErrors,
   ListAvailableTasksResponses,
-  ListBatches1Data,
-  ListBatches1Errors,
-  ListBatches1Responses,
+  ListBatches2Data,
+  ListBatches2Errors,
+  ListBatches2Responses,
   ListBatchesData,
   ListBatchesErrors,
   ListBatchesResponses,
@@ -2019,6 +1980,9 @@ import type {
   ListByEntityData,
   ListByEntityErrors,
   ListByEntityResponses,
+  ListByModeData,
+  ListByModeErrors,
+  ListByModeResponses,
   ListByProjectData,
   ListByProjectErrors,
   ListByProjectResponses,
@@ -2049,10 +2013,18 @@ import type {
   ListChildrenData,
   ListChildrenErrors,
   ListChildrenResponses,
+  ListClassAssignmentsData,
+  ListClassAssignmentsErrors,
+  ListClassAssignmentsResponses,
+  ListConflictsData,
+  ListConflictsErrors,
+  ListConflictsResponses,
+  ListConstraintsData,
+  ListConstraintsErrors,
+  ListConstraintsResponses,
   ListCoursesData,
   ListCoursesErrors,
   ListCoursesResponses,
-  ListData,
   ListDeadLetterData,
   ListDeadLetterErrors,
   ListDeadLetterResponses,
@@ -2065,13 +2037,18 @@ import type {
   ListEnabledData,
   ListEnabledErrors,
   ListEnabledResponses,
-  ListErrors,
+  ListEntityTypeConfigsData,
+  ListEntityTypeConfigsErrors,
+  ListEntityTypeConfigsResponses,
   ListEscalationPoliciesData,
   ListEscalationPoliciesErrors,
   ListEscalationPoliciesResponses,
-  ListEvents1Data,
-  ListEvents1Errors,
-  ListEvents1Responses,
+  ListEvaluationsData,
+  ListEvaluationsErrors,
+  ListEvaluationsResponses,
+  ListEventsActivityEventsData,
+  ListEventsActivityEventsErrors,
+  ListEventsActivityEventsResponses,
   ListEventsData,
   ListEventsErrors,
   ListEventsResponses,
@@ -2087,9 +2064,9 @@ import type {
   ListFlaggedDetailsData,
   ListFlaggedDetailsErrors,
   ListFlaggedDetailsResponses,
-  ListGradeBands1Data,
-  ListGradeBands1Errors,
-  ListGradeBands1Responses,
+  ListGradeBands2Data,
+  ListGradeBands2Errors,
+  ListGradeBands2Responses,
   ListGradeBandsData,
   ListGradeBandsErrors,
   ListGradeBandsResponses,
@@ -2099,21 +2076,36 @@ import type {
   ListGroupedData,
   ListGroupedErrors,
   ListGroupedResponses,
+  ListGroupsData,
+  ListGroupsErrors,
+  ListGroupsResponses,
+  ListHolidayCalendarsData,
+  ListHolidayCalendarsErrors,
+  ListHolidayCalendarsResponses,
+  ListIndicatorResultsData,
+  ListIndicatorResultsErrors,
+  ListIndicatorResultsResponses,
   ListIndicatorsData,
   ListIndicatorsErrors,
   ListIndicatorsResponses,
   ListInspectorsData,
   ListInspectorsErrors,
   ListInspectorsResponses,
-  ListInstances1Data,
-  ListInstances1Errors,
-  ListInstances1Responses,
+  ListInstances2Data,
+  ListInstances2Errors,
+  ListInstances2Responses,
   ListInstancesData,
   ListInstancesErrors,
   ListInstancesResponses,
   ListInventoriesData,
   ListInventoriesErrors,
   ListInventoriesResponses,
+  ListIssueCategoriesData,
+  ListIssueCategoriesErrors,
+  ListIssueCategoriesResponses,
+  ListItemOverridesData,
+  ListItemOverridesErrors,
+  ListItemOverridesResponses,
   ListItemsData,
   ListItemsErrors,
   ListItemsResponses,
@@ -2141,48 +2133,72 @@ import type {
   ListMyTasksData,
   ListMyTasksErrors,
   ListMyTasksResponses,
+  ListMyTodosData,
+  ListMyTodosErrors,
+  ListMyTodosResponses,
+  ListObservationsData,
+  ListObservationsErrors,
+  ListObservationsResponses,
+  ListOfferingsData,
+  ListOfferingsErrors,
+  ListOfferingsResponses,
   ListOptionsData,
   ListOptionsErrors,
   ListOptionsResponses,
   ListOverdueCasesData,
   ListOverdueCasesErrors,
   ListOverdueCasesResponses,
-  ListPending1Data,
-  ListPending1Errors,
-  ListPending1Responses,
+  ListPendingApprovalsData,
+  ListPendingApprovalsErrors,
+  ListPendingApprovalsResponses,
   ListPendingData,
   ListPendingErrors,
   ListPendingResponses,
+  ListPeriodConfigsData,
+  ListPeriodConfigsErrors,
+  ListPeriodConfigsResponses,
   ListPermissionsData,
   ListPermissionsErrors,
   ListPermissionsResponses,
   ListPlanCoursesData,
   ListPlanCoursesErrors,
   ListPlanCoursesResponses,
-  ListPlans1Data,
-  ListPlans1Errors,
-  ListPlans1Responses,
   ListPlans2Data,
   ListPlans2Errors,
   ListPlans2Responses,
+  ListPlansCurriculumPlansData,
+  ListPlansCurriculumPlansErrors,
+  ListPlansCurriculumPlansResponses,
   ListPlansData,
   ListPlansErrors,
   ListPlansResponses,
-  ListPolicies1Data,
-  ListPolicies1Errors,
-  ListPolicies1Responses,
   ListPoliciesData,
   ListPoliciesErrors,
   ListPoliciesResponses,
+  ListPoliciesScoringPoliciesData,
+  ListPoliciesScoringPoliciesErrors,
+  ListPoliciesScoringPoliciesResponses,
   ListPresetsData,
   ListPresetsErrors,
   ListPresetsResponses,
-  ListProfiles1Data,
-  ListProfiles1Errors,
-  ListProfiles1Responses,
-  ListProfilesData,
-  ListProfilesErrors,
-  ListProfilesResponses,
+  ListProcessDefinitionsData,
+  ListProcessDefinitionsErrors,
+  ListProcessDefinitionsResponses,
+  ListProcessInstancesData,
+  ListProcessInstancesErrors,
+  ListProcessInstancesResponses,
+  ListProfilesScoringProfilesData,
+  ListProfilesScoringProfilesErrors,
+  ListProfilesScoringProfilesResponses,
+  ListProfilesTeacherProfilesData,
+  ListProfilesTeacherProfilesErrors,
+  ListProfilesTeacherProfilesResponses,
+  ListProgressData,
+  ListProgressErrors,
+  ListProgressResponses,
+  ListProjectItemsData,
+  ListProjectItemsErrors,
+  ListProjectItemsResponses,
   ListProjectScoresData,
   ListProjectScoresErrors,
   ListProjectScoresResponses,
@@ -2195,7 +2211,9 @@ import type {
   ListRecordsData,
   ListRecordsErrors,
   ListRecordsResponses,
-  ListResponses,
+  ListRelationTypesData,
+  ListRelationTypesErrors,
+  ListRelationTypesResponses,
   ListResponseSetsData,
   ListResponseSetsErrors,
   ListResponseSetsResponses,
@@ -2205,12 +2223,12 @@ import type {
   ListRootSectionsData,
   ListRootSectionsErrors,
   ListRootSectionsResponses,
-  ListRules1Data,
-  ListRules1Errors,
-  ListRules1Responses,
   ListRules2Data,
   ListRules2Errors,
   ListRules2Responses,
+  ListRulesCalculationRulesData,
+  ListRulesCalculationRulesErrors,
+  ListRulesCalculationRulesResponses,
   ListRulesData,
   ListRulesErrors,
   ListRulesResponses,
@@ -2232,21 +2250,36 @@ import type {
   ListSubmissionsData,
   ListSubmissionsErrors,
   ListSubmissionsResponses,
-  ListTasks1Data,
-  ListTasks1Errors,
-  ListTasks1Responses,
+  ListTasks2Data,
+  ListTasks2Errors,
+  ListTasks2Responses,
   ListTasksData,
   ListTasksErrors,
   ListTasksResponses,
+  ListTeacherPreferencesData,
+  ListTeacherPreferencesErrors,
+  ListTeacherPreferencesResponses,
+  ListTeachingClassesData,
+  ListTeachingClassesErrors,
+  ListTeachingClassesResponses,
   ListTemplatesData,
   ListTemplatesErrors,
   ListTemplatesResponses,
+  ListTenantsData,
+  ListTenantsErrors,
+  ListTenantsResponses,
+  ListTriggerPointsData,
+  ListTriggerPointsErrors,
+  ListTriggerPointsResponses,
+  ListTriggersData,
+  ListTriggersErrors,
+  ListTriggersResponses,
   ListTypesData,
   ListTypesErrors,
   ListTypesResponses,
-  ListVersions1Data,
-  ListVersions1Errors,
-  ListVersions1Responses,
+  ListVersions2Data,
+  ListVersions2Errors,
+  ListVersions2Responses,
   ListVersionsData,
   ListVersionsErrors,
   ListVersionsResponses,
@@ -2268,6 +2301,9 @@ import type {
   ManualCalculateData,
   ManualCalculateErrors,
   ManualCalculateResponses,
+  ManualEvaluateData,
+  ManualEvaluateErrors,
+  ManualEvaluateResponses,
   MarkAllAsReadData,
   MarkAllAsReadErrors,
   MarkAllAsReadResponses,
@@ -2364,21 +2400,24 @@ import type {
   PreviewTargetCountData,
   PreviewTargetCountErrors,
   PreviewTargetCountResponses,
-  PublishBatch1Data,
-  PublishBatch1Errors,
-  PublishBatch1Responses,
-  PublishBatchData,
-  PublishBatchErrors,
-  PublishBatchResponses,
-  PublishPlan1Data,
-  PublishPlan1Errors,
-  PublishPlan1Responses,
-  PublishPlanData,
-  PublishPlanErrors,
-  PublishPlanResponses,
+  PublishBatchPublish2Data,
+  PublishBatchPublish2Errors,
+  PublishBatchPublish2Responses,
+  PublishBatchPublishData,
+  PublishBatchPublishErrors,
+  PublishBatchPublishResponses,
+  PublishData,
+  PublishErrors,
+  PublishPlanPublish2Data,
+  PublishPlanPublish2Errors,
+  PublishPlanPublish2Responses,
+  PublishPlanPublishData,
+  PublishPlanPublishErrors,
+  PublishPlanPublishResponses,
   PublishProjectData,
   PublishProjectErrors,
   PublishProjectResponses,
+  PublishResponses,
   PublishResultData,
   PublishResultErrors,
   PublishResultResponses,
@@ -2430,9 +2469,9 @@ import type {
   RecalculateScoreData,
   RecalculateScoreErrors,
   RecalculateScoreResponses,
-  Recent1Data,
-  Recent1Errors,
-  Recent1Responses,
+  Recent2Data,
+  Recent2Errors,
+  Recent2Responses,
   RecentData,
   RecentErrors,
   RecentResponses,
@@ -2442,18 +2481,21 @@ import type {
   RecurrenceData,
   RecurrenceErrors,
   RecurrenceResponses,
+  RefreshCasbinData,
+  RefreshCasbinErrors,
+  RefreshCasbinResponses,
   RefreshData,
   RefreshErrors,
   RefreshResponses,
   RegisterApplicationData,
   RegisterApplicationErrors,
   RegisterApplicationResponses,
-  Reject1Data,
-  Reject1Errors,
-  Reject1Responses,
   Reject2Data,
   Reject2Errors,
   Reject2Responses,
+  Reject3Data,
+  Reject3Errors,
+  Reject3Responses,
   RejectAdjustmentData,
   RejectAdjustmentErrors,
   RejectAdjustmentResponses,
@@ -2487,12 +2529,15 @@ import type {
   RemoveInspectorData,
   RemoveInspectorErrors,
   RemoveInspectorResponses,
-  RemoveMember1Data,
-  RemoveMember1Errors,
-  RemoveMember1Responses,
-  RemoveMemberData,
-  RemoveMemberErrors,
-  RemoveMemberResponses,
+  RemoveInspectorRoleData,
+  RemoveInspectorRoleErrors,
+  RemoveInspectorRoleResponses,
+  RemoveMemberMembers2Data,
+  RemoveMemberMembers2Errors,
+  RemoveMemberMembers2Responses,
+  RemoveMemberMembersData,
+  RemoveMemberMembersErrors,
+  RemoveMemberMembersResponses,
   RemoveMembersData,
   RemoveMembersErrors,
   RemoveMembersResponses,
@@ -2525,9 +2570,9 @@ import type {
   ResetFieldData,
   ResetFieldErrors,
   ResetFieldResponses,
-  ResetPassword1Data,
-  ResetPassword1Errors,
-  ResetPassword1Responses,
+  ResetPassword2Data,
+  ResetPassword2Errors,
+  ResetPassword2Responses,
   ResetPasswordData,
   ResetPasswordErrors,
   ResetPasswordResponses,
@@ -2538,9 +2583,9 @@ import type {
   ResetScheduleData,
   ResetScheduleErrors,
   ResetScheduleResponses,
-  Resolve1Data,
-  Resolve1Errors,
-  Resolve1Responses,
+  Resolve2Data,
+  Resolve2Errors,
+  Resolve2Responses,
   ResolveAlertData,
   ResolveAlertErrors,
   ResolveAlertResponses,
@@ -2616,6 +2661,9 @@ import type {
   SetUserRolesData,
   SetUserRolesErrors,
   SetUserRolesResponses,
+  Simulate2Data,
+  Simulate2Errors,
+  Simulate2Responses,
   SimulateData,
   SimulateErrors,
   SimulateResponses,
@@ -2625,9 +2673,9 @@ import type {
   SplitOrgUnitData,
   SplitOrgUnitErrors,
   SplitOrgUnitResponses,
-  Start1Data,
-  Start1Errors,
-  Start1Responses,
+  Start2Data,
+  Start2Errors,
+  Start2Responses,
   StartData,
   StartErrors,
   StartFillingData,
@@ -2643,9 +2691,9 @@ import type {
   StartWorkData,
   StartWorkErrors,
   StartWorkResponses,
-  Statistics1Data,
-  Statistics1Errors,
-  Statistics1Responses,
+  Statistics2Data,
+  Statistics2Errors,
+  Statistics2Responses,
   StatisticsData,
   StatisticsErrors,
   StatisticsResponses,
@@ -2655,18 +2703,18 @@ import type {
   StudentWarningHistoryData,
   StudentWarningHistoryErrors,
   StudentWarningHistoryResponses,
-  Submit1Data,
-  Submit1Errors,
-  Submit1Responses,
+  SubmitAppealsData,
+  SubmitAppealsErrors,
+  SubmitAppealsResponses,
   SubmitBatchData,
   SubmitBatchErrors,
   SubmitBatchResponses,
   SubmitCorrectionData,
   SubmitCorrectionErrors,
   SubmitCorrectionResponses,
-  SubmitData,
-  SubmitErrors,
-  SubmitResponses,
+  SubmitResponsesData,
+  SubmitResponsesErrors,
+  SubmitResponsesResponses,
   SubmitTaskData,
   SubmitTaskErrors,
   SubmitTaskResponses,
@@ -2742,9 +2790,9 @@ import type {
   TriggerPointsData,
   TriggerPointsErrors,
   TriggerPointsResponses,
-  UnbindWechat1Data,
-  UnbindWechat1Errors,
-  UnbindWechat1Responses,
+  UnbindWechat2Data,
+  UnbindWechat2Errors,
+  UnbindWechat2Responses,
   UnbindWechatData,
   UnbindWechatErrors,
   UnbindWechatResponses,
@@ -2763,69 +2811,12 @@ import type {
   UnlockSubmissionData,
   UnlockSubmissionErrors,
   UnlockSubmissionResponses,
-  Update10Data,
-  Update10Errors,
-  Update10Responses,
-  Update11Data,
-  Update11Errors,
-  Update11Responses,
-  Update12Data,
-  Update12Errors,
-  Update12Responses,
-  Update13Data,
-  Update13Errors,
-  Update13Responses,
-  Update14Data,
-  Update14Errors,
-  Update14Responses,
-  Update15Data,
-  Update15Errors,
-  Update15Responses,
-  Update16Data,
-  Update16Errors,
-  Update16Responses,
-  Update17Data,
-  Update17Errors,
-  Update17Responses,
-  Update18Data,
-  Update18Errors,
-  Update18Responses,
-  Update1Data,
-  Update1Errors,
-  Update1Responses,
-  Update2Data,
-  Update2Errors,
-  Update2Responses,
-  Update3Data,
-  Update3Errors,
-  Update3Responses,
-  Update4Data,
-  Update4Errors,
-  Update4Responses,
-  Update5Data,
-  Update5Errors,
-  Update5Responses,
-  Update6Data,
-  Update6Errors,
-  Update6Responses,
-  Update7Data,
-  Update7Errors,
-  Update7Responses,
-  Update8Data,
-  Update8Errors,
-  Update8Responses,
-  Update9Data,
-  Update9Errors,
-  Update9Responses,
   UpdateAcademicYearData,
   UpdateAcademicYearErrors,
   UpdateAcademicYearResponses,
-  UpdateAdvancedScoringData,
-  UpdateAdvancedScoringErrors,
-  UpdateAdvancedScoringResponses,
-  UpdateAdvancedSettingsData,
-  UpdateAdvancedSettingsErrors,
-  UpdateAdvancedSettingsResponses,
+  UpdateAccessRelationsData,
+  UpdateAccessRelationsErrors,
+  UpdateAccessRelationsResponses,
   UpdateAlertRuleData,
   UpdateAlertRuleErrors,
   UpdateAlertRuleResponses,
@@ -2838,12 +2829,12 @@ import type {
   UpdateAssetData,
   UpdateAssetErrors,
   UpdateAssetResponses,
-  UpdateBatch1Data,
-  UpdateBatch1Errors,
-  UpdateBatch1Responses,
-  UpdateBatchData,
-  UpdateBatchErrors,
-  UpdateBatchResponses,
+  UpdateBatchBatches2Data,
+  UpdateBatchBatches2Errors,
+  UpdateBatchBatches2Responses,
+  UpdateBatchBatchesData,
+  UpdateBatchBatchesErrors,
+  UpdateBatchBatchesResponses,
   UpdateCalcRuleData,
   UpdateCalcRuleErrors,
   UpdateCalcRuleResponses,
@@ -2859,19 +2850,24 @@ import type {
   UpdateCohortData,
   UpdateCohortErrors,
   UpdateCohortResponses,
-  UpdateConfig1Data,
-  UpdateConfig1Errors,
-  UpdateConfig1Responses,
-  UpdateConfigData,
-  UpdateConfigErrors,
-  UpdateConfigResponses,
+  UpdateConfigConfigs2Data,
+  UpdateConfigConfigs2Errors,
+  UpdateConfigConfigs2Responses,
+  UpdateConfigConfigsData,
+  UpdateConfigConfigsErrors,
+  UpdateConfigConfigsResponses,
+  UpdateConstraintsData,
+  UpdateConstraintsErrors,
+  UpdateConstraintsResponses,
   UpdateCourseData,
   UpdateCourseErrors,
   UpdateCourseResponses,
   UpdateCourseStatusData,
   UpdateCourseStatusErrors,
   UpdateCourseStatusResponses,
-  UpdateData,
+  UpdateDataModulesData,
+  UpdateDataModulesErrors,
+  UpdateDataModulesResponses,
   UpdateDetailRemarkData,
   UpdateDetailRemarkErrors,
   UpdateDetailRemarkResponses,
@@ -2884,25 +2880,39 @@ import type {
   UpdateDirectionData,
   UpdateDirectionErrors,
   UpdateDirectionResponses,
-  UpdateErrors,
+  UpdateEntityEventTypesData,
+  UpdateEntityEventTypesErrors,
+  UpdateEntityEventTypesResponses,
+  UpdateEntityTypeConfigsData,
+  UpdateEntityTypeConfigsErrors,
+  UpdateEntityTypeConfigsResponses,
   UpdateEscalationPolicyData,
   UpdateEscalationPolicyErrors,
   UpdateEscalationPolicyResponses,
+  UpdateEvaluationsData,
+  UpdateEvaluationsErrors,
+  UpdateEvaluationsResponses,
   UpdateEventData,
   UpdateEventErrors,
   UpdateEventResponses,
-  UpdateGradeBand1Data,
-  UpdateGradeBand1Errors,
-  UpdateGradeBand1Responses,
-  UpdateGradeBandData,
-  UpdateGradeBandErrors,
-  UpdateGradeBandResponses,
+  UpdateGradeBandGradeBands2Data,
+  UpdateGradeBandGradeBands2Errors,
+  UpdateGradeBandGradeBands2Responses,
+  UpdateGradeBandGradeBandsData,
+  UpdateGradeBandGradeBandsErrors,
+  UpdateGradeBandGradeBandsResponses,
   UpdateGradeData,
   UpdateGradeErrors,
   UpdateGradeMajorDirectionData,
   UpdateGradeMajorDirectionErrors,
   UpdateGradeMajorDirectionResponses,
   UpdateGradeResponses,
+  UpdateGroupsData,
+  UpdateGroupsErrors,
+  UpdateGroupsResponses,
+  UpdateHolidayCalendarsData,
+  UpdateHolidayCalendarsErrors,
+  UpdateHolidayCalendarsResponses,
   UpdateIndicatorData,
   UpdateIndicatorErrors,
   UpdateIndicatorResponses,
@@ -2912,6 +2922,9 @@ import type {
   UpdateInventoryDetailData,
   UpdateInventoryDetailErrors,
   UpdateInventoryDetailResponses,
+  UpdateIssueCategoriesData,
+  UpdateIssueCategoriesErrors,
+  UpdateIssueCategoriesResponses,
   UpdateItemData,
   UpdateItemErrors,
   UpdateItemOverrideData,
@@ -2924,6 +2937,9 @@ import type {
   UpdateMajorData,
   UpdateMajorErrors,
   UpdateMajorResponses,
+  UpdateOfferingsData,
+  UpdateOfferingsErrors,
+  UpdateOfferingsResponses,
   UpdateOperationalConfigData,
   UpdateOperationalConfigErrors,
   UpdateOperationalConfigResponses,
@@ -2936,52 +2952,60 @@ import type {
   UpdateOrgUnitData,
   UpdateOrgUnitErrors,
   UpdateOrgUnitResponses,
+  UpdatePeriodConfigsData,
+  UpdatePeriodConfigsErrors,
+  UpdatePeriodConfigsResponses,
   UpdatePermissionData,
   UpdatePermissionErrors,
   UpdatePermissionResponses,
   UpdatePlaceData,
   UpdatePlaceErrors,
   UpdatePlaceResponses,
-  UpdatePlan1Data,
-  UpdatePlan1Errors,
-  UpdatePlan1Responses,
-  UpdatePlan2Data,
-  UpdatePlan2Errors,
-  UpdatePlan2Responses,
   UpdatePlanCourseData,
   UpdatePlanCourseErrors,
   UpdatePlanCourseResponses,
-  UpdatePlanData,
-  UpdatePlanErrors,
-  UpdatePlanResponses,
-  UpdatePolicy1Data,
-  UpdatePolicy1Errors,
-  UpdatePolicy1Responses,
-  UpdatePolicy2Data,
-  UpdatePolicy2Errors,
-  UpdatePolicy2Responses,
+  UpdatePlanCurriculumPlansData,
+  UpdatePlanCurriculumPlansErrors,
+  UpdatePlanCurriculumPlansResponses,
+  UpdatePlanPlans2Data,
+  UpdatePlanPlans2Errors,
+  UpdatePlanPlans2Responses,
+  UpdatePlanPlansData,
+  UpdatePlanPlansErrors,
+  UpdatePlanPlansResponses,
   UpdatePolicyConfigData,
   UpdatePolicyConfigErrors,
   UpdatePolicyConfigResponses,
   UpdatePolicyData,
   UpdatePolicyErrors,
+  UpdatePolicyPoliciesData,
+  UpdatePolicyPoliciesErrors,
+  UpdatePolicyPoliciesResponses,
   UpdatePolicyResponses,
+  UpdatePolicyScoringPoliciesData,
+  UpdatePolicyScoringPoliciesErrors,
+  UpdatePolicyScoringPoliciesResponses,
   UpdatePresetData,
   UpdatePresetErrors,
   UpdatePresetResponses,
-  UpdateProfile1Data,
-  UpdateProfile1Errors,
-  UpdateProfile1Responses,
-  UpdateProfileData,
-  UpdateProfileErrors,
-  UpdateProfileResponses,
+  UpdateProfileScoringProfilesData,
+  UpdateProfileScoringProfilesErrors,
+  UpdateProfileScoringProfilesResponses,
+  UpdateProfileTeacherProfilesData,
+  UpdateProfileTeacherProfilesErrors,
+  UpdateProfileTeacherProfilesResponses,
+  UpdateProgressData,
+  UpdateProgressErrors,
+  UpdateProgressResponses,
   UpdateProjectData,
   UpdateProjectErrors,
   UpdateProjectResponses,
+  UpdateRatingLinksData,
+  UpdateRatingLinksErrors,
+  UpdateRatingLinksResponses,
   UpdateRecordData,
   UpdateRecordErrors,
   UpdateRecordResponses,
-  UpdateResponses,
   UpdateResponseSetData,
   UpdateResponseSetErrors,
   UpdateResponseSetResponses,
@@ -2991,15 +3015,15 @@ import type {
   UpdateRootSectionData,
   UpdateRootSectionErrors,
   UpdateRootSectionResponses,
-  UpdateRule1Data,
-  UpdateRule1Errors,
-  UpdateRule1Responses,
-  UpdateRule2Data,
-  UpdateRule2Errors,
-  UpdateRule2Responses,
-  UpdateRuleData,
-  UpdateRuleErrors,
-  UpdateRuleResponses,
+  UpdateRuleCalculationRulesData,
+  UpdateRuleCalculationRulesErrors,
+  UpdateRuleCalculationRulesResponses,
+  UpdateRuleRules2Data,
+  UpdateRuleRules2Errors,
+  UpdateRuleRules2Responses,
+  UpdateRuleRulesData,
+  UpdateRuleRulesErrors,
+  UpdateRuleRulesResponses,
   UpdateScheduleData,
   UpdateScheduleErrors,
   UpdateSchedulePlanData,
@@ -3018,9 +3042,9 @@ import type {
   UpdateSemesterData,
   UpdateSemesterErrors,
   UpdateSemesterResponses,
-  UpdateStatus1Data,
-  UpdateStatus1Errors,
-  UpdateStatus1Responses,
+  UpdateStatus2Data,
+  UpdateStatus2Errors,
+  UpdateStatus2Responses,
   UpdateStatusData,
   UpdateStatusErrors,
   UpdateStatusResponses,
@@ -3036,18 +3060,36 @@ import type {
   UpdateTaskStatusData,
   UpdateTaskStatusErrors,
   UpdateTaskStatusResponses,
+  UpdateTeacherPreferencesData,
+  UpdateTeacherPreferencesErrors,
+  UpdateTeacherPreferencesResponses,
+  UpdateTeachingClassesData,
+  UpdateTeachingClassesErrors,
+  UpdateTeachingClassesResponses,
   UpdateTemplateData,
   UpdateTemplateErrors,
   UpdateTemplateResponses,
-  UpdateUser1Data,
-  UpdateUser1Errors,
-  UpdateUser1Responses,
-  UpdateUserData,
-  UpdateUserErrors,
-  UpdateUserResponses,
+  UpdateTenantsData,
+  UpdateTenantsErrors,
+  UpdateTenantsResponses,
+  UpdateTriggerPointsData,
+  UpdateTriggerPointsErrors,
+  UpdateTriggerPointsResponses,
+  UpdateTriggersData,
+  UpdateTriggersErrors,
+  UpdateTriggersResponses,
+  UpdateTypesData,
+  UpdateTypesErrors,
+  UpdateTypesResponses,
   UpdateUserStatusData,
   UpdateUserStatusErrors,
   UpdateUserStatusResponses,
+  UpdateUserUsers2Data,
+  UpdateUserUsers2Errors,
+  UpdateUserUsers2Responses,
+  UpdateUserUsersData,
+  UpdateUserUsersErrors,
+  UpdateUserUsersResponses,
   UpdateViolationRecordData,
   UpdateViolationRecordErrors,
   UpdateViolationRecordResponses,
@@ -3060,8 +3102,14 @@ import type {
   UploadData,
   UploadErrors,
   UploadResponses,
+  UpsertByModeData,
+  UpsertByModeErrors,
+  UpsertByModeResponses,
   UpsertData,
   UpsertErrors,
+  UpsertItemOverrideData,
+  UpsertItemOverrideErrors,
+  UpsertItemOverrideResponses,
   UpsertResponses,
   VerifyCaseData,
   VerifyCaseErrors,
@@ -3144,10 +3192,10 @@ export const listRules2 = <ThrowOnError extends boolean = false>(
 /**
  * 创建预警规则
  */
-export const createRule2 = <ThrowOnError extends boolean = false>(
-  options: Options<CreateRule2Data, ThrowOnError>
+export const createRuleRules2 = <ThrowOnError extends boolean = false>(
+  options: Options<CreateRuleRules2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<CreateRule2Responses, CreateRule2Errors, ThrowOnError>({
+  (options.client ?? client).post<CreateRuleRules2Responses, CreateRuleRules2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/academic-warnings/rules',
@@ -3161,10 +3209,14 @@ export const createRule2 = <ThrowOnError extends boolean = false>(
 /**
  * 删除预警规则
  */
-export const deleteRule2 = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteRule2Data, ThrowOnError>
+export const deleteRuleRules2 = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteRuleRules2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<DeleteRule2Responses, DeleteRule2Errors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeleteRuleRules2Responses,
+    DeleteRuleRules2Errors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/academic-warnings/rules/{id}',
@@ -3174,10 +3226,10 @@ export const deleteRule2 = <ThrowOnError extends boolean = false>(
 /**
  * 更新预警规则
  */
-export const updateRule2 = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateRule2Data, ThrowOnError>
+export const updateRuleRules2 = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateRuleRules2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).put<UpdateRule2Responses, UpdateRule2Errors, ThrowOnError>({
+  (options.client ?? client).put<UpdateRuleRules2Responses, UpdateRuleRules2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/academic-warnings/rules/{id}',
@@ -3230,10 +3282,10 @@ export const previewScan = <ThrowOnError extends boolean = false>(
 /**
  * 预警统计
  */
-export const statistics1 = <ThrowOnError extends boolean = false>(
-  options?: Options<Statistics1Data, ThrowOnError>
+export const statistics2 = <ThrowOnError extends boolean = false>(
+  options?: Options<Statistics2Data, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<Statistics1Responses, Statistics1Errors, ThrowOnError>({
+  (options?.client ?? client).get<Statistics2Responses, Statistics2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/academic-warnings/statistics',
@@ -3415,10 +3467,14 @@ export const updateCourseStatus = <ThrowOnError extends boolean = false>(
 /**
  * Get plan list (paginated)
  */
-export const listPlans2 = <ThrowOnError extends boolean = false>(
-  options?: Options<ListPlans2Data, ThrowOnError>
+export const listPlansCurriculumPlans = <ThrowOnError extends boolean = false>(
+  options?: Options<ListPlansCurriculumPlansData, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<ListPlans2Responses, ListPlans2Errors, ThrowOnError>({
+  (options?.client ?? client).get<
+    ListPlansCurriculumPlansResponses,
+    ListPlansCurriculumPlansErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/academic/curriculum-plans',
@@ -3428,10 +3484,14 @@ export const listPlans2 = <ThrowOnError extends boolean = false>(
 /**
  * Create plan
  */
-export const createPlan2 = <ThrowOnError extends boolean = false>(
-  options: Options<CreatePlan2Data, ThrowOnError>
+export const createPlanCurriculumPlans = <ThrowOnError extends boolean = false>(
+  options: Options<CreatePlanCurriculumPlansData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<CreatePlan2Responses, CreatePlan2Errors, ThrowOnError>({
+  (options.client ?? client).post<
+    CreatePlanCurriculumPlansResponses,
+    CreatePlanCurriculumPlansErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/academic/curriculum-plans',
@@ -3445,10 +3505,14 @@ export const createPlan2 = <ThrowOnError extends boolean = false>(
 /**
  * Delete plan
  */
-export const deletePlan2 = <ThrowOnError extends boolean = false>(
-  options: Options<DeletePlan2Data, ThrowOnError>
+export const deletePlanCurriculumPlans = <ThrowOnError extends boolean = false>(
+  options: Options<DeletePlanCurriculumPlansData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<DeletePlan2Responses, DeletePlan2Errors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeletePlanCurriculumPlansResponses,
+    DeletePlanCurriculumPlansErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/academic/curriculum-plans/{id}',
@@ -3458,10 +3522,14 @@ export const deletePlan2 = <ThrowOnError extends boolean = false>(
 /**
  * Get plan by ID
  */
-export const getPlan1 = <ThrowOnError extends boolean = false>(
-  options: Options<GetPlan1Data, ThrowOnError>
+export const getPlanCurriculumPlans = <ThrowOnError extends boolean = false>(
+  options: Options<GetPlanCurriculumPlansData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetPlan1Responses, GetPlan1Errors, ThrowOnError>({
+  (options.client ?? client).get<
+    GetPlanCurriculumPlansResponses,
+    GetPlanCurriculumPlansErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/academic/curriculum-plans/{id}',
@@ -3471,10 +3539,14 @@ export const getPlan1 = <ThrowOnError extends boolean = false>(
 /**
  * Update plan
  */
-export const updatePlan2 = <ThrowOnError extends boolean = false>(
-  options: Options<UpdatePlan2Data, ThrowOnError>
+export const updatePlanCurriculumPlans = <ThrowOnError extends boolean = false>(
+  options: Options<UpdatePlanCurriculumPlansData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<UpdatePlan2Responses, UpdatePlan2Errors, ThrowOnError>({
+  (options.client ?? client).put<
+    UpdatePlanCurriculumPlansResponses,
+    UpdatePlanCurriculumPlansErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/academic/curriculum-plans/{id}',
@@ -3514,10 +3586,14 @@ export const deprecatePlan = <ThrowOnError extends boolean = false>(
 /**
  * Publish plan
  */
-export const publishPlan1 = <ThrowOnError extends boolean = false>(
-  options: Options<PublishPlan1Data, ThrowOnError>
+export const publishPlanPublish2 = <ThrowOnError extends boolean = false>(
+  options: Options<PublishPlanPublish2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<PublishPlan1Responses, PublishPlan1Errors, ThrowOnError>({
+  (options.client ?? client).post<
+    PublishPlanPublish2Responses,
+    PublishPlanPublish2Errors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/academic/curriculum-plans/{id}/publish',
@@ -3722,10 +3798,14 @@ export const deleteGradeMajorDirection = <ThrowOnError extends boolean = false>(
 /**
  * Get by ID
  */
-export const getById11 = <ThrowOnError extends boolean = false>(
-  options: Options<GetById11Data, ThrowOnError>
+export const getByIdGradeMajorDirections = <ThrowOnError extends boolean = false>(
+  options: Options<GetByIdGradeMajorDirectionsData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetById11Responses, GetById11Errors, ThrowOnError>({
+  (options.client ?? client).get<
+    GetByIdGradeMajorDirectionsResponses,
+    GetByIdGradeMajorDirectionsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/academic/grade-major-directions/{id}',
@@ -4002,10 +4082,14 @@ export const query = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const create19 = <ThrowOnError extends boolean = false>(
-  options: Options<Create19Data, ThrowOnError>
+export const createAccessRelations = <ThrowOnError extends boolean = false>(
+  options: Options<CreateAccessRelationsData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Create19Responses, Create19Errors, ThrowOnError>({
+  (options.client ?? client).post<
+    CreateAccessRelationsResponses,
+    CreateAccessRelationsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/access-relations',
@@ -4016,20 +4100,24 @@ export const create19 = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const listPending1 = <ThrowOnError extends boolean = false>(
-  options?: Options<ListPending1Data, ThrowOnError>
+export const listPendingApprovals = <ThrowOnError extends boolean = false>(
+  options?: Options<ListPendingApprovalsData, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<ListPending1Responses, ListPending1Errors, ThrowOnError>({
+  (options?.client ?? client).get<
+    ListPendingApprovalsResponses,
+    ListPendingApprovalsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/access-relations/approvals',
     ...options
   })
 
-export const approve2 = <ThrowOnError extends boolean = false>(
-  options: Options<Approve2Data, ThrowOnError>
+export const approve3 = <ThrowOnError extends boolean = false>(
+  options: Options<Approve3Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Approve2Responses, Approve2Errors, ThrowOnError>({
+  (options.client ?? client).post<Approve3Responses, Approve3Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/access-relations/approvals/{id}/approve',
@@ -4040,24 +4128,20 @@ export const approve2 = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const cancel2 = <ThrowOnError extends boolean = false>(
-  options: Options<Cancel2Data, ThrowOnError>
+export const cancel3 = <ThrowOnError extends boolean = false>(
+  options: Options<Cancel3Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Cancel2Responses, Cancel2Errors, ThrowOnError>({
+  (options.client ?? client).post<Cancel3Responses, Cancel3Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/access-relations/approvals/{id}/cancel',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
-    }
+    ...options
   })
 
-export const reject2 = <ThrowOnError extends boolean = false>(
-  options: Options<Reject2Data, ThrowOnError>
+export const reject3 = <ThrowOnError extends boolean = false>(
+  options: Options<Reject3Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Reject2Responses, Reject2Errors, ThrowOnError>({
+  (options.client ?? client).post<Reject3Responses, Reject3Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/access-relations/approvals/{id}/reject',
@@ -4126,30 +4210,38 @@ export const bySubject = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const recent1 = <ThrowOnError extends boolean = false>(
-  options?: Options<Recent1Data, ThrowOnError>
+export const recent2 = <ThrowOnError extends boolean = false>(
+  options?: Options<Recent2Data, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<Recent1Responses, Recent1Errors, ThrowOnError>({
+  (options?.client ?? client).get<Recent2Responses, Recent2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/access-relations/history/recent',
     ...options
   })
 
-export const delete20 = <ThrowOnError extends boolean = false>(
-  options: Options<Delete20Data, ThrowOnError>
+export const deleteAccessRelations = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteAccessRelationsData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<Delete20Responses, Delete20Errors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeleteAccessRelationsResponses,
+    DeleteAccessRelationsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/access-relations/{id}',
     ...options
   })
 
-export const update18 = <ThrowOnError extends boolean = false>(
-  options: Options<Update18Data, ThrowOnError>
+export const updateAccessRelations = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateAccessRelationsData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<Update18Responses, Update18Errors, ThrowOnError>({
+  (options.client ?? client).put<
+    UpdateAccessRelationsResponses,
+    UpdateAccessRelationsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/access-relations/{id}',
@@ -4160,10 +4252,10 @@ export const update18 = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const simulate = <ThrowOnError extends boolean = false>(
-  options: Options<SimulateData, ThrowOnError>
+export const simulate2 = <ThrowOnError extends boolean = false>(
+  options: Options<Simulate2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<SimulateResponses, SimulateErrors, ThrowOnError>({
+  (options.client ?? client).post<Simulate2Responses, Simulate2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/access/data-permissions/simulate',
@@ -4174,10 +4266,14 @@ export const simulate = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const listEvents1 = <ThrowOnError extends boolean = false>(
-  options: Options<ListEvents1Data, ThrowOnError>
+export const listEventsActivityEvents = <ThrowOnError extends boolean = false>(
+  options: Options<ListEventsActivityEventsData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<ListEvents1Responses, ListEvents1Errors, ThrowOnError>({
+  (options.client ?? client).get<
+    ListEventsActivityEventsResponses,
+    ListEventsActivityEventsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/activity-events',
@@ -4198,10 +4294,10 @@ export const getResourceTimeline = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const getStats1 = <ThrowOnError extends boolean = false>(
-  options?: Options<GetStats1Data, ThrowOnError>
+export const getStats2 = <ThrowOnError extends boolean = false>(
+  options?: Options<GetStats2Data, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<GetStats1Responses, GetStats1Errors, ThrowOnError>({
+  (options?.client ?? client).get<GetStats2Responses, GetStats2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/activity-events/stats',
@@ -4316,10 +4412,10 @@ export const markAllAsRead = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const getStatistics6 = <ThrowOnError extends boolean = false>(
-  options?: Options<GetStatistics6Data, ThrowOnError>
+export const getStatistics7 = <ThrowOnError extends boolean = false>(
+  options?: Options<GetStatistics7Data, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<GetStatistics6Responses, GetStatistics6Errors, ThrowOnError>({
+  (options?.client ?? client).get<GetStatistics7Responses, GetStatistics7Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/asset-alerts/statistics',
@@ -4360,10 +4456,14 @@ export const countUnread = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const getAlert1 = <ThrowOnError extends boolean = false>(
-  options: Options<GetAlert1Data, ThrowOnError>
+export const getAlertAssetAlerts = <ThrowOnError extends boolean = false>(
+  options: Options<GetAlertAssetAlertsData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetAlert1Responses, GetAlert1Errors, ThrowOnError>({
+  (options.client ?? client).get<
+    GetAlertAssetAlertsResponses,
+    GetAlertAssetAlertsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/asset-alerts/{id}',
@@ -4458,30 +4558,30 @@ export const getApproval = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const approve1 = <ThrowOnError extends boolean = false>(
-  options: Options<Approve1Data, ThrowOnError>
+export const approve2 = <ThrowOnError extends boolean = false>(
+  options: Options<Approve2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Approve1Responses, Approve1Errors, ThrowOnError>({
+  (options.client ?? client).post<Approve2Responses, Approve2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/asset-approvals/{id}/approve',
     ...options
   })
 
-export const cancel1 = <ThrowOnError extends boolean = false>(
-  options: Options<Cancel1Data, ThrowOnError>
+export const cancel2 = <ThrowOnError extends boolean = false>(
+  options: Options<Cancel2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Cancel1Responses, Cancel1Errors, ThrowOnError>({
+  (options.client ?? client).post<Cancel2Responses, Cancel2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/asset-approvals/{id}/cancel',
     ...options
   })
 
-export const reject1 = <ThrowOnError extends boolean = false>(
-  options: Options<Reject1Data, ThrowOnError>
+export const reject2 = <ThrowOnError extends boolean = false>(
+  options: Options<Reject2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Reject1Responses, Reject1Errors, ThrowOnError>({
+  (options.client ?? client).post<Reject2Responses, Reject2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/asset-approvals/{id}/reject',
@@ -4550,10 +4650,10 @@ export const getOverdueBorrows = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const getStatistics5 = <ThrowOnError extends boolean = false>(
-  options?: Options<GetStatistics5Data, ThrowOnError>
+export const getStatistics6 = <ThrowOnError extends boolean = false>(
+  options?: Options<GetStatistics6Data, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<GetStatistics5Responses, GetStatistics5Errors, ThrowOnError>({
+  (options?.client ?? client).get<GetStatistics6Responses, GetStatistics6Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/asset-borrows/statistics',
@@ -4700,17 +4800,19 @@ export const getMethods = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const getPeriodSummary1 = <ThrowOnError extends boolean = false>(
-  options: Options<GetPeriodSummary1Data, ThrowOnError>
+export const getPeriodSummaryPeriod = <ThrowOnError extends boolean = false>(
+  options: Options<GetPeriodSummaryPeriodData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetPeriodSummary1Responses, GetPeriodSummary1Errors, ThrowOnError>(
-    {
-      responseType: 'json',
-      security: [{ scheme: 'bearer', type: 'http' }],
-      url: '/asset-depreciation/period/{period}',
-      ...options
-    }
-  )
+  (options.client ?? client).get<
+    GetPeriodSummaryPeriodResponses,
+    GetPeriodSummaryPeriodErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/asset-depreciation/period/{period}',
+    ...options
+  })
 
 export const triggerDepreciation = <ThrowOnError extends boolean = false>(
   options: Options<TriggerDepreciationData, ThrowOnError>
@@ -4798,10 +4900,10 @@ export const createInventory = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const getStatistics4 = <ThrowOnError extends boolean = false>(
-  options?: Options<GetStatistics4Data, ThrowOnError>
+export const getStatistics5 = <ThrowOnError extends boolean = false>(
+  options?: Options<GetStatistics5Data, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<GetStatistics4Responses, GetStatistics4Errors, ThrowOnError>({
+  (options?.client ?? client).get<GetStatistics5Responses, GetStatistics5Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/asset-inventories/statistics',
@@ -4870,10 +4972,14 @@ export const getAllCategories = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const createCategory1 = <ThrowOnError extends boolean = false>(
-  options: Options<CreateCategory1Data, ThrowOnError>
+export const createCategoryCategories2 = <ThrowOnError extends boolean = false>(
+  options: Options<CreateCategoryCategories2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<CreateCategory1Responses, CreateCategory1Errors, ThrowOnError>({
+  (options.client ?? client).post<
+    CreateCategoryCategories2Responses,
+    CreateCategoryCategories2Errors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/asset/categories',
@@ -5309,10 +5415,10 @@ export const updateRecord = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const getStatistics3 = <ThrowOnError extends boolean = false>(
-  options: Options<GetStatistics3Data, ThrowOnError>
+export const getStatistics4 = <ThrowOnError extends boolean = false>(
+  options: Options<GetStatistics4Data, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetStatistics3Responses, GetStatistics3Errors, ThrowOnError>({
+  (options.client ?? client).get<GetStatistics4Responses, GetStatistics4Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/attendance/statistics',
@@ -5333,10 +5439,10 @@ export const getStudentStatistics = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const list21 = <ThrowOnError extends boolean = false>(
-  options?: Options<List21Data, ThrowOnError>
+export const listAuditTrail = <ThrowOnError extends boolean = false>(
+  options?: Options<ListAuditTrailData, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<List21Responses, List21Errors, ThrowOnError>({
+  (options?.client ?? client).get<ListAuditTrailResponses, ListAuditTrailErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/audit-trail',
@@ -5577,20 +5683,26 @@ export const updateEvent = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const list20 = <ThrowOnError extends boolean = false>(
-  options: Options<List20Data, ThrowOnError>
+export const listPeriodConfigs = <ThrowOnError extends boolean = false>(
+  options: Options<ListPeriodConfigsData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<List20Responses, List20Errors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/calendar/period-configs',
-    ...options
-  })
+  (options.client ?? client).get<ListPeriodConfigsResponses, ListPeriodConfigsErrors, ThrowOnError>(
+    {
+      responseType: 'json',
+      security: [{ scheme: 'bearer', type: 'http' }],
+      url: '/calendar/period-configs',
+      ...options
+    }
+  )
 
-export const create18 = <ThrowOnError extends boolean = false>(
-  options: Options<Create18Data, ThrowOnError>
+export const createPeriodConfigs = <ThrowOnError extends boolean = false>(
+  options: Options<CreatePeriodConfigsData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Create18Responses, Create18Errors, ThrowOnError>({
+  (options.client ?? client).post<
+    CreatePeriodConfigsResponses,
+    CreatePeriodConfigsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/calendar/period-configs',
@@ -5615,30 +5727,42 @@ export const initFromPrevious = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const delete19 = <ThrowOnError extends boolean = false>(
-  options: Options<Delete19Data, ThrowOnError>
+export const deletePeriodConfigs = <ThrowOnError extends boolean = false>(
+  options: Options<DeletePeriodConfigsData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<Delete19Responses, Delete19Errors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeletePeriodConfigsResponses,
+    DeletePeriodConfigsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/calendar/period-configs/{id}',
     ...options
   })
 
-export const getById10 = <ThrowOnError extends boolean = false>(
-  options: Options<GetById10Data, ThrowOnError>
+export const getByIdPeriodConfigs = <ThrowOnError extends boolean = false>(
+  options: Options<GetByIdPeriodConfigsData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetById10Responses, GetById10Errors, ThrowOnError>({
+  (options.client ?? client).get<
+    GetByIdPeriodConfigsResponses,
+    GetByIdPeriodConfigsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/calendar/period-configs/{id}',
     ...options
   })
 
-export const update17 = <ThrowOnError extends boolean = false>(
-  options: Options<Update17Data, ThrowOnError>
+export const updatePeriodConfigs = <ThrowOnError extends boolean = false>(
+  options: Options<UpdatePeriodConfigsData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<Update17Responses, Update17Errors, ThrowOnError>({
+  (options.client ?? client).put<
+    UpdatePeriodConfigsResponses,
+    UpdatePeriodConfigsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/calendar/period-configs/{id}',
@@ -5833,10 +5957,10 @@ export const getOverview = <ThrowOnError extends boolean = false>(
 /**
  * Get dashboard statistics (legacy)
  */
-export const getStatistics2 = <ThrowOnError extends boolean = false>(
-  options?: Options<GetStatistics2Data, ThrowOnError>
+export const getStatistics3 = <ThrowOnError extends boolean = false>(
+  options?: Options<GetStatistics3Data, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<GetStatistics2Responses, GetStatistics2Errors, ThrowOnError>({
+  (options?.client ?? client).get<GetStatistics3Responses, GetStatistics3Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/dashboard/statistics',
@@ -5853,10 +5977,14 @@ export const listModules = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const create17 = <ThrowOnError extends boolean = false>(
-  options: Options<Create17Data, ThrowOnError>
+export const createDataModules = <ThrowOnError extends boolean = false>(
+  options: Options<CreateDataModulesData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Create17Responses, Create17Errors, ThrowOnError>({
+  (options.client ?? client).post<
+    CreateDataModulesResponses,
+    CreateDataModulesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/data-modules',
@@ -5895,37 +6023,43 @@ export const listModulesGrouped = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const delete18 = <ThrowOnError extends boolean = false>(
-  options: Options<Delete18Data, ThrowOnError>
+export const deleteDataModules = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteDataModulesData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<Delete18Responses, Delete18Errors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeleteDataModulesResponses,
+    DeleteDataModulesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/data-modules/{id}',
     ...options
   })
 
-export const update16 = <ThrowOnError extends boolean = false>(
-  options: Options<Update16Data, ThrowOnError>
+export const updateDataModules = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateDataModulesData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<Update16Responses, Update16Errors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/data-modules/{id}',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
+  (options.client ?? client).put<UpdateDataModulesResponses, UpdateDataModulesErrors, ThrowOnError>(
+    {
+      responseType: 'json',
+      security: [{ scheme: 'bearer', type: 'http' }],
+      url: '/data-modules/{id}',
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      }
     }
-  })
+  )
 
 /**
  * 获取所有用户
  */
-export const getAllUsers1 = <ThrowOnError extends boolean = false>(
-  options?: Options<GetAllUsers1Data, ThrowOnError>
+export const getAllUsers2 = <ThrowOnError extends boolean = false>(
+  options?: Options<GetAllUsers2Data, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<GetAllUsers1Responses, GetAllUsers1Errors, ThrowOnError>({
+  (options?.client ?? client).get<GetAllUsers2Responses, GetAllUsers2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/domain/users',
@@ -5935,10 +6069,10 @@ export const getAllUsers1 = <ThrowOnError extends boolean = false>(
 /**
  * 创建用户
  */
-export const createUser1 = <ThrowOnError extends boolean = false>(
-  options: Options<CreateUser1Data, ThrowOnError>
+export const createUserUsers2 = <ThrowOnError extends boolean = false>(
+  options: Options<CreateUserUsers2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<CreateUser1Responses, CreateUser1Errors, ThrowOnError>({
+  (options.client ?? client).post<CreateUserUsers2Responses, CreateUserUsers2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/domain/users',
@@ -5952,10 +6086,14 @@ export const createUser1 = <ThrowOnError extends boolean = false>(
 /**
  * 批量删除用户
  */
-export const deleteUsers1 = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteUsers1Data, ThrowOnError>
+export const deleteUsersBatch2 = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteUsersBatch2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<DeleteUsers1Responses, DeleteUsers1Errors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeleteUsersBatch2Responses,
+    DeleteUsersBatch2Errors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/domain/users/batch',
@@ -5969,12 +6107,12 @@ export const deleteUsers1 = <ThrowOnError extends boolean = false>(
 /**
  * 根据组织单元获取用户列表
  */
-export const getUsersByOrgUnit1 = <ThrowOnError extends boolean = false>(
-  options: Options<GetUsersByOrgUnit1Data, ThrowOnError>
+export const getUsersByOrgUnit2 = <ThrowOnError extends boolean = false>(
+  options: Options<GetUsersByOrgUnit2Data, ThrowOnError>
 ) =>
   (options.client ?? client).get<
-    GetUsersByOrgUnit1Responses,
-    GetUsersByOrgUnit1Errors,
+    GetUsersByOrgUnit2Responses,
+    GetUsersByOrgUnit2Errors,
     ThrowOnError
   >({
     responseType: 'json',
@@ -5986,12 +6124,12 @@ export const getUsersByOrgUnit1 = <ThrowOnError extends boolean = false>(
 /**
  * 根据用户名获取用户
  */
-export const getUserByUsername1 = <ThrowOnError extends boolean = false>(
-  options: Options<GetUserByUsername1Data, ThrowOnError>
+export const getUserByUsername2 = <ThrowOnError extends boolean = false>(
+  options: Options<GetUserByUsername2Data, ThrowOnError>
 ) =>
   (options.client ?? client).get<
-    GetUserByUsername1Responses,
-    GetUserByUsername1Errors,
+    GetUserByUsername2Responses,
+    GetUserByUsername2Errors,
     ThrowOnError
   >({
     responseType: 'json',
@@ -6003,10 +6141,14 @@ export const getUserByUsername1 = <ThrowOnError extends boolean = false>(
 /**
  * 检查用户名是否存在
  */
-export const existsUsername1 = <ThrowOnError extends boolean = false>(
-  options: Options<ExistsUsername1Data, ThrowOnError>
+export const existsUsernameExists2 = <ThrowOnError extends boolean = false>(
+  options: Options<ExistsUsernameExists2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).get<ExistsUsername1Responses, ExistsUsername1Errors, ThrowOnError>({
+  (options.client ?? client).get<
+    ExistsUsernameExists2Responses,
+    ExistsUsernameExists2Errors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/domain/users/exists',
@@ -6029,12 +6171,12 @@ export const getUsersPage = <ThrowOnError extends boolean = false>(
 /**
  * 获取简单用户列表（用于选择器）
  */
-export const getSimpleUserList1 = <ThrowOnError extends boolean = false>(
-  options?: Options<GetSimpleUserList1Data, ThrowOnError>
+export const getSimpleUserListSimple2 = <ThrowOnError extends boolean = false>(
+  options?: Options<GetSimpleUserListSimple2Data, ThrowOnError>
 ) =>
   (options?.client ?? client).get<
-    GetSimpleUserList1Responses,
-    GetSimpleUserList1Errors,
+    GetSimpleUserListSimple2Responses,
+    GetSimpleUserListSimple2Errors,
     ThrowOnError
   >({
     responseType: 'json',
@@ -6046,10 +6188,14 @@ export const getSimpleUserList1 = <ThrowOnError extends boolean = false>(
 /**
  * 删除用户
  */
-export const deleteUser1 = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteUser1Data, ThrowOnError>
+export const deleteUserUsers2 = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteUserUsers2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<DeleteUser1Responses, DeleteUser1Errors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeleteUserUsers2Responses,
+    DeleteUserUsers2Errors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/domain/users/{id}',
@@ -6059,10 +6205,10 @@ export const deleteUser1 = <ThrowOnError extends boolean = false>(
 /**
  * 获取用户详情
  */
-export const getUser1 = <ThrowOnError extends boolean = false>(
-  options: Options<GetUser1Data, ThrowOnError>
+export const getUserUsers2 = <ThrowOnError extends boolean = false>(
+  options: Options<GetUserUsers2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetUser1Responses, GetUser1Errors, ThrowOnError>({
+  (options.client ?? client).get<GetUserUsers2Responses, GetUserUsers2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/domain/users/{id}',
@@ -6072,10 +6218,10 @@ export const getUser1 = <ThrowOnError extends boolean = false>(
 /**
  * 更新用户
  */
-export const updateUser1 = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateUser1Data, ThrowOnError>
+export const updateUserUsers2 = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateUserUsers2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).put<UpdateUser1Responses, UpdateUser1Errors, ThrowOnError>({
+  (options.client ?? client).put<UpdateUserUsers2Responses, UpdateUserUsers2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/domain/users/{id}',
@@ -6089,10 +6235,10 @@ export const updateUser1 = <ThrowOnError extends boolean = false>(
 /**
  * 绑定微信
  */
-export const bindWechat1 = <ThrowOnError extends boolean = false>(
-  options: Options<BindWechat1Data, ThrowOnError>
+export const bindWechat2 = <ThrowOnError extends boolean = false>(
+  options: Options<BindWechat2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<BindWechat1Responses, BindWechat1Errors, ThrowOnError>({
+  (options.client ?? client).post<BindWechat2Responses, BindWechat2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/domain/users/{id}/bind-wechat',
@@ -6102,10 +6248,14 @@ export const bindWechat1 = <ThrowOnError extends boolean = false>(
 /**
  * 禁用用户
  */
-export const disableUser1 = <ThrowOnError extends boolean = false>(
-  options: Options<DisableUser1Data, ThrowOnError>
+export const disableUserDisable2 = <ThrowOnError extends boolean = false>(
+  options: Options<DisableUserDisable2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<DisableUser1Responses, DisableUser1Errors, ThrowOnError>({
+  (options.client ?? client).post<
+    DisableUserDisable2Responses,
+    DisableUserDisable2Errors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/domain/users/{id}/disable',
@@ -6115,10 +6265,14 @@ export const disableUser1 = <ThrowOnError extends boolean = false>(
 /**
  * 启用用户
  */
-export const enableUser1 = <ThrowOnError extends boolean = false>(
-  options: Options<EnableUser1Data, ThrowOnError>
+export const enableUserEnable2 = <ThrowOnError extends boolean = false>(
+  options: Options<EnableUserEnable2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<EnableUser1Responses, EnableUser1Errors, ThrowOnError>({
+  (options.client ?? client).post<
+    EnableUserEnable2Responses,
+    EnableUserEnable2Errors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/domain/users/{id}/enable',
@@ -6128,10 +6282,10 @@ export const enableUser1 = <ThrowOnError extends boolean = false>(
 /**
  * 重置用户密码
  */
-export const resetPassword1 = <ThrowOnError extends boolean = false>(
-  options: Options<ResetPassword1Data, ThrowOnError>
+export const resetPassword2 = <ThrowOnError extends boolean = false>(
+  options: Options<ResetPassword2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<ResetPassword1Responses, ResetPassword1Errors, ThrowOnError>({
+  (options.client ?? client).post<ResetPassword2Responses, ResetPassword2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/domain/users/{id}/reset-password',
@@ -6171,10 +6325,10 @@ export const assignRoles = <ThrowOnError extends boolean = false>(
 /**
  * 解绑微信
  */
-export const unbindWechat1 = <ThrowOnError extends boolean = false>(
-  options: Options<UnbindWechat1Data, ThrowOnError>
+export const unbindWechat2 = <ThrowOnError extends boolean = false>(
+  options: Options<UnbindWechat2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<UnbindWechat1Responses, UnbindWechat1Errors, ThrowOnError>({
+  (options.client ?? client).post<UnbindWechat2Responses, UnbindWechat2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/domain/users/{id}/unbind-wechat',
@@ -6338,10 +6492,10 @@ export const rejectApplication = <ThrowOnError extends boolean = false>(
 /**
  * 招生计划列表
  */
-export const listPlans1 = <ThrowOnError extends boolean = false>(
-  options?: Options<ListPlans1Data, ThrowOnError>
+export const listPlans2 = <ThrowOnError extends boolean = false>(
+  options?: Options<ListPlans2Data, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<ListPlans1Responses, ListPlans1Errors, ThrowOnError>({
+  (options?.client ?? client).get<ListPlans2Responses, ListPlans2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/enrollment/plans',
@@ -6351,10 +6505,10 @@ export const listPlans1 = <ThrowOnError extends boolean = false>(
 /**
  * 创建招生计划
  */
-export const createPlan1 = <ThrowOnError extends boolean = false>(
-  options: Options<CreatePlan1Data, ThrowOnError>
+export const createPlanPlans2 = <ThrowOnError extends boolean = false>(
+  options: Options<CreatePlanPlans2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<CreatePlan1Responses, CreatePlan1Errors, ThrowOnError>({
+  (options.client ?? client).post<CreatePlanPlans2Responses, CreatePlanPlans2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/enrollment/plans',
@@ -6381,10 +6535,14 @@ export const planStatistics = <ThrowOnError extends boolean = false>(
 /**
  * 删除招生计划
  */
-export const deletePlan1 = <ThrowOnError extends boolean = false>(
-  options: Options<DeletePlan1Data, ThrowOnError>
+export const deletePlanPlans2 = <ThrowOnError extends boolean = false>(
+  options: Options<DeletePlanPlans2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<DeletePlan1Responses, DeletePlan1Errors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeletePlanPlans2Responses,
+    DeletePlanPlans2Errors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/enrollment/plans/{id}',
@@ -6394,10 +6552,10 @@ export const deletePlan1 = <ThrowOnError extends boolean = false>(
 /**
  * 更新招生计划
  */
-export const updatePlan1 = <ThrowOnError extends boolean = false>(
-  options: Options<UpdatePlan1Data, ThrowOnError>
+export const updatePlanPlans2 = <ThrowOnError extends boolean = false>(
+  options: Options<UpdatePlanPlans2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).put<UpdatePlan1Responses, UpdatePlan1Errors, ThrowOnError>({
+  (options.client ?? client).put<UpdatePlanPlans2Responses, UpdatePlanPlans2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/enrollment/plans/{id}',
@@ -6411,10 +6569,14 @@ export const updatePlan1 = <ThrowOnError extends boolean = false>(
 /**
  * 发布招生计划
  */
-export const publishPlan = <ThrowOnError extends boolean = false>(
-  options: Options<PublishPlanData, ThrowOnError>
+export const publishPlanPublish = <ThrowOnError extends boolean = false>(
+  options: Options<PublishPlanPublishData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<PublishPlanResponses, PublishPlanErrors, ThrowOnError>({
+  (options.client ?? client).post<
+    PublishPlanPublishResponses,
+    PublishPlanPublishErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/enrollment/plans/{id}/publish',
@@ -6437,10 +6599,14 @@ export const listTypes = <ThrowOnError extends boolean = false>(
 /**
  * 创建事件类型
  */
-export const create16 = <ThrowOnError extends boolean = false>(
-  options: Options<Create16Data, ThrowOnError>
+export const createEntityEventTypes = <ThrowOnError extends boolean = false>(
+  options: Options<CreateEntityEventTypesData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Create16Responses, Create16Errors, ThrowOnError>({
+  (options.client ?? client).post<
+    CreateEntityEventTypesResponses,
+    CreateEntityEventTypesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/entity-event-types',
@@ -6467,10 +6633,14 @@ export const listEnabled = <ThrowOnError extends boolean = false>(
 /**
  * 删除事件类型
  */
-export const delete17 = <ThrowOnError extends boolean = false>(
-  options: Options<Delete17Data, ThrowOnError>
+export const deleteEntityEventTypes = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteEntityEventTypesData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<Delete17Responses, Delete17Errors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeleteEntityEventTypesResponses,
+    DeleteEntityEventTypesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/entity-event-types/{id}',
@@ -6480,10 +6650,14 @@ export const delete17 = <ThrowOnError extends boolean = false>(
 /**
  * 更新事件类型
  */
-export const update15 = <ThrowOnError extends boolean = false>(
-  options: Options<Update15Data, ThrowOnError>
+export const updateEntityEventTypes = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateEntityEventTypesData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<Update15Responses, Update15Errors, ThrowOnError>({
+  (options.client ?? client).put<
+    UpdateEntityEventTypesResponses,
+    UpdateEntityEventTypesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/entity-event-types/{id}',
@@ -6541,20 +6715,28 @@ export const getSubjectTimeline = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const list19 = <ThrowOnError extends boolean = false>(
-  options: Options<List19Data, ThrowOnError>
+export const listEntityTypeConfigs = <ThrowOnError extends boolean = false>(
+  options: Options<ListEntityTypeConfigsData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<List19Responses, List19Errors, ThrowOnError>({
+  (options.client ?? client).get<
+    ListEntityTypeConfigsResponses,
+    ListEntityTypeConfigsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/entity-type-configs',
     ...options
   })
 
-export const create15 = <ThrowOnError extends boolean = false>(
-  options: Options<Create15Data, ThrowOnError>
+export const createEntityTypeConfigs = <ThrowOnError extends boolean = false>(
+  options: Options<CreateEntityTypeConfigsData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Create15Responses, Create15Errors, ThrowOnError>({
+  (options.client ?? client).post<
+    CreateEntityTypeConfigsResponses,
+    CreateEntityTypeConfigsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/entity-type-configs',
@@ -6595,20 +6777,28 @@ export const detail = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const delete16 = <ThrowOnError extends boolean = false>(
-  options: Options<Delete16Data, ThrowOnError>
+export const deleteEntityTypeConfigs = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteEntityTypeConfigsData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<Delete16Responses, Delete16Errors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeleteEntityTypeConfigsResponses,
+    DeleteEntityTypeConfigsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/entity-type-configs/{id}',
     ...options
   })
 
-export const update14 = <ThrowOnError extends boolean = false>(
-  options: Options<Update14Data, ThrowOnError>
+export const updateEntityTypeConfigs = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateEntityTypeConfigsData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<Update14Responses, Update14Errors, ThrowOnError>({
+  (options.client ?? client).put<
+    UpdateEntityTypeConfigsResponses,
+    UpdateEntityTypeConfigsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/entity-type-configs/{id}',
@@ -6681,10 +6871,10 @@ export const recent = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const resolve1 = <ThrowOnError extends boolean = false>(
-  options: Options<Resolve1Data, ThrowOnError>
+export const resolve2 = <ThrowOnError extends boolean = false>(
+  options: Options<Resolve2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Resolve1Responses, Resolve1Errors, ThrowOnError>({
+  (options.client ?? client).post<Resolve2Responses, Resolve2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/errors/{id}/resolve',
@@ -6720,10 +6910,14 @@ export const statistics = <ThrowOnError extends boolean = false>(
 /**
  * 获取触发点列表
  */
-export const list18 = <ThrowOnError extends boolean = false>(
-  options?: Options<List18Data, ThrowOnError>
+export const listTriggerPoints = <ThrowOnError extends boolean = false>(
+  options?: Options<ListTriggerPointsData, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<List18Responses, List18Errors, ThrowOnError>({
+  (options?.client ?? client).get<
+    ListTriggerPointsResponses,
+    ListTriggerPointsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/event/trigger-points',
@@ -6733,10 +6927,14 @@ export const list18 = <ThrowOnError extends boolean = false>(
 /**
  * 创建触发点
  */
-export const create14 = <ThrowOnError extends boolean = false>(
-  options: Options<Create14Data, ThrowOnError>
+export const createTriggerPoints = <ThrowOnError extends boolean = false>(
+  options: Options<CreateTriggerPointsData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Create14Responses, Create14Errors, ThrowOnError>({
+  (options.client ?? client).post<
+    CreateTriggerPointsResponses,
+    CreateTriggerPointsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/event/trigger-points',
@@ -6750,10 +6948,14 @@ export const create14 = <ThrowOnError extends boolean = false>(
 /**
  * 删除触发点
  */
-export const delete15 = <ThrowOnError extends boolean = false>(
-  options: Options<Delete15Data, ThrowOnError>
+export const deleteTriggerPoints = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteTriggerPointsData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<Delete15Responses, Delete15Errors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeleteTriggerPointsResponses,
+    DeleteTriggerPointsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/event/trigger-points/{id}',
@@ -6763,10 +6965,14 @@ export const delete15 = <ThrowOnError extends boolean = false>(
 /**
  * 获取触发点详情
  */
-export const getById9 = <ThrowOnError extends boolean = false>(
-  options: Options<GetById9Data, ThrowOnError>
+export const getByIdTriggerPoints = <ThrowOnError extends boolean = false>(
+  options: Options<GetByIdTriggerPointsData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetById9Responses, GetById9Errors, ThrowOnError>({
+  (options.client ?? client).get<
+    GetByIdTriggerPointsResponses,
+    GetByIdTriggerPointsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/event/trigger-points/{id}',
@@ -6776,10 +6982,14 @@ export const getById9 = <ThrowOnError extends boolean = false>(
 /**
  * 更新触发点
  */
-export const update13 = <ThrowOnError extends boolean = false>(
-  options: Options<Update13Data, ThrowOnError>
+export const updateTriggerPoints = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateTriggerPointsData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<Update13Responses, Update13Errors, ThrowOnError>({
+  (options.client ?? client).put<
+    UpdateTriggerPointsResponses,
+    UpdateTriggerPointsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/event/trigger-points/{id}',
@@ -6793,10 +7003,10 @@ export const update13 = <ThrowOnError extends boolean = false>(
 /**
  * 禁用触发点
  */
-export const disable1 = <ThrowOnError extends boolean = false>(
-  options: Options<Disable1Data, ThrowOnError>
+export const disable2 = <ThrowOnError extends boolean = false>(
+  options: Options<Disable2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).put<Disable1Responses, Disable1Errors, ThrowOnError>({
+  (options.client ?? client).put<Disable2Responses, Disable2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/event/trigger-points/{id}/disable',
@@ -6806,10 +7016,10 @@ export const disable1 = <ThrowOnError extends boolean = false>(
 /**
  * 启用触发点
  */
-export const enable1 = <ThrowOnError extends boolean = false>(
-  options: Options<Enable1Data, ThrowOnError>
+export const enable2 = <ThrowOnError extends boolean = false>(
+  options: Options<Enable2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).put<Enable1Responses, Enable1Errors, ThrowOnError>({
+  (options.client ?? client).put<Enable2Responses, Enable2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/event/trigger-points/{id}/enable',
@@ -6819,10 +7029,10 @@ export const enable1 = <ThrowOnError extends boolean = false>(
 /**
  * 获取触发器列表
  */
-export const list17 = <ThrowOnError extends boolean = false>(
-  options?: Options<List17Data, ThrowOnError>
+export const listTriggers = <ThrowOnError extends boolean = false>(
+  options?: Options<ListTriggersData, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<List17Responses, List17Errors, ThrowOnError>({
+  (options?.client ?? client).get<ListTriggersResponses, ListTriggersErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/event/triggers',
@@ -6832,10 +7042,10 @@ export const list17 = <ThrowOnError extends boolean = false>(
 /**
  * 创建触发器
  */
-export const create13 = <ThrowOnError extends boolean = false>(
-  options: Options<Create13Data, ThrowOnError>
+export const createTriggers = <ThrowOnError extends boolean = false>(
+  options: Options<CreateTriggersData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Create13Responses, Create13Errors, ThrowOnError>({
+  (options.client ?? client).post<CreateTriggersResponses, CreateTriggersErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/event/triggers',
@@ -6866,10 +7076,10 @@ export const test = <ThrowOnError extends boolean = false>(
 /**
  * 删除触发器
  */
-export const delete14 = <ThrowOnError extends boolean = false>(
-  options: Options<Delete14Data, ThrowOnError>
+export const deleteTriggers = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteTriggersData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<Delete14Responses, Delete14Errors, ThrowOnError>({
+  (options.client ?? client).delete<DeleteTriggersResponses, DeleteTriggersErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/event/triggers/{id}',
@@ -6879,10 +7089,10 @@ export const delete14 = <ThrowOnError extends boolean = false>(
 /**
  * 获取触发器详情
  */
-export const getById8 = <ThrowOnError extends boolean = false>(
-  options: Options<GetById8Data, ThrowOnError>
+export const getByIdTriggers = <ThrowOnError extends boolean = false>(
+  options: Options<GetByIdTriggersData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetById8Responses, GetById8Errors, ThrowOnError>({
+  (options.client ?? client).get<GetByIdTriggersResponses, GetByIdTriggersErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/event/triggers/{id}',
@@ -6892,10 +7102,10 @@ export const getById8 = <ThrowOnError extends boolean = false>(
 /**
  * 更新触发器
  */
-export const update12 = <ThrowOnError extends boolean = false>(
-  options: Options<Update12Data, ThrowOnError>
+export const updateTriggers = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateTriggersData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<Update12Responses, Update12Errors, ThrowOnError>({
+  (options.client ?? client).put<UpdateTriggersResponses, UpdateTriggersErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/event/triggers/{id}',
@@ -6950,10 +7160,10 @@ export const listGrouped = <ThrowOnError extends boolean = false>(
 /**
  * 创建事件类型
  */
-export const create12 = <ThrowOnError extends boolean = false>(
-  options: Options<Create12Data, ThrowOnError>
+export const createTypes = <ThrowOnError extends boolean = false>(
+  options: Options<CreateTypesData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Create12Responses, Create12Errors, ThrowOnError>({
+  (options.client ?? client).post<CreateTypesResponses, CreateTypesErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/event/types',
@@ -6980,10 +7190,14 @@ export const listCategories = <ThrowOnError extends boolean = false>(
 /**
  * 创建事件分类（批量插入空分类占位）
  */
-export const createCategory = <ThrowOnError extends boolean = false>(
-  options: Options<CreateCategoryData, ThrowOnError>
+export const createCategoryCategories = <ThrowOnError extends boolean = false>(
+  options: Options<CreateCategoryCategoriesData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<CreateCategoryResponses, CreateCategoryErrors, ThrowOnError>({
+  (options.client ?? client).post<
+    CreateCategoryCategoriesResponses,
+    CreateCategoryCategoriesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/event/types/categories',
@@ -6997,10 +7211,10 @@ export const createCategory = <ThrowOnError extends boolean = false>(
 /**
  * 删除事件类型
  */
-export const delete13 = <ThrowOnError extends boolean = false>(
-  options: Options<Delete13Data, ThrowOnError>
+export const deleteTypes = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteTypesData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<Delete13Responses, Delete13Errors, ThrowOnError>({
+  (options.client ?? client).delete<DeleteTypesResponses, DeleteTypesErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/event/types/{id}',
@@ -7010,10 +7224,10 @@ export const delete13 = <ThrowOnError extends boolean = false>(
 /**
  * 更新事件类型
  */
-export const update11 = <ThrowOnError extends boolean = false>(
-  options: Options<Update11Data, ThrowOnError>
+export const updateTypes = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateTypesData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<Update11Responses, Update11Errors, ThrowOnError>({
+  (options.client ?? client).put<UpdateTypesResponses, UpdateTypesErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/event/types/{id}',
@@ -7120,10 +7334,10 @@ export const listAlerts = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const getAlert = <ThrowOnError extends boolean = false>(
-  options: Options<GetAlertData, ThrowOnError>
+export const getAlertAlerts = <ThrowOnError extends boolean = false>(
+  options: Options<GetAlertAlertsData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetAlertResponses, GetAlertErrors, ThrowOnError>({
+  (options.client ?? client).get<GetAlertAlertsResponses, GetAlertAlertsErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/alerts/{id}',
@@ -7376,10 +7590,10 @@ export const getTrend = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const submit1 = <ThrowOnError extends boolean = false>(
-  options: Options<Submit1Data, ThrowOnError>
+export const submitAppeals = <ThrowOnError extends boolean = false>(
+  options: Options<SubmitAppealsData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Submit1Responses, Submit1Errors, ThrowOnError>({
+  (options.client ?? client).post<SubmitAppealsResponses, SubmitAppealsErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/appeals',
@@ -7420,10 +7634,10 @@ export const listPending = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const getById7 = <ThrowOnError extends boolean = false>(
-  options: Options<GetById7Data, ThrowOnError>
+export const getByIdAppeals = <ThrowOnError extends boolean = false>(
+  options: Options<GetByIdAppealsData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetById7Responses, GetById7Errors, ThrowOnError>({
+  (options.client ?? client).get<GetByIdAppealsResponses, GetByIdAppealsErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/appeals/{id}',
@@ -7822,10 +8036,10 @@ export const candidates = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const confirm1 = <ThrowOnError extends boolean = false>(
-  options: Options<Confirm1Data, ThrowOnError>
+export const confirm2 = <ThrowOnError extends boolean = false>(
+  options: Options<Confirm2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Confirm1Responses, Confirm1Errors, ThrowOnError>({
+  (options.client ?? client).post<Confirm2Responses, Confirm2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/corrective/candidates/confirm',
@@ -7846,20 +8060,98 @@ export const kpi = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const getPolicy2 = <ThrowOnError extends boolean = false>(
-  options: Options<GetPolicy2Data, ThrowOnError>
+export const listByMode = <ThrowOnError extends boolean = false>(
+  options: Options<ListByModeData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetPolicy2Responses, GetPolicy2Errors, ThrowOnError>({
+  (options.client ?? client).get<ListByModeResponses, ListByModeErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/inspection/corrective/projects/{projectId}/by-mode',
+    ...options
+  })
+
+export const deleteByMode = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteByModeData, ThrowOnError>
+) =>
+  (options.client ?? client).delete<DeleteByModeResponses, DeleteByModeErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/inspection/corrective/projects/{projectId}/by-mode/{mode}',
+    ...options
+  })
+
+export const upsertByMode = <ThrowOnError extends boolean = false>(
+  options: Options<UpsertByModeData, ThrowOnError>
+) =>
+  (options.client ?? client).put<UpsertByModeResponses, UpsertByModeErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/inspection/corrective/projects/{projectId}/by-mode/{mode}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  })
+
+export const listItemOverrides = <ThrowOnError extends boolean = false>(
+  options: Options<ListItemOverridesData, ThrowOnError>
+) =>
+  (options.client ?? client).get<ListItemOverridesResponses, ListItemOverridesErrors, ThrowOnError>(
+    {
+      responseType: 'json',
+      security: [{ scheme: 'bearer', type: 'http' }],
+      url: '/inspection/corrective/projects/{projectId}/item-overrides',
+      ...options
+    }
+  )
+
+export const deleteItemOverride = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteItemOverrideData, ThrowOnError>
+) =>
+  (options.client ?? client).delete<
+    DeleteItemOverrideResponses,
+    DeleteItemOverrideErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/inspection/corrective/projects/{projectId}/item-overrides/{itemId}',
+    ...options
+  })
+
+export const upsertItemOverride = <ThrowOnError extends boolean = false>(
+  options: Options<UpsertItemOverrideData, ThrowOnError>
+) =>
+  (options.client ?? client).put<
+    UpsertItemOverrideResponses,
+    UpsertItemOverrideErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/inspection/corrective/projects/{projectId}/item-overrides/{itemId}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  })
+
+export const getPolicy = <ThrowOnError extends boolean = false>(
+  options: Options<GetPolicyData, ThrowOnError>
+) =>
+  (options.client ?? client).get<GetPolicyResponses, GetPolicyErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/corrective/projects/{projectId}/policy',
     ...options
   })
 
-export const updatePolicy2 = <ThrowOnError extends boolean = false>(
-  options: Options<UpdatePolicy2Data, ThrowOnError>
+export const updatePolicy = <ThrowOnError extends boolean = false>(
+  options: Options<UpdatePolicyData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<UpdatePolicy2Responses, UpdatePolicy2Errors, ThrowOnError>({
+  (options.client ?? client).put<UpdatePolicyResponses, UpdatePolicyErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/corrective/projects/{projectId}/policy',
@@ -7870,6 +8162,16 @@ export const updatePolicy2 = <ThrowOnError extends boolean = false>(
     }
   })
 
+export const listProjectItems = <ThrowOnError extends boolean = false>(
+  options: Options<ListProjectItemsData, ThrowOnError>
+) =>
+  (options.client ?? client).get<ListProjectItemsResponses, ListProjectItemsErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/inspection/corrective/projects/{projectId}/template-items',
+    ...options
+  })
+
 export const recurrence = <ThrowOnError extends boolean = false>(
   options: Options<RecurrenceData, ThrowOnError>
 ) =>
@@ -7878,6 +8180,20 @@ export const recurrence = <ThrowOnError extends boolean = false>(
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/corrective/recurrence',
     ...options
+  })
+
+export const simulate = <ThrowOnError extends boolean = false>(
+  options: Options<SimulateData, ThrowOnError>
+) =>
+  (options.client ?? client).post<SimulateResponses, SimulateErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/inspection/corrective/simulate',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
   })
 
 export const getItemOverride = <ThrowOnError extends boolean = false>(
@@ -8016,20 +8332,28 @@ export const updateScheme = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const list16 = <ThrowOnError extends boolean = false>(
-  options?: Options<List16Data, ThrowOnError>
+export const listHolidayCalendars = <ThrowOnError extends boolean = false>(
+  options?: Options<ListHolidayCalendarsData, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<List16Responses, List16Errors, ThrowOnError>({
+  (options?.client ?? client).get<
+    ListHolidayCalendarsResponses,
+    ListHolidayCalendarsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/holiday-calendars',
     ...options
   })
 
-export const create11 = <ThrowOnError extends boolean = false>(
-  options: Options<Create11Data, ThrowOnError>
+export const createHolidayCalendars = <ThrowOnError extends boolean = false>(
+  options: Options<CreateHolidayCalendarsData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Create11Responses, Create11Errors, ThrowOnError>({
+  (options.client ?? client).post<
+    CreateHolidayCalendarsResponses,
+    CreateHolidayCalendarsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/holiday-calendars',
@@ -8060,10 +8384,14 @@ export const findDefault = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const delete12 = <ThrowOnError extends boolean = false>(
-  options: Options<Delete12Data, ThrowOnError>
+export const deleteHolidayCalendars = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteHolidayCalendarsData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<Delete12Responses, Delete12Errors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeleteHolidayCalendarsResponses,
+    DeleteHolidayCalendarsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/holiday-calendars/{id}',
@@ -8080,10 +8408,14 @@ export const findById = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const update10 = <ThrowOnError extends boolean = false>(
-  options: Options<Update10Data, ThrowOnError>
+export const updateHolidayCalendars = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateHolidayCalendarsData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<Update10Responses, Update10Errors, ThrowOnError>({
+  (options.client ?? client).put<
+    UpdateHolidayCalendarsResponses,
+    UpdateHolidayCalendarsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/holiday-calendars/{id}',
@@ -8092,6 +8424,54 @@ export const update10 = <ThrowOnError extends boolean = false>(
       'Content-Type': 'application/json',
       ...options.headers
     }
+  })
+
+export const listIndicatorResults = <ThrowOnError extends boolean = false>(
+  options: Options<ListIndicatorResultsData, ThrowOnError>
+) =>
+  (options.client ?? client).get<
+    ListIndicatorResultsResponses,
+    ListIndicatorResultsErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/inspection/indicator-results',
+    ...options
+  })
+
+export const manualEvaluate = <ThrowOnError extends boolean = false>(
+  options: Options<ManualEvaluateData, ThrowOnError>
+) =>
+  (options.client ?? client).post<ManualEvaluateResponses, ManualEvaluateErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/inspection/indicator-results/manual-evaluate',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  })
+
+export const history_ = <ThrowOnError extends boolean = false>(
+  options: Options<HistoryData, ThrowOnError>
+) =>
+  (options.client ?? client).get<HistoryResponses, HistoryErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/inspection/indicator-results/{id}/history',
+    ...options
+  })
+
+export const publish = <ThrowOnError extends boolean = false>(
+  options: Options<PublishData, ThrowOnError>
+) =>
+  (options.client ?? client).post<PublishResponses, PublishErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/inspection/indicator-results/{id}/publish',
+    ...options
   })
 
 export const getScores = <ThrowOnError extends boolean = false>(
@@ -8160,12 +8540,12 @@ export const createLeafIndicator = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const deleteIndicator1 = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteIndicator1Data, ThrowOnError>
+export const deleteIndicatorIndicators = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteIndicatorIndicatorsData, ThrowOnError>
 ) =>
   (options.client ?? client).delete<
-    DeleteIndicator1Responses,
-    DeleteIndicator1Errors,
+    DeleteIndicatorIndicatorsResponses,
+    DeleteIndicatorIndicatorsErrors,
     ThrowOnError
   >({
     responseType: 'json',
@@ -8198,20 +8578,28 @@ export const updateIndicator = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const list15 = <ThrowOnError extends boolean = false>(
-  options?: Options<List15Data, ThrowOnError>
+export const listIssueCategories = <ThrowOnError extends boolean = false>(
+  options?: Options<ListIssueCategoriesData, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<List15Responses, List15Errors, ThrowOnError>({
+  (options?.client ?? client).get<
+    ListIssueCategoriesResponses,
+    ListIssueCategoriesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/issue-categories',
     ...options
   })
 
-export const create10 = <ThrowOnError extends boolean = false>(
-  options: Options<Create10Data, ThrowOnError>
+export const createIssueCategories = <ThrowOnError extends boolean = false>(
+  options: Options<CreateIssueCategoriesData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Create10Responses, Create10Errors, ThrowOnError>({
+  (options.client ?? client).post<
+    CreateIssueCategoriesResponses,
+    CreateIssueCategoriesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/issue-categories',
@@ -8232,30 +8620,42 @@ export const roots = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const delete11 = <ThrowOnError extends boolean = false>(
-  options: Options<Delete11Data, ThrowOnError>
+export const deleteIssueCategories = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteIssueCategoriesData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<Delete11Responses, Delete11Errors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeleteIssueCategoriesResponses,
+    DeleteIssueCategoriesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/issue-categories/{id}',
     ...options
   })
 
-export const getById6 = <ThrowOnError extends boolean = false>(
-  options: Options<GetById6Data, ThrowOnError>
+export const getByIdIssueCategories = <ThrowOnError extends boolean = false>(
+  options: Options<GetByIdIssueCategoriesData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetById6Responses, GetById6Errors, ThrowOnError>({
+  (options.client ?? client).get<
+    GetByIdIssueCategoriesResponses,
+    GetByIdIssueCategoriesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/issue-categories/{id}',
     ...options
   })
 
-export const update9 = <ThrowOnError extends boolean = false>(
-  options: Options<Update9Data, ThrowOnError>
+export const updateIssueCategories = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateIssueCategoriesData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<Update9Responses, Update9Errors, ThrowOnError>({
+  (options.client ?? client).put<
+    UpdateIssueCategoriesResponses,
+    UpdateIssueCategoriesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/issue-categories/{id}',
@@ -8328,10 +8728,10 @@ export const createLibraryItem = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const getCategories1 = <ThrowOnError extends boolean = false>(
-  options?: Options<GetCategories1Data, ThrowOnError>
+export const getCategories2 = <ThrowOnError extends boolean = false>(
+  options?: Options<GetCategories2Data, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<GetCategories1Responses, GetCategories1Errors, ThrowOnError>({
+  (options?.client ?? client).get<GetCategories2Responses, GetCategories2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/library-items/categories',
@@ -8409,10 +8809,10 @@ export const syncToTemplates = <ThrowOnError extends boolean = false>(
 /**
  * 查询评分观察记录(分页)
  */
-export const list14 = <ThrowOnError extends boolean = false>(
-  options?: Options<List14Data, ThrowOnError>
+export const listObservations = <ThrowOnError extends boolean = false>(
+  options?: Options<ListObservationsData, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<List14Responses, List14Errors, ThrowOnError>({
+  (options?.client ?? client).get<ListObservationsResponses, ListObservationsErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/observations',
@@ -8432,6 +8832,16 @@ export const bySubmission = <ThrowOnError extends boolean = false>(
     ...options
   })
 
+export const getOrgScores = <ThrowOnError extends boolean = false>(
+  options: Options<GetOrgScoresData, ThrowOnError>
+) =>
+  (options.client ?? client).get<GetOrgScoresResponses, GetOrgScoresErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/inspection/org-scores',
+    ...options
+  })
+
 export const listPlans = <ThrowOnError extends boolean = false>(
   options: Options<ListPlansData, ThrowOnError>
 ) =>
@@ -8442,10 +8852,10 @@ export const listPlans = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const createPlan = <ThrowOnError extends boolean = false>(
-  options: Options<CreatePlanData, ThrowOnError>
+export const createPlanPlans = <ThrowOnError extends boolean = false>(
+  options: Options<CreatePlanPlansData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<CreatePlanResponses, CreatePlanErrors, ThrowOnError>({
+  (options.client ?? client).post<CreatePlanPlansResponses, CreatePlanPlansErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/plans',
@@ -8456,30 +8866,30 @@ export const createPlan = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const deletePlan = <ThrowOnError extends boolean = false>(
-  options: Options<DeletePlanData, ThrowOnError>
+export const deletePlanPlans = <ThrowOnError extends boolean = false>(
+  options: Options<DeletePlanPlansData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<DeletePlanResponses, DeletePlanErrors, ThrowOnError>({
+  (options.client ?? client).delete<DeletePlanPlansResponses, DeletePlanPlansErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/plans/{id}',
     ...options
   })
 
-export const getPlan = <ThrowOnError extends boolean = false>(
-  options: Options<GetPlanData, ThrowOnError>
+export const getPlanPlans = <ThrowOnError extends boolean = false>(
+  options: Options<GetPlanPlansData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetPlanResponses, GetPlanErrors, ThrowOnError>({
+  (options.client ?? client).get<GetPlanPlansResponses, GetPlanPlansErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/plans/{id}',
     ...options
   })
 
-export const updatePlan = <ThrowOnError extends boolean = false>(
-  options: Options<UpdatePlanData, ThrowOnError>
+export const updatePlanPlans = <ThrowOnError extends boolean = false>(
+  options: Options<UpdatePlanPlansData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<UpdatePlanResponses, UpdatePlanErrors, ThrowOnError>({
+  (options.client ?? client).put<UpdatePlanPlansResponses, UpdatePlanPlansErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/plans/{id}',
@@ -8624,38 +9034,6 @@ export const updateProject = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const getAdvancedScoring = <ThrowOnError extends boolean = false>(
-  options: Options<GetAdvancedScoringData, ThrowOnError>
-) =>
-  (options.client ?? client).get<
-    GetAdvancedScoringResponses,
-    GetAdvancedScoringErrors,
-    ThrowOnError
-  >({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/inspection/projects/{id}/advanced-scoring',
-    ...options
-  })
-
-export const updateAdvancedScoring = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateAdvancedScoringData, ThrowOnError>
-) =>
-  (options.client ?? client).patch<
-    UpdateAdvancedScoringResponses,
-    UpdateAdvancedScoringErrors,
-    ThrowOnError
-  >({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/inspection/projects/{id}/advanced-scoring',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
-    }
-  })
-
 export const archiveProject = <ThrowOnError extends boolean = false>(
   options: Options<ArchiveProjectData, ThrowOnError>
 ) =>
@@ -8664,6 +9042,20 @@ export const archiveProject = <ThrowOnError extends boolean = false>(
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/projects/{id}/archive',
     ...options
+  })
+
+export const cloneProject = <ThrowOnError extends boolean = false>(
+  options: Options<CloneProjectData, ThrowOnError>
+) =>
+  (options.client ?? client).post<CloneProjectResponses, CloneProjectErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/inspection/projects/{id}/clone',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
   })
 
 export const completeProject = <ThrowOnError extends boolean = false>(
@@ -8820,6 +9212,20 @@ export const addInspector = <ThrowOnError extends boolean = false>(
     }
   })
 
+export const batchAssignTasks = <ThrowOnError extends boolean = false>(
+  options: Options<BatchAssignTasksData, ThrowOnError>
+) =>
+  (options.client ?? client).post<BatchAssignTasksResponses, BatchAssignTasksErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/inspection/projects/{projectId}/inspectors/batch-assign',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  })
+
 export const removeInspector = <ThrowOnError extends boolean = false>(
   options: Options<RemoveInspectorData, ThrowOnError>
 ) =>
@@ -8827,6 +9233,44 @@ export const removeInspector = <ThrowOnError extends boolean = false>(
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/projects/{projectId}/inspectors/{inspectorId}',
+    ...options
+  })
+
+export const removeInspectorRole = <ThrowOnError extends boolean = false>(
+  options: Options<RemoveInspectorRoleData, ThrowOnError>
+) =>
+  (options.client ?? client).delete<
+    RemoveInspectorRoleResponses,
+    RemoveInspectorRoleErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/inspection/projects/{projectId}/inspectors/{userId}/roles/{role}',
+    ...options
+  })
+
+export const addInspectorRole = <ThrowOnError extends boolean = false>(
+  options: Options<AddInspectorRoleData, ThrowOnError>
+) =>
+  (options.client ?? client).post<AddInspectorRoleResponses, AddInspectorRoleErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/inspection/projects/{projectId}/inspectors/{userId}/roles/{role}',
+    ...options
+  })
+
+export const getPeopleWorkbench = <ThrowOnError extends boolean = false>(
+  options: Options<GetPeopleWorkbenchData, ThrowOnError>
+) =>
+  (options.client ?? client).get<
+    GetPeopleWorkbenchResponses,
+    GetPeopleWorkbenchErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/inspection/projects/{projectId}/people-workbench',
     ...options
   })
 
@@ -8840,10 +9284,14 @@ export const getByProject = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const create9 = <ThrowOnError extends boolean = false>(
-  options: Options<Create9Data, ThrowOnError>
+export const createRatingLinks = <ThrowOnError extends boolean = false>(
+  options: Options<CreateRatingLinksData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Create9Responses, Create9Errors, ThrowOnError>({
+  (options.client ?? client).post<
+    CreateRatingLinksResponses,
+    CreateRatingLinksErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/rating-links',
@@ -8868,39 +9316,49 @@ export const manualCalculate = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const delete10 = <ThrowOnError extends boolean = false>(
-  options: Options<Delete10Data, ThrowOnError>
+export const deleteRatingLinks = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteRatingLinksData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<Delete10Responses, Delete10Errors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeleteRatingLinksResponses,
+    DeleteRatingLinksErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/rating-links/{id}',
     ...options
   })
 
-export const getById5 = <ThrowOnError extends boolean = false>(
-  options: Options<GetById5Data, ThrowOnError>
+export const getByIdRatingLinks = <ThrowOnError extends boolean = false>(
+  options: Options<GetByIdRatingLinksData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetById5Responses, GetById5Errors, ThrowOnError>({
+  (options.client ?? client).get<
+    GetByIdRatingLinksResponses,
+    GetByIdRatingLinksErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/rating-links/{id}',
     ...options
   })
 
-export const update8 = <ThrowOnError extends boolean = false>(
-  options: Options<Update8Data, ThrowOnError>
+export const updateRatingLinks = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateRatingLinksData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<Update8Responses, Update8Errors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/inspection/rating-links/{id}',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
+  (options.client ?? client).put<UpdateRatingLinksResponses, UpdateRatingLinksErrors, ThrowOnError>(
+    {
+      responseType: 'json',
+      security: [{ scheme: 'bearer', type: 'http' }],
+      url: '/inspection/rating-links/{id}',
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      }
     }
-  })
+  )
 
 export const myInspections = <ThrowOnError extends boolean = false>(
   options?: Options<MyInspectionsData, ThrowOnError>
@@ -9058,20 +9516,28 @@ export const updateOption = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const listPolicies1 = <ThrowOnError extends boolean = false>(
-  options?: Options<ListPolicies1Data, ThrowOnError>
+export const listPoliciesScoringPolicies = <ThrowOnError extends boolean = false>(
+  options?: Options<ListPoliciesScoringPoliciesData, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<ListPolicies1Responses, ListPolicies1Errors, ThrowOnError>({
+  (options?.client ?? client).get<
+    ListPoliciesScoringPoliciesResponses,
+    ListPoliciesScoringPoliciesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/scoring-policies',
     ...options
   })
 
-export const createPolicy1 = <ThrowOnError extends boolean = false>(
-  options: Options<CreatePolicy1Data, ThrowOnError>
+export const createPolicyScoringPolicies = <ThrowOnError extends boolean = false>(
+  options: Options<CreatePolicyScoringPoliciesData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<CreatePolicy1Responses, CreatePolicy1Errors, ThrowOnError>({
+  (options.client ?? client).post<
+    CreatePolicyScoringPoliciesResponses,
+    CreatePolicyScoringPoliciesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/scoring-policies',
@@ -9082,30 +9548,42 @@ export const createPolicy1 = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const deletePolicy1 = <ThrowOnError extends boolean = false>(
-  options: Options<DeletePolicy1Data, ThrowOnError>
+export const deletePolicyScoringPolicies = <ThrowOnError extends boolean = false>(
+  options: Options<DeletePolicyScoringPoliciesData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<DeletePolicy1Responses, DeletePolicy1Errors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeletePolicyScoringPoliciesResponses,
+    DeletePolicyScoringPoliciesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/scoring-policies/{id}',
     ...options
   })
 
-export const getPolicy1 = <ThrowOnError extends boolean = false>(
-  options: Options<GetPolicy1Data, ThrowOnError>
+export const getPolicyScoringPolicies = <ThrowOnError extends boolean = false>(
+  options: Options<GetPolicyScoringPoliciesData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetPolicy1Responses, GetPolicy1Errors, ThrowOnError>({
+  (options.client ?? client).get<
+    GetPolicyScoringPoliciesResponses,
+    GetPolicyScoringPoliciesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/scoring-policies/{id}',
     ...options
   })
 
-export const updatePolicy1 = <ThrowOnError extends boolean = false>(
-  options: Options<UpdatePolicy1Data, ThrowOnError>
+export const updatePolicyScoringPolicies = <ThrowOnError extends boolean = false>(
+  options: Options<UpdatePolicyScoringPoliciesData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<UpdatePolicy1Responses, UpdatePolicy1Errors, ThrowOnError>({
+  (options.client ?? client).put<
+    UpdatePolicyScoringPoliciesResponses,
+    UpdatePolicyScoringPoliciesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/scoring-policies/{id}',
@@ -9164,20 +9642,24 @@ export const updateCalcRule = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const listGradeBands1 = <ThrowOnError extends boolean = false>(
-  options: Options<ListGradeBands1Data, ThrowOnError>
+export const listGradeBands2 = <ThrowOnError extends boolean = false>(
+  options: Options<ListGradeBands2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).get<ListGradeBands1Responses, ListGradeBands1Errors, ThrowOnError>({
+  (options.client ?? client).get<ListGradeBands2Responses, ListGradeBands2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/scoring-policies/{id}/grade-bands',
     ...options
   })
 
-export const createGradeBand1 = <ThrowOnError extends boolean = false>(
-  options: Options<CreateGradeBand1Data, ThrowOnError>
+export const createGradeBandGradeBands2 = <ThrowOnError extends boolean = false>(
+  options: Options<CreateGradeBandGradeBands2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<CreateGradeBand1Responses, CreateGradeBand1Errors, ThrowOnError>({
+  (options.client ?? client).post<
+    CreateGradeBandGradeBands2Responses,
+    CreateGradeBandGradeBands2Errors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/scoring-policies/{id}/grade-bands',
@@ -9188,12 +9670,12 @@ export const createGradeBand1 = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const deleteGradeBand1 = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteGradeBand1Data, ThrowOnError>
+export const deleteGradeBandGradeBands2 = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteGradeBandGradeBands2Data, ThrowOnError>
 ) =>
   (options.client ?? client).delete<
-    DeleteGradeBand1Responses,
-    DeleteGradeBand1Errors,
+    DeleteGradeBandGradeBands2Responses,
+    DeleteGradeBandGradeBands2Errors,
     ThrowOnError
   >({
     responseType: 'json',
@@ -9202,10 +9684,14 @@ export const deleteGradeBand1 = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const updateGradeBand1 = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateGradeBand1Data, ThrowOnError>
+export const updateGradeBandGradeBands2 = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateGradeBandGradeBands2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).put<UpdateGradeBand1Responses, UpdateGradeBand1Errors, ThrowOnError>({
+  (options.client ?? client).put<
+    UpdateGradeBandGradeBands2Responses,
+    UpdateGradeBandGradeBands2Errors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/scoring-policies/{id}/grade-bands/{bandId}',
@@ -9274,20 +9760,28 @@ export const applyPreset = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const listProfiles1 = <ThrowOnError extends boolean = false>(
-  options?: Options<ListProfiles1Data, ThrowOnError>
+export const listProfilesScoringProfiles = <ThrowOnError extends boolean = false>(
+  options: Options<ListProfilesScoringProfilesData, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<ListProfiles1Responses, ListProfiles1Errors, ThrowOnError>({
+  (options.client ?? client).get<
+    ListProfilesScoringProfilesResponses,
+    ListProfilesScoringProfilesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/scoring-profiles',
     ...options
   })
 
-export const createProfile1 = <ThrowOnError extends boolean = false>(
-  options: Options<CreateProfile1Data, ThrowOnError>
+export const createProfileScoringProfiles = <ThrowOnError extends boolean = false>(
+  options: Options<CreateProfileScoringProfilesData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<CreateProfile1Responses, CreateProfile1Errors, ThrowOnError>({
+  (options.client ?? client).post<
+    CreateProfileScoringProfilesResponses,
+    CreateProfileScoringProfilesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/scoring-profiles',
@@ -9298,79 +9792,59 @@ export const createProfile1 = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const getProfileBySection = <ThrowOnError extends boolean = false>(
-  options: Options<GetProfileBySectionData, ThrowOnError>
+export const getProfileByProjectAndSection = <ThrowOnError extends boolean = false>(
+  options: Options<GetProfileByProjectAndSectionData, ThrowOnError>
 ) =>
   (options.client ?? client).get<
-    GetProfileBySectionResponses,
-    GetProfileBySectionErrors,
+    GetProfileByProjectAndSectionResponses,
+    GetProfileByProjectAndSectionErrors,
     ThrowOnError
   >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/inspection/scoring-profiles/by-section/{sectionId}',
+    url: '/inspection/scoring-profiles/by-project-section',
     ...options
   })
 
-export const getProfileByTemplateLegacy = <ThrowOnError extends boolean = false>(
-  options: Options<GetProfileByTemplateLegacyData, ThrowOnError>
+export const deleteProfileScoringProfiles = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteProfileScoringProfilesData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<
-    GetProfileByTemplateLegacyResponses,
-    GetProfileByTemplateLegacyErrors,
+  (options.client ?? client).delete<
+    DeleteProfileScoringProfilesResponses,
+    DeleteProfileScoringProfilesErrors,
     ThrowOnError
   >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/inspection/scoring-profiles/by-template/{templateId}',
+    url: '/inspection/scoring-profiles/{id}',
     ...options
   })
 
-export const deleteProfile1 = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteProfile1Data, ThrowOnError>
+export const getProfileScoringProfiles = <ThrowOnError extends boolean = false>(
+  options: Options<GetProfileScoringProfilesData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<DeleteProfile1Responses, DeleteProfile1Errors, ThrowOnError>({
+  (options.client ?? client).get<
+    GetProfileScoringProfilesResponses,
+    GetProfileScoringProfilesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/scoring-profiles/{id}',
     ...options
   })
 
-export const getProfile1 = <ThrowOnError extends boolean = false>(
-  options: Options<GetProfile1Data, ThrowOnError>
-) =>
-  (options.client ?? client).get<GetProfile1Responses, GetProfile1Errors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/inspection/scoring-profiles/{id}',
-    ...options
-  })
-
-export const updateProfile1 = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateProfile1Data, ThrowOnError>
-) =>
-  (options.client ?? client).put<UpdateProfile1Responses, UpdateProfile1Errors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/inspection/scoring-profiles/{id}',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
-    }
-  })
-
-export const updateAdvancedSettings = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateAdvancedSettingsData, ThrowOnError>
+export const updateProfileScoringProfiles = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateProfileScoringProfilesData, ThrowOnError>
 ) =>
   (options.client ?? client).put<
-    UpdateAdvancedSettingsResponses,
-    UpdateAdvancedSettingsErrors,
+    UpdateProfileScoringProfilesResponses,
+    UpdateProfileScoringProfilesErrors,
     ThrowOnError
   >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/inspection/scoring-profiles/{id}/advanced-settings',
+    url: '/inspection/scoring-profiles/{id}',
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -9378,20 +9852,28 @@ export const updateAdvancedSettings = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const listRules1 = <ThrowOnError extends boolean = false>(
-  options: Options<ListRules1Data, ThrowOnError>
+export const listRulesCalculationRules = <ThrowOnError extends boolean = false>(
+  options: Options<ListRulesCalculationRulesData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<ListRules1Responses, ListRules1Errors, ThrowOnError>({
+  (options.client ?? client).get<
+    ListRulesCalculationRulesResponses,
+    ListRulesCalculationRulesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/scoring-profiles/{id}/calculation-rules',
     ...options
   })
 
-export const createRule1 = <ThrowOnError extends boolean = false>(
-  options: Options<CreateRule1Data, ThrowOnError>
+export const createRuleCalculationRules = <ThrowOnError extends boolean = false>(
+  options: Options<CreateRuleCalculationRulesData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<CreateRule1Responses, CreateRule1Errors, ThrowOnError>({
+  (options.client ?? client).post<
+    CreateRuleCalculationRulesResponses,
+    CreateRuleCalculationRulesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/scoring-profiles/{id}/calculation-rules',
@@ -9402,20 +9884,28 @@ export const createRule1 = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const deleteRule1 = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteRule1Data, ThrowOnError>
+export const deleteRuleCalculationRules = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteRuleCalculationRulesData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<DeleteRule1Responses, DeleteRule1Errors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeleteRuleCalculationRulesResponses,
+    DeleteRuleCalculationRulesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/scoring-profiles/{id}/calculation-rules/{ruleId}',
     ...options
   })
 
-export const updateRule1 = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateRule1Data, ThrowOnError>
+export const updateRuleCalculationRules = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateRuleCalculationRulesData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<UpdateRule1Responses, UpdateRule1Errors, ThrowOnError>({
+  (options.client ?? client).put<
+    UpdateRuleCalculationRulesResponses,
+    UpdateRuleCalculationRulesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/scoring-profiles/{id}/calculation-rules/{ruleId}',
@@ -9558,10 +10048,14 @@ export const listGradeBands = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const createGradeBand = <ThrowOnError extends boolean = false>(
-  options: Options<CreateGradeBandData, ThrowOnError>
+export const createGradeBandGradeBands = <ThrowOnError extends boolean = false>(
+  options: Options<CreateGradeBandGradeBandsData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<CreateGradeBandResponses, CreateGradeBandErrors, ThrowOnError>({
+  (options.client ?? client).post<
+    CreateGradeBandGradeBandsResponses,
+    CreateGradeBandGradeBandsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/scoring-profiles/{id}/grade-bands',
@@ -9572,20 +10066,28 @@ export const createGradeBand = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const deleteGradeBand = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteGradeBandData, ThrowOnError>
+export const deleteGradeBandGradeBands = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteGradeBandGradeBandsData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<DeleteGradeBandResponses, DeleteGradeBandErrors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeleteGradeBandGradeBandsResponses,
+    DeleteGradeBandGradeBandsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/scoring-profiles/{id}/grade-bands/{bandId}',
     ...options
   })
 
-export const updateGradeBand = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateGradeBandData, ThrowOnError>
+export const updateGradeBandGradeBands = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateGradeBandGradeBandsData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<UpdateGradeBandResponses, UpdateGradeBandErrors, ThrowOnError>({
+  (options.client ?? client).put<
+    UpdateGradeBandGradeBandsResponses,
+    UpdateGradeBandGradeBandsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/scoring-profiles/{id}/grade-bands/{bandId}',
@@ -9596,10 +10098,10 @@ export const updateGradeBand = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const listVersions1 = <ThrowOnError extends boolean = false>(
-  options: Options<ListVersions1Data, ThrowOnError>
+export const listVersions = <ThrowOnError extends boolean = false>(
+  options: Options<ListVersionsData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<ListVersions1Responses, ListVersions1Errors, ThrowOnError>({
+  (options.client ?? client).get<ListVersionsResponses, ListVersionsErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/scoring-profiles/{id}/versions',
@@ -9620,10 +10122,14 @@ export const publishVersion = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const getVersion1 = <ThrowOnError extends boolean = false>(
-  options: Options<GetVersion1Data, ThrowOnError>
+export const getVersionVersions2 = <ThrowOnError extends boolean = false>(
+  options: Options<GetVersionVersions2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetVersion1Responses, GetVersion1Errors, ThrowOnError>({
+  (options.client ?? client).get<
+    GetVersionVersions2Responses,
+    GetVersionVersions2Errors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/scoring-profiles/{id}/versions/{version}',
@@ -9911,11 +10417,7 @@ export const completeSubmission = <ThrowOnError extends boolean = false>(
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/submissions/{id}/complete',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
-    }
+    ...options
   })
 
 export const saveFormData = <ThrowOnError extends boolean = false>(
@@ -10072,20 +10574,20 @@ export const push = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const listTasks1 = <ThrowOnError extends boolean = false>(
-  options?: Options<ListTasks1Data, ThrowOnError>
+export const listTasks2 = <ThrowOnError extends boolean = false>(
+  options?: Options<ListTasks2Data, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<ListTasks1Responses, ListTasks1Errors, ThrowOnError>({
+  (options?.client ?? client).get<ListTasks2Responses, ListTasks2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/tasks',
     ...options
   })
 
-export const createTask1 = <ThrowOnError extends boolean = false>(
-  options: Options<CreateTask1Data, ThrowOnError>
+export const createTaskTasks2 = <ThrowOnError extends boolean = false>(
+  options: Options<CreateTaskTasks2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<CreateTask1Responses, CreateTask1Errors, ThrowOnError>({
+  (options.client ?? client).post<CreateTaskTasks2Responses, CreateTaskTasks2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/tasks',
@@ -10234,10 +10736,10 @@ export const createSelfCheck = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const getTask1 = <ThrowOnError extends boolean = false>(
-  options: Options<GetTask1Data, ThrowOnError>
+export const getTaskTasks2 = <ThrowOnError extends boolean = false>(
+  options: Options<GetTaskTasks2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetTask1Responses, GetTask1Errors, ThrowOnError>({
+  (options.client ?? client).get<GetTaskTasks2Responses, GetTaskTasks2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/tasks/{id}',
@@ -10528,20 +11030,24 @@ export const publishRootSection = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const listVersions = <ThrowOnError extends boolean = false>(
-  options: Options<ListVersionsData, ThrowOnError>
+export const listVersions2 = <ThrowOnError extends boolean = false>(
+  options: Options<ListVersions2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).get<ListVersionsResponses, ListVersionsErrors, ThrowOnError>({
+  (options.client ?? client).get<ListVersions2Responses, ListVersions2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/templates/{id}/versions',
     ...options
   })
 
-export const getVersion = <ThrowOnError extends boolean = false>(
-  options: Options<GetVersionData, ThrowOnError>
+export const getVersionVersions = <ThrowOnError extends boolean = false>(
+  options: Options<GetVersionVersionsData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetVersionResponses, GetVersionErrors, ThrowOnError>({
+  (options.client ?? client).get<
+    GetVersionVersionsResponses,
+    GetVersionVersionsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/templates/{id}/versions/{version}',
@@ -10666,20 +11172,20 @@ export const dryRun = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const list13 = <ThrowOnError extends boolean = false>(
-  options?: Options<List13Data, ThrowOnError>
+export const listGroups = <ThrowOnError extends boolean = false>(
+  options?: Options<ListGroupsData, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<List13Responses, List13Errors, ThrowOnError>({
+  (options?.client ?? client).get<ListGroupsResponses, ListGroupsErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/message/groups',
     ...options
   })
 
-export const create8 = <ThrowOnError extends boolean = false>(
-  options: Options<Create8Data, ThrowOnError>
+export const createGroups = <ThrowOnError extends boolean = false>(
+  options: Options<CreateGroupsData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Create8Responses, Create8Errors, ThrowOnError>({
+  (options.client ?? client).post<CreateGroupsResponses, CreateGroupsErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/message/groups',
@@ -10690,30 +11196,30 @@ export const create8 = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const delete9 = <ThrowOnError extends boolean = false>(
-  options: Options<Delete9Data, ThrowOnError>
+export const deleteGroups = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteGroupsData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<Delete9Responses, Delete9Errors, ThrowOnError>({
+  (options.client ?? client).delete<DeleteGroupsResponses, DeleteGroupsErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/message/groups/{id}',
     ...options
   })
 
-export const get1 = <ThrowOnError extends boolean = false>(
-  options: Options<Get1Data, ThrowOnError>
+export const getGroups = <ThrowOnError extends boolean = false>(
+  options: Options<GetGroupsData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<Get1Responses, Get1Errors, ThrowOnError>({
+  (options.client ?? client).get<GetGroupsResponses, GetGroupsErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/message/groups/{id}',
     ...options
   })
 
-export const update7 = <ThrowOnError extends boolean = false>(
-  options: Options<Update7Data, ThrowOnError>
+export const updateGroups = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateGroupsData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<Update7Responses, Update7Errors, ThrowOnError>({
+  (options.client ?? client).put<UpdateGroupsResponses, UpdateGroupsErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/message/groups/{id}',
@@ -10734,10 +11240,10 @@ export const members = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const addMembers1 = <ThrowOnError extends boolean = false>(
-  options: Options<AddMembers1Data, ThrowOnError>
+export const addMembers2 = <ThrowOnError extends boolean = false>(
+  options: Options<AddMembers2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<AddMembers1Responses, AddMembers1Errors, ThrowOnError>({
+  (options.client ?? client).post<AddMembers2Responses, AddMembers2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/message/groups/{id}/members',
@@ -10748,10 +11254,14 @@ export const addMembers1 = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const removeMember1 = <ThrowOnError extends boolean = false>(
-  options: Options<RemoveMember1Data, ThrowOnError>
+export const removeMemberMembers2 = <ThrowOnError extends boolean = false>(
+  options: Options<RemoveMemberMembers2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<RemoveMember1Responses, RemoveMember1Errors, ThrowOnError>({
+  (options.client ?? client).delete<
+    RemoveMemberMembers2Responses,
+    RemoveMemberMembers2Errors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/message/groups/{id}/members/{userId}',
@@ -10782,10 +11292,14 @@ export const upsert = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const delete8 = <ThrowOnError extends boolean = false>(
-  options: Options<Delete8Data, ThrowOnError>
+export const deletePreferences = <ThrowOnError extends boolean = false>(
+  options: Options<DeletePreferencesData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<Delete8Responses, Delete8Errors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeletePreferencesResponses,
+    DeletePreferencesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/message/preferences/{id}',
@@ -10808,10 +11322,10 @@ export const listRules = <ThrowOnError extends boolean = false>(
 /**
  * 创建订阅规则
  */
-export const createRule = <ThrowOnError extends boolean = false>(
-  options: Options<CreateRuleData, ThrowOnError>
+export const createRuleRules = <ThrowOnError extends boolean = false>(
+  options: Options<CreateRuleRulesData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<CreateRuleResponses, CreateRuleErrors, ThrowOnError>({
+  (options.client ?? client).post<CreateRuleRulesResponses, CreateRuleRulesErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/msg/config/rules',
@@ -10842,10 +11356,10 @@ export const previewRule = <ThrowOnError extends boolean = false>(
 /**
  * 删除订阅规则
  */
-export const deleteRule = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteRuleData, ThrowOnError>
+export const deleteRuleRules = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteRuleRulesData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<DeleteRuleResponses, DeleteRuleErrors, ThrowOnError>({
+  (options.client ?? client).delete<DeleteRuleRulesResponses, DeleteRuleRulesErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/msg/config/rules/{id}',
@@ -10855,10 +11369,10 @@ export const deleteRule = <ThrowOnError extends boolean = false>(
 /**
  * 更新订阅规则
  */
-export const updateRule = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateRuleData, ThrowOnError>
+export const updateRuleRules = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateRuleRulesData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<UpdateRuleResponses, UpdateRuleErrors, ThrowOnError>({
+  (options.client ?? client).put<UpdateRuleRulesResponses, UpdateRuleRulesErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/msg/config/rules/{id}',
@@ -11018,10 +11532,10 @@ export const markRead = <ThrowOnError extends boolean = false>(
 /**
  * 获取我管理的班级列表
  */
-export const getMyClasses1 = <ThrowOnError extends boolean = false>(
-  options?: Options<GetMyClasses1Data, ThrowOnError>
+export const getMyClasses2 = <ThrowOnError extends boolean = false>(
+  options?: Options<GetMyClasses2Data, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<GetMyClasses1Responses, GetMyClasses1Errors, ThrowOnError>({
+  (options?.client ?? client).get<GetMyClasses2Responses, GetMyClasses2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/my-class/classes',
@@ -11071,10 +11585,10 @@ export const getClassStudents = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const list12 = <ThrowOnError extends boolean = false>(
-  options?: Options<List12Data, ThrowOnError>
+export const listMyTodos = <ThrowOnError extends boolean = false>(
+  options?: Options<ListMyTodosData, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<List12Responses, List12Errors, ThrowOnError>({
+  (options?.client ?? client).get<ListMyTodosResponses, ListMyTodosErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/my-todos',
@@ -11352,12 +11866,12 @@ export const createOrgUnit = <ThrowOnError extends boolean = false>(
 /**
  * Get allowed child types
  */
-export const getAllowedChildTypes1 = <ThrowOnError extends boolean = false>(
-  options: Options<GetAllowedChildTypes1Data, ThrowOnError>
+export const getAllowedChildTypes2 = <ThrowOnError extends boolean = false>(
+  options: Options<GetAllowedChildTypes2Data, ThrowOnError>
 ) =>
   (options.client ?? client).get<
-    GetAllowedChildTypes1Responses,
-    GetAllowedChildTypes1Errors,
+    GetAllowedChildTypes2Responses,
+    GetAllowedChildTypes2Errors,
     ThrowOnError
   >({
     responseType: 'json',
@@ -11451,10 +11965,10 @@ export const updateOrgUnit = <ThrowOnError extends boolean = false>(
 /**
  * Get children
  */
-export const getChildren1 = <ThrowOnError extends boolean = false>(
-  options: Options<GetChildren1Data, ThrowOnError>
+export const getChildren2 = <ThrowOnError extends boolean = false>(
+  options: Options<GetChildren2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetChildren1Responses, GetChildren1Errors, ThrowOnError>({
+  (options.client ?? client).get<GetChildren2Responses, GetChildren2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/org-units/{id}/children',
@@ -11496,6 +12010,21 @@ export const freezeOrgUnit = <ThrowOnError extends boolean = false>(
   })
 
 /**
+ * Org unit impact analysis — 删除/合并前查依赖统计 (P8-4)
+ *
+ * Returns counts of dependent entities (descendants, students, classes, teachers, places, access_relations) under this org_unit subtree. Used by admin UI to warn before destructive operations.
+ */
+export const getImpact = <ThrowOnError extends boolean = false>(
+  options: Options<GetImpactData, ThrowOnError>
+) =>
+  (options.client ?? client).get<GetImpactResponses, GetImpactErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/org-units/{id}/impact',
+    ...options
+  })
+
+/**
  * Get belonging members
  */
 export const getBelongingMembers = <ThrowOnError extends boolean = false>(
@@ -11532,10 +12061,14 @@ export const getMembersRecursive = <ThrowOnError extends boolean = false>(
 /**
  * Remove member from organization
  */
-export const removeMember = <ThrowOnError extends boolean = false>(
-  options: Options<RemoveMemberData, ThrowOnError>
+export const removeMemberMembers = <ThrowOnError extends boolean = false>(
+  options: Options<RemoveMemberMembersData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<RemoveMemberResponses, RemoveMemberErrors, ThrowOnError>({
+  (options.client ?? client).delete<
+    RemoveMemberMembersResponses,
+    RemoveMemberMembersErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/org-units/{id}/members/{userId}',
@@ -11945,20 +12478,20 @@ export const triggerPoints = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const disable3 = <ThrowOnError extends boolean = false>(
-  options: Options<Disable3Data, ThrowOnError>
+export const disable4 = <ThrowOnError extends boolean = false>(
+  options: Options<Disable4Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Disable3Responses, Disable3Errors, ThrowOnError>({
+  (options.client ?? client).post<Disable4Responses, Disable4Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/plugin-platform/{code}/disable',
     ...options
   })
 
-export const enable3 = <ThrowOnError extends boolean = false>(
-  options: Options<Enable3Data, ThrowOnError>
+export const enable4 = <ThrowOnError extends boolean = false>(
+  options: Options<Enable4Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Enable3Responses, Enable3Errors, ThrowOnError>({
+  (options.client ?? client).post<Enable4Responses, Enable4Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/plugin-platform/{code}/enable',
@@ -11988,10 +12521,14 @@ export const uninstall = <ThrowOnError extends boolean = false>(
 /**
  * Create a rating configuration
  */
-export const createConfig1 = <ThrowOnError extends boolean = false>(
-  options: Options<CreateConfig1Data, ThrowOnError>
+export const createConfigConfigs2 = <ThrowOnError extends boolean = false>(
+  options: Options<CreateConfigConfigs2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<CreateConfig1Responses, CreateConfig1Errors, ThrowOnError>({
+  (options.client ?? client).post<
+    CreateConfigConfigs2Responses,
+    CreateConfigConfigs2Errors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/ratings/configs',
@@ -12018,10 +12555,14 @@ export const getConfigsByPlan = <ThrowOnError extends boolean = false>(
 /**
  * Delete a rating configuration
  */
-export const deleteConfig1 = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteConfig1Data, ThrowOnError>
+export const deleteConfigConfigs2 = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteConfigConfigs2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<DeleteConfig1Responses, DeleteConfig1Errors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeleteConfigConfigs2Responses,
+    DeleteConfigConfigs2Errors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/ratings/configs/{id}',
@@ -12044,10 +12585,14 @@ export const getConfig = <ThrowOnError extends boolean = false>(
 /**
  * Update a rating configuration
  */
-export const updateConfig1 = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateConfig1Data, ThrowOnError>
+export const updateConfigConfigs2 = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateConfigConfigs2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).put<UpdateConfig1Responses, UpdateConfig1Errors, ThrowOnError>({
+  (options.client ?? client).put<
+    UpdateConfigConfigs2Responses,
+    UpdateConfigConfigs2Errors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/ratings/configs/{id}',
@@ -12216,10 +12761,14 @@ export const revokeResult = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const list11 = <ThrowOnError extends boolean = false>(
-  options?: Options<List11Data, ThrowOnError>
+export const listRelationTypes = <ThrowOnError extends boolean = false>(
+  options?: Options<ListRelationTypesData, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<List11Responses, List11Errors, ThrowOnError>({
+  (options?.client ?? client).get<
+    ListRelationTypesResponses,
+    ListRelationTypesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/relation-types',
@@ -12518,10 +13067,14 @@ export const listPolicies = <ThrowOnError extends boolean = false>(
 /**
  * 创建排班策略
  */
-export const createPolicy = <ThrowOnError extends boolean = false>(
-  options: Options<CreatePolicyData, ThrowOnError>
+export const createPolicyPolicies = <ThrowOnError extends boolean = false>(
+  options: Options<CreatePolicyPoliciesData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<CreatePolicyResponses, CreatePolicyErrors, ThrowOnError>({
+  (options.client ?? client).post<
+    CreatePolicyPoliciesResponses,
+    CreatePolicyPoliciesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/schedule/policies',
@@ -12535,10 +13088,14 @@ export const createPolicy = <ThrowOnError extends boolean = false>(
 /**
  * 删除排班策略
  */
-export const deletePolicy = <ThrowOnError extends boolean = false>(
-  options: Options<DeletePolicyData, ThrowOnError>
+export const deletePolicyPolicies = <ThrowOnError extends boolean = false>(
+  options: Options<DeletePolicyPoliciesData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<DeletePolicyResponses, DeletePolicyErrors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeletePolicyPoliciesResponses,
+    DeletePolicyPoliciesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/schedule/policies/{id}',
@@ -12548,23 +13105,29 @@ export const deletePolicy = <ThrowOnError extends boolean = false>(
 /**
  * 获取排班策略详情
  */
-export const getPolicy = <ThrowOnError extends boolean = false>(
-  options: Options<GetPolicyData, ThrowOnError>
+export const getPolicyPolicies = <ThrowOnError extends boolean = false>(
+  options: Options<GetPolicyPoliciesData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetPolicyResponses, GetPolicyErrors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/schedule/policies/{id}',
-    ...options
-  })
+  (options.client ?? client).get<GetPolicyPoliciesResponses, GetPolicyPoliciesErrors, ThrowOnError>(
+    {
+      responseType: 'json',
+      security: [{ scheme: 'bearer', type: 'http' }],
+      url: '/schedule/policies/{id}',
+      ...options
+    }
+  )
 
 /**
  * 更新排班策略
  */
-export const updatePolicy = <ThrowOnError extends boolean = false>(
-  options: Options<UpdatePolicyData, ThrowOnError>
+export const updatePolicyPolicies = <ThrowOnError extends boolean = false>(
+  options: Options<UpdatePolicyPoliciesData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<UpdatePolicyResponses, UpdatePolicyErrors, ThrowOnError>({
+  (options.client ?? client).put<
+    UpdatePolicyPoliciesResponses,
+    UpdatePolicyPoliciesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/schedule/policies/{id}',
@@ -12677,10 +13240,14 @@ export const getAllConfigs = <ThrowOnError extends boolean = false>(
  *
  * 创建新的系统配置项
  */
-export const createConfig = <ThrowOnError extends boolean = false>(
-  options: Options<CreateConfigData, ThrowOnError>
+export const createConfigConfigs = <ThrowOnError extends boolean = false>(
+  options: Options<CreateConfigConfigsData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<CreateConfigResponses, CreateConfigErrors, ThrowOnError>({
+  (options.client ?? client).post<
+    CreateConfigConfigsResponses,
+    CreateConfigConfigsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/system/configs',
@@ -12749,10 +13316,14 @@ export const getPublicConfigs = <ThrowOnError extends boolean = false>(
  *
  * 根据ID删除系统配置（系统内置配置不可删除）
  */
-export const deleteConfig = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteConfigData, ThrowOnError>
+export const deleteConfigConfigs = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteConfigConfigsData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<DeleteConfigResponses, DeleteConfigErrors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeleteConfigConfigsResponses,
+    DeleteConfigConfigsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/system/configs/{id}',
@@ -12764,10 +13335,14 @@ export const deleteConfig = <ThrowOnError extends boolean = false>(
  *
  * 根据ID修改系统配置
  */
-export const updateConfig = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateConfigData, ThrowOnError>
+export const updateConfigConfigs = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateConfigConfigsData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<UpdateConfigResponses, UpdateConfigErrors, ThrowOnError>({
+  (options.client ?? client).put<
+    UpdateConfigConfigsResponses,
+    UpdateConfigConfigsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/system/configs/{id}',
@@ -12788,13 +13363,27 @@ export const checkSync = <ThrowOnError extends boolean = false>(
     ...options
   })
 
+export const refreshCasbin = <ThrowOnError extends boolean = false>(
+  options?: Options<RefreshCasbinData, ThrowOnError>
+) =>
+  (options?.client ?? client).post<RefreshCasbinResponses, RefreshCasbinErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/system/permission-sync/refresh-casbin',
+    ...options
+  })
+
 /**
  * Get teacher profile list (paginated)
  */
-export const listProfiles = <ThrowOnError extends boolean = false>(
-  options?: Options<ListProfilesData, ThrowOnError>
+export const listProfilesTeacherProfiles = <ThrowOnError extends boolean = false>(
+  options?: Options<ListProfilesTeacherProfilesData, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<ListProfilesResponses, ListProfilesErrors, ThrowOnError>({
+  (options?.client ?? client).get<
+    ListProfilesTeacherProfilesResponses,
+    ListProfilesTeacherProfilesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teacher-profiles',
@@ -12804,10 +13393,14 @@ export const listProfiles = <ThrowOnError extends boolean = false>(
 /**
  * Create teacher profile
  */
-export const createProfile = <ThrowOnError extends boolean = false>(
-  options: Options<CreateProfileData, ThrowOnError>
+export const createProfileTeacherProfiles = <ThrowOnError extends boolean = false>(
+  options: Options<CreateProfileTeacherProfilesData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<CreateProfileResponses, CreateProfileErrors, ThrowOnError>({
+  (options.client ?? client).post<
+    CreateProfileTeacherProfilesResponses,
+    CreateProfileTeacherProfilesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teacher-profiles',
@@ -12851,10 +13444,14 @@ export const getByUserId = <ThrowOnError extends boolean = false>(
 /**
  * Delete teacher profile
  */
-export const deleteProfile = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteProfileData, ThrowOnError>
+export const deleteProfileTeacherProfiles = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteProfileTeacherProfilesData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<DeleteProfileResponses, DeleteProfileErrors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeleteProfileTeacherProfilesResponses,
+    DeleteProfileTeacherProfilesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teacher-profiles/{id}',
@@ -12864,10 +13461,14 @@ export const deleteProfile = <ThrowOnError extends boolean = false>(
 /**
  * Get teacher profile by ID
  */
-export const getProfile = <ThrowOnError extends boolean = false>(
-  options: Options<GetProfileData, ThrowOnError>
+export const getProfileTeacherProfiles = <ThrowOnError extends boolean = false>(
+  options: Options<GetProfileTeacherProfilesData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetProfileResponses, GetProfileErrors, ThrowOnError>({
+  (options.client ?? client).get<
+    GetProfileTeacherProfilesResponses,
+    GetProfileTeacherProfilesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teacher-profiles/{id}',
@@ -12877,10 +13478,14 @@ export const getProfile = <ThrowOnError extends boolean = false>(
 /**
  * Update teacher profile
  */
-export const updateProfile = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateProfileData, ThrowOnError>
+export const updateProfileTeacherProfiles = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateProfileTeacherProfilesData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<UpdateProfileResponses, UpdateProfileErrors, ThrowOnError>({
+  (options.client ?? client).put<
+    UpdateProfileTeacherProfilesResponses,
+    UpdateProfileTeacherProfilesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teacher-profiles/{id}',
@@ -13040,20 +13645,28 @@ export const rejectAdjustment = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const list10 = <ThrowOnError extends boolean = false>(
-  options: Options<List10Data, ThrowOnError>
+export const listClassAssignments = <ThrowOnError extends boolean = false>(
+  options: Options<ListClassAssignmentsData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<List10Responses, List10Errors, ThrowOnError>({
+  (options.client ?? client).get<
+    ListClassAssignmentsResponses,
+    ListClassAssignmentsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/class-assignments',
     ...options
   })
 
-export const create7 = <ThrowOnError extends boolean = false>(
-  options: Options<Create7Data, ThrowOnError>
+export const createClassAssignments = <ThrowOnError extends boolean = false>(
+  options: Options<CreateClassAssignmentsData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Create7Responses, Create7Errors, ThrowOnError>({
+  (options.client ?? client).post<
+    CreateClassAssignmentsResponses,
+    CreateClassAssignmentsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/class-assignments',
@@ -13078,20 +13691,24 @@ export const batchConfirm = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const delete7 = <ThrowOnError extends boolean = false>(
-  options: Options<Delete7Data, ThrowOnError>
+export const deleteClassAssignments = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteClassAssignmentsData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<Delete7Responses, Delete7Errors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeleteClassAssignmentsResponses,
+    DeleteClassAssignmentsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/class-assignments/{id}',
     ...options
   })
 
-export const list9 = <ThrowOnError extends boolean = false>(
-  options: Options<List9Data, ThrowOnError>
+export const listConflicts = <ThrowOnError extends boolean = false>(
+  options: Options<ListConflictsData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<List9Responses, List9Errors, ThrowOnError>({
+  (options.client ?? client).get<ListConflictsResponses, ListConflictsErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/conflicts',
@@ -13146,20 +13763,24 @@ export const resolve = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const list8 = <ThrowOnError extends boolean = false>(
-  options: Options<List8Data, ThrowOnError>
+export const listConstraints = <ThrowOnError extends boolean = false>(
+  options: Options<ListConstraintsData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<List8Responses, List8Errors, ThrowOnError>({
+  (options.client ?? client).get<ListConstraintsResponses, ListConstraintsErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/constraints',
     ...options
   })
 
-export const create6 = <ThrowOnError extends boolean = false>(
-  options: Options<Create6Data, ThrowOnError>
+export const createConstraints = <ThrowOnError extends boolean = false>(
+  options: Options<CreateConstraintsData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Create6Responses, Create6Errors, ThrowOnError>({
+  (options.client ?? client).post<
+    CreateConstraintsResponses,
+    CreateConstraintsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/constraints',
@@ -13180,64 +13801,74 @@ export const getTimeMatrix = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const delete6 = <ThrowOnError extends boolean = false>(
-  options: Options<Delete6Data, ThrowOnError>
+export const deleteConstraints = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteConstraintsData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<Delete6Responses, Delete6Errors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeleteConstraintsResponses,
+    DeleteConstraintsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/constraints/{id}',
     ...options
   })
 
-export const update6 = <ThrowOnError extends boolean = false>(
-  options: Options<Update6Data, ThrowOnError>
+export const updateConstraints = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateConstraintsData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<Update6Responses, Update6Errors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/teaching/constraints/{id}',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
+  (options.client ?? client).put<UpdateConstraintsResponses, UpdateConstraintsErrors, ThrowOnError>(
+    {
+      responseType: 'json',
+      security: [{ scheme: 'bearer', type: 'http' }],
+      url: '/teaching/constraints/{id}',
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      }
     }
-  })
+  )
 
-export const disable2 = <ThrowOnError extends boolean = false>(
-  options: Options<Disable2Data, ThrowOnError>
+export const disable3 = <ThrowOnError extends boolean = false>(
+  options: Options<Disable3Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Disable2Responses, Disable2Errors, ThrowOnError>({
+  (options.client ?? client).post<Disable3Responses, Disable3Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/constraints/{id}/disable',
     ...options
   })
 
-export const enable2 = <ThrowOnError extends boolean = false>(
-  options: Options<Enable2Data, ThrowOnError>
+export const enable3 = <ThrowOnError extends boolean = false>(
+  options: Options<Enable3Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Enable2Responses, Enable2Errors, ThrowOnError>({
+  (options.client ?? client).post<Enable3Responses, Enable3Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/constraints/{id}/enable',
     ...options
   })
 
-export const list7 = <ThrowOnError extends boolean = false>(
-  options?: Options<List7Data, ThrowOnError>
+export const listEvaluations = <ThrowOnError extends boolean = false>(
+  options?: Options<ListEvaluationsData, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<List7Responses, List7Errors, ThrowOnError>({
+  (options?.client ?? client).get<ListEvaluationsResponses, ListEvaluationsErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/evaluations',
     ...options
   })
 
-export const create5 = <ThrowOnError extends boolean = false>(
-  options: Options<Create5Data, ThrowOnError>
+export const createEvaluations = <ThrowOnError extends boolean = false>(
+  options: Options<CreateEvaluationsData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Create5Responses, Create5Errors, ThrowOnError>({
+  (options.client ?? client).post<
+    CreateEvaluationsResponses,
+    CreateEvaluationsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/evaluations',
@@ -13248,39 +13879,45 @@ export const create5 = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const delete5 = <ThrowOnError extends boolean = false>(
-  options: Options<Delete5Data, ThrowOnError>
+export const deleteEvaluations = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteEvaluationsData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<Delete5Responses, Delete5Errors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeleteEvaluationsResponses,
+    DeleteEvaluationsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/evaluations/{id}',
     ...options
   })
 
-export const get = <ThrowOnError extends boolean = false>(
-  options: Options<GetData, ThrowOnError>
+export const getEvaluations = <ThrowOnError extends boolean = false>(
+  options: Options<GetEvaluationsData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetResponses, GetErrors, ThrowOnError>({
+  (options.client ?? client).get<GetEvaluationsResponses, GetEvaluationsErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/evaluations/{id}',
     ...options
   })
 
-export const update5 = <ThrowOnError extends boolean = false>(
-  options: Options<Update5Data, ThrowOnError>
+export const updateEvaluations = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateEvaluationsData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<Update5Responses, Update5Errors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/teaching/evaluations/{id}',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
+  (options.client ?? client).put<UpdateEvaluationsResponses, UpdateEvaluationsErrors, ThrowOnError>(
+    {
+      responseType: 'json',
+      security: [{ scheme: 'bearer', type: 'http' }],
+      url: '/teaching/evaluations/{id}',
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      }
     }
-  })
+  )
 
 export const close = <ThrowOnError extends boolean = false>(
   options: Options<CloseData, ThrowOnError>
@@ -13316,10 +13953,14 @@ export const createIndicator = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const deleteIndicator = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteIndicatorData, ThrowOnError>
+export const deleteIndicatorIndicators2 = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteIndicatorIndicators2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<DeleteIndicatorResponses, DeleteIndicatorErrors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeleteIndicatorIndicators2Responses,
+    DeleteIndicatorIndicators2Errors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/evaluations/{id}/indicators/{indicatorId}',
@@ -13336,10 +13977,10 @@ export const myPending = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const submit = <ThrowOnError extends boolean = false>(
-  options: Options<SubmitData, ThrowOnError>
+export const submitResponses = <ThrowOnError extends boolean = false>(
+  options: Options<SubmitResponsesData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<SubmitResponses, SubmitErrors, ThrowOnError>({
+  (options.client ?? client).post<SubmitResponsesResponses, SubmitResponsesErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/evaluations/{id}/responses',
@@ -13350,10 +13991,10 @@ export const submit = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const start1 = <ThrowOnError extends boolean = false>(
-  options: Options<Start1Data, ThrowOnError>
+export const start2 = <ThrowOnError extends boolean = false>(
+  options: Options<Start2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Start1Responses, Start1Errors, ThrowOnError>({
+  (options.client ?? client).post<Start2Responses, Start2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/evaluations/{id}/start',
@@ -13384,20 +14025,24 @@ export const assignRooms = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const listBatches1 = <ThrowOnError extends boolean = false>(
-  options?: Options<ListBatches1Data, ThrowOnError>
+export const listBatches2 = <ThrowOnError extends boolean = false>(
+  options?: Options<ListBatches2Data, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<ListBatches1Responses, ListBatches1Errors, ThrowOnError>({
+  (options?.client ?? client).get<ListBatches2Responses, ListBatches2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/examinations/batches',
     ...options
   })
 
-export const createBatch1 = <ThrowOnError extends boolean = false>(
-  options: Options<CreateBatch1Data, ThrowOnError>
+export const createBatchBatches2 = <ThrowOnError extends boolean = false>(
+  options: Options<CreateBatchBatches2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<CreateBatch1Responses, CreateBatch1Errors, ThrowOnError>({
+  (options.client ?? client).post<
+    CreateBatchBatches2Responses,
+    CreateBatchBatches2Errors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/examinations/batches',
@@ -13476,30 +14121,38 @@ export const detectConflicts = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const deleteBatch1 = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteBatch1Data, ThrowOnError>
+export const deleteBatchBatches2 = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteBatchBatches2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<DeleteBatch1Responses, DeleteBatch1Errors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeleteBatchBatches2Responses,
+    DeleteBatchBatches2Errors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/examinations/batches/{id}',
     ...options
   })
 
-export const getBatch1 = <ThrowOnError extends boolean = false>(
-  options: Options<GetBatch1Data, ThrowOnError>
+export const getBatchBatches2 = <ThrowOnError extends boolean = false>(
+  options: Options<GetBatchBatches2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetBatch1Responses, GetBatch1Errors, ThrowOnError>({
+  (options.client ?? client).get<GetBatchBatches2Responses, GetBatchBatches2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/examinations/batches/{id}',
     ...options
   })
 
-export const updateBatch1 = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateBatch1Data, ThrowOnError>
+export const updateBatchBatches2 = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateBatchBatches2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).put<UpdateBatch1Responses, UpdateBatch1Errors, ThrowOnError>({
+  (options.client ?? client).put<
+    UpdateBatchBatches2Responses,
+    UpdateBatchBatches2Errors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/examinations/batches/{id}',
@@ -13510,10 +14163,14 @@ export const updateBatch1 = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const publishBatch1 = <ThrowOnError extends boolean = false>(
-  options: Options<PublishBatch1Data, ThrowOnError>
+export const publishBatchPublish2 = <ThrowOnError extends boolean = false>(
+  options: Options<PublishBatchPublish2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<PublishBatch1Responses, PublishBatch1Errors, ThrowOnError>({
+  (options.client ?? client).post<
+    PublishBatchPublish2Responses,
+    PublishBatchPublish2Errors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/examinations/batches/{id}/publish',
@@ -13548,10 +14205,14 @@ export const listBatches = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const createBatch = <ThrowOnError extends boolean = false>(
-  options: Options<CreateBatchData, ThrowOnError>
+export const createBatchBatches = <ThrowOnError extends boolean = false>(
+  options: Options<CreateBatchBatchesData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<CreateBatchResponses, CreateBatchErrors, ThrowOnError>({
+  (options.client ?? client).post<
+    CreateBatchBatchesResponses,
+    CreateBatchBatchesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/grades/batches',
@@ -13633,30 +14294,38 @@ export const downloadImportTemplate = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const deleteBatch = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteBatchData, ThrowOnError>
+export const deleteBatchBatches = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteBatchBatchesData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<DeleteBatchResponses, DeleteBatchErrors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeleteBatchBatchesResponses,
+    DeleteBatchBatchesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/grades/batches/{id}',
     ...options
   })
 
-export const getBatch = <ThrowOnError extends boolean = false>(
-  options: Options<GetBatchData, ThrowOnError>
+export const getBatchBatches = <ThrowOnError extends boolean = false>(
+  options: Options<GetBatchBatchesData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetBatchResponses, GetBatchErrors, ThrowOnError>({
+  (options.client ?? client).get<GetBatchBatchesResponses, GetBatchBatchesErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/grades/batches/{id}',
     ...options
   })
 
-export const updateBatch = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateBatchData, ThrowOnError>
+export const updateBatchBatches = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateBatchBatchesData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<UpdateBatchResponses, UpdateBatchErrors, ThrowOnError>({
+  (options.client ?? client).put<
+    UpdateBatchBatchesResponses,
+    UpdateBatchBatchesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/grades/batches/{id}',
@@ -13677,10 +14346,14 @@ export const approveBatch = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const publishBatch = <ThrowOnError extends boolean = false>(
-  options: Options<PublishBatchData, ThrowOnError>
+export const publishBatchPublish = <ThrowOnError extends boolean = false>(
+  options: Options<PublishBatchPublishData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<PublishBatchResponses, PublishBatchErrors, ThrowOnError>({
+  (options.client ?? client).post<
+    PublishBatchPublishResponses,
+    PublishBatchPublishErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/grades/batches/{id}/publish',
@@ -13754,10 +14427,10 @@ export const getRanking = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const getStatistics1 = <ThrowOnError extends boolean = false>(
-  options?: Options<GetStatistics1Data, ThrowOnError>
+export const getStatistics2 = <ThrowOnError extends boolean = false>(
+  options?: Options<GetStatistics2Data, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<GetStatistics1Responses, GetStatistics1Errors, ThrowOnError>({
+  (options?.client ?? client).get<GetStatistics2Responses, GetStatistics2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/grades/statistics',
@@ -13804,10 +14477,10 @@ export const updateGrade = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const listInstances1 = <ThrowOnError extends boolean = false>(
-  options: Options<ListInstances1Data, ThrowOnError>
+export const listInstances2 = <ThrowOnError extends boolean = false>(
+  options: Options<ListInstances2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).get<ListInstances1Responses, ListInstances1Errors, ThrowOnError>({
+  (options.client ?? client).get<ListInstances2Responses, ListInstances2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/instances',
@@ -13888,20 +14561,20 @@ export const substituteTeacher = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const list6 = <ThrowOnError extends boolean = false>(
-  options: Options<List6Data, ThrowOnError>
+export const listOfferings = <ThrowOnError extends boolean = false>(
+  options: Options<ListOfferingsData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<List6Responses, List6Errors, ThrowOnError>({
+  (options.client ?? client).get<ListOfferingsResponses, ListOfferingsErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/offerings',
     ...options
   })
 
-export const create4 = <ThrowOnError extends boolean = false>(
-  options: Options<Create4Data, ThrowOnError>
+export const createOfferings = <ThrowOnError extends boolean = false>(
+  options: Options<CreateOfferingsData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Create4Responses, Create4Errors, ThrowOnError>({
+  (options.client ?? client).post<CreateOfferingsResponses, CreateOfferingsErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/offerings',
@@ -13912,10 +14585,10 @@ export const create4 = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const generateTasks1 = <ThrowOnError extends boolean = false>(
-  options: Options<GenerateTasks1Data, ThrowOnError>
+export const generateTasks2 = <ThrowOnError extends boolean = false>(
+  options: Options<GenerateTasks2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<GenerateTasks1Responses, GenerateTasks1Errors, ThrowOnError>({
+  (options.client ?? client).post<GenerateTasks2Responses, GenerateTasks2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/offerings/generate-tasks',
@@ -13940,20 +14613,20 @@ export const importFromPlan = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const delete4 = <ThrowOnError extends boolean = false>(
-  options: Options<Delete4Data, ThrowOnError>
+export const deleteOfferings = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteOfferingsData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<Delete4Responses, Delete4Errors, ThrowOnError>({
+  (options.client ?? client).delete<DeleteOfferingsResponses, DeleteOfferingsErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/offerings/{id}',
     ...options
   })
 
-export const update4 = <ThrowOnError extends boolean = false>(
-  options: Options<Update4Data, ThrowOnError>
+export const updateOfferings = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateOfferingsData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<Update4Responses, Update4Errors, ThrowOnError>({
+  (options.client ?? client).put<UpdateOfferingsResponses, UpdateOfferingsErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/offerings/{id}',
@@ -13974,20 +14647,20 @@ export const confirm = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const list5 = <ThrowOnError extends boolean = false>(
-  options: Options<List5Data, ThrowOnError>
+export const listProgress = <ThrowOnError extends boolean = false>(
+  options: Options<ListProgressData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<List5Responses, List5Errors, ThrowOnError>({
+  (options.client ?? client).get<ListProgressResponses, ListProgressErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/progress',
     ...options
   })
 
-export const create3 = <ThrowOnError extends boolean = false>(
-  options: Options<Create3Data, ThrowOnError>
+export const createProgress = <ThrowOnError extends boolean = false>(
+  options: Options<CreateProgressData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Create3Responses, Create3Errors, ThrowOnError>({
+  (options.client ?? client).post<CreateProgressResponses, CreateProgressErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/progress',
@@ -14018,20 +14691,20 @@ export const summary = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const delete3 = <ThrowOnError extends boolean = false>(
-  options: Options<Delete3Data, ThrowOnError>
+export const deleteProgress = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteProgressData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<Delete3Responses, Delete3Errors, ThrowOnError>({
+  (options.client ?? client).delete<DeleteProgressResponses, DeleteProgressErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/progress/{id}',
     ...options
   })
 
-export const update3 = <ThrowOnError extends boolean = false>(
-  options: Options<Update3Data, ThrowOnError>
+export const updateProgress = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateProgressData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<Update3Responses, Update3Errors, ThrowOnError>({
+  (options.client ?? client).put<UpdateProgressResponses, UpdateProgressErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/progress/{id}',
@@ -14452,10 +15125,10 @@ export const listTasks = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const createTask = <ThrowOnError extends boolean = false>(
-  options: Options<CreateTaskData, ThrowOnError>
+export const createTaskTasks = <ThrowOnError extends boolean = false>(
+  options: Options<CreateTaskTasksData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<CreateTaskResponses, CreateTaskErrors, ThrowOnError>({
+  (options.client ?? client).post<CreateTaskTasksResponses, CreateTaskTasksErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/tasks',
@@ -14490,10 +15163,10 @@ export const deleteTask = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const getTask = <ThrowOnError extends boolean = false>(
-  options: Options<GetTaskData, ThrowOnError>
+export const getTaskTasks = <ThrowOnError extends boolean = false>(
+  options: Options<GetTaskTasksData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetTaskResponses, GetTaskErrors, ThrowOnError>({
+  (options.client ?? client).get<GetTaskTasksResponses, GetTaskTasksErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/tasks/{id}',
@@ -14554,20 +15227,28 @@ export const removeTeacher = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const list4 = <ThrowOnError extends boolean = false>(
-  options: Options<List4Data, ThrowOnError>
+export const listTeacherPreferences = <ThrowOnError extends boolean = false>(
+  options: Options<ListTeacherPreferencesData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<List4Responses, List4Errors, ThrowOnError>({
+  (options.client ?? client).get<
+    ListTeacherPreferencesResponses,
+    ListTeacherPreferencesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/teacher-preferences',
     ...options
   })
 
-export const create2 = <ThrowOnError extends boolean = false>(
-  options: Options<Create2Data, ThrowOnError>
+export const createTeacherPreferences = <ThrowOnError extends boolean = false>(
+  options: Options<CreateTeacherPreferencesData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Create2Responses, Create2Errors, ThrowOnError>({
+  (options.client ?? client).post<
+    CreateTeacherPreferencesResponses,
+    CreateTeacherPreferencesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/teacher-preferences',
@@ -14578,20 +15259,28 @@ export const create2 = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const delete2 = <ThrowOnError extends boolean = false>(
-  options: Options<Delete2Data, ThrowOnError>
+export const deleteTeacherPreferences = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteTeacherPreferencesData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<Delete2Responses, Delete2Errors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeleteTeacherPreferencesResponses,
+    DeleteTeacherPreferencesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/teacher-preferences/{id}',
     ...options
   })
 
-export const update2 = <ThrowOnError extends boolean = false>(
-  options: Options<Update2Data, ThrowOnError>
+export const updateTeacherPreferences = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateTeacherPreferencesData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<Update2Responses, Update2Errors, ThrowOnError>({
+  (options.client ?? client).put<
+    UpdateTeacherPreferencesResponses,
+    UpdateTeacherPreferencesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/teacher-preferences/{id}',
@@ -14602,20 +15291,28 @@ export const update2 = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const list3 = <ThrowOnError extends boolean = false>(
-  options: Options<List3Data, ThrowOnError>
+export const listTeachingClasses = <ThrowOnError extends boolean = false>(
+  options: Options<ListTeachingClassesData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<List3Responses, List3Errors, ThrowOnError>({
+  (options.client ?? client).get<
+    ListTeachingClassesResponses,
+    ListTeachingClassesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/teaching-classes',
     ...options
   })
 
-export const create1 = <ThrowOnError extends boolean = false>(
-  options: Options<Create1Data, ThrowOnError>
+export const createTeachingClasses = <ThrowOnError extends boolean = false>(
+  options: Options<CreateTeachingClassesData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<Create1Responses, Create1Errors, ThrowOnError>({
+  (options.client ?? client).post<
+    CreateTeachingClassesResponses,
+    CreateTeachingClassesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/teaching-classes',
@@ -14626,30 +15323,42 @@ export const create1 = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const delete1 = <ThrowOnError extends boolean = false>(
-  options: Options<Delete1Data, ThrowOnError>
+export const deleteTeachingClasses = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteTeachingClassesData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<Delete1Responses, Delete1Errors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeleteTeachingClassesResponses,
+    DeleteTeachingClassesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/teaching-classes/{id}',
     ...options
   })
 
-export const getById4 = <ThrowOnError extends boolean = false>(
-  options: Options<GetById4Data, ThrowOnError>
+export const getByIdTeachingClasses = <ThrowOnError extends boolean = false>(
+  options: Options<GetByIdTeachingClassesData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetById4Responses, GetById4Errors, ThrowOnError>({
+  (options.client ?? client).get<
+    GetByIdTeachingClassesResponses,
+    GetByIdTeachingClassesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/teaching-classes/{id}',
     ...options
   })
 
-export const update1 = <ThrowOnError extends boolean = false>(
-  options: Options<Update1Data, ThrowOnError>
+export const updateTeachingClasses = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateTeachingClassesData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<Update1Responses, Update1Errors, ThrowOnError>({
+  (options.client ?? client).put<
+    UpdateTeachingClassesResponses,
+    UpdateTeachingClassesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/teaching/teaching-classes/{id}',
@@ -14810,20 +15519,20 @@ export const getStats = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const list2 = <ThrowOnError extends boolean = false>(
-  options?: Options<List2Data, ThrowOnError>
+export const listTenants = <ThrowOnError extends boolean = false>(
+  options?: Options<ListTenantsData, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<List2Responses, List2Errors, ThrowOnError>({
+  (options?.client ?? client).get<ListTenantsResponses, ListTenantsErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/tenants',
     ...options
   })
 
-export const create = <ThrowOnError extends boolean = false>(
-  options: Options<CreateData, ThrowOnError>
+export const createTenants = <ThrowOnError extends boolean = false>(
+  options: Options<CreateTenantsData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<CreateResponses, CreateErrors, ThrowOnError>({
+  (options.client ?? client).post<CreateTenantsResponses, CreateTenantsErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/tenants',
@@ -14834,30 +15543,30 @@ export const create = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const delete_ = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteData, ThrowOnError>
+export const deleteTenants = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteTenantsData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<DeleteResponses, DeleteErrors, ThrowOnError>({
+  (options.client ?? client).delete<DeleteTenantsResponses, DeleteTenantsErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/tenants/{id}',
     ...options
   })
 
-export const getById3 = <ThrowOnError extends boolean = false>(
-  options: Options<GetById3Data, ThrowOnError>
+export const getByIdTenants = <ThrowOnError extends boolean = false>(
+  options: Options<GetByIdTenantsData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetById3Responses, GetById3Errors, ThrowOnError>({
+  (options.client ?? client).get<GetByIdTenantsResponses, GetByIdTenantsErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/tenants/{id}',
     ...options
   })
 
-export const update = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateData, ThrowOnError>
+export const updateTenants = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateTenantsData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<UpdateResponses, UpdateErrors, ThrowOnError>({
+  (options.client ?? client).put<UpdateTenantsResponses, UpdateTenantsErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/tenants/{id}',
@@ -15529,10 +16238,10 @@ export const resumeStudent = <ThrowOnError extends boolean = false>(
 /**
  * 更新学生状态
  */
-export const updateStatus1 = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateStatus1Data, ThrowOnError>
+export const updateStatus2 = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateStatus2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).patch<UpdateStatus1Responses, UpdateStatus1Errors, ThrowOnError>({
+  (options.client ?? client).patch<UpdateStatus2Responses, UpdateStatus2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/user_student/{id}/status',
@@ -15611,10 +16320,10 @@ export const getAllUsers = <ThrowOnError extends boolean = false>(
 /**
  * 创建用户
  */
-export const createUser = <ThrowOnError extends boolean = false>(
-  options: Options<CreateUserData, ThrowOnError>
+export const createUserUsers = <ThrowOnError extends boolean = false>(
+  options: Options<CreateUserUsersData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<CreateUserResponses, CreateUserErrors, ThrowOnError>({
+  (options.client ?? client).post<CreateUserUsersResponses, CreateUserUsersErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/users',
@@ -15628,10 +16337,14 @@ export const createUser = <ThrowOnError extends boolean = false>(
 /**
  * 批量删除用户
  */
-export const deleteUsers = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteUsersData, ThrowOnError>
+export const deleteUsersBatch = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteUsersBatchData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<DeleteUsersResponses, DeleteUsersErrors, ThrowOnError>({
+  (options.client ?? client).delete<
+    DeleteUsersBatchResponses,
+    DeleteUsersBatchErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/users/batch',
@@ -15675,10 +16388,14 @@ export const getUserByUsername = <ThrowOnError extends boolean = false>(
 /**
  * 检查用户名是否存在
  */
-export const existsUsername = <ThrowOnError extends boolean = false>(
-  options: Options<ExistsUsernameData, ThrowOnError>
+export const existsUsernameExists = <ThrowOnError extends boolean = false>(
+  options: Options<ExistsUsernameExistsData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<ExistsUsernameResponses, ExistsUsernameErrors, ThrowOnError>({
+  (options.client ?? client).get<
+    ExistsUsernameExistsResponses,
+    ExistsUsernameExistsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/users/exists',
@@ -15727,12 +16444,12 @@ export const getUserPage = <ThrowOnError extends boolean = false>(
 /**
  * 获取简单用户列表
  */
-export const getSimpleUserList = <ThrowOnError extends boolean = false>(
-  options?: Options<GetSimpleUserListData, ThrowOnError>
+export const getSimpleUserListSimple = <ThrowOnError extends boolean = false>(
+  options?: Options<GetSimpleUserListSimpleData, ThrowOnError>
 ) =>
   (options?.client ?? client).get<
-    GetSimpleUserListResponses,
-    GetSimpleUserListErrors,
+    GetSimpleUserListSimpleResponses,
+    GetSimpleUserListSimpleErrors,
     ThrowOnError
   >({
     responseType: 'json',
@@ -15778,10 +16495,10 @@ export const getUsersWithOrgUnits = <ThrowOnError extends boolean = false>(
 /**
  * 删除用户
  */
-export const deleteUser = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteUserData, ThrowOnError>
+export const deleteUserUsers = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteUserUsersData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<DeleteUserResponses, DeleteUserErrors, ThrowOnError>({
+  (options.client ?? client).delete<DeleteUserUsersResponses, DeleteUserUsersErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/users/{id}',
@@ -15791,10 +16508,10 @@ export const deleteUser = <ThrowOnError extends boolean = false>(
 /**
  * 获取用户详情
  */
-export const getUser = <ThrowOnError extends boolean = false>(
-  options: Options<GetUserData, ThrowOnError>
+export const getUserUsers = <ThrowOnError extends boolean = false>(
+  options: Options<GetUserUsersData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetUserResponses, GetUserErrors, ThrowOnError>({
+  (options.client ?? client).get<GetUserUsersResponses, GetUserUsersErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/users/{id}',
@@ -15804,10 +16521,10 @@ export const getUser = <ThrowOnError extends boolean = false>(
 /**
  * 更新用户
  */
-export const updateUser = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateUserData, ThrowOnError>
+export const updateUserUsers = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateUserUsersData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<UpdateUserResponses, UpdateUserErrors, ThrowOnError>({
+  (options.client ?? client).put<UpdateUserUsersResponses, UpdateUserUsersErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/users/{id}',
@@ -15834,10 +16551,14 @@ export const bindWechat = <ThrowOnError extends boolean = false>(
 /**
  * 禁用用户
  */
-export const disableUser = <ThrowOnError extends boolean = false>(
-  options: Options<DisableUserData, ThrowOnError>
+export const disableUserDisable = <ThrowOnError extends boolean = false>(
+  options: Options<DisableUserDisableData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<DisableUserResponses, DisableUserErrors, ThrowOnError>({
+  (options.client ?? client).post<
+    DisableUserDisableResponses,
+    DisableUserDisableErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/users/{id}/disable',
@@ -15847,10 +16568,10 @@ export const disableUser = <ThrowOnError extends boolean = false>(
 /**
  * 启用用户
  */
-export const enableUser = <ThrowOnError extends boolean = false>(
-  options: Options<EnableUserData, ThrowOnError>
+export const enableUserEnable = <ThrowOnError extends boolean = false>(
+  options: Options<EnableUserEnableData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<EnableUserResponses, EnableUserErrors, ThrowOnError>({
+  (options.client ?? client).post<EnableUserEnableResponses, EnableUserEnableErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/users/{id}/enable',
@@ -16360,10 +17081,14 @@ export const myHistoricTasks = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const list1 = <ThrowOnError extends boolean = false>(
-  options?: Options<List1Data, ThrowOnError>
+export const listProcessDefinitions = <ThrowOnError extends boolean = false>(
+  options?: Options<ListProcessDefinitionsData, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<List1Responses, List1Errors, ThrowOnError>({
+  (options?.client ?? client).get<
+    ListProcessDefinitionsResponses,
+    ListProcessDefinitionsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/workflow/process-definitions',
@@ -16398,10 +17123,14 @@ export const deleteDeployment = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const getById2 = <ThrowOnError extends boolean = false>(
-  options: Options<GetById2Data, ThrowOnError>
+export const getByIdProcessDefinitions = <ThrowOnError extends boolean = false>(
+  options: Options<GetByIdProcessDefinitionsData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetById2Responses, GetById2Errors, ThrowOnError>({
+  (options.client ?? client).get<
+    GetByIdProcessDefinitionsResponses,
+    GetByIdProcessDefinitionsErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/workflow/process-definitions/{id}',
@@ -16428,10 +17157,14 @@ export const suspend = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const list = <ThrowOnError extends boolean = false>(
-  options?: Options<ListData, ThrowOnError>
+export const listProcessInstances = <ThrowOnError extends boolean = false>(
+  options?: Options<ListProcessInstancesData, ThrowOnError>
 ) =>
-  (options?.client ?? client).get<ListResponses, ListErrors, ThrowOnError>({
+  (options?.client ?? client).get<
+    ListProcessInstancesResponses,
+    ListProcessInstancesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/workflow/process-instances',
@@ -16452,10 +17185,14 @@ export const start = <ThrowOnError extends boolean = false>(
     }
   })
 
-export const getById1 = <ThrowOnError extends boolean = false>(
-  options: Options<GetById1Data, ThrowOnError>
+export const getByIdProcessInstances = <ThrowOnError extends boolean = false>(
+  options: Options<GetByIdProcessInstancesData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetById1Responses, GetById1Errors, ThrowOnError>({
+  (options.client ?? client).get<
+    GetByIdProcessInstancesResponses,
+    GetByIdProcessInstancesErrors,
+    ThrowOnError
+  >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/workflow/process-instances/{id}',
@@ -16486,10 +17223,10 @@ export const myTasks = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const getById = <ThrowOnError extends boolean = false>(
-  options: Options<GetByIdData, ThrowOnError>
+export const getByIdTasks = <ThrowOnError extends boolean = false>(
+  options: Options<GetByIdTasksData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetByIdResponses, GetByIdErrors, ThrowOnError>({
+  (options.client ?? client).get<GetByIdTasksResponses, GetByIdTasksErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/workflow/tasks/{id}',

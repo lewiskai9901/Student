@@ -19,16 +19,16 @@ import type {
 import {
   search as searchAuditTrail,
   findRecent as findRecentAuditTrail,
-  list15 as listIssueCategoriesSdk,
-  create10 as createIssueCategorySdk,
-  update9 as updateIssueCategorySdk,
-  delete11 as deleteIssueCategorySdk,
-  list16 as listHolidayCalendarsSdk,
+  listIssueCategories as listIssueCategoriesSdk,
+  createIssueCategories as createIssueCategorySdk,
+  updateIssueCategories as updateIssueCategorySdk,
+  deleteIssueCategories as deleteIssueCategorySdk,
+  listHolidayCalendars as listHolidayCalendarsSdk,
   findByYear as findHolidayByYearSdk,
   findById as findHolidayByIdSdk,
-  create11 as createHolidayCalendarSdk,
-  update10 as updateHolidayCalendarSdk,
-  delete12 as deleteHolidayCalendarSdk,
+  createHolidayCalendars as createHolidayCalendarSdk,
+  updateHolidayCalendars as updateHolidayCalendarSdk,
+  deleteHolidayCalendars as deleteHolidayCalendarSdk,
 } from '@/api-generated/sdk.gen'
 
 export const useInspPlatformStore = defineStore('inspPlatform', () => {

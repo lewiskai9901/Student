@@ -69,10 +69,10 @@ import { ref, onMounted } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import {
-  list2 as listTenantsSdk,
-  create as createTenantSdk,
-  update as updateTenantSdk,
-  delete_ as deleteTenantSdk
+  listTenants as listTenantsSdk,
+  createTenants as createTenantSdk,
+  updateTenants as updateTenantSdk,
+  deleteTenants as deleteTenantSdk
 } from '@/api-generated/sdk.gen'
 import type { Tenant } from '@/types/tenant'
 

@@ -580,11 +580,11 @@ import {
   Loader2, UserX, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight
 } from 'lucide-vue-next'
 import {
-  listProfiles,
-  createProfile,
-  updateProfile,
-  deleteProfile,
-  getProfile,
+  listProfilesTeacherProfiles as listProfiles,
+  createProfileTeacherProfiles as createProfile,
+  updateProfileTeacherProfiles as updateProfile,
+  deleteProfileTeacherProfiles as deleteProfile,
+  getProfileTeacherProfiles as getProfile,
   getCourses as getTeacherCourses,
   addCourse as addTeacherCourse,
   removeCourse as removeTeacherCourse,

@@ -365,7 +365,7 @@ import {
   getOrgStatistics,
   getBelongingMembers,
   addMember as addOrgMember,
-  removeMember as removeOrgMember
+  removeMemberMembers as removeOrgMember
 } from '@/api-generated/sdk.gen'
 import type { OrgStatistics } from '@/types/position'
 import ActivityTimeline from '@/components/activity/ActivityTimeline.vue'
