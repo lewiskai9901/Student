@@ -15,7 +15,6 @@ import type {
   CreateRuleRequest,
   UpdateRuleRequest,
   PublishVersionRequest,
-  UpdateAdvancedSettingsRequest,
 } from '@/types/insp/scoring'
 // 评级 GradeBand 已迁移到「评级」Tab 的 Indicator + GradeScheme 模型, 此处不再导入
 import {
@@ -34,7 +33,6 @@ import {
   createRule as createRuleApi,
   updateRule as updateRuleApi,
   deleteRule as deleteRuleApi,
-  updateAdvancedSettings as updateAdvancedSettingsApi,
   publishVersion as publishVersionApi,
   getVersions,
   getVersion as getVersionApi,
@@ -72,12 +70,6 @@ export const useInspScoringStore = defineStore('inspScoring', () => {
 
   async function updateProfile(id: LongId, data: UpdateProfileRequest) {
     const profile = await updateProfileApi(id, data)
-    currentProfile.value = profile
-    return profile
-  }
-
-  async function updateAdvancedSettings(id: LongId, data: UpdateAdvancedSettingsRequest) {
-    const profile = await updateAdvancedSettingsApi(id, data)
     currentProfile.value = profile
     return profile
   }
@@ -189,7 +181,6 @@ export const useInspScoringStore = defineStore('inspScoring', () => {
     loadProfileFull,
     createProfile,
     updateProfile,
-    updateAdvancedSettings,
     deleteProfile,
     loadDimensions,
     syncDimensions,

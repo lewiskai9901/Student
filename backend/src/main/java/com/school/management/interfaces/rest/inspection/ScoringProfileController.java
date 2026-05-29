@@ -73,26 +73,6 @@ public class ScoringProfileController {
                 userId));
     }
 
-    @PutMapping("/{id}/advanced-settings")
-    @CasbinAccess(resource = "insp:scoring-profile", action = "edit")
-    public Result<ScoringProfile> updateAdvancedSettings(@PathVariable Long id,
-                                                          @RequestBody @Valid UpdateAdvancedSettingsRequest request) {
-        Long userId = SecurityUtils.requireCurrentUserId();
-        // 项目-owned: 必须带 projectId 校验归属, 防止跨项目写入
-        return Result.success(scoringService.updateAdvancedSettings(id,
-                request.getProjectId(),
-                request.getTrendFactorEnabled(), request.getTrendLookbackDays(),
-                request.getTrendBonusPerPercent(), request.getTrendPenaltyPerPercent(),
-                request.getTrendMaxAdjustment(),
-                request.getDecayEnabled(), request.getDecayMode(),
-                request.getDecayRatePerDay(), request.getDecayFloor(),
-                request.getMultiRaterMode(), request.getRaterWeightBy(),
-                request.getConsensusThreshold(),
-                request.getCalibrationEnabled(), request.getCalibrationMethod(),
-                request.getCalibrationPeriodDays(), request.getCalibrationMinSamples(),
-                userId));
-    }
-
     @DeleteMapping("/{id}")
     @CasbinAccess(resource = "insp:scoring-profile", action = "delete")
     public Result<Void> deleteProfile(@PathVariable Long id) {
@@ -403,31 +383,5 @@ public class ScoringProfileController {
     @lombok.Data
     public static class PublishVersionRequest {
         private String changeSummary;
-    }
-
-    @lombok.Data
-    public static class UpdateAdvancedSettingsRequest {
-        /** 项目-owned 校验: 期望归属的项目 id, 防止跨项目误改. */
-        private Long projectId;
-        // 1.9 趋势因子
-        private Boolean trendFactorEnabled;
-        private Integer trendLookbackDays;
-        private BigDecimal trendBonusPerPercent;
-        private BigDecimal trendPenaltyPerPercent;
-        private BigDecimal trendMaxAdjustment;
-        // 1.10 分数衰减
-        private Boolean decayEnabled;
-        private String decayMode;
-        private BigDecimal decayRatePerDay;
-        private BigDecimal decayFloor;
-        // 1.11 多评审员聚合
-        private String multiRaterMode;
-        private String raterWeightBy;
-        private BigDecimal consensusThreshold;
-        // 1.12 分布校准
-        private Boolean calibrationEnabled;
-        private String calibrationMethod;
-        private Integer calibrationPeriodDays;
-        private Integer calibrationMinSamples;
     }
 }

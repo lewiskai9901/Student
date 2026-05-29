@@ -192,21 +192,6 @@
             @delete="handleDeleteRule"
           />
         </InspAccordion>
-
-        <InspAccordion
-          id="sp-anchor-adv"
-          title="高级算法 (可选)"
-          :summary="advSummary"
-          :status="advStatus"
-          :default-expanded="false"
-          storage-key="sp-acc-adv"
-        >
-          <AdvancedScoringSettings
-            v-if="profile"
-            :profile="profile"
-            @save="handleSaveAdvancedSettings"
-          />
-        </InspAccordion>
       </div>
 
       <!-- RIGHT: Sticky sidebar (健康检查已融入手风琴头部状态点 L3) -->
@@ -243,7 +228,6 @@ import type {
   ScoringProfile,
   CreateRuleRequest,
   UpdateRuleRequest,
-  UpdateAdvancedSettingsRequest,
   NormalizeBy,
   NormalizationMode,
 } from '@/types/insp/scoring'
@@ -252,7 +236,6 @@ import DimensionTable from './components/DimensionTable.vue'
 import CalcRuleChain from './components/CalcRuleChain.vue'
 import ScoreSimulator from './components/ScoreSimulator.vue'
 import VersionHistory from './components/VersionHistory.vue'
-import AdvancedScoringSettings from './components/AdvancedScoringSettings.vue'
 import ConceptDiagram from './components/ConceptDiagram.vue'
 import InspAccordion from '../shared/InspAccordion.vue'
 import { getProject } from '@/api/inspection/project'
@@ -357,25 +340,6 @@ const ruleSummary = computed(() => {
   if (rules.length === 0) return '未配置 (可选)'
   const enabled = rules.filter(r => r.isEnabled).length
   return `${rules.length} 条 · ${enabled} 已启用`
-})
-
-// 4. 高级算法 (可选)
-const advStatus = computed<SectionStatus>(() => {
-  if (!profile.value) return 'neutral'
-  const p = profile.value
-  const anyOn = p.trendFactorEnabled || p.decayEnabled || p.calibrationEnabled
-    || (p.multiRaterMode && p.multiRaterMode !== 'LATEST')
-  return anyOn ? 'ok' : 'neutral'
-})
-const advSummary = computed(() => {
-  if (!profile.value) return '全关'
-  const p = profile.value
-  const features: string[] = []
-  if (p.trendFactorEnabled) features.push('趋势')
-  if (p.decayEnabled) features.push('衰减')
-  if (p.multiRaterMode && p.multiRaterMode !== 'LATEST') features.push('多人评')
-  if (p.calibrationEnabled) features.push('校准')
-  return features.length === 0 ? '全关' : features.join(' · ')
 })
 
 // ==================== Lifecycle ====================
@@ -588,23 +552,6 @@ async function handleDeleteRule(id: LongId) {
     ElMessage.success('规则已删除')
   } catch (e) {
     ElMessage.error('删除规则失败: ' + msg(e))
-  }
-}
-
-// Advanced settings handler (1.9-1.12)
-async function handleSaveAdvancedSettings(
-  data: UpdateAdvancedSettingsRequest,
-  onDone: (ok: boolean) => void,
-) {
-  if (!profile.value) { onDone(false); return }
-  try {
-    await store.updateAdvancedSettings(profile.value.id, data)
-    profile.value = store.currentProfile
-    ElMessage.success('高级设置已保存')
-    onDone(true)
-  } catch (e) {
-    ElMessage.error('保存高级设置失败: ' + msg(e))
-    onDone(false)
   }
 }
 

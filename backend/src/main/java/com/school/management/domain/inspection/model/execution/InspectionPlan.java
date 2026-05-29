@@ -47,7 +47,7 @@ public class InspectionPlan extends AggregateRoot<Long> {
     private AssignStrategy assignStrategy = AssignStrategy.OPEN_TO_ALL;
     /**
      * 每个检查目标的检查员份数 (1=单人评分, >1=多人评分). 默认 1.
-     * 多人评分的合并算法由所引用 ScoringProfile.multiRaterMode 决定（按分区查 ScoringProfile）.
+     * 多人评分的合并算法由聚合层决定 (当前取最新一份).
      */
     private Integer ratersPerTarget;
     private Boolean isEnabled;

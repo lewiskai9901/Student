@@ -84,26 +84,6 @@ public class ScoringProfileRepositoryImpl implements ScoringProfileRepository {
         po.setMinScore(d.getMinScore());
         po.setPrecisionDigits(d.getPrecisionDigits());
         po.setCurrentVersion(d.getCurrentVersion());
-        // 1.9
-        po.setTrendFactorEnabled(d.getTrendFactorEnabled());
-        po.setTrendLookbackDays(d.getTrendLookbackDays());
-        po.setTrendBonusPerPercent(d.getTrendBonusPerPercent());
-        po.setTrendPenaltyPerPercent(d.getTrendPenaltyPerPercent());
-        po.setTrendMaxAdjustment(d.getTrendMaxAdjustment());
-        // 1.10
-        po.setDecayEnabled(d.getDecayEnabled());
-        po.setDecayMode(d.getDecayMode());
-        po.setDecayRatePerDay(d.getDecayRatePerDay());
-        po.setDecayFloor(d.getDecayFloor());
-        // 1.11
-        po.setMultiRaterMode(d.getMultiRaterMode());
-        po.setRaterWeightBy(d.getRaterWeightBy());
-        po.setConsensusThreshold(d.getConsensusThreshold());
-        // 1.12
-        po.setCalibrationEnabled(d.getCalibrationEnabled());
-        po.setCalibrationMethod(d.getCalibrationMethod());
-        po.setCalibrationPeriodDays(d.getCalibrationPeriodDays());
-        po.setCalibrationMinSamples(d.getCalibrationMinSamples());
         // 1.13 章节级归一化 (枚举 -> String, null 兜底 NONE)
         po.setNormalizeBy(d.getNormalizeBy() != null ? d.getNormalizeBy().name() : NormalizeBy.NONE.name());
         po.setNormalizationMode(d.getNormalizationMode() != null ? d.getNormalizationMode().name() : NormalizationMode.NONE.name());
@@ -128,26 +108,6 @@ public class ScoringProfileRepositoryImpl implements ScoringProfileRepository {
                 .minScore(po.getMinScore())
                 .precisionDigits(po.getPrecisionDigits())
                 .currentVersion(po.getCurrentVersion())
-                // 1.9
-                .trendFactorEnabled(po.getTrendFactorEnabled())
-                .trendLookbackDays(po.getTrendLookbackDays())
-                .trendBonusPerPercent(po.getTrendBonusPerPercent())
-                .trendPenaltyPerPercent(po.getTrendPenaltyPerPercent())
-                .trendMaxAdjustment(po.getTrendMaxAdjustment())
-                // 1.10
-                .decayEnabled(po.getDecayEnabled())
-                .decayMode(po.getDecayMode())
-                .decayRatePerDay(po.getDecayRatePerDay())
-                .decayFloor(po.getDecayFloor())
-                // 1.11
-                .multiRaterMode(po.getMultiRaterMode())
-                .raterWeightBy(po.getRaterWeightBy())
-                .consensusThreshold(po.getConsensusThreshold())
-                // 1.12
-                .calibrationEnabled(po.getCalibrationEnabled())
-                .calibrationMethod(po.getCalibrationMethod())
-                .calibrationPeriodDays(po.getCalibrationPeriodDays())
-                .calibrationMinSamples(po.getCalibrationMinSamples())
                 // 1.13 章节级归一化 (String -> 枚举, null/非法值兜底 NONE)
                 .normalizeBy(parseNormalizeBy(po.getNormalizeBy()))
                 .normalizationMode(parseNormalizationMode(po.getNormalizationMode()))

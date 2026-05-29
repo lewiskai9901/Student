@@ -270,12 +270,9 @@ public class InspProjectApplicationService {
                     snapshotMap.put("maxScore", profile.getMaxScore());
                     snapshotMap.put("minScore", profile.getMinScore());
                     snapshotMap.put("precisionDigits", profile.getPrecisionDigits());
-                    snapshotMap.put("multiRaterMode", profile.getMultiRaterMode());
-                    snapshotMap.put("calibrationEnabled", profile.getCalibrationEnabled());
-                    snapshotMap.put("calibrationMethod", profile.getCalibrationMethod());
-                    snapshotMap.put("trendFactorEnabled", profile.getTrendFactorEnabled());
-                    snapshotMap.put("decayEnabled", profile.getDecayEnabled());
-                    snapshotMap.put("decayMode", profile.getDecayMode());
+                    snapshotMap.put("normalizeBy", profile.getNormalizeBy() != null ? profile.getNormalizeBy().name() : null);
+                    snapshotMap.put("normalizationMode", profile.getNormalizationMode() != null ? profile.getNormalizationMode().name() : null);
+                    snapshotMap.put("baselinePopulation", profile.getBaselinePopulation());
                     snapshotMap.put("snapshotAt", LocalDateTime.now().toString());
                     String snapshot = objectMapper.writeValueAsString(snapshotMap);
                     project.lockScoringConfig(snapshot);

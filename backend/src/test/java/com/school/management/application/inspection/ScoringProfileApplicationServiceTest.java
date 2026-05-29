@@ -246,7 +246,7 @@ class ScoringProfileApplicationServiceTest {
 
     // ============================================================
     @Nested
-    @DisplayName("updateProfile / updateAdvancedSettings — 更新")
+    @DisplayName("updateProfile — 更新")
     class UpdateProfileTests {
         @Test
         @DisplayName("updateProfile: 写入 maxScore/minScore/precision")
@@ -330,49 +330,6 @@ class ScoringProfileApplicationServiceTest {
                     NormalizeBy.PER_MEMBER, NormalizationMode.PER_CAPITA, 30,
                     new BigDecimal("3.0"), new BigDecimal("1.0"), 1L))
                     .isInstanceOf(IllegalArgumentException.class);
-        }
-
-        @Test
-        @DisplayName("updateAdvancedSettings: 写入趋势/衰减/多评审员/校准字段")
-        void shouldUpdateAdvanced() {
-            ScoringProfile p = profile(500L, 100L, 700L);
-            when(profileRepository.findById(500L)).thenReturn(Optional.of(p));
-            when(profileRepository.save(any(ScoringProfile.class)))
-                    .thenAnswer(inv -> inv.getArgument(0));
-
-            ScoringProfile result = service.updateAdvancedSettings(500L, 700L,
-                    true, 14, new BigDecimal("0.5"), new BigDecimal("0.3"), new BigDecimal("5"),
-                    true, "LINEAR", new BigDecimal("0.1"), new BigDecimal("60"),
-                    "AVERAGE", "EQUAL", new BigDecimal("0.8"),
-                    true, "Z_SCORE", 30, 10, 88L);
-
-            assertThat(result.getTrendFactorEnabled()).isTrue();
-            assertThat(result.getTrendLookbackDays()).isEqualTo(14);
-            assertThat(result.getDecayMode()).isEqualTo("LINEAR");
-            assertThat(result.getMultiRaterMode()).isEqualTo("AVERAGE");
-            assertThat(result.getCalibrationMethod()).isEqualTo("Z_SCORE");
-        }
-
-        @Test
-        @DisplayName("updateAdvancedSettings: profile 不存在抛异常")
-        void shouldRejectAdvancedMissing() {
-            when(profileRepository.findById(9L)).thenReturn(Optional.empty());
-            assertThatThrownBy(() -> service.updateAdvancedSettings(9L, null,
-                    false, 7, null, null, null, false, null, null, null,
-                    null, null, null, false, null, null, null, 1L))
-                    .isInstanceOf(IllegalArgumentException.class);
-        }
-
-        @Test
-        @DisplayName("updateAdvancedSettings: expectedProjectId 与归属不符抛异常")
-        void shouldRejectAdvancedWrongProject() {
-            ScoringProfile p = profile(500L, 100L, 700L);
-            when(profileRepository.findById(500L)).thenReturn(Optional.of(p));
-            assertThatThrownBy(() -> service.updateAdvancedSettings(500L, 999L,
-                    false, 7, null, null, null, false, null, null, null,
-                    null, null, null, false, null, null, null, 1L))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("禁止跨项目修改");
         }
     }
 

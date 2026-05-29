@@ -49,26 +49,6 @@ export interface ScoringProfile {
   minScore: number
   precisionDigits: number
   currentVersion: number
-  // 1.9 趋势因子
-  trendFactorEnabled: boolean
-  trendLookbackDays: number
-  trendBonusPerPercent: number | null
-  trendPenaltyPerPercent: number | null
-  trendMaxAdjustment: number | null
-  // 1.10 分数衰减
-  decayEnabled: boolean
-  decayMode: string | null
-  decayRatePerDay: number | null
-  decayFloor: number | null
-  // 1.11 多评审员聚合
-  multiRaterMode: string | null
-  raterWeightBy: string | null
-  consensusThreshold: number | null
-  // 1.12 分布校准
-  calibrationEnabled: boolean
-  calibrationMethod: string | null
-  calibrationPeriodDays: number | null
-  calibrationMinSamples: number | null
   // 1.13 章节级归一化 (规模公平性)
   normalizeBy: NormalizeBy
   normalizationMode: NormalizationMode
@@ -98,25 +78,6 @@ export interface UpdateProfileRequest {
   baselinePopulation?: number
   normFloor?: number | null
   normCap?: number | null
-}
-
-export interface UpdateAdvancedSettingsRequest {
-  trendFactorEnabled?: boolean
-  trendLookbackDays?: number
-  trendBonusPerPercent?: number
-  trendPenaltyPerPercent?: number
-  trendMaxAdjustment?: number
-  decayEnabled?: boolean
-  decayMode?: string
-  decayRatePerDay?: number
-  decayFloor?: number
-  multiRaterMode?: string
-  raterWeightBy?: string
-  consensusThreshold?: number
-  calibrationEnabled?: boolean
-  calibrationMethod?: string
-  calibrationPeriodDays?: number
-  calibrationMinSamples?: number
 }
 
 // ==================== 评分维度 ====================

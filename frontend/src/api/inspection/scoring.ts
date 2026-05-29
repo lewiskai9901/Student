@@ -18,7 +18,6 @@ import type {
   UpdateRuleRequest,
   ScoringProfileVersion,
   PublishVersionRequest,
-  UpdateAdvancedSettingsRequest,
 } from '@/types/insp/scoring'
 
 const BASE = '/inspection/scoring-profiles'
@@ -52,10 +51,6 @@ export function createProfile(data: CreateProfileRequest): Promise<ScoringProfil
 
 export function updateProfile(id: LongId, data: UpdateProfileRequest): Promise<ScoringProfile> {
   return http.put<ScoringProfile>(`${BASE}/${id}`, data)
-}
-
-export function updateAdvancedSettings(id: LongId, data: UpdateAdvancedSettingsRequest): Promise<ScoringProfile> {
-  return http.put<ScoringProfile>(`${BASE}/${id}/advanced-settings`, data)
 }
 
 export function deleteProfile(id: LongId): Promise<void> {
@@ -142,7 +137,6 @@ export const scoringProfileApi = {
   getByProjectAndSection: getProfileByProjectAndSection,
   create: createProfile,
   update: updateProfile,
-  updateAdvanced: updateAdvancedSettings,
   delete: deleteProfile,
   getDimensions,
   createDimension,

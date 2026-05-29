@@ -5,7 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   ArrowLeft, Play, Pause, CheckCircle, Send, Trash2, Save, Users, Settings, BarChart3, ClipboardList, Lock,
-  ClipboardCheck, Check, X, ListTree, LayoutDashboard, Pencil, Plus, Copy,
+  ClipboardCheck, Check, X, ListTree, LayoutDashboard, Copy,
   AlertTriangle, AlertCircle, Info,
 } from 'lucide-vue-next'
 import { useInspExecutionStore } from '@/stores/inspection/inspExecutionStore'
@@ -34,6 +34,7 @@ import SectionConfigView from './components/SectionConfigView.vue'
 import CustomThresholdInput from './components/CustomThresholdInput.vue'
 import PolicyFlowDiagram from './components/PolicyFlowDiagram.vue'
 import ProjectCorrectiveStrategy from './components/ProjectCorrectiveStrategy.vue'
+import ScoringSectionCard from './components/ScoringSectionCard.vue'
 import { buildSectionTree, type SectionTreeNode } from '@/utils/sectionTree'
 import IndicatorScoreView from './components/IndicatorScoreView.vue'
 import EvaluationConfigView from './components/EvaluationConfigView.vue'
@@ -79,7 +80,12 @@ const loadingOrgTree = ref(false)
 const placeTree = ref<PlaceTreeNode[]>([])
 const userList = ref<SimpleUser[]>([])
 // Tabs
-const activeTab = ref('overview')
+// L4 2026-05-26: 支持 ?tab=xxx 直达 (评分配置 → 评级 跨页跳转用)
+const VALID_TABS = ['overview', 'config', 'team', 'scores', 'scoring', 'evaluation', 'corrective', 'settings']
+const initialTab = typeof route.query.tab === 'string' && VALID_TABS.includes(route.query.tab)
+  ? route.query.tab
+  : 'overview'
+const activeTab = ref(initialTab)
 // 评级 Tab 的子页 (config / results)
 const evalSubTab = ref<'config' | 'results'>('config')
 // EvaluationConfigView 行内点"查看结果"会把 indicatorId 传到 results 子页预选
@@ -771,22 +777,10 @@ async function handleRemoveInspector(insp: ProjectInspector) {
 function goBack() { router.push('/inspection/projects') }
 function goExecuteTask(taskId: LongId) { router.push(`/inspection/tasks/${taskId}/execute`) }
 
-// ============ 评分方案 (项目-owned) ============
-// 进入指定评分方案编辑器
+// ============ 评分配置 · 按章节 (L1 2026-05-26) ============
+// 进入指定评分方案编辑器 (评分配置按 section 切片, 每章一套)
 function goEditProfile(profileId: LongId) {
   router.push(`/inspection/scoring/${profileId}`)
-}
-// 新建评分方案: 跳转编辑器并附带 projectId + templateId (= rootSectionId), 编辑器内自动创建.
-function goCreateProfile() {
-  const tid = project.value?.rootSectionId
-  if (!tid) {
-    ElMessage.warning('项目暂无根分区 (单模板项目才能直接新建方案, 多模板请到模板内的分区入口)')
-    return
-  }
-  router.push({
-    path: '/inspection/scoring-profiles/create',
-    query: { templateId: String(tid), projectId: String(projectId) },
-  })
 }
 // 2026-05-24 修: TeamTab 内人员/角色变更后, 同步刷新 inspectors ref —
 // 否则 SectionConfigView 调度组对话框依赖的 :inspectors prop 是 stale 值, 看不到新加的人.
@@ -1230,61 +1224,39 @@ onMounted(async () => {
         <TeamTab :project-id="projectId" :is-draft="isDraft" @change="onTeamChange" />
       </div>
 
-      <!-- ===== 评分方案 Tab (P2: 独立 Tab, 从 设置 卡片提升) ===== -->
+      <!-- ===== 评分配置 · 按章节 Tab (L1 2026-05-26 概念重塑) ===== -->
       <div v-if="activeTab === 'scoring'">
         <div class="pdv-tab-head">
           <div class="pdv-tab-title-row">
-            <h2 class="pdv-tab-title">评分方案</h2>
-            <span v-if="scoringProfiles.length" class="pdv-tab-count">{{ scoringProfiles.length }} 套</span>
+            <h2 class="pdv-tab-title">评分配置 · 按章节</h2>
+            <span v-if="scoringProfiles.length" class="pdv-tab-count">{{ scoringProfiles.length }} 章已配置</span>
           </div>
           <div class="pdv-tab-ops">
-            <el-button v-if="isDraft && !isArchived" size="small" type="primary" plain @click="goCreateProfile" round>
-              <Plus class="w-3.5 h-3.5 mr-1" />新建评分方案
-            </el-button>
             <el-button v-if="!isDraft && !isArchived" size="small" plain @click="handleCloneProject" round>
               <Copy class="w-3.5 h-3.5 mr-1" />克隆为新项目
             </el-button>
           </div>
         </div>
         <div class="pdv-tab-desc">
-          本项目专属的评分方案 — 与项目同生命周期, 不与其他项目共享.
+          每个章节有独立的评分规则 (例: 卫生章用扣分制 / 安全章用一票否决).
+          项目总分汇总走<el-link type="primary" :underline="false" @click="activeTab = 'evaluation'">「评级」</el-link> Tab 的 Indicator 配置.
           <span v-if="!isDraft">已发布项目只读, 如需修改请点"克隆为新项目"复制一份草稿.</span>
         </div>
         <div v-if="scoringProfiles.length === 0" class="cfg-empty cfg-empty--card">
-          暂无评分方案 ·
-          <el-link v-if="isDraft && !isArchived" type="primary" :underline="false" @click="goCreateProfile">立即新建</el-link>
-          <span v-else>已发布项目无法新建</span>
+          本项目模板还没有任何章节配置过评分 ·
+          <span v-if="isDraft && !isArchived">点击模板内任一分区进入编辑器, 系统会自动创建默认配置</span>
+          <span v-else>已发布项目无法新增</span>
         </div>
-        <div v-else class="pdv-profile-list">
-          <div v-for="p in scoringProfiles" :key="p.id" class="pdv-profile-row">
-            <div class="pdv-profile-meta">
-              <div class="pdv-profile-name">
-                <span v-if="sectionNameMap.get(p.sectionId)" class="pdv-profile-section">
-                  {{ sectionNameMap.get(p.sectionId)?.name }}
-                </span>
-                <span v-else class="pdv-profile-section pdv-profile-section--orphan">
-                  未关联分区
-                </span>
-                <span class="pdv-profile-id">#{{ p.id }}</span>
-              </div>
-              <div class="pdv-profile-stats">
-                <span>{{ p.minScore }}–{{ p.maxScore }} 分</span>
-                <span class="pdv-profile-sep">·</span>
-                <span>{{ p.precisionDigits }} 位精度</span>
-                <span v-if="p.multiRaterMode" class="pdv-profile-sep">·</span>
-                <span v-if="p.multiRaterMode">{{ p.multiRaterMode }}</span>
-                <template v-if="p.calibrationEnabled || p.trendFactorEnabled || p.decayEnabled">
-                  <span class="pdv-profile-sep">·</span>
-                  <span v-if="p.calibrationEnabled" class="pdv-profile-feat">校准</span>
-                  <span v-if="p.trendFactorEnabled" class="pdv-profile-feat">趋势</span>
-                  <span v-if="p.decayEnabled" class="pdv-profile-feat">衰减</span>
-                </template>
-              </div>
-            </div>
-            <el-button size="small" type="primary" plain @click="goEditProfile(p.id)">
-              <Pencil class="w-3.5 h-3.5 mr-0.5" />{{ isDraft && !isArchived ? '编辑' : '查看' }}
-            </el-button>
-          </div>
+        <div v-else class="pdv-scoring-grid">
+          <ScoringSectionCard
+            v-for="p in scoringProfiles"
+            :key="p.id"
+            :profile="p"
+            :section-name="sectionNameMap.get(p.sectionId)?.name ?? null"
+            :is-draft="isDraft"
+            :is-archived="isArchived"
+            @edit="goEditProfile"
+          />
         </div>
       </div>
 
@@ -1580,6 +1552,13 @@ onMounted(async () => {
   gap: 8px;
   margin-left: auto;
 }
+/* 评分配置 · 按章节 卡片网格 (L1 2026-05-26) */
+.pdv-scoring-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
 .pdv-profile-list {
   display: flex;
   flex-direction: column;

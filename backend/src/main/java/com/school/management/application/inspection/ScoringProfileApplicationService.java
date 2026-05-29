@@ -113,43 +113,6 @@ public class ScoringProfileApplicationService {
         return profileRepository.save(profile);
     }
 
-    /**
-     * 更新评分方案高级参数. 项目-owned 模式下要求调用方传入预期项目 id 做归属校验,
-     * 防止误用 profileId 跨项目改写他项目的评分规则.
-     *
-     * @param expectedProjectId 预期归属项目 id, null 表示跳过校验 (仅供超管运维路径).
-     */
-    @Transactional
-    @CacheEvict(value = "ratingConfig", allEntries = true)
-    public ScoringProfile updateAdvancedSettings(Long id,
-            Long expectedProjectId,
-            Boolean trendFactorEnabled, Integer trendLookbackDays,
-            BigDecimal trendBonusPerPercent, BigDecimal trendPenaltyPerPercent,
-            BigDecimal trendMaxAdjustment,
-            Boolean decayEnabled, String decayMode,
-            BigDecimal decayRatePerDay, BigDecimal decayFloor,
-            String multiRaterMode, String raterWeightBy,
-            BigDecimal consensusThreshold,
-            Boolean calibrationEnabled, String calibrationMethod,
-            Integer calibrationPeriodDays, Integer calibrationMinSamples,
-            Long updatedBy) {
-        ScoringProfile profile = profileRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("评分配置不存在: " + id));
-        if (expectedProjectId != null && profile.getProjectId() != null
-                && !expectedProjectId.equals(profile.getProjectId())) {
-            throw new IllegalArgumentException(
-                    "评分方案 " + id + " 不属于项目 " + expectedProjectId
-                            + " (实际归属 " + profile.getProjectId() + "), 禁止跨项目修改");
-        }
-        profile.updateAdvancedSettings(trendFactorEnabled, trendLookbackDays,
-                trendBonusPerPercent, trendPenaltyPerPercent, trendMaxAdjustment,
-                decayEnabled, decayMode, decayRatePerDay, decayFloor,
-                multiRaterMode, raterWeightBy, consensusThreshold,
-                calibrationEnabled, calibrationMethod, calibrationPeriodDays, calibrationMinSamples,
-                updatedBy);
-        return profileRepository.save(profile);
-    }
-
     @Transactional
     @CacheEvict(value = "ratingConfig", allEntries = true)
     public void deleteProfile(Long id) {
@@ -193,22 +156,11 @@ public class ScoringProfileApplicationService {
                 .minScore(source.getMinScore())
                 .precisionDigits(source.getPrecisionDigits())
                 .currentVersion(0)  // 新版本从 0 开始, 不继承源版本号
-                .trendFactorEnabled(source.getTrendFactorEnabled())
-                .trendLookbackDays(source.getTrendLookbackDays())
-                .trendBonusPerPercent(source.getTrendBonusPerPercent())
-                .trendPenaltyPerPercent(source.getTrendPenaltyPerPercent())
-                .trendMaxAdjustment(source.getTrendMaxAdjustment())
-                .decayEnabled(source.getDecayEnabled())
-                .decayMode(source.getDecayMode())
-                .decayRatePerDay(source.getDecayRatePerDay())
-                .decayFloor(source.getDecayFloor())
-                .multiRaterMode(source.getMultiRaterMode())
-                .raterWeightBy(source.getRaterWeightBy())
-                .consensusThreshold(source.getConsensusThreshold())
-                .calibrationEnabled(source.getCalibrationEnabled())
-                .calibrationMethod(source.getCalibrationMethod())
-                .calibrationPeriodDays(source.getCalibrationPeriodDays())
-                .calibrationMinSamples(source.getCalibrationMinSamples())
+                .normalizeBy(source.getNormalizeBy())
+                .normalizationMode(source.getNormalizationMode())
+                .baselinePopulation(source.getBaselinePopulation())
+                .normFloor(source.getNormFloor())
+                .normCap(source.getNormCap())
                 .createdBy(createdBy != null ? createdBy : source.getCreatedBy()));
         ScoringProfile savedCopy = profileRepository.save(copy);
         Long newProfileId = savedCopy.getId();

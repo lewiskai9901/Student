@@ -3,7 +3,7 @@
     <!-- 折叠态 / 展开态共用头 -->
     <button class="cd-head" @click="toggle">
       <span class="cd-head-title">评分是怎么算出来的?</span>
-      <span class="cd-head-meta">4 步流程 · 点击{{ collapsed ? '展开' : '收起' }}</span>
+      <span class="cd-head-meta">本章 3 步 + 项目合并 · 点击{{ collapsed ? '展开' : '收起' }}</span>
       <ChevronDown :size="14" class="cd-head-arrow" :class="{ flip: !collapsed }" />
     </button>
 
@@ -12,16 +12,20 @@
       <div class="cd-flow">
         <button
           v-for="(step, i) in steps"
-          :key="step.id"
+          :key="step.id || step.name"
           class="cd-step"
-          :class="{ 'cd-step--result': step.isResult }"
-          @click="scrollTo(step.id)"
+          :class="{
+            'cd-step--result': step.isResult,
+            'cd-step--external': step.isExternal,
+          }"
+          :title="step.isExternal ? '跳转到「评级」Tab 查看跨章节合并配置' : undefined"
+          @click="handleStepClick(step)"
         >
           <span class="cd-step-name">{{ step.name }}</span>
           <span class="cd-step-value">{{ step.value }}</span>
           <span class="cd-step-sub">{{ step.sub }}</span>
           <span v-if="i < steps.length - 1" class="cd-arrow" aria-hidden>
-            {{ i === steps.length - 2 ? '=' : '→' }}
+            {{ stepsArrowChar(i) }}
           </span>
         </button>
       </div>
@@ -29,8 +33,8 @@
       <p class="cd-eg">
         <span class="cd-eg-lbl">例:</span>
         学生小张原始 <b>95</b> 分 → 4 个维度加权 <b>92</b> 分
-        → 规则链触发"3 项不合格扣 3 分" <b>89</b> 分
-        → 时效衰减(检查后 3 天)再扣 1.5 分 = <b>最终 87.5 分</b>
+        → 规则链触发"3 项不合格扣 3 分" = <b>本章节 89 分</b>
+        → 与其他章节合并(由「评级」Tab 的 Indicator 配置)→ <b>项目评级</b>
       </p>
     </div>
   </div>
@@ -38,7 +42,16 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ChevronDown } from 'lucide-vue-next'
+import type { LongId } from '@/types/common'
+
+const props = defineProps<{
+  /** L4 2026-05-26: 用于"项目评级"步骤跳转到「评级」Tab. 单 section 编辑时可空 */
+  projectId?: LongId
+}>()
+
+const router = useRouter()
 
 const STORAGE_KEY = 'scoring-concept-collapsed'
 
@@ -60,18 +73,34 @@ interface Step {
   value: string
   sub: string
   isResult?: boolean
+  /** L4: 项目级步骤, 点击跳到项目「评级」Tab */
+  isExternal?: boolean
 }
 
 const steps: Step[] = [
   { id: 'sp-anchor-raw',   name: '原始打分', value: '100/100', sub: '评分员录入' },
   { id: 'sp-anchor-dims',  name: '维度汇总', value: '按权重',  sub: '评分维度' },
   { id: 'sp-anchor-rules', name: '规则链',   value: '加减分',  sub: '计算规则链' },
-  { id: 'sp-anchor-adv',   name: '高级调整', value: '时效/趋势', sub: '高级算法' },
-  { id: '',                name: '最终分',   value: '87.5',    sub: '项目得分', isResult: true },
+  { id: '',                name: '本章节得分', value: '89',      sub: '本章配置输出', isResult: true },
+  { id: '_rating',         name: '项目评级',   value: '→「评级」', sub: '跨章合并 + Indicator', isExternal: true },
 ]
 
+function stepsArrowChar(i: number): string {
+  // index 2 -> '=' (规则链算出本章节得分, 求和语义), 其余 '→'
+  return i === 2 ? '=' : '→'
+}
+
+function handleStepClick(step: Step) {
+  if (step.isExternal) {
+    if (!props.projectId) return
+    router.push(`/inspection/projects/${props.projectId}?tab=evaluation`)
+    return
+  }
+  if (!step.id || step.id.startsWith('_')) return
+  scrollTo(step.id)
+}
+
 function scrollTo(id: string) {
-  if (!id) return
   const el = document.getElementById(id)
   if (!el) return
   el.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -149,12 +178,24 @@ function scrollTo(id: string) {
   text-align: left;
   transition: border-color 0.15s, background 0.15s;
 }
-.cd-step:not(.cd-step--result):hover {
+.cd-step:not(.cd-step--result):not(.cd-step--external):hover {
   border-color: var(--insp-accent, #2563eb);
   background: var(--insp-accent-tint, #eff6ff);
 }
 .cd-step--result {
   cursor: default;
+  border-color: var(--insp-accent, #2563eb);
+  background: var(--insp-accent-tint, #eff6ff);
+}
+/* L4: 外部步骤 (跳「评级」Tab), 虚线表示跨编辑器边界 */
+.cd-step--external {
+  border-style: dashed;
+  border-color: var(--insp-ink-tertiary, #6b7280);
+  background: var(--insp-bg-surface, #fff);
+  color: var(--insp-ink-secondary, #374151);
+}
+.cd-step--external:hover {
+  border-style: solid;
   border-color: var(--insp-accent, #2563eb);
   background: var(--insp-accent-tint, #eff6ff);
 }
