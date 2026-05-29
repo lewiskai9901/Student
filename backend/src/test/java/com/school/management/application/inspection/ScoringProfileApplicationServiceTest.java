@@ -5,6 +5,8 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.school.management.domain.inspection.model.scoring.CalculationRule;
 import com.school.management.domain.inspection.model.scoring.EscalationPolicy;
 import com.school.management.domain.inspection.model.scoring.GradeBand;
+import com.school.management.domain.inspection.model.scoring.NormalizationMode;
+import com.school.management.domain.inspection.model.scoring.NormalizeBy;
 import com.school.management.domain.inspection.model.scoring.RuleType;
 import com.school.management.domain.inspection.model.scoring.ScoreDimension;
 import com.school.management.domain.inspection.model.scoring.ScoringProfile;
@@ -283,6 +285,50 @@ class ScoringProfileApplicationServiceTest {
             assertThatThrownBy(() -> service.updateProfile(
                     500L, new BigDecimal("10"), new BigDecimal("99"), 2,
                     null, null, null, null, null, 1L))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        @DisplayName("updateProfile: 归一化配置真能持久化 (写路径回归)")
+        void shouldPersistNormalizationSettings() {
+            ScoringProfile p = profile(500L, 100L);
+            when(profileRepository.findById(500L)).thenReturn(Optional.of(p));
+            when(profileRepository.save(any(ScoringProfile.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
+
+            ScoringProfile result = service.updateProfile(
+                    500L, new BigDecimal("100"), new BigDecimal("0"), 2,
+                    NormalizeBy.PER_MEMBER, NormalizationMode.PER_CAPITA, 30,
+                    new BigDecimal("0.5"), new BigDecimal("2.0"), 88L);
+
+            assertThat(result.getNormalizeBy()).isEqualTo(NormalizeBy.PER_MEMBER);
+            assertThat(result.getNormalizationMode()).isEqualTo(NormalizationMode.PER_CAPITA);
+            assertThat(result.getBaselinePopulation()).isEqualTo(30);
+            assertThat(result.getNormFloor()).isEqualByComparingTo("0.5");
+            assertThat(result.getNormCap()).isEqualByComparingTo("2.0");
+        }
+
+        @Test
+        @DisplayName("updateProfile: baselinePopulation < 1 抛 IllegalArgumentException")
+        void shouldRejectBaselinePopulationBelowOne() {
+            ScoringProfile p = profile(500L, 100L);
+            when(profileRepository.findById(500L)).thenReturn(Optional.of(p));
+            assertThatThrownBy(() -> service.updateProfile(
+                    500L, new BigDecimal("100"), new BigDecimal("0"), 2,
+                    NormalizeBy.PER_MEMBER, NormalizationMode.PER_CAPITA, 0,
+                    null, null, 1L))
+                    .isInstanceOf(IllegalArgumentException.class);
+        }
+
+        @Test
+        @DisplayName("updateProfile: normFloor > normCap 抛 IllegalArgumentException")
+        void shouldRejectFloorGreaterThanCap() {
+            ScoringProfile p = profile(500L, 100L);
+            when(profileRepository.findById(500L)).thenReturn(Optional.of(p));
+            assertThatThrownBy(() -> service.updateProfile(
+                    500L, new BigDecimal("100"), new BigDecimal("0"), 2,
+                    NormalizeBy.PER_MEMBER, NormalizationMode.PER_CAPITA, 30,
+                    new BigDecimal("3.0"), new BigDecimal("1.0"), 1L))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
