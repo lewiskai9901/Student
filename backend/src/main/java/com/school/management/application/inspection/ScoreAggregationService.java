@@ -45,6 +45,7 @@ public class ScoreAggregationService {
     private final SubmissionObservationRepository observationRepository;
     private final ScoreCalculationDomainService scoreCalculationService;
     private final NormalizationBasisResolver normalizationBasisResolver;
+    private final OrgUnitScoreRollupService orgUnitScoreRollupService;
     private final ObjectMapper objectMapper;
 
     // ========== Scoring Config Resolution (评级引擎完美架构 2026-05-23) ==========
@@ -374,6 +375,22 @@ public class ScoreAggregationService {
                     "胜出线程已写入等价汇总: project={}, date={}",
                     project.getProjectCode(), cycleDate);
             return;
+        }
+
+        // Phase 3.4: 项目分重算成功后级联触发组织树 roll-up.
+        // org_unit_scores 是衍生汇总, 读已 save 的 submission/projectScore + 写组织树各级得分.
+        // 同一 @Transactional 内执行即可 (rollup 不注入本 service, 无循环依赖).
+        //
+        // 事务决定: roll-up 失败应 log.error 但不 rethrow —— 衍生汇总失败不能让主算分
+        // 事务回滚导致 ProjectScore 也丢. 这与上方 DuplicateKeyException 防御式处理一致.
+        // 注意: 此处吞异常后, 若 rollup 内部已把事务标 rollback-only, 主事务 commit 仍会失败;
+        // 但 rollup 自身的 upsert 已对 DuplicateKeyException 单独 catch, 不会污染外层事务,
+        // 其余异常 (如数据缺失) 仅记录不致命.
+        try {
+            orgUnitScoreRollupService.rollup(project.getId(), cycleDate);
+        } catch (Exception e) {
+            log.error("组织树 roll-up 失败 (不影响主算分): project={}, date={}",
+                    project.getProjectCode(), cycleDate, e);
         }
     }
 

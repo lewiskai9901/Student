@@ -40,6 +40,7 @@ class ScoreAggregationServiceResolveTest {
     @Mock SubmissionObservationRepository observationRepository;
     @Mock ScoreCalculationDomainService scoreCalculationService;
     @Mock com.school.management.domain.inspection.service.NormalizationBasisResolver normalizationBasisResolver;
+    @Mock OrgUnitScoreRollupService orgUnitScoreRollupService;
 
     private ScoreAggregationService service() {
         return new ScoreAggregationService(
@@ -47,7 +48,7 @@ class ScoreAggregationServiceResolveTest {
                 planRepository, scoreRepository, scoringProfileRepository, dimensionRepository,
                 ruleRepository, gradeBandRepository, sectionRepository, escalationPolicyRepository,
                 observationRepository, scoreCalculationService, normalizationBasisResolver,
-                new ObjectMapper());
+                orgUnitScoreRollupService, new ObjectMapper());
     }
 
     private ScoringProfile profile(Long id, Long projectId, Long sectionId) {

@@ -1,7 +1,12 @@
 package com.school.management.application.inspection;
 
+import com.school.management.domain.inspection.model.execution.InspProject;
+import com.school.management.domain.inspection.model.execution.InspSubmission;
+import com.school.management.domain.inspection.model.execution.InspTask;
+import com.school.management.domain.inspection.model.execution.ProjectScore;
 import com.school.management.domain.inspection.model.execution.ScoringMode;
 import com.school.management.domain.inspection.model.execution.SubmissionDetail;
+import com.school.management.domain.inspection.model.execution.SubmissionStatus;
 import com.school.management.domain.inspection.model.scoring.NormalizationMode;
 import com.school.management.domain.inspection.model.scoring.NormalizeBy;
 import com.school.management.domain.inspection.model.scoring.ScoringProfile;
@@ -18,6 +23,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -53,6 +59,7 @@ class ScoreAggregationServiceNormalizationTest {
     @Mock SubmissionObservationRepository observationRepository;
     @Mock ScoreCalculationDomainService scoreCalculationService;
     @Mock NormalizationBasisResolver normalizationBasisResolver;
+    @Mock OrgUnitScoreRollupService orgUnitScoreRollupService;
 
     private ScoreAggregationService service() {
         return new ScoreAggregationService(
@@ -60,7 +67,7 @@ class ScoreAggregationServiceNormalizationTest {
                 planRepository, scoreRepository, scoringProfileRepository, dimensionRepository,
                 ruleRepository, gradeBandRepository, sectionRepository, escalationPolicyRepository,
                 observationRepository, scoreCalculationService, normalizationBasisResolver,
-                new ObjectMapper());
+                orgUnitScoreRollupService, new ObjectMapper());
     }
 
     /** baseline=40, normalizeBy=PER_MEMBER, mode=PER_CAPITA 的 profile */
@@ -169,5 +176,49 @@ class ScoreAggregationServiceNormalizationTest {
         assertThat(popCap.getValue()).isEqualTo(1);
         assertThat(inputsCap.getValue().get(0).getNormalizationConfig()).isNull();
         verifyNoInteractions(normalizationBasisResolver);
+    }
+
+    // ========== Phase 3.4: 项目分重算后级联触发组织树 roll-up ==========
+
+    private InspProject project() {
+        return InspProject.reconstruct(InspProject.builder()
+                .id(9L).projectCode("P-9").projectName("项目9"));
+    }
+
+    @Test
+    @DisplayName("Phase 3.4: count>0 (有 COMPLETED 提交) → 重算 ProjectScore 后触发 rollup")
+    void triggersRollupWhenCompletedSubmissionsExist() {
+        LocalDate date = LocalDate.of(2026, 5, 29);
+        when(projectRepository.findById(9L)).thenReturn(Optional.of(project()));
+
+        InspTask task = InspTask.builder().id(20L).build();
+        when(taskRepository.findByProjectIdAndTaskDate(9L, date)).thenReturn(List.of(task));
+
+        InspSubmission sub = InspSubmission.builder()
+                .id(30L).taskId(20L)
+                .status(SubmissionStatus.COMPLETED)
+                .finalScore(new BigDecimal("88"))
+                .build();
+        when(submissionRepository.findByTaskId(20L)).thenReturn(List.of(sub));
+        when(scoreRepository.findByProjectIdAndCycleDate(9L, date)).thenReturn(Optional.empty());
+
+        service().recomputeProjectScore(9L, date);
+
+        // ProjectScore 已 save (count>0 路径), 随后级联 rollup
+        verify(scoreRepository).save(any(ProjectScore.class));
+        verify(orgUnitScoreRollupService).rollup(9L, date);
+    }
+
+    @Test
+    @DisplayName("Phase 3.4: count==0 (本周期无完成提交) → 不调 rollup")
+    void doesNotTriggerRollupWhenNoCompletedSubmissions() {
+        LocalDate date = LocalDate.of(2026, 5, 29);
+        when(projectRepository.findById(9L)).thenReturn(Optional.of(project()));
+        // 无任何 task → count==0 提前 return, 不触发 rollup
+        when(taskRepository.findByProjectIdAndTaskDate(9L, date)).thenReturn(List.of());
+
+        service().recomputeProjectScore(9L, date);
+
+        verify(orgUnitScoreRollupService, never()).rollup(anyLong(), any());
     }
 }
