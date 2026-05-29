@@ -4,6 +4,7 @@ import com.school.management.domain.inspection.model.execution.*;
 import com.school.management.domain.inspection.model.scoring.*;
 import com.school.management.domain.inspection.model.template.TemplateSection;
 import com.school.management.domain.inspection.repository.*;
+import com.school.management.domain.inspection.service.NormalizationBasisResolver;
 import com.school.management.domain.inspection.service.ScoreCalculationDomainService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -43,6 +44,7 @@ public class ScoreAggregationService {
     private final EscalationPolicyRepository escalationPolicyRepository;
     private final SubmissionObservationRepository observationRepository;
     private final ScoreCalculationDomainService scoreCalculationService;
+    private final NormalizationBasisResolver normalizationBasisResolver;
     private final ObjectMapper objectMapper;
 
     // ========== Scoring Config Resolution (评级引擎完美架构 2026-05-23) ==========
@@ -166,11 +168,33 @@ public class ScoreAggregationService {
             List<CalculationRule> rules = ruleRepository.findByScoringProfileIdOrderByPriority(profileId);
             List<GradeBand> gradeBands = gradeBandRepository.findByScoringProfileId(profileId);
 
-            List<ScoreCalculationDomainService.ItemScoreInput> inputs = buildItemScoreInputs(details);
+            // 规模公平性归一化 (Stage 1): 解析 population 分母 — 引擎按 baseline/population
+            // 系数把不同规模单位的扣分摊平.
+            //
+            // population 与 normConfig 必须由同一个门控决定, 否则会算错: 引擎归一化开关是
+            // (normConfig != null && population > 0). 若只满足 normalizationMode!=NONE 却没解析到
+            // population (如缺主体信息的 @Deprecated 路径), population 留 1 而 normConfig 非空,
+            // 会用 baseline/1=baseline 系数把分数放大. 故只有 normalizeBy 与 mode 都启用且主体可解析时,
+            // 才同时给出真实 population 与归一化用 profile (normProfile); 否则 normProfile=null 不归一.
+            int population = 1;
+            ScoringProfile normProfile = null;
+            if (profile.getNormalizeBy() != null && profile.getNormalizeBy() != NormalizeBy.NONE
+                    && profile.getNormalizationMode() != null
+                    && profile.getNormalizationMode() != NormalizationMode.NONE
+                    && subjectType != null && subjectId != null) {
+                TargetType tt = mapSubjectToTargetType(subjectType);
+                if (tt != null) {
+                    population = normalizationBasisResolver.resolveDenominator(
+                            tt, subjectId, profile.getNormalizeBy());
+                    normProfile = profile;
+                }
+            }
+
+            List<ScoreCalculationDomainService.ItemScoreInput> inputs = buildItemScoreInputs(details, normProfile);
             // 重复违规递增: 按 EscalationPolicy 放大本次扣分基数
             applyEscalationPolicies(profileId, subjectType, subjectId, inputs);
             ScoreCalculationDomainService.ScoreResult result = scoreCalculationService.calculate(
-                    profile, dimensions, rules, gradeBands, inputs, 0);
+                    profile, dimensions, rules, gradeBands, inputs, population);
 
             String breakdown = serializeBreakdown(result);
             return new ScoreFields(
@@ -378,7 +402,12 @@ public class ScoreAggregationService {
     }
 
     private List<ScoreCalculationDomainService.ItemScoreInput> buildItemScoreInputs(
-            List<SubmissionDetail> details) {
+            List<SubmissionDetail> details, ScoringProfile normProfile) {
+        // 章节级归一化配置 (Stage 1): 仅当调用方解析到 population 时才传入 normProfile,
+        // 从它一次性构建 NormalizationConfig 复用到每个 item. normProfile 为 null 时不归一化.
+        ScoreCalculationDomainService.NormalizationConfig normConfig =
+                normProfile != null ? buildNormalizationConfig(normProfile) : null;
+
         List<ScoreCalculationDomainService.ItemScoreInput> inputs = new ArrayList<>();
         for (SubmissionDetail detail : details) {
             String scoringMode = mapScoringMode(detail.getScoringMode());
@@ -389,9 +418,25 @@ public class ScoreAggregationService {
 
             inputs.add(new ScoreCalculationDomainService.ItemScoreInput(
                     detail.getItemCode(), dimensionId, scoringMode,
-                    configScore, responseNumericValue, quantity, null));
+                    configScore, responseNumericValue, quantity, normConfig));
         }
         return inputs;
+    }
+
+    /**
+     * 从 profile 构建章节级归一化配置.
+     * mode 为 null 或 NONE → 返回 null (引擎跳过归一化).
+     * 否则 enabled=true, baselinePopulation 缺省为 1.
+     * 注意 NormalizationConfig 构造器 cappedAt 在 floorAt 之前.
+     */
+    private ScoreCalculationDomainService.NormalizationConfig buildNormalizationConfig(ScoringProfile profile) {
+        NormalizationMode mode = profile.getNormalizationMode();
+        if (mode == null || mode == NormalizationMode.NONE) {
+            return null;
+        }
+        int baseline = profile.getBaselinePopulation() != null ? profile.getBaselinePopulation() : 1;
+        return new ScoreCalculationDomainService.NormalizationConfig(
+                true, mode, baseline, profile.getNormCap(), profile.getNormFloor(), null);
     }
 
     /**
@@ -405,6 +450,21 @@ public class ScoreAggregationService {
             case USER -> "USER";
             case PLACE -> "PLACE";
             case ASSET -> "ASSET";
+            default -> null;
+        };
+    }
+
+    /**
+     * subjectType(String) → TargetType 反向映射 — 给归一化分母解析用.
+     * (ORG_UNIT→ORG, USER→USER, PLACE→PLACE, ASSET→ASSET, 其它→null)
+     */
+    private static TargetType mapSubjectToTargetType(String subjectType) {
+        if (subjectType == null) return null;
+        return switch (subjectType) {
+            case "ORG_UNIT" -> TargetType.ORG;
+            case "USER" -> TargetType.USER;
+            case "PLACE" -> TargetType.PLACE;
+            case "ASSET" -> TargetType.ASSET;
             default -> null;
         };
     }
