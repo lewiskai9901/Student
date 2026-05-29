@@ -418,6 +418,44 @@ class ScoreCalculationDomainServiceTest {
         }
 
         @Test
+        @DisplayName("PROGRESSIVE_BONUS 累进加分规则 — 0 达标项不应用 (钉死 >0 谓词)")
+        void applyRule_progressiveBonus_noQualifiedItems_notApplied() {
+            ScoringProfile profile = buildProfile(new BigDecimal("130"), new BigDecimal("-100"));
+
+            ScoreDimension dim = buildDimension(1L, "DIM1", "维度1", 100,
+                    new BigDecimal("100"), null);
+
+            // 没有任何合格项: 全是扣分项/0 分项 → finalScore > 0 的项数为 0
+            List<ItemScoreInput> inputs = List.of(
+                    buildDeductionInput("D1", 1L, new BigDecimal("-1"), 1),
+                    buildDeductionInput("D2", 1L, new BigDecimal("-1"), 1),
+                    buildDeductionInput("Z1", 1L, new BigDecimal("0"), 1)
+            );
+
+            CalculationRule progressiveBonusRule = CalculationRule.builder()
+                    .id(1L)
+                    .ruleCode("PROGRESSIVE_BONUS_RULE")
+                    .ruleType(RuleType.PROGRESSIVE_BONUS)
+                    .priority(1)
+                    .isEnabled(true)
+                    .config("{\"thresholds\": [{\"count\": 2, \"bonus\": 3}, {\"count\": 4, \"bonus\": 6}]}")
+                    .build();
+
+            ScoreResult result = service.calculate(
+                    profile, List.of(dim), List.of(progressiveBonusRule),
+                    Collections.emptyList(), inputs, 0);
+
+            RuleApplication app = result.getRuleApplications().stream()
+                    .filter(a -> a.getRuleType() == RuleType.PROGRESSIVE_BONUS)
+                    .findFirst()
+                    .orElseThrow();
+            // 0 项达标 → 不命中任何阈值档 → 规则不应用
+            assertThat(app.isApplied()).isFalse();
+            // 无加分流入 bonusTotal
+            assertThat(result.getBonusTotal()).isEqualByComparingTo("0");
+        }
+
+        @Test
         @DisplayName("禁用的规则不执行")
         void testDisabledRuleSkipped() {
             ScoringProfile profile = buildProfile(new BigDecimal("100"), BigDecimal.ZERO);
