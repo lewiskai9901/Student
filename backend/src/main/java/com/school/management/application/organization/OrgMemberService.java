@@ -1,9 +1,7 @@
 package com.school.management.application.organization;
 
-import com.school.management.application.access.AccessRelationService;
 import com.school.management.application.organization.query.OrgMemberDTO;
 import com.school.management.application.organization.query.OrgStatisticsDTO;
-import com.school.management.domain.access.model.entity.AccessRelation;
 import com.school.management.domain.access.repository.AccessRelationRepository;
 import com.school.management.domain.organization.model.OrgUnit;
 import com.school.management.domain.organization.repository.OrgUnitRepository;
@@ -17,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -33,8 +30,8 @@ public class OrgMemberService {
     private final UserDomainMapper userDomainMapper;
     private final OrgUnitRepository orgUnitRepository;
     private final AccessRelationRepository accessRelationRepository;
-    private final AccessRelationService accessRelationService;
     private final PolicyRegistry policyRegistry;
+    private final MembershipResolver membershipResolver;
 
     /**
      * 获取归属成员列表（primary_org_unit_id = orgUnitId）
@@ -107,7 +104,8 @@ public class OrgMemberService {
     }
 
     /**
-     * 添加成员：设置 user.primary_org_unit_id，创建 access_relation
+     * 添加成员：统一走 MembershipResolver 写 member 关系 (grant-or-replace, 每用户唯一)。
+     * 不再写 users.primary_org_unit_id 外键 (列待 Phase 4 删)。
      */
     @Transactional
     public void addMember(Long orgUnitId, Long userId) {
@@ -115,27 +113,11 @@ public class OrgMemberService {
         policyRegistry.enforce(new PolicyContext<>("org_unit", "BEFORE_ADD_MEMBER",
                 Map.of("orgUnitId", orgUnitId, "userId", userId)));
 
-        OrgUnit orgUnit = orgUnitRepository.findById(orgUnitId)
+        orgUnitRepository.findById(orgUnitId)
                 .orElseThrow(() -> new IllegalArgumentException("OrgUnit not found: " + orgUnitId));
 
-        // Set user's primary org unit
-        userDomainMapper.setPrimaryOrgUnitId(userId, orgUnitId);
-
-        // Create access relation (user -> org_unit, member)
-        // W4.5: 成员判定走 AccessRelationService.checkDirect, 让授权查询集中,
-        // 不走 implied 展开 (这里要的是真实 member, 派生 viewer 不算)
-        boolean alreadyMember = accessRelationService.checkDirect(
-                "user", userId, "member", "org_unit", orgUnitId, LocalDateTime.now());
-        if (!alreadyMember) {
-            AccessRelation relation = AccessRelation.builder()
-                    .resourceType("org_unit")
-                    .resourceId(orgUnitId)
-                    .relation("member")
-                    .subjectType("user")
-                    .subjectId(userId)
-                    .build();
-            accessRelationRepository.save(relation);
-        }
+        // 统一归属写入: member | user | org_unit (唯一), is_primary=1
+        membershipResolver.setMembership(userId, orgUnitId);
 
         log.info("Added user {} as member of org {}", userId, orgUnitId);
 
@@ -147,7 +129,9 @@ public class OrgMemberService {
     }
 
     /**
-     * 移除成员：清除 user.primary_org_unit_id，删除 access_relation
+     * 移除成员：统一走 MembershipResolver 撤销 member 关系。
+     * 归属唯一, 仅当用户当前归属正是该 org 时才撤销 (防误删跨 org 归属)。
+     * 不再写 users.primary_org_unit_id 外键 (列待 Phase 4 删)。
      */
     @Transactional
     public void removeMember(Long orgUnitId, Long userId) {
@@ -155,11 +139,12 @@ public class OrgMemberService {
         policyRegistry.enforce(new PolicyContext<>("org_unit", "BEFORE_REMOVE_MEMBER",
                 Map.of("orgUnitId", orgUnitId, "userId", userId)));
 
-        // Clear user's primary org unit (only if it matches)
-        userDomainMapper.clearPrimaryOrgUnitIdForUser(userId, orgUnitId);
-
-        // Remove access relation
-        accessRelationRepository.deleteByResourceAndSubject("org_unit", orgUnitId, "user", userId);
+        // 归属唯一: 仅当用户当前 member 即指向该 org 才撤销, 否则跳过 (不误删别处归属)
+        if (membershipResolver.orgOf(userId).map(orgUnitId::equals).orElse(false)) {
+            membershipResolver.clearMembership(userId);
+        } else {
+            log.debug("Skip removeMember: user {} not a member of org {}", userId, orgUnitId);
+        }
 
         log.info("Removed user {} from org {}", userId, orgUnitId);
 
@@ -175,9 +160,9 @@ public class OrgMemberService {
      */
     @Transactional
     public void endAllByOrgUnitId(Long orgUnitId, String reason) {
-        int count = userDomainMapper.clearPrimaryOrgUnitId(orgUnitId);
+        // 批量撤销该 org 的全部 member 关系 (组织解散). 不再清 primary_org_unit_id 外键 (列待 Phase 4 删)。
         accessRelationRepository.deleteByResource("org_unit", orgUnitId);
-        log.info("Ended all memberships for org {} (count={}, reason={})", orgUnitId, count, reason);
+        log.info("Ended all memberships for org {} (reason={})", orgUnitId, reason);
     }
 
     // ==================== Helper methods ====================

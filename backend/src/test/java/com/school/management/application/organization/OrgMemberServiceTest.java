@@ -12,23 +12,23 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Collections;
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.lenient;
 
 /**
- * Regression test for {@link OrgMemberService#removeMember(Long, Long)}.
+ * Regression test for {@link OrgMemberService} after the membership-unified-relation
+ * refactor (Task 2.2): 成员增删改只走 {@link MembershipResolver}, 不再写
+ * {@code users.primary_org_unit_id} 外键, 也不手工建/删 access_relation 行。
  *
- * <p>Guards against the data corruption bug fixed in commit 1168eec3:
- * the pre-fix implementation called
- * {@code accessRelationRepository.deleteByResource("org_unit", orgUnitId)},
- * which wiped out ALL members of the target org instead of removing just
- * the one user. The post-fix implementation correctly uses
- * {@code deleteByResourceAndSubject(resourceType, resourceId, subjectType, subjectId)}.
+ * <p>历史背景: commit 1168eec3 曾修过 removeMember 误删整个 org 全部成员的 bug
+ * (deleteByResource vs deleteByResourceAndSubject)。现在删除归属统一交给
+ * MembershipResolver.clearMembership(userId) — 归属唯一, 不会跨 org 误删。
  */
 @ExtendWith(MockitoExtension.class)
 class OrgMemberServiceTest {
@@ -45,6 +45,9 @@ class OrgMemberServiceTest {
     @Mock
     PolicyRegistry policyRegistry;
 
+    @Mock
+    MembershipResolver membershipResolver;
+
     @InjectMocks
     OrgMemberService service;
 
@@ -58,32 +61,49 @@ class OrgMemberServiceTest {
     }
 
     @Test
-    void removeMember_shouldOnlyDeleteSpecificUserRelation_notAllOrgRelations() {
-        // This is the regression test for the data corruption bug.
-        // Pre-fix: deleteByResource("org_unit", orgUnitId) deleted ALL users.
-        // Post-fix: deleteByResourceAndSubject(resourceType, resourceId, subjectType, subjectId).
-        service.removeMember(100L, 999L);
+    void addMember_shouldDelegateToMembershipResolver_andNotWriteFk() {
+        when(orgUnitRepository.findById(100L))
+                .thenReturn(Optional.of(mock(com.school.management.domain.organization.model.OrgUnit.class)));
 
-        // The correct method with 4 args must be called.
-        verify(accessRelationRepository).deleteByResourceAndSubject(
-                eq("org_unit"), eq(100L), eq("user"), eq(999L));
+        service.addMember(100L, 999L);
 
-        // The broken method must NOT be called (it would delete all members).
-        verify(accessRelationRepository, never()).deleteByResource("org_unit", 100L);
+        // 统一归属写入走 MembershipResolver (grant-or-replace)。
+        verify(membershipResolver).setMembership(999L, 100L);
+
+        // 不再写 primary_org_unit_id 外键, 也不手工建 access_relation。
+        verify(userDomainMapper, never()).setPrimaryOrgUnitId(any(), any());
+        verify(accessRelationRepository, never()).save(any());
     }
 
     @Test
-    void removeMember_shouldAlsoClearUserPrimaryOrgUnit() {
+    void removeMember_shouldClearMembership_whenUserBelongsToThatOrg() {
+        when(membershipResolver.orgOf(999L)).thenReturn(Optional.of(100L));
+
         service.removeMember(100L, 999L);
-        // Verify the user's primary org unit assignment is cleared (user-scoped clear,
-        // not the org-wide clear used during dissolution).
-        verify(userDomainMapper).clearPrimaryOrgUnitIdForUser(999L, 100L);
+
+        verify(membershipResolver).clearMembership(999L);
+        // 不再写 primary_org_unit_id 外键, 也不手工删 access_relation。
+        verify(userDomainMapper, never()).clearPrimaryOrgUnitIdForUser(any(), any());
+        verify(accessRelationRepository, never())
+                .deleteByResourceAndSubject(any(), any(), any(), any());
+    }
+
+    @Test
+    void removeMember_shouldNotClear_whenUserBelongsToDifferentOrg() {
+        // 用户归属在另一个 org — 不得误删其归属。
+        when(membershipResolver.orgOf(999L)).thenReturn(Optional.of(200L));
+
+        service.removeMember(100L, 999L);
+
+        verify(membershipResolver, never()).clearMembership(any());
     }
 
     @Test
     void endAllByOrgUnitId_shouldUseDeleteByResource_thisIsCorrectForDissolution() {
-        // This method is called during org dissolution — deleting ALL relations is intentional.
+        // 组织解散 — 删除该 org 全部 member 关系是预期行为。
         service.endAllByOrgUnitId(100L, "解散");
         verify(accessRelationRepository).deleteByResource("org_unit", 100L);
+        // 不再清 primary_org_unit_id 外键。
+        verify(userDomainMapper, never()).clearPrimaryOrgUnitId(any());
     }
 }
