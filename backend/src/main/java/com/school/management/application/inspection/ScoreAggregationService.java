@@ -422,15 +422,18 @@ public class ScoreAggregationService {
 
         List<ScoreCalculationDomainService.ItemScoreInput> inputs = new ArrayList<>();
         for (SubmissionDetail detail : details) {
+            // scoringMode 仅作记录 / EscalationPolicy 匹配 (DEDUCTION 判定), 不再参与算分.
             String scoringMode = mapScoringMode(detail.getScoringMode());
             BigDecimal configScore = parseConfigScore(detail.getScoringConfig());
             BigDecimal responseNumericValue = parseNumericValue(detail.getResponseValue());
             int quantity = parseQuantity(detail.getResponseValue(), detail.getScoringMode());
             Long dimensionId = parseDimensionId(detail.getDimensions());
+            // 单项原始分以 detail.score 为权威 (提交路径已由 ItemScoreEvaluator 算好). null 当 0.
+            BigDecimal itemScore = detail.getScore() != null ? detail.getScore() : BigDecimal.ZERO;
 
             inputs.add(new ScoreCalculationDomainService.ItemScoreInput(
                     detail.getItemCode(), dimensionId, scoringMode,
-                    configScore, responseNumericValue, quantity, normConfig));
+                    configScore, responseNumericValue, quantity, itemScore, normConfig));
         }
         return inputs;
     }
@@ -527,16 +530,20 @@ public class ScoreAggregationService {
             if (factor == null || factor.compareTo(BigDecimal.ONE) <= 0) continue;
             if (factor.compareTo(cap) > 0) factor = cap;
 
+            // 评分引擎现以 itemScore 为项原始分, 故重复违规递增改为放大 itemScore (扣分基数).
+            BigDecimal oldItemScore = in.getItemScore();
+            BigDecimal newItemScore = oldItemScore != null ? oldItemScore.multiply(factor) : null;
             BigDecimal newConfigScore = in.getConfigScore() != null
                     ? in.getConfigScore().multiply(factor) : in.getConfigScore();
 
             inputs.set(i, new ScoreCalculationDomainService.ItemScoreInput(
                     in.getItemCode(), in.getDimensionId(), in.getScoringMode(),
-                    newConfigScore, in.getResponseNumericValue(), in.getQuantity(), null));
+                    newConfigScore, in.getResponseNumericValue(), in.getQuantity(),
+                    newItemScore, null));
 
-            log.debug("EscalationPolicy 应用: itemCode={}, subject={}/{}, pastN={}, factor={}, deductionAdjusted={}->{}",
+            log.debug("EscalationPolicy 应用: itemCode={}, subject={}/{}, pastN={}, factor={}, itemScoreAdjusted={}->{}",
                     in.getItemCode(), subjectType, subjectId, pastN, factor,
-                    in.getConfigScore(), newConfigScore);
+                    oldItemScore, newItemScore);
         }
     }
 

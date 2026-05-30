@@ -4,6 +4,7 @@ import com.school.management.application.event.EntityEventApplicationService;
 import com.school.management.application.event.TriggerService;
 import com.school.management.domain.inspection.model.execution.*;
 import com.school.management.domain.inspection.repository.*;
+import com.school.management.domain.inspection.service.ItemScoreEvaluator;
 import com.school.management.domain.inspection.service.ObservationExtractor;
 import com.school.management.infrastructure.event.SpringDomainEventPublisher;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -51,6 +52,10 @@ class InspSubmissionApplicationServiceTest {
 
     ObjectMapper objectMapper = new ObjectMapper();
 
+    // 真实评分计算器 (无 FormulaEvaluator — 纯计算, FORMULA 模式退化为 0). 用于钉死
+    // P1.6 服务端权威算分: updateDetailResponse 落库的 detail.score 由它算出, 忽略前端值.
+    ItemScoreEvaluator itemScoreEvaluator = new ItemScoreEvaluator();
+
     InspSubmissionApplicationService service;
 
     @BeforeEach
@@ -58,7 +63,8 @@ class InspSubmissionApplicationServiceTest {
         service = new InspSubmissionApplicationService(
                 submissionRepository, detailRepository, evidenceRepository,
                 taskRepository, projectRepository, scoreAggregationService,
-                eventPublisher, objectMapper, entityEventApplicationService);
+                eventPublisher, objectMapper, entityEventApplicationService,
+                itemScoreEvaluator);
     }
 
     // ---- helpers ----
@@ -467,6 +473,30 @@ class InspSubmissionApplicationServiceTest {
                     new BigDecimal("3"), null);
 
             verify(scoreAggregationService).recalculateFromSubmission(50L);
+        }
+
+        @Test
+        @DisplayName("P1.6: updateDetailResponse 用 ItemScoreEvaluator 算权威 detail.score, 忽略前端 score")
+        void shouldComputeAuthoritativeScoreIgnoringFrontend() {
+            // LEVEL 模式, scoringConfig 含 levels[{良:8}], responseValue=良 → 权威分 8
+            SubmissionDetail d = SubmissionDetail.create(50L, 5L, "I-1", "等级项", "SCORE",
+                    100L, "分区A", ScoringMode.LEVEL,
+                    "{\"levels\":[{\"label\":\"优\",\"score\":\"10\"},{\"label\":\"良\",\"score\":\"8\"}]}",
+                    null, null);
+            ReflectionTestUtils.setField(d, "id", 1L);
+            when(detailRepository.findById(1L)).thenReturn(Optional.of(d));
+            when(detailRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            InspSubmission s = submissionInState(50L, SubmissionStatus.IN_PROGRESS);
+            when(submissionRepository.findById(50L)).thenReturn(Optional.of(s));
+
+            // 前端乱传 score=999 — 必须被忽略
+            service.updateDetailResponse(1L, "良", ScoringMode.LEVEL,
+                    new BigDecimal("999"), null);
+
+            ArgumentCaptor<SubmissionDetail> cap = ArgumentCaptor.forClass(SubmissionDetail.class);
+            verify(detailRepository).save(cap.capture());
+            // 落库的 detail.score = 服务端权威算出的 8, 不是前端的 999
+            assertThat(cap.getValue().getScore()).isEqualByComparingTo("8");
         }
 
         @Test

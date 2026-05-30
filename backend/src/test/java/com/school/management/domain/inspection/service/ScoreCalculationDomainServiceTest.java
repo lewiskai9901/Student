@@ -55,16 +55,20 @@ class ScoreCalculationDomainServiceTest {
                 .build();
     }
 
+    // P1.7: 引擎现以 itemScore (= detail.score, 服务端权威) 为项原始分, 不再 switch on mode 重算.
+    // 测试 helper 直接给出等价 itemScore: DEDUCTION → -abs(score)*quantity, ADDITION → abs(score)*quantity.
     private ItemScoreInput buildDeductionInput(String itemCode, Long dimensionId,
                                                 BigDecimal score, int quantity) {
+        BigDecimal itemScore = score.abs().multiply(BigDecimal.valueOf(quantity)).negate();
         return new ItemScoreInput(itemCode, dimensionId, "DEDUCTION",
-                score, null, quantity, null);
+                score, null, quantity, itemScore, null);
     }
 
     private ItemScoreInput buildAdditionInput(String itemCode, Long dimensionId,
                                                BigDecimal score, int quantity) {
+        BigDecimal itemScore = score.abs().multiply(BigDecimal.valueOf(quantity));
         return new ItemScoreInput(itemCode, dimensionId, "ADDITION",
-                score, null, quantity, null);
+                score, null, quantity, itemScore, null);
     }
 
     private GradeBand buildGradeBand(String gradeCode, BigDecimal min, BigDecimal max) {
@@ -156,6 +160,52 @@ class ScoreCalculationDomainServiceTest {
         }
     }
 
+    // ==================== P1.7 引擎消费 itemScore ====================
+
+    @Nested
+    @DisplayName("P1.7 引擎以 itemScore (=detail.score) 为项原始分")
+    class ItemScoreConsumptionTests {
+
+        @Test
+        @DisplayName("LEVEL 项 itemScore=8 经引擎 → finalScore 反映 8 (旧 switch 逻辑会算 0)")
+        void engineConsumesItemScoreForLevelMode() {
+            ScoringProfile profile = buildProfile(new BigDecimal("100"), new BigDecimal("-100"));
+            ScoreDimension dim = buildDimension(1L, "DIM1", "维度1", 100,
+                    BigDecimal.ZERO, null);
+
+            // LEVEL 模式 → mapScoringMode 旧实现归 RESPONSE_MAPPED, responseNumericValue=null
+            // → 旧 calculateItemScore 会算出 rawScore=0. 现以 itemScore=8 为权威.
+            ItemScoreInput input = new ItemScoreInput("LVL_ITEM", 1L, "RESPONSE_MAPPED",
+                    BigDecimal.ZERO, null, 1, new BigDecimal("8"), null);
+
+            ScoreResult result = service.calculate(
+                    profile, List.of(dim), Collections.emptyList(),
+                    Collections.emptyList(), List.of(input), 0);
+
+            // dimScore = base 0 + itemScore 8 = 8
+            assertThat(result.getFinalScore()).isEqualByComparingTo("8.00");
+            assertThat(result.getItemOutputs().get(0).getRawScore()).isEqualByComparingTo("8");
+        }
+
+        @Test
+        @DisplayName("itemScore=null → 当 0, 不抛 NPE")
+        void nullItemScoreTreatedAsZero() {
+            ScoringProfile profile = buildProfile(new BigDecimal("100"), new BigDecimal("-100"));
+            ScoreDimension dim = buildDimension(1L, "DIM1", "维度1", 100,
+                    new BigDecimal("50"), null);
+
+            ItemScoreInput input = new ItemScoreInput("X", 1L, "DEDUCTION",
+                    BigDecimal.ZERO, null, 1, null, null);
+
+            ScoreResult result = service.calculate(
+                    profile, List.of(dim), Collections.emptyList(),
+                    Collections.emptyList(), List.of(input), 0);
+
+            // dimScore = base 50 + 0 = 50
+            assertThat(result.getFinalScore()).isEqualByComparingTo("50.00");
+        }
+    }
+
     // ==================== 归一化测试 ====================
 
     @Nested
@@ -174,8 +224,9 @@ class ScoreCalculationDomainServiceTest {
                     true, NormalizationMode.PER_CAPITA, 40,
                     new BigDecimal("2.0"), new BigDecimal("0.5"), null);
 
+            // itemScore = -6 (= -abs(2)*3 服务端权威算出)
             ItemScoreInput input = new ItemScoreInput("ITEM_A", 1L, "DEDUCTION",
-                    new BigDecimal("-2"), null, 3, normConfig);
+                    new BigDecimal("-2"), null, 3, new BigDecimal("-6"), normConfig);
 
             ScoreResult result = service.calculate(
                     profile, List.of(dim), Collections.emptyList(),
@@ -200,8 +251,9 @@ class ScoreCalculationDomainServiceTest {
                     true, NormalizationMode.PER_CAPITA, 40,
                     new BigDecimal("2.0"), new BigDecimal("0.1"), null);
 
+            // itemScore = -10 (= -abs(10)*1)
             ItemScoreInput input = new ItemScoreInput("ITEM_A", 1L, "DEDUCTION",
-                    new BigDecimal("-10"), null, 1, normConfig);
+                    new BigDecimal("-10"), null, 1, new BigDecimal("-10"), normConfig);
 
             ScoreResult result = service.calculate(
                     profile, List.of(dim), Collections.emptyList(),

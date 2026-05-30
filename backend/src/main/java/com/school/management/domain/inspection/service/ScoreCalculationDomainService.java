@@ -119,36 +119,13 @@ public class ScoreCalculationDomainService {
     // ========== Item 级别计算 ==========
 
     private ItemScoreOutput calculateItemScore(ItemScoreInput input, int population) {
-        BigDecimal rawScore = BigDecimal.ZERO;
         BigDecimal normFactor = BigDecimal.ONE;
         BigDecimal finalItemScore;
 
-        String scoringMode = input.getScoringMode();
-        BigDecimal configScore = input.getConfigScore();
-        BigDecimal responseValue = input.getResponseNumericValue();
-        int quantity = input.getQuantity();
-
-        if (configScore == null) {
-            configScore = BigDecimal.ZERO;
-        }
-
-        switch (scoringMode != null ? scoringMode : "DEDUCTION") {
-            case "DEDUCTION":
-                rawScore = configScore.abs().multiply(BigDecimal.valueOf(quantity)).negate();
-                break;
-            case "ADDITION":
-                rawScore = configScore.abs().multiply(BigDecimal.valueOf(quantity));
-                break;
-            case "FIXED":
-                rawScore = configScore;
-                break;
-            case "RESPONSE_MAPPED":
-                rawScore = responseValue != null ? responseValue : BigDecimal.ZERO;
-                break;
-            default:
-                rawScore = configScore;
-                break;
-        }
+        // 单项原始分以 detail.score (= ItemScoreEvaluator 服务端权威算出) 为准.
+        // 退役旧 switch on scoringMode 重算 (DEDUCTION/ADDITION/FIXED/RESPONSE_MAPPED) —
+        // 那条路径只认 4 个 mode, 等级/通过等模式恒算 0, 与提交路径不一致. 现统一消费 itemScore.
+        BigDecimal rawScore = input.getItemScore() != null ? input.getItemScore() : BigDecimal.ZERO;
 
         // 归一化
         NormalizationConfig normConfig = input.getNormalizationConfig();
@@ -455,21 +432,28 @@ public class ScoreCalculationDomainService {
     public static class ItemScoreInput {
         private final String itemCode;
         private final Long dimensionId;
-        private final String scoringMode;    // DEDUCTION, ADDITION, FIXED, RESPONSE_MAPPED
-        private final BigDecimal configScore;
+        private final String scoringMode;    // 仅作记录 / EscalationPolicy 匹配; 不再参与算分
+        private final BigDecimal configScore; // 仅作记录; 算分以 itemScore 为准
         private final BigDecimal responseNumericValue;
         private final int quantity;
+        /**
+         * 单项原始分 — 服务端权威 (= detail.score, 由 ItemScoreEvaluator 按 13 种模式算出).
+         * 引擎直接以此为 rawScore, 不再 switch on scoringMode 重算.
+         */
+        private final BigDecimal itemScore;
         private final NormalizationConfig normalizationConfig;
 
         public ItemScoreInput(String itemCode, Long dimensionId, String scoringMode,
                               BigDecimal configScore, BigDecimal responseNumericValue,
-                              int quantity, NormalizationConfig normalizationConfig) {
+                              int quantity, BigDecimal itemScore,
+                              NormalizationConfig normalizationConfig) {
             this.itemCode = itemCode;
             this.dimensionId = dimensionId;
             this.scoringMode = scoringMode;
             this.configScore = configScore;
             this.responseNumericValue = responseNumericValue;
             this.quantity = quantity;
+            this.itemScore = itemScore;
             this.normalizationConfig = normalizationConfig;
         }
 
@@ -479,6 +463,7 @@ public class ScoreCalculationDomainService {
         public BigDecimal getConfigScore() { return configScore; }
         public BigDecimal getResponseNumericValue() { return responseNumericValue; }
         public int getQuantity() { return quantity; }
+        public BigDecimal getItemScore() { return itemScore; }
         public NormalizationConfig getNormalizationConfig() { return normalizationConfig; }
     }
 

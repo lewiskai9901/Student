@@ -8,6 +8,7 @@ import com.school.management.domain.inspection.model.execution.*;
 import com.school.management.domain.inspection.model.scoring.*;
 import com.school.management.domain.inspection.model.template.TemplateItem;
 import com.school.management.domain.inspection.repository.*;
+import com.school.management.domain.inspection.service.ItemScoreEvaluator;
 import com.school.management.domain.inspection.service.ObservationContext;
 import com.school.management.domain.inspection.service.ObservationExtractor;
 import com.school.management.infrastructure.event.SpringDomainEventPublisher;
@@ -38,6 +39,7 @@ public class InspSubmissionApplicationService {
     private final SpringDomainEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
     private final EntityEventApplicationService entityEventApplicationService;
+    private final ItemScoreEvaluator itemScoreEvaluator;
 
     @Autowired(required = false)
     private TriggerService triggerService;
@@ -446,6 +448,10 @@ public class InspSubmissionApplicationService {
     /**
      * 更新明细的作答（responseValue、score、dimensions）。
      * 如果所属 submission 已处于 COMPLETED 状态，自动触发级联重算。
+     *
+     * <p>P1.6: detail.score 由服务端 {@link ItemScoreEvaluator} 按评分模式权威算出 —
+     * 忽略前端传入的 {@code score} 形参 (前端 score 仅用于录入时预览). scoringConfig 取
+     * detail 上的快照. 这样有/无 ScoringProfile 两条评分路径都基于同一个权威 detail.score.
      */
     @Transactional
     public SubmissionDetail updateDetailResponse(Long detailId, String responseValue,
@@ -453,7 +459,10 @@ public class InspSubmissionApplicationService {
                                                   String dimensions) {
         SubmissionDetail detail = detailRepository.findById(detailId)
                 .orElseThrow(() -> new IllegalArgumentException("明细不存在: " + detailId));
-        detail.updateResponse(responseValue, scoringMode, score, dimensions);
+        // 服务端权威算分 — 不信前端 score; responseValue/mode 为空时 evaluator 返回 0.
+        BigDecimal authoritativeScore = itemScoreEvaluator.scoreItem(
+                scoringMode, responseValue, detail.getScoringConfig());
+        detail.updateResponse(responseValue, scoringMode, authoritativeScore, dimensions);
         detailRepository.save(detail);
 
         // 如果所属 submission 已完成，自动触发级联重算
