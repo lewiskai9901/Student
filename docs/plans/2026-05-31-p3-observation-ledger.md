@@ -2,13 +2,15 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: superpowers:subagent-driven-development。本计划是大厂模型重设计,替代原 P3 的"录入模式/EVENT_STREAM"。开发阶段**无数据兼容包袱**(用户确认):遇结构变更直接改 schema+代码,不写迁移,DROP 重建测试数据。
 
-**Goal:** 把"巡检/违纪/观察"从"模板分区里的录入模式"升级成**一等的「观察事件台账」实体**,配独立"记一笔"入口 + 类目库 + 评比维度选类目 + 自动周期聚合出班级排名;清单检查保持平行;**砍掉模板版本钉死/漂移迁移**,改为"项目跟随活模板 + 公布即冻结结果"。
+> ⚠️ **通用性铁律(最重要):这是通用平台的检查模块,核心代码/模型/字段不得出现任何行业术语**(班级/学生/纪律/违纪/红旗 等)。检查对象一律用通用的 `TargetType: ORG/USER/PLACE/ASSET` + `targetId` + `orgUnitId`;实体叫 `Observation`(观察/事件)不叫"违纪";类目是通用"问题类目";评比产出叫"评比维度/奖项"。**本文出现的"班级/迟到/纪律红旗/卫生红旗"全是学校场景举例,不是模型概念**。已有 ArchUnit 守护 `NoIndustryTypeLiteralInCoreTest` 禁止 core 出现 STUDENT/CLASS 字面量——P3 代码必须过这关。已知行业残留待清:`PersonScoreObservationExtractor` 用 `studentId/studentName`,3A 收编时改成通用 `subjectId/subjectName`(或 targetId)。
+
+**Goal:** 把"巡检/观察/事件"从"模板分区里的录入模式"升级成**一等的「观察事件台账」实体**(通用,不绑行业),配独立"记一笔"入口 + 类目库 + 评比维度选类目 + 自动周期聚合出**检查对象(组织/用户/场所)排名**;清单检查保持平行;**砍掉模板版本钉死/漂移迁移**,改为"项目跟随活模板 + 公布即冻结结果"。
 
 **Architecture(全部设计决策,来自头脑风暴):**
 1. **观察事件 = 一等实体** `Observation`:`{projectId, targetType, targetId, orgUnitId, categoryId, points(记录时从类目快照), severity, occurredAt, recordedBy, evidenceUrls, note}`。随时记,不依附任何清单任务。
 2. **类目库** = 复用 `问题类目(issue categories)`,补 `defaultPoints/severity`。巡检时从库选,points 在记录瞬间快照进 Observation(改类目分值不回改历史)。
 3. **平行"记一笔"入口**:搜对象(班/生)→ 选类目 → 自动带分 → 拍证据 → 存。自动解析到"当前进行中的评比项目 + 该对象 + 按 occurredAt 落周期"。无需派任务。
-4. **评比维度(rating dimension)选类目**:复用 `insp_rating_dimensions`,从"只选清单分区(section_ids)"扩展为"也选巡检类目(category_ids)"。默认全选。一个事件池 × 多维度 = 多个奖(纪律红旗/卫生红旗/文明班级)。
+4. **评比维度(rating dimension)选类目**:复用 `insp_rating_dimensions`,从"只选清单分区(section_ids)"扩展为"也选巡检类目(category_ids)"。默认全选。一个事件池 × 多维度 = 多个奖项/排名口径(学校场景*举例*:纪律红旗只算纪律类、卫生红旗只算卫生类)。
 5. **聚合 = 周期重算式,非累加**:每条观察/清单提交变更 → 重算 (维度, 对象, periodKey) 整段总分 → 幂等 upsert 唯一键。复用 `PeriodKeyResolver` + `period_summaries` + 组织 roll-up(评分公平性那套)。周期由 `occurredAt` + 方案的**日切规则**确定性派生(默认自然日 00:00,可配日切点如 06:00)。多触发自愈(事件驱动+定时兜底+查看懒重算)。
 6. **公布即冻结结果**:某期排名正式公布 → 快照该期"分数/排名结果"。未公布全活、随时重算。冻结的是结果不是模板。
 7. **砍掉版本/漂移**:删 `template_version` 钉死 + drift 检测 + `upgrade-template-version` 整套。项目引用活模板;模板改 → 未公布周期直接重算。
@@ -65,9 +67,9 @@
 - 扩展/复用 `PeriodKeyResolver`:`occurredAt + period_type + day_cutoff → periodKey`。清单提交与观察用同一规则。
 - TDD(边界:23:55 vs 00:05;日切 06:00 时凌晨事件归前一日)。
 
-### Task 3B.3 重算式聚合 → 班级周期分 + 排名
-- `RankingAggregationService.recompute(projectId, dimensionId, target, periodKey)`:从源**重算** = 该周期该对象的(清单分 [按 section_ids] + 观察分 [按 category_ids 求和/加权])→ upsert 进汇总表唯一键 `(tenant, dimension, target, periodKey)`。
-- 触发:观察/清单提交变更 → 重算其 (维度,对象,periodKey);定时兜底全量;查看懒重算。复用 org roll-up 把对象分 roll 到班级/组织排名。
+### Task 3B.3 重算式聚合 → 检查对象周期分 + 排名
+- `RankingAggregationService.recompute(projectId, dimensionId, target, periodKey)`:从源**重算** = 该周期该检查对象的(清单分 [按 section_ids] + 观察分 [按 category_ids 求和/加权])→ upsert 进汇总表唯一键 `(tenant, dimension, target, periodKey)`。
+- 触发:观察/清单提交变更 → 重算其 (维度,对象,periodKey);定时兜底全量;查看懒重算。复用 org roll-up 把对象分沿组织树 roll 到上级组织单元排名。
 - 幂等 upsert + DuplicateKey 兜底(仿 ProjectScore/org_unit_scores)。
 - TDD(钉死:重算两次结果一致=防重;漏触发后重算自愈=防漏)。
 
@@ -98,7 +100,7 @@
 # Phase 3D — 前端:记一笔入口 + 项目配置 + 类目页 + 排名
 
 ### Task 3D.1 "记一笔"入口(改造 EventStreamRecorder)
-- 桌面 + 移动:全局/检查平台内一个"记一笔"按钮 → 搜对象(班/生)→ 选类目(带分值)→ occurredAt(默认现在可改)→ 拍证据 → 存 → 调 `POST /inspection/observations`。
+- 桌面 + 移动:全局/检查平台内一个"记一笔"按钮 → 搜检查对象(组织/用户/场所)→ 选类目(带分值)→ occurredAt(默认现在可改)→ 拍证据 → 存 → 调 `POST /inspection/observations`。
 - 复用既有 `EventStreamRecorder.vue` + `useGeolocation`/上传。
 - type-check。
 
@@ -118,7 +120,7 @@
 
 # Phase 3E — 端到端验证
 - 全 inspection 测试套件绿 + 前端 type-check 0 + build 绿 + 真启动。
-- **浏览器端到端 smoke**(orchestrator 驱动):建纪律模板(清单)→ 建评比项目(配纪律红旗维度选类目)→ 跑清单任务打分 + 记一笔违纪 → 看本周期班级排名正确(清单分+观察分合并)→ 公布锁定 → 补记一条验证不改已公布。
+- **浏览器端到端 smoke**(orchestrator 驱动,*学校场景举例验证*):建清单模板 → 建评比项目(配评比维度选类目)→ 跑清单任务打分 + 记一笔观察 → 看本周期检查对象(组织单元)排名正确(清单分+观察分合并)→ 公布锁定 → 补记一条验证不改已公布。
 
 ---
 
