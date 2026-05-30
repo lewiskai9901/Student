@@ -1404,7 +1404,7 @@ const scoringFromResponseSet = computed(() =>
                     <tr v-for="(p, r) in scoring.probabilities" :key="'r'+r">
                       <th>{{ p.label }}</th>
                       <td v-for="(imp, c) in scoring.impacts" :key="'c'+c">
-                        <select v-if="scoring.matrix[r]" v-model="scoring.matrix[r][c]" class="ie-matrix-cell">
+                        <select v-if="scoring.matrix[r]" v-model="scoring.matrix[r][c]" :class="['ie-matrix-cell', 'lvl-' + scoring.matrix[r][c]]">
                           <option v-for="lv in itemRiskLevels" :key="lv" :value="lv">{{ lv }}</option>
                         </select>
                       </td>
@@ -1617,6 +1617,27 @@ const scoringFromResponseSet = computed(() =>
 .ie-dialog-close { background:none; border:none; font-size:18px; color:#9ca3af; cursor:pointer; line-height:1; }
 .ie-dialog-body { flex:1; overflow-y:auto; padding:10px 14px; display:flex; flex-direction:column; gap:8px; }
 .ie-dialog-foot { display:flex; justify-content:flex-end; gap:6px; padding:6px 14px 10px; border-top:1px solid #f0f2f5; }
+
+/* ═══════ Width util ═══════ */
+.w-90 { width:90px; flex:0 0 90px; }
+
+/* ═══════ Risk matrix grid (RISK_MATRIX 复杂模式) ═══════ */
+.ie-matrix { border-collapse:separate; border-spacing:3px; margin:4px 0 2px; font-size:10px; }
+.ie-matrix th { font-weight:500; color:#8c95a3; font-size:10px; padding:2px 4px; white-space:nowrap; }
+.ie-matrix thead th { text-align:center; vertical-align:bottom; }
+.ie-matrix tbody th { text-align:right; padding-right:6px; color:#5a6474; font-weight:500; }
+.ie-matrix-corner { background:none; }
+.ie-matrix td { padding:0; text-align:center; }
+.ie-matrix-cell { width:54px; padding:3px 4px 3px 6px; font-size:10px; font-weight:600; text-align:center;
+  border:1px solid #dce1e8; border-radius:4px; outline:none; cursor:pointer; appearance:none; color:#5a6474; background:#fff;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23b8c0cc' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 3px center; padding-right:16px; transition:box-shadow 0.12s; }
+.ie-matrix-cell:focus { box-shadow:0 0 0 2px rgba(26,109,255,0.12); }
+/* 风险等级配色 — 浅底, 非色块装饰, 让矩阵一眼可读 (L绿 M黄 H橙 VH红) */
+.ie-matrix-cell.lvl-L  { background-color:#ecfdf5; border-color:#a7f3d0; color:#047857; }
+.ie-matrix-cell.lvl-M  { background-color:#fffbeb; border-color:#fde68a; color:#b45309; }
+.ie-matrix-cell.lvl-H  { background-color:#fff7ed; border-color:#fed7aa; color:#c2410c; }
+.ie-matrix-cell.lvl-VH { background-color:#fef2f2; border-color:#fecaca; color:#b91c1c; }
 
 .ie-modal-enter-active { transition:all 0.2s ease-out; }
 .ie-modal-leave-active { transition:all 0.15s ease-in; }
