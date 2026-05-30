@@ -83,6 +83,8 @@ const multiSelectInputs = ref<Record<LongId, string[]>>({})   // MULTI_SELECT / 
 const dateInputs = ref<Record<LongId, string>>({})            // DATE / TIME / DATETIME
 const mediaInputs = ref<Record<LongId, string>>({})           // PHOTO / VIDEO / FILE_UPLOAD / SIGNATURE (存 url)
 const gpsInputs = ref<Record<LongId, string>>({})             // GPS "lat,lng"
+// PERSON_SCORE 逐人录入态, keyed by detailId → { userId: score }. 回显时灌给 PersonScoreGrid.
+const personScoreInputs = ref<Record<LongId, Record<string, number>>>({})
 
 // 采集项选项数据源:
 //  - templateItemMetaMap: templateItemId → { config, responseSetId } (执行端从模板项加载, SubmissionDetail 本身不带)
@@ -1213,6 +1215,40 @@ async function handleFormula(detail: SubmissionDetail) {
   } catch (e: any) { console.error('公式录入保存失败', e); ElMessage.error('公式录入保存失败，请重试') }
 }
 
+/**
+ * PERSON_SCORE 逐人评分保存. 载荷来自 PersonScoreGrid 的 @update:scores: [{userId,userName,score}].
+ *
+ * 落库约定 (对齐后端 PersonScoreObservationExtractor 直接解析 responseValue):
+ *   - responseValue = JSON 数组 [{studentId,studentName,score}, ...] (extractor 按 studentId/studentName/score 取值,
+ *     仅负分人员产生观察). 注意 grid 用 userId/userName, 这里映射成 studentId/studentName.
+ *   - 不传 scoringMode: PERSON_SCORE 是 itemType 非 ScoringMode, evaluator 对 null mode 返回 0 — 逐人分由
+ *     extractor 单独消费, detail.score 保持非评分语义 (合计仅供前端摘要, 后端不依赖).
+ *   - dimensions = 同一数组镜像, 供审计/回显冗余.
+ */
+async function handlePersonScores(
+  detail: SubmissionDetail,
+  raw: Array<{ userId: LongId; userName: string; score: number | null }>,
+) {
+  // grid 已过滤未打分项, 这里再兜底剔除 null
+  const scores = raw.filter((s): s is { userId: LongId; userName: string; score: number } => s.score != null)
+  // 同步本地录入态 (回显用)
+  const m: Record<string, number> = {}
+  for (const s of scores) m[String(s.userId)] = s.score
+  personScoreInputs.value[detail.id] = m
+
+  const payload = scores.map(s => ({
+    studentId: s.userId,
+    studentName: s.userName,
+    score: s.score,
+  }))
+  try {
+    await persistDetailResponse(detail, {
+      responseValue: scores.length ? JSON.stringify(payload) : '',
+      dimensions: scores.length ? JSON.stringify(payload) : undefined,
+    })
+  } catch (e: any) { console.error('逐人评分保存失败', e); ElMessage.error('逐人评分保存失败，请重试') }
+}
+
 async function handleTextInput(detail: SubmissionDetail, val: string) {
   textInputs.value[detail.id] = val
 }
@@ -1474,7 +1510,19 @@ function initInputs(list: SubmissionDetail[]) {
     } else if (!mode) {
       // 采集项 (非评分): 按 itemType 回填到对应控件态
       const t = d.itemType
-      if (t === 'NUMBER') {
+      if (t === 'PERSON_SCORE') {
+        // responseValue = JSON [{studentId,studentName,score}] → 回填 { userId: score } 灌 PersonScoreGrid
+        try {
+          const arr = JSON.parse(d.responseValue)
+          if (Array.isArray(arr)) {
+            const m: Record<string, number> = {}
+            for (const p of arr) {
+              if (p?.studentId != null && p?.score != null) m[String(p.studentId)] = Number(p.score)
+            }
+            personScoreInputs.value[d.id] = m
+          }
+        } catch { /* 脏数据忽略 */ }
+      } else if (t === 'NUMBER') {
         const n = parseFloat(d.responseValue)
         if (!isNaN(n)) numberInputs.value[d.id] = n
       } else if (t === 'SELECT' || t === 'RADIO') {
@@ -2312,7 +2360,9 @@ onMounted(() => loadData())
                       :target-type="group.submission.targetType"
                       :target-id="group.submission.targetId"
                       :detail-id="detail.id"
+                      :initial-scores="personScoreInputs[detail.id]"
                       :disabled="!isGroupEditable(group)"
+                      @update:scores="(s: Array<{ userId: LongId; userName: string; score: number | null }>) => handlePersonScores(detail, s)"
                     />
                   </template>
                 </div>

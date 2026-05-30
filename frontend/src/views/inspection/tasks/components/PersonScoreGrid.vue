@@ -21,6 +21,8 @@ const props = withDefaults(defineProps<{
   targetType: string
   targetId: LongId
   detailId: LongId
+  // 已存逐人分回显: { userId: score }. 加载人员后按 id 灌入 scoreMap.
+  initialScores?: Record<string, number>
   disabled?: boolean
   maxScore?: number
 }>(), {
@@ -57,10 +59,11 @@ async function loadPersons() {
   loading.value = true
   try {
     persons.value = await getProjectTargetPersons(props.targetType, props.targetId)
-    // Initialize scoreMap for new persons not yet in the map
+    // Initialize scoreMap for new persons not yet in the map — 优先回显已存逐人分.
     for (const p of persons.value) {
       if (!(p.id in scoreMap.value)) {
-        scoreMap.value[p.id] = null
+        const seeded = props.initialScores?.[String(p.id)]
+        scoreMap.value[p.id] = seeded != null ? seeded : null
       }
     }
   } catch (e: any) {
@@ -111,6 +114,19 @@ watch(
   () => {
     scoreMap.value = {}
     loadPersons()
+  }
+)
+
+// initialScores 异步先于/晚于 persons 到达均可: 仅灌入尚未打分(null/缺失)的人员, 不覆盖检查员现编辑.
+watch(
+  () => props.initialScores,
+  (init) => {
+    if (!init || persons.value.length === 0) return
+    for (const p of persons.value) {
+      if (scoreMap.value[p.id] == null && init[String(p.id)] != null) {
+        scoreMap.value[p.id] = init[String(p.id)]
+      }
+    }
   }
 )
 </script>
