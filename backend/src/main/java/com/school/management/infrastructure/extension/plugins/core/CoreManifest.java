@@ -42,9 +42,9 @@ public class CoreManifest implements PluginPackage {
     @Override
     public Stream<Contribution> contribute() {
         return Stream.of(
-            // 成员关系
+            // 成员关系 — 每用户唯一归属 (maxPerSubject=1), forceGrant 强制
             wrap(RelationTypeDef.of(CoreRelations.MEMBER, "user", "org_unit", "成员",
-                "MEMBERSHIP", "用户属于某组织")),
+                "MEMBERSHIP", "用户属于某组织").withMaxPerSubject(1)),
 
             // 管理关系 (organization) — 主管理员单一,副管理员可多人
             // W4 reference demo: admin(org) 派生两条 implied:

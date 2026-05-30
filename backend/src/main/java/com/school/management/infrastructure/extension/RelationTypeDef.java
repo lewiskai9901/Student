@@ -22,6 +22,8 @@ import java.util.Map;
  * @param capacityBound     受资源容量限制(如 place.capacity 限制入住人数)
  * @param maxPerResource    每个 resource 最多允许的 subject 数,全局默认 (null=无限)
  * @param maxBySubtype      按资源子类型(如 org_unit 的 typeCode)覆盖上限,优先于 maxPerResource
+ * @param maxPerSubject     每个 subject 最多允许持有该 relation 的 resource 数 (null=无限)。
+ *                          如 member 关系 maxPerSubject=1 表示"每用户唯一归属"。
  * @param impliedRelations  关系链推导 — 本关系额外"派生"出哪些隐含关系。空列表表示不派生其它关系。
  */
 public record RelationTypeDef(
@@ -35,39 +37,46 @@ public record RelationTypeDef(
     boolean capacityBound,
     Integer maxPerResource,
     Map<String, Integer> maxBySubtype,
+    Integer maxPerSubject,
     List<Implied> impliedRelations
 ) {
     public static RelationTypeDef of(String code, String from, String to, String name,
                                      String category, String description) {
         return new RelationTypeDef(code, from, to, name, false, category, description,
-            false, null, null, List.of());
+            false, null, null, null, List.of());
     }
 
     public RelationTypeDef transitive() {
         return new RelationTypeDef(relationCode, fromType, toType, relationName, true, category, description,
-            capacityBound, maxPerResource, maxBySubtype, impliedRelations);
+            capacityBound, maxPerResource, maxBySubtype, maxPerSubject, impliedRelations);
     }
 
     public RelationTypeDef withCapacityBound() {
         return new RelationTypeDef(relationCode, fromType, toType, relationName, isTransitive, category, description,
-            true, maxPerResource, maxBySubtype, impliedRelations);
+            true, maxPerResource, maxBySubtype, maxPerSubject, impliedRelations);
     }
 
     public RelationTypeDef withMaxPerResource(int max) {
         return new RelationTypeDef(relationCode, fromType, toType, relationName, isTransitive, category, description,
-            capacityBound, max, maxBySubtype, impliedRelations);
+            capacityBound, max, maxBySubtype, maxPerSubject, impliedRelations);
     }
 
     /** 按资源子类型(如班级 CLASS / 年级 GRADE)细化上限 */
     public RelationTypeDef withMaxBySubtype(Map<String, Integer> bySubtype) {
         return new RelationTypeDef(relationCode, fromType, toType, relationName, isTransitive, category, description,
-            capacityBound, maxPerResource, bySubtype, impliedRelations);
+            capacityBound, maxPerResource, bySubtype, maxPerSubject, impliedRelations);
+    }
+
+    /** 每个 subject 最多持有该 relation 的 resource 数 (如 member=1 表示每用户唯一归属) */
+    public RelationTypeDef withMaxPerSubject(int max) {
+        return new RelationTypeDef(relationCode, fromType, toType, relationName, isTransitive, category, description,
+            capacityBound, maxPerResource, maxBySubtype, max, impliedRelations);
     }
 
     /** 追加/覆盖关系链推导规则 */
     public RelationTypeDef withImplied(List<Implied> implied) {
         return new RelationTypeDef(relationCode, fromType, toType, relationName, isTransitive, category, description,
-            capacityBound, maxPerResource, maxBySubtype,
+            capacityBound, maxPerResource, maxBySubtype, maxPerSubject,
             implied == null ? List.of() : List.copyOf(implied));
     }
 

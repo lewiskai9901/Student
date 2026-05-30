@@ -344,6 +344,28 @@ public class AccessRelationRepositoryImpl implements AccessRelationRepository {
     }
 
     @Override
+    public int countActiveBySubjectRelation(String subjectType, Long subjectId, String relation) {
+        Integer cnt = jdbcTemplate.queryForObject(
+            "SELECT COUNT(1) FROM access_relations " +
+            "WHERE subject_type = ? AND subject_id = ? AND relation = ? " +
+            "  AND deleted = 0 " +
+            "  AND (valid_to IS NULL OR valid_to > NOW())",
+            Integer.class, subjectType, subjectId, relation);
+        return cnt != null ? cnt : 0;
+    }
+
+    @Override
+    public int countActiveByResourceRelation(String resourceType, Long resourceId, String relation) {
+        Integer cnt = jdbcTemplate.queryForObject(
+            "SELECT COUNT(1) FROM access_relations " +
+            "WHERE resource_type = ? AND resource_id = ? AND relation = ? " +
+            "  AND deleted = 0 " +
+            "  AND (valid_to IS NULL OR valid_to > NOW())",
+            Integer.class, resourceType, resourceId, relation);
+        return cnt != null ? cnt : 0;
+    }
+
+    @Override
     public void archiveAndSoftDelete(Long id, String reason, Long actorId,
                                      String operatorIp, String userAgent) {
         // 1. INSERT … SELECT 归档到 history (Phase 7 W7.3: + operator_ip / operator_user_agent / operation)

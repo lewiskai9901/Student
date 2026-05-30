@@ -145,6 +145,16 @@ public interface AccessRelationRepository {
                                      String subjectType, Long subjectId);
 
     /**
+     * 统计某 (subject_type, subject_id, relation) 当前活跃关系数 (cardinality maxPerSubject 强制用).
+     */
+    int countActiveBySubjectRelation(String subjectType, Long subjectId, String relation);
+
+    /**
+     * 统计某 (resource_type, resource_id, relation) 当前活跃关系数 (cardinality maxPerResource 强制用).
+     */
+    int countActiveByResourceRelation(String resourceType, Long resourceId, String relation);
+
+    /**
      * 把指定关系归档到 history 表 + 软删原表.
      * 必须在事务内调用 (调用方加 @Transactional).
      *

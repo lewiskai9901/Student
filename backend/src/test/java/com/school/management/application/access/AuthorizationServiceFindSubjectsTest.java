@@ -49,7 +49,7 @@ class AuthorizationServiceFindSubjectsTest {
         om = new ObjectMapper();
         svc = new AccessRelationService(repo, events, om,
             List.of(new FakeOccupantsDiscovery()), jdbc, noopCheckCache(), new MetadataSchemaValidator(om),
-            new RelationApprovalService(jdbc, om, events));
+            new RelationApprovalService(jdbc, om, events), mock(RelationTypeRegistry.class));
     }
 
     private static AccessCheckCache noopCheckCache() {

@@ -33,17 +33,30 @@ public class RelationTypeRegistry {
     /** key = "{code}|{from}|{to}", value = tier (CORE/COMMON_EXT/DOMAIN) */
     private final Map<String, String> registry = new ConcurrentHashMap<>();
 
+    /**
+     * cardinality 缓存: key = "{code}|{from}|{to}", value = (maxPerSubject, maxPerResource).
+     * forceGrant 据此真正强制基数约束 (member 每用户唯一、admin 每组织唯一)。
+     */
+    private final Map<String, Cardinality> cardinalities = new ConcurrentHashMap<>();
+
+    /** 关系基数约束 (null=不限) */
+    public record Cardinality(Integer maxPerSubject, Integer maxPerResource) {}
+
     @EventListener(ApplicationReadyEvent.class)
     public void load() {
         registry.clear();
+        cardinalities.clear();
         jdbcTemplate.query(
-            "SELECT relation_code, from_type, to_type, tier, is_enabled " +
+            "SELECT relation_code, from_type, to_type, tier, max_per_subject, max_per_resource " +
             "FROM relation_types WHERE is_enabled = 1 AND plugin_enabled = 1",
             rs -> {
                 String key = rs.getString("relation_code") + "|" +
                              rs.getString("from_type") + "|" +
                              rs.getString("to_type");
                 registry.put(key, rs.getString("tier"));
+                Integer maxPerSubject = (Integer) rs.getObject("max_per_subject");
+                Integer maxPerResource = (Integer) rs.getObject("max_per_resource");
+                cardinalities.put(key, new Cardinality(maxPerSubject, maxPerResource));
             });
         log.info("[RelationTypeRegistry] 加载 {} 个关系类型: {}",
             registry.size(), registry.keySet());
@@ -59,6 +72,22 @@ public class RelationTypeRegistry {
 
     public Set<String> allKeys() {
         return Collections.unmodifiableSet(registry.keySet());
+    }
+
+    /** 关系基数约束 (按 code|from|to)。未注册返回 (null,null) — 不限。 */
+    public Cardinality getCardinality(String code, String fromType, String toType) {
+        Cardinality c = cardinalities.get(code + "|" + fromType + "|" + toType);
+        return c != null ? c : new Cardinality(null, null);
+    }
+
+    /** 每个 subject 最多持有该 relation 的 resource 数 (null=无限) */
+    public Integer getMaxPerSubject(String code, String fromType, String toType) {
+        return getCardinality(code, fromType, toType).maxPerSubject();
+    }
+
+    /** 每个 resource 最多允许的 subject 数 (null=无限) */
+    public Integer getMaxPerResource(String code, String fromType, String toType) {
+        return getCardinality(code, fromType, toType).maxPerResource();
     }
 
     /** 热重载(管理员增加关系类型后调用) */

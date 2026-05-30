@@ -10,6 +10,7 @@ import com.school.management.domain.access.repository.AccessRelationRepository;
 import com.school.management.domain.access.repository.AccessRelationRepository.DirectRelationRef;
 import com.school.management.domain.access.repository.AccessRelationRepository.InsertDirectCommand;
 import com.school.management.domain.access.repository.AccessRelationRepository.RelationEdgeRef;
+import com.school.management.exception.CardinalityViolationException;
 import com.school.management.infrastructure.extension.RelationTypeDef.Implied;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -69,6 +70,8 @@ public class AccessRelationService {
     private final MetadataSchemaValidator metadataSchemaValidator;
     /** 审批流路由 (Phase 7 W7.1) — 关系类型 approval_required=1 时走两步 grant. */
     private final RelationApprovalService relationApprovalService;
+    /** 关系基数 (cardinality) 元数据 — forceGrant 据此强制 maxPerSubject / maxPerResource. */
+    private final RelationTypeRegistry relationTypeRegistry;
 
     /**
      * Phase 6 (workflow-engine): 审批引擎模式切换. INLINE = pending_relation_approvals 表 (默认),
@@ -439,6 +442,11 @@ public class AccessRelationService {
             return existing.get();
         }
 
+        // 基数约束 (cardinality) 强制 — 走到这里说明是"新增不同 tuple",
+        // 幂等命中已提前返回, 所以"新增第 N+1 条" ⟺ 现有活跃数 ≥ 上限即超限.
+        // grant-or-replace (自动解除旧归属) 是后续 setMembership 的职责, 此处只拒.
+        enforceCardinality(r);
+
         String metaJson;
         try {
             metaJson = r.metadata != null ? objectMapper.writeValueAsString(r.metadata) : null;
@@ -465,6 +473,46 @@ public class AccessRelationService {
         checkCache.invalidateByResource(r.resourceType, r.resourceId);
 
         return newId;
+    }
+
+    /**
+     * 强制关系基数约束 (cardinality). 仅在确认是"新增不同 tuple"后调用.
+     *
+     * <ul>
+     *   <li>maxPerSubject: 该 (subject_type, subject_id, relation) 活跃数 ≥ 上限 → 拒
+     *       (如 member=1 每用户唯一归属)</li>
+     *   <li>maxPerResource: 该 (resource_type, resource_id, relation) 活跃数 ≥ 上限 → 拒
+     *       (如 admin=1 每组织唯一主管理员)</li>
+     * </ul>
+     *
+     * 基数元数据按 (relation | subjectType=fromType | resourceType=toType) 从
+     * {@link RelationTypeRegistry} 取. 自动替换旧关系 (grant-or-replace) 是 setMembership 的职责.
+     */
+    private void enforceCardinality(GrantRequest r) {
+        RelationTypeRegistry.Cardinality card =
+            relationTypeRegistry.getCardinality(r.relation, r.subjectType, r.resourceType);
+
+        Integer maxPerSubject = card.maxPerSubject();
+        if (maxPerSubject != null) {
+            int current = repo.countActiveBySubjectRelation(r.subjectType, r.subjectId, r.relation);
+            if (current >= maxPerSubject) {
+                throw new CardinalityViolationException(String.format(
+                    "主体已达 %s 关系上限(每主体最多 %d 个),当前已有 %d,请先解除原关系。"
+                        + " subject=%s:%d",
+                    r.relation, maxPerSubject, current, r.subjectType, r.subjectId));
+            }
+        }
+
+        Integer maxPerResource = card.maxPerResource();
+        if (maxPerResource != null) {
+            int current = repo.countActiveByResourceRelation(r.resourceType, r.resourceId, r.relation);
+            if (current >= maxPerResource) {
+                throw new CardinalityViolationException(String.format(
+                    "资源已达 %s 关系上限(每资源最多 %d 个),当前已有 %d,请先解除原关系。"
+                        + " resource=%s:%d",
+                    r.relation, maxPerResource, current, r.resourceType, r.resourceId));
+            }
+        }
     }
 
     /**
