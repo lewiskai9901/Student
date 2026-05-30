@@ -498,6 +498,18 @@
 .card-control { display: flex; align-items: center; gap: var(--insp-sp-2); }
 .card-control--direct { gap: var(--insp-sp-3); }
 .card-control--capture { display: block; }
+/* 复杂模式 (WEIGHTED_MULTI / RISK_MATRIX / FORMULA) 多行布局 */
+.card-control--complex { flex-direction: column; align-items: flex-start; gap: 4px; }
+.wm-dim-row, .fm-input-row, .rm-axis-row { display: flex; align-items: center; gap: 6px; }
+.wm-dim-label, .fm-input-label, .rm-axis-label { font-size: 11px; color: #6b7280; min-width: 48px; }
+.wm-dim-val { font-size: 11px; color: #9ca3af; }
+.rm-chip {
+  padding: 2px 8px; border-radius: 4px; font-size: 11px;
+  background: #f3f4f6; color: #6b7280; border: none; cursor: pointer; transition: all .15s;
+}
+.rm-chip:disabled { opacity: .5; cursor: not-allowed; }
+.rm-chip--p { background: #f97316; color: #fff; }
+.rm-chip--i { background: #ef4444; color: #fff; }
 
 .range-hint {
   font-size: var(--insp-text-xs);

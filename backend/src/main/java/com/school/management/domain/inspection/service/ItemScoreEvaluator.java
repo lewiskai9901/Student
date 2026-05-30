@@ -250,7 +250,15 @@ public class ItemScoreEvaluator {
 
     // ==================== WEIGHTED_MULTI / RISK_MATRIX (复用 SeverityNormalizer) ====================
     // 构造最小 SubmissionDetail 喂 normalizer 得 [0,1] severity, 再换算成分.
-    // 换算 (待确认假设, 见类注释): score = round(-(severity × maxScore)), maxScore 缺省 100.
+    //
+    // <p><b>两种换算语义 (产品已定 P2.1):</b>
+    // <ul>
+    //   <li>WEIGHTED_MULTI = <b>得分语义</b> (正分): {@code score = round((1 - severity) × maxScore)}.
+    //       多维加权综合评估越好得分越高, 完美(severity 0)拿满分 maxScore, 最差(severity 1)得 0.</li>
+    //   <li>RISK_MATRIX = <b>扣分语义</b> (负分): {@code score = round(-(severity × maxScore))}.
+    //       风险矩阵越严重扣越多, 低风险(severity 0)不扣, 极高风险(severity 1)扣满 maxScore.</li>
+    // </ul>
+    // maxScore 缺省 100. round 到整数与 ratingScale 风格一致.
 
     private BigDecimal complex(ScoringMode mode, JsonNode cfg, String responseValue, String rawConfigJson) {
         if (responseValue == null || responseValue.isBlank()) {
@@ -269,7 +277,13 @@ public class ItemScoreEvaluator {
         if (maxScore == null) {
             maxScore = new BigDecimal("100");
         }
-        // 扣分语义: 越严重扣越多 (负). round 到整数与 ratingScale 风格一致.
+        if (mode == ScoringMode.WEIGHTED_MULTI) {
+            // 得分语义: 越好得分越高 = (1 - severity) × maxScore (正).
+            return BigDecimal.valueOf(1.0 - severity)
+                    .multiply(maxScore)
+                    .setScale(0, RoundingMode.HALF_UP);
+        }
+        // RISK_MATRIX: 扣分语义, 越严重扣越多 (负).
         return BigDecimal.valueOf(severity)
                 .multiply(maxScore)
                 .negate()

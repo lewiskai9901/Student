@@ -260,32 +260,32 @@ class ItemScoreEvaluatorTest {
                 .isEqualByComparingTo("-10");
     }
 
-    // ==================== WEIGHTED_MULTI (复用 SeverityNormalizer, severity→扣分) ====================
-    // severity ∈ [0,1] (0=完美, 1=最差). 换算: score = round(-(severity × maxScore)).
-    // cfg 仅有 maxScore (得分语义) → 按"扣分语义"假设处理: 越严重扣越多. 见返回说明的待确认假设.
+    // ==================== WEIGHTED_MULTI (复用 SeverityNormalizer, severity→得分语义/正分) ====================
+    // severity ∈ [0,1] (0=完美, 1=最差). P2.1 已定: WEIGHTED_MULTI 用得分语义,
+    // score = round((1 - severity) × maxScore) — 越好得分越高, 完美拿满分, 最差得 0.
 
     @Test
-    void weightedMulti_perfectIsZeroDeduction() {
+    void weightedMulti_perfectIsFullScore() {
         String cfg = "{\"dimensions\":[" +
                 "{\"key\":\"hygiene\",\"weight\":0.5,\"mode\":\"LEVEL\"}," +
                 "{\"key\":\"safety\",\"weight\":0.5,\"mode\":\"PASS_FAIL\"}" +
                 "],\"anyDimensionAbove\":0.9,\"maxScore\":10}";
-        // hygiene=A(sev 0) + safety=PASS(sev 0) → severity 0 → 扣 0
+        // hygiene=A(sev 0) + safety=PASS(sev 0) → severity 0 → (1-0)×10 = 10 (满分)
         assertThat(ev.scoreItem(ScoringMode.WEIGHTED_MULTI,
                 "{\"hygiene\":\"A\",\"safety\":\"PASS\"}", cfg))
-                .isEqualByComparingTo("0");
+                .isEqualByComparingTo("10");
     }
 
     @Test
-    void weightedMulti_severityScaledToNegativeScore() {
+    void weightedMulti_worstSeverityIsZeroScore() {
         String cfg = "{\"dimensions\":[" +
                 "{\"key\":\"hygiene\",\"weight\":0.5,\"mode\":\"LEVEL\"}," +
                 "{\"key\":\"safety\",\"weight\":0.5,\"mode\":\"PASS_FAIL\"}" +
                 "],\"anyDimensionAbove\":0.9,\"maxScore\":10}";
-        // safety=FAIL(1.0) >= 0.9 → 升级 max=1.0 → -(1.0 × 10) = -10
+        // safety=FAIL(1.0) >= 0.9 → 升级 max=1.0 → (1-1.0)×10 = 0 (最低分)
         assertThat(ev.scoreItem(ScoringMode.WEIGHTED_MULTI,
                 "{\"hygiene\":\"A\",\"safety\":\"FAIL\"}", cfg))
-                .isEqualByComparingTo("-10");
+                .isEqualByComparingTo("0");
     }
 
     @Test

@@ -69,6 +69,8 @@ const sectionTree = ref<SectionTreeNode[]>([])
 const numberInputs = ref<Record<LongId, number>>({})
 const selectInputs = ref<Record<LongId, string>>({})
 const textInputs = ref<Record<LongId, string>>({})
+// 复杂模式 (WEIGHTED_MULTI / RISK_MATRIX / FORMULA) 多维录入值, keyed by detailId → { dimKey: value }
+const multiInputs = ref<Record<LongId, Record<string, number>>>({})
 
 // G1: 当前键盘聚焦的 detail (用于 1/2 键 PASS_FAIL)
 const focusedDetailId = ref<LongId | null>(null)
@@ -513,6 +515,7 @@ async function selectTarget(targetId: LongId) {
   numberInputs.value = {}
   selectInputs.value = {}
   textInputs.value = {}
+  multiInputs.value = {}
   loadRecurrence(targetId)
 
   detailLoading.value = true
@@ -712,6 +715,10 @@ async function ensureDetailPersisted(detail: SubmissionDetail): Promise<Submissi
         textInputs.value[created.id] = textInputs.value[detail.id]
         delete textInputs.value[detail.id]
       }
+      if (multiInputs.value[detail.id] !== undefined) {
+        multiInputs.value[created.id] = multiInputs.value[detail.id]
+        delete multiInputs.value[detail.id]
+      }
       break
     }
   }
@@ -861,7 +868,7 @@ function getCumulativeConfig(detail: SubmissionDetail): { countLabel: string; sc
  */
 async function persistDetailResponse(
   detail: SubmissionDetail,
-  data: { responseValue: string; scoringMode?: ScoringMode; score?: number },
+  data: { responseValue: string; scoringMode?: ScoringMode; score?: number; dimensions?: string },
 ): Promise<void> {
   markSaving()
   try {
@@ -999,6 +1006,132 @@ function handleCumulativeChange(detail: SubmissionDetail, delta: number) {
   }).catch((e: any) => { console.error('计数保存失败', e); ElMessage.error('计数保存失败，请重试') })
 }
 
+// ==================== Complex modes (WEIGHTED_MULTI / RISK_MATRIX / THRESHOLD / FORMULA) ====================
+// 录入控件 + 保存格式严格对齐后端 ItemScoreEvaluator / Normalizer 契约 (见各 handler 注释).
+// 服务端 (ItemScoreEvaluator) 按 responseValue + detail.scoringConfig 权威算分, 前端不传 score.
+
+interface WmDimension { key: string; label: string; weight: number; maxScore: number }
+interface RiskOption { label: string; value: number }
+interface FormulaInput { key: string; label: string }
+
+/** WEIGHTED_MULTI 维度配置 (来自模板侧 ItemEditor#serializeScoringConfig: { dimensions:[{key,label,weight,maxScore}] }). */
+function getWeightedDimensions(detail: SubmissionDetail): WmDimension[] {
+  const cfg = parseScoringConfig(detail)
+  const dims = Array.isArray(cfg.dimensions) ? cfg.dimensions : []
+  return dims.map((d: any, i: number) => ({
+    key: String(d.key ?? `dim${i + 1}`),
+    label: String(d.label ?? d.key ?? `维度${i + 1}`),
+    weight: Number(d.weight ?? 0),
+    maxScore: Number(d.maxScore ?? 10),
+  }))
+}
+
+/** RISK_MATRIX 可能性/影响选项 (来自模板侧: { probabilities:[{label,value}], impacts:[{label,value}] }). */
+function getRiskProbabilities(detail: SubmissionDetail): RiskOption[] {
+  const cfg = parseScoringConfig(detail)
+  return Array.isArray(cfg.probabilities) ? cfg.probabilities : []
+}
+function getRiskImpacts(detail: SubmissionDetail): RiskOption[] {
+  const cfg = parseScoringConfig(detail)
+  return Array.isArray(cfg.impacts) ? cfg.impacts : []
+}
+
+/** THRESHOLD 单位提示. */
+function getThresholdUnit(detail: SubmissionDetail): string {
+  const cfg = parseScoringConfig(detail)
+  return String(cfg.unit ?? '')
+}
+
+/** FORMULA 输入变量 (模板侧字段名 inputs). */
+function getFormulaInputs(detail: SubmissionDetail): FormulaInput[] {
+  const cfg = parseScoringConfig(detail)
+  const inputs = Array.isArray(cfg.inputs) ? cfg.inputs : []
+  return inputs.map((x: any, i: number) => ({
+    key: String(x.key ?? `v${i + 1}`),
+    label: String(x.label ?? x.key ?? `变量${i + 1}`),
+  }))
+}
+
+function setMultiInput(detailId: LongId, key: string, value: number) {
+  const cur = multiInputs.value[detailId] ?? {}
+  multiInputs.value[detailId] = { ...cur, [key]: value }
+}
+
+/**
+ * WEIGHTED_MULTI 确认: responseValue = JSON { dimKey: 数值 }, 对齐 WeightedMultiNormalizer
+ * (respNode.get(key) 走数值分支). 多维明细另存 dimensions (JSON) 供审计/展示.
+ */
+async function handleWeightedMulti(detail: SubmissionDetail) {
+  const vals = multiInputs.value[detail.id] ?? {}
+  const dims = getWeightedDimensions(detail)
+  const respMap: Record<string, number> = {}
+  for (const d of dims) respMap[d.key] = vals[d.key] ?? 0
+  try {
+    await persistDetailResponse(detail, {
+      responseValue: JSON.stringify(respMap),
+      scoringMode: 'WEIGHTED_MULTI',
+      dimensions: JSON.stringify(dims.map(d => ({ key: d.key, label: d.label, weight: d.weight, value: respMap[d.key] }))),
+    })
+  } catch (e: any) { console.error('多维评分保存失败', e); ElMessage.error('多维评分保存失败，请重试') }
+}
+
+/**
+ * RISK_MATRIX 确认: responseValue = "probIdx,impactIdx" (0-based 索引, 对齐
+ * RiskMatrixNormalizer#parseCoords). 索引 = 选中 value 在 probabilities/impacts 数组中的位置.
+ */
+async function handleRiskMatrix(detail: SubmissionDetail) {
+  const vals = multiInputs.value[detail.id] ?? {}
+  const probs = getRiskProbabilities(detail)
+  const impacts = getRiskImpacts(detail)
+  const probIdx = probs.findIndex(p => p.value === vals.probability)
+  const impactIdx = impacts.findIndex(i => i.value === vals.impact)
+  if (probIdx < 0 || impactIdx < 0) {
+    ElMessage.warning('请先选择可能性和影响度')
+    return
+  }
+  try {
+    await persistDetailResponse(detail, {
+      responseValue: `${probIdx},${impactIdx}`,
+      scoringMode: 'RISK_MATRIX',
+      dimensions: JSON.stringify({ probability: vals.probability, impact: vals.impact, probIdx, impactIdx }),
+    })
+  } catch (e: any) { console.error('风险矩阵保存失败', e); ElMessage.error('风险矩阵保存失败，请重试') }
+}
+
+/**
+ * THRESHOLD 确认: responseValue = 实测值字符串, 对齐 ItemScoreEvaluator#threshold (落 thresholds 档).
+ */
+async function handleThreshold(detail: SubmissionDetail) {
+  const val = numberInputs.value[detail.id]
+  if (val === undefined || val === null || Number.isNaN(val)) {
+    ElMessage.warning('请先录入实测值')
+    return
+  }
+  try {
+    await persistDetailResponse(detail, {
+      responseValue: String(val),
+      scoringMode: 'THRESHOLD',
+    })
+  } catch (e: any) { console.error('阈值保存失败', e); ElMessage.error('阈值保存失败，请重试') }
+}
+
+/**
+ * FORMULA 确认: responseValue = 主变量数值字符串 (后端 formula() 把 value/score/response 都绑为该值);
+ * 多变量明细另存 dimensions (JSON). 注: 后端需 cfg.formula 表达式才能算分 — 见返回的模板侧缺口说明.
+ */
+async function handleFormula(detail: SubmissionDetail) {
+  const vals = multiInputs.value[detail.id] ?? {}
+  const inputs = getFormulaInputs(detail)
+  const primary = inputs.length > 0 ? (vals[inputs[0].key] ?? 0) : 0
+  try {
+    await persistDetailResponse(detail, {
+      responseValue: String(primary),
+      scoringMode: 'FORMULA',
+      dimensions: JSON.stringify(vals),
+    })
+  } catch (e: any) { console.error('公式录入保存失败', e); ElMessage.error('公式录入保存失败，请重试') }
+}
+
 async function handleTextInput(detail: SubmissionDetail, val: string) {
   textInputs.value[detail.id] = val
 }
@@ -1028,6 +1161,46 @@ function initInputs(list: SubmissionDetail[]) {
               || mode === 'CUMULATIVE' || mode === 'RATING_SCALE') {
       const n = parseFloat(d.responseValue)
       if (!isNaN(n)) numberInputs.value[d.id] = n
+    } else if (mode === 'WEIGHTED_MULTI') {
+      // responseValue = JSON { dimKey: value } → 回填多维 slider
+      try {
+        const obj = JSON.parse(d.responseValue)
+        if (obj && typeof obj === 'object') {
+          const m: Record<string, number> = {}
+          for (const k of Object.keys(obj)) m[k] = Number(obj[k]) || 0
+          multiInputs.value[d.id] = m
+        }
+      } catch { /* 脏数据忽略 */ }
+    } else if (mode === 'RISK_MATRIX') {
+      // dimensions = JSON {probability, impact, ...} → 回填选中态; 缺则从 "p,i" 索引反查 value
+      try {
+        const dim = d.dimensions ? JSON.parse(d.dimensions) : null
+        if (dim && (dim.probability != null || dim.impact != null)) {
+          multiInputs.value[d.id] = { probability: Number(dim.probability), impact: Number(dim.impact) }
+        } else {
+          const parts = String(d.responseValue).split(',')
+          if (parts.length === 2) {
+            const pi = parseInt(parts[0], 10), ii = parseInt(parts[1], 10)
+            const probs = getRiskProbabilities(d), impacts = getRiskImpacts(d)
+            multiInputs.value[d.id] = {
+              probability: probs[pi]?.value ?? 0,
+              impact: impacts[ii]?.value ?? 0,
+            }
+          }
+        }
+      } catch { /* 脏数据忽略 */ }
+    } else if (mode === 'THRESHOLD') {
+      const n = parseFloat(d.responseValue)
+      if (!isNaN(n)) numberInputs.value[d.id] = n
+    } else if (mode === 'FORMULA') {
+      try {
+        const obj = d.dimensions ? JSON.parse(d.dimensions) : null
+        if (obj && typeof obj === 'object') {
+          const m: Record<string, number> = {}
+          for (const k of Object.keys(obj)) m[k] = Number(obj[k]) || 0
+          multiInputs.value[d.id] = m
+        }
+      } catch { /* 脏数据忽略 */ }
     } else if (!mode) {
       textInputs.value[d.id] = d.responseValue
     }
@@ -1647,6 +1820,55 @@ onMounted(() => loadData())
                     </div>
                     <span class="counter-unit">{{ getCumulativeConfig(detail).countLabel }}</span>
                     <span class="score-hint">× {{ getCumulativeConfig(detail).scorePerUnit }}分 = {{ (numberInputs[detail.id] ?? 0) * getCumulativeConfig(detail).scorePerUnit }}分</span>
+                  </div>
+                  <!-- WEIGHTED_MULTI: 每维度 slider, 确认后 responseValue = JSON {dimKey:value} -->
+                  <div v-else-if="detail.scoringMode === 'WEIGHTED_MULTI'" class="card-control card-control--complex">
+                    <div v-for="dim in getWeightedDimensions(detail)" :key="dim.key" class="wm-dim-row">
+                      <span class="wm-dim-label">{{ dim.label }}</span>
+                      <el-slider
+                        :model-value="(multiInputs[detail.id] || {})[dim.key] ?? 0"
+                        :min="0" :max="dim.maxScore" :step="1" :show-tooltip="false"
+                        :disabled="!isGroupEditable(group)" style="width: 110px"
+                        @update:model-value="(v: any) => setMultiInput(detail.id, dim.key, Number(v))" />
+                      <span class="wm-dim-val">{{ (multiInputs[detail.id] || {})[dim.key] ?? 0 }}/{{ dim.maxScore }} <span class="pill-score">权重{{ dim.weight }}%</span></span>
+                    </div>
+                    <el-button size="small" type="primary" plain :disabled="!isGroupEditable(group)" @click="handleWeightedMulti(detail)">确认</el-button>
+                  </div>
+                  <!-- RISK_MATRIX: 选可能性×影响度, 确认后 responseValue = "probIdx,impactIdx" -->
+                  <div v-else-if="detail.scoringMode === 'RISK_MATRIX'" class="card-control card-control--complex">
+                    <div class="rm-axis-row">
+                      <span class="rm-axis-label">可能性</span>
+                      <button v-for="p in getRiskProbabilities(detail)" :key="'p'+p.value"
+                        class="rm-chip" :class="{ 'rm-chip--p': (multiInputs[detail.id] || {}).probability === p.value }"
+                        :disabled="!isGroupEditable(group)"
+                        @click="setMultiInput(detail.id, 'probability', p.value)">{{ p.label }}</button>
+                    </div>
+                    <div class="rm-axis-row">
+                      <span class="rm-axis-label">影响度</span>
+                      <button v-for="imp in getRiskImpacts(detail)" :key="'i'+imp.value"
+                        class="rm-chip" :class="{ 'rm-chip--i': (multiInputs[detail.id] || {}).impact === imp.value }"
+                        :disabled="!isGroupEditable(group)"
+                        @click="setMultiInput(detail.id, 'impact', imp.value)">{{ imp.label }}</button>
+                    </div>
+                    <el-button size="small" type="danger" plain :disabled="!isGroupEditable(group)" @click="handleRiskMatrix(detail)">确认</el-button>
+                  </div>
+                  <!-- THRESHOLD: 实测值数值, 确认后 responseValue = 数值 -->
+                  <div v-else-if="detail.scoringMode === 'THRESHOLD'" class="card-control">
+                    <el-input-number v-model="numberInputs[detail.id]" :disabled="!isGroupEditable(group)"
+                      size="small" controls-position="right" style="width: 120px" />
+                    <span v-if="getThresholdUnit(detail)" class="counter-unit">{{ getThresholdUnit(detail) }}</span>
+                    <el-button size="small" type="primary" plain :disabled="!isGroupEditable(group)" @click="handleThreshold(detail)">确认</el-button>
+                  </div>
+                  <!-- FORMULA: 录入公式变量, 确认后 responseValue = 主变量数值 -->
+                  <div v-else-if="detail.scoringMode === 'FORMULA'" class="card-control card-control--complex">
+                    <div v-for="(inp, ii) in getFormulaInputs(detail)" :key="inp.key" class="fm-input-row">
+                      <span class="fm-input-label">{{ inp.label }}<span v-if="ii === 0" class="pill-score">主</span></span>
+                      <el-input-number
+                        :model-value="(multiInputs[detail.id] || {})[inp.key] ?? 0"
+                        :disabled="!isGroupEditable(group)" size="small" controls-position="right" style="width: 110px"
+                        @update:model-value="(v: any) => setMultiInput(detail.id, inp.key, Number(v ?? 0))" />
+                    </div>
+                    <el-button size="small" type="primary" plain :disabled="!isGroupEditable(group)" @click="handleFormula(detail)">确认</el-button>
                   </div>
                   <div v-else-if="!detail.scoringMode && detail.itemType !== 'VIOLATION_RECORD' && detail.itemType !== 'PERSON_SCORE'" class="card-control card-control--capture">
                     <el-input v-model="textInputs[detail.id]" :disabled="!isGroupEditable(group)" size="small" placeholder="请填写..." clearable @blur="saveTextInput(detail)" />
