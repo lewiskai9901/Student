@@ -47,6 +47,13 @@ public class AccessRelation {
     @Builder.Default
     private AccessLevel accessLevel = AccessLevel.FULL;
 
+    /**
+     * 是否主归属 (每主体唯一). 从 metadata.isPrimary 提升的实体列,
+     * 为"每用户唯一归属"的生成列 UNIQUE 约束铺路 — 唯一判断以此列为准, 不再依赖 metadata。
+     */
+    @Builder.Default
+    private boolean isPrimary = false;
+
     /** 扩展字段 */
     private Map<String, Object> metadata;
 

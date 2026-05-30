@@ -392,6 +392,7 @@ public class AccessRelationRepositoryImpl implements AccessRelationRepository {
                 .subjectId(po.getSubjectId())
                 .includeChildren(Boolean.TRUE.equals(po.getIncludeChildren()))
                 .accessLevel(AccessLevel.parse(po.getAccessLevel()))
+                .isPrimary(Boolean.TRUE.equals(po.getIsPrimary()))
                 .metadata(meta)
                 .validFrom(po.getValidFrom())
                 .validTo(po.getValidTo())
@@ -412,6 +413,7 @@ public class AccessRelationRepositoryImpl implements AccessRelationRepository {
         po.setSubjectId(domain.getSubjectId());
         po.setIncludeChildren(domain.isIncludeChildren());
         po.setAccessLevel(domain.getAccessLevel() != null ? domain.getAccessLevel().name() : AccessLevel.FULL.name());
+        po.setIsPrimary(domain.isPrimary());
         po.setValidFrom(domain.getValidFrom());
         po.setValidTo(domain.getValidTo());
         po.setRemark(domain.getRemark());

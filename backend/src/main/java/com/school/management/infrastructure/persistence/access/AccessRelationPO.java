@@ -25,6 +25,10 @@ public class AccessRelationPO {
     /** 访问级别: READ_ONLY / FULL / OWNER (v3 语义化,替代 TINYINT) */
     private String accessLevel;
 
+    /** 是否主归属 (从 metadata.isPrimary 提升的实体列, 为归属唯一约束铺路) */
+    @TableField("is_primary")
+    private Boolean isPrimary;
+
     /** JSON 字符串，映射时转 Map */
     private String metadata;
 
