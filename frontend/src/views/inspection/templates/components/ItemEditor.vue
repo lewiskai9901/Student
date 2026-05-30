@@ -144,10 +144,17 @@ const categoryColor = computed(() => itemCategory.value === 'scored' ? '#2563eb'
 interface LevelItem { label: string; score: number }
 interface ScoreTableOption { label: string; description: string; score: number }
 interface TierItem { label: string; score: number }
-interface Dimension { key: string; label: string; weight: number; maxScore: number }
+/** WEIGHTED_MULTI 子模式: 后端 WeightedMultiNormalizer 按 dim.mode 分发 sub-normalizer.
+ *  DIRECT = 数值 slider (0..maxScore, 走 DirectNormalizer); LEVEL = 等级标签; PASS_FAIL = 通过/不通过. */
+type DimMode = 'DIRECT' | 'LEVEL' | 'PASS_FAIL'
+interface Dimension { key: string; label: string; weight: number; maxScore: number; mode: DimMode }
 interface ProbImpact { label: string; value: number }
-interface ThresholdItem { max: number | null; label: string; score: number }
+/** THRESHOLD 档: 后端 ItemScoreEvaluator.threshold 读 cfg.thresholds[{upTo, score}].
+ *  upTo=null 为兜底档 (超过所有上限时命中). UI/序列化字段名统一为 upTo. */
+interface ThresholdItem { upTo: number | null; label: string; score: number }
 interface FormulaInput { key: string; label: string }
+/** RISK_MATRIX 等级 → severity 映射项. 后端 RiskMatrixNormalizer 读 cfg.levelToSeverity (0..1). */
+interface LevelSeverity { level: string; severity: number }
 
 interface ScoringConfigData {
   mode: ScoringMode
@@ -171,12 +178,56 @@ interface ScoringConfigData {
   dimensions: Dimension[]
   probabilities: ProbImpact[]
   impacts: ProbImpact[]
+  /** RISK_MATRIX 矩阵: matrix[probIdx][impactIdx] = level 字符串 (L/M/H/VH). 行=可能性, 列=影响. */
+  matrix: string[][]
+  /** RISK_MATRIX 等级→severity 映射 (后端 cfg.levelToSeverity). */
+  levelToSeverity: LevelSeverity[]
+  /** RISK_MATRIX maxScore (扣分语义: severity × maxScore). */
+  riskMaxScore: number
   unit: string
   thresholds: ThresholdItem[]
   formulaType: string
   formulaInputs: FormulaInput[]
+  /** FORMULA 表达式 (后端 cfg.formula, 绑变量 value/score/response). */
+  formula: string
   formulaMaxScore: number
   formulaMinScore: number
+}
+
+/** RISK_MATRIX 默认等级集 (与 RiskMatrixNormalizer DEFAULT_LEVEL_MAP 对齐). */
+const RISK_LEVELS = ['L', 'M', 'H', 'VH'] as const
+const DEFAULT_LEVEL_SEVERITY: LevelSeverity[] = [
+  { level: 'L', severity: 0 },
+  { level: 'M', severity: 0.4 },
+  { level: 'H', severity: 0.75 },
+  { level: 'VH', severity: 1 },
+]
+
+/**
+ * 按 probabilities×impacts 维度生成默认矩阵.
+ * 行=可能性 (低→高), 列=影响 (低→高). level 按"行索引+列索引"归一化到 L/M/H/VH 四级,
+ * 左上角(低概率低影响)=L, 右下角(高概率高影响)=VH. 已有 oldMatrix 时尽量保留对应格子.
+ */
+function buildDefaultMatrix(rows: number, cols: number, oldMatrix?: string[][]): string[][] {
+  const result: string[][] = []
+  for (let r = 0; r < rows; r++) {
+    const row: string[] = []
+    for (let c = 0; c < cols; c++) {
+      const existing = oldMatrix?.[r]?.[c]
+      if (existing && (RISK_LEVELS as readonly string[]).includes(existing)) {
+        row.push(existing)
+        continue
+      }
+      // 归一化 (r/(rows-1) + c/(cols-1)) / 2 ∈ [0,1] → 四级
+      const rp = rows > 1 ? r / (rows - 1) : 0
+      const cp = cols > 1 ? c / (cols - 1) : 0
+      const t = (rp + cp) / 2
+      const idx = t >= 0.75 ? 3 : t >= 0.5 ? 2 : t >= 0.25 ? 1 : 0
+      row.push(RISK_LEVELS[idx])
+    }
+    result.push(row)
+  }
+  return result
 }
 
 const scoring = reactive<ScoringConfigData>({
@@ -214,8 +265,8 @@ const scoring = reactive<ScoringConfigData>({
   scorePerStar: 2,
   weightedMultiMaxScore: 10,
   dimensions: [
-    { key: 'dim1', label: '维度1', weight: 50, maxScore: 10 },
-    { key: 'dim2', label: '维度2', weight: 50, maxScore: 10 },
+    { key: 'dim1', label: '维度1', weight: 50, maxScore: 100, mode: 'DIRECT' },
+    { key: 'dim2', label: '维度2', weight: 50, maxScore: 100, mode: 'DIRECT' },
   ],
   probabilities: [
     { label: '罕见', value: 1 },
@@ -231,17 +282,21 @@ const scoring = reactive<ScoringConfigData>({
     { label: '较大', value: 4 },
     { label: '严重', value: 5 },
   ],
+  matrix: buildDefaultMatrix(5, 5),
+  levelToSeverity: DEFAULT_LEVEL_SEVERITY.map(x => ({ ...x })),
+  riskMaxScore: 20,
   unit: '',
   thresholds: [
-    { max: 25, label: '合格', score: 10 },
-    { max: 30, label: '注意', score: 5 },
-    { max: null, label: '不合格', score: 0 },
+    { upTo: 25, label: '合格', score: 0 },
+    { upTo: 30, label: '注意', score: -5 },
+    { upTo: null, label: '不合格', score: -10 },
   ],
   formulaType: 'ratio',
   formulaInputs: [
     { key: 'actual', label: '实测值' },
     { key: 'standard', label: '标准值' },
   ],
+  formula: '',
   formulaMaxScore: 10,
   formulaMinScore: 0,
 })
@@ -257,12 +312,26 @@ const itemDiscreteOptions = computed<string[]>(() => {
   }
 })
 
-// RISK_MATRIX 模式的等级列表 (L/M/H/VH 默认, 未来从 matrix 配置解析)
+// RISK_MATRIX 模式的等级列表 (取自 levelToSeverity 配置, 回退默认四级)
 const itemRiskLevels = computed<string[]>(() => {
   if (scoring.mode !== 'RISK_MATRIX') return []
-  // 默认四级 (与 RiskMatrixNormalizer DEFAULT_LEVEL_MAP 对齐)
-  return ['L', 'M', 'H', 'VH']
+  const cfg = scoring.levelToSeverity.map(x => x.level).filter(Boolean)
+  return cfg.length > 0 ? cfg : [...RISK_LEVELS]
 })
+
+// 编辑期: 可能性/影响数量变化时同步重建矩阵 (保留已编辑格子)
+watch(
+  () => scoring.mode === 'RISK_MATRIX'
+    ? `${scoring.probabilities.length}x${scoring.impacts.length}`
+    : '',
+  (sig) => {
+    if (!sig) return
+    const needRows = scoring.probabilities.length
+    const needCols = scoring.impacts.length
+    const sizeOk = scoring.matrix.length === needRows && scoring.matrix.every(r => r.length === needCols)
+    if (!sizeOk) scoring.matrix = buildDefaultMatrix(needRows, needCols, scoring.matrix)
+  }
+)
 
 // 整改规则按本题量表配置时所需的"满分"参考值 (按 scoringMode 取对应字段)
 const itemMaxScoreForCorrective = computed(() => {
@@ -349,19 +418,52 @@ function parseScoringConfig(json: string) {
         break
       case 'WEIGHTED_MULTI':
         scoring.weightedMultiMaxScore = c.maxScore ?? 10
-        if (Array.isArray(c.dimensions) && c.dimensions.length > 0) scoring.dimensions = c.dimensions
+        if (Array.isArray(c.dimensions) && c.dimensions.length > 0) {
+          scoring.dimensions = c.dimensions.map((d: any, i: number) => ({
+            key: d.key ?? `dim${i + 1}`,
+            label: d.label ?? '',
+            weight: d.weight ?? 0,
+            maxScore: d.maxScore ?? 100,
+            mode: (['DIRECT', 'LEVEL', 'PASS_FAIL'].includes(d.mode) ? d.mode : 'DIRECT') as DimMode,
+          }))
+        }
         break
       case 'RISK_MATRIX':
         if (Array.isArray(c.probabilities) && c.probabilities.length > 0) scoring.probabilities = c.probabilities
         if (Array.isArray(c.impacts) && c.impacts.length > 0) scoring.impacts = c.impacts
+        scoring.riskMaxScore = c.maxScore ?? 20
+        // 矩阵: 后端结构 matrix[r][c] = {level} 或 字符串; 统一解析为 string[][]
+        if (Array.isArray(c.matrix) && c.matrix.length > 0) {
+          scoring.matrix = c.matrix.map((row: any) =>
+            Array.isArray(row) ? row.map((cell: any) =>
+              typeof cell === 'string' ? cell : (cell?.level ?? 'L')) : [])
+        } else {
+          scoring.matrix = buildDefaultMatrix(scoring.probabilities.length, scoring.impacts.length)
+        }
+        // levelToSeverity: 后端 {L:0,M:0.4,...} → UI 数组
+        if (c.levelToSeverity && typeof c.levelToSeverity === 'object') {
+          scoring.levelToSeverity = Object.entries(c.levelToSeverity).map(([level, severity]) => ({
+            level, severity: Number(severity),
+          }))
+        } else {
+          scoring.levelToSeverity = DEFAULT_LEVEL_SEVERITY.map(x => ({ ...x }))
+        }
         break
       case 'THRESHOLD':
         scoring.unit = c.unit ?? ''
-        if (Array.isArray(c.thresholds) && c.thresholds.length > 0) scoring.thresholds = c.thresholds
+        if (Array.isArray(c.thresholds) && c.thresholds.length > 0) {
+          // 兼容旧字段名 max → upTo
+          scoring.thresholds = c.thresholds.map((t: any) => ({
+            upTo: t.upTo ?? t.max ?? null,
+            label: t.label ?? '',
+            score: t.score ?? 0,
+          }))
+        }
         break
       case 'FORMULA':
         scoring.formulaType = c.formulaType ?? 'ratio'
         if (Array.isArray(c.inputs) && c.inputs.length > 0) scoring.formulaInputs = c.inputs
+        scoring.formula = c.formula ?? ''
         scoring.formulaMaxScore = c.maxScore ?? 10
         scoring.formulaMinScore = c.minScore ?? 0
         break
@@ -410,22 +512,40 @@ function serializeScoringConfig(): string {
       break
     case 'WEIGHTED_MULTI':
       obj.maxScore = scoring.weightedMultiMaxScore
-      obj.dimensions = scoring.dimensions
+      // 后端 WeightedMultiNormalizer 读 dimensions[{key, weight, mode}]; weight 比例无关 (内部 Σ(w×s)/Σw 归一)
+      obj.dimensions = scoring.dimensions.map(d => ({
+        key: d.key,
+        label: d.label,
+        weight: d.weight,
+        maxScore: d.maxScore,
+        mode: d.mode,
+      }))
       break
     case 'RISK_MATRIX':
       obj.probabilities = scoring.probabilities
       obj.impacts = scoring.impacts
+      obj.maxScore = scoring.riskMaxScore
+      // 后端 RiskMatrixNormalizer 读 matrix[probIdx][impactIdx] = {level} + levelToSeverity{level: 0..1}
+      obj.matrix = scoring.matrix.map(row => row.map(level => ({ level })))
+      obj.levelToSeverity = scoring.levelToSeverity.reduce((acc, x) => {
+        acc[x.level] = x.severity
+        return acc
+      }, {} as Record<string, number>)
       break
     case 'THRESHOLD':
       obj.unit = scoring.unit
+      // 后端 ItemScoreEvaluator.threshold 读 thresholds[{upTo, score}], upTo=null 为兜底档
       obj.thresholds = scoring.thresholds.map(t => ({
-        ...t,
-        max: ((t.max as any) === '' || t.max === undefined || t.max === null || (typeof t.max === 'number' && isNaN(t.max))) ? null : t.max,
+        upTo: ((t.upTo as any) === '' || t.upTo === undefined || t.upTo === null || (typeof t.upTo === 'number' && isNaN(t.upTo))) ? null : t.upTo,
+        label: t.label,
+        score: t.score,
       }))
       break
     case 'FORMULA':
       obj.formulaType = scoring.formulaType
       obj.inputs = scoring.formulaInputs
+      // 后端 ItemScoreEvaluator.formula 读 cfg.formula 表达式 (绑变量 value/score/response)
+      obj.formula = scoring.formula
       obj.maxScore = scoring.formulaMaxScore
       obj.minScore = scoring.formulaMinScore
       break
@@ -600,13 +720,17 @@ function resetScoringDefaults() {
   scoring.maxStars = 5
   scoring.scorePerStar = 2
   scoring.weightedMultiMaxScore = 10
-  scoring.dimensions = [{ key: 'dim1', label: '维度1', weight: 50, maxScore: 10 }, { key: 'dim2', label: '维度2', weight: 50, maxScore: 10 }]
+  scoring.dimensions = [{ key: 'dim1', label: '维度1', weight: 50, maxScore: 100, mode: 'DIRECT' }, { key: 'dim2', label: '维度2', weight: 50, maxScore: 100, mode: 'DIRECT' }]
   scoring.probabilities = [{ label: '罕见', value: 1 }, { label: '不太可能', value: 2 }, { label: '可能', value: 3 }, { label: '很可能', value: 4 }, { label: '几乎确定', value: 5 }]
   scoring.impacts = [{ label: '微小', value: 1 }, { label: '较小', value: 2 }, { label: '中等', value: 3 }, { label: '较大', value: 4 }, { label: '严重', value: 5 }]
+  scoring.matrix = buildDefaultMatrix(5, 5)
+  scoring.levelToSeverity = DEFAULT_LEVEL_SEVERITY.map(x => ({ ...x }))
+  scoring.riskMaxScore = 20
   scoring.unit = ''
-  scoring.thresholds = [{ max: 25, label: '合格', score: 10 }, { max: 30, label: '注意', score: 5 }, { max: null, label: '不合格', score: 0 }]
+  scoring.thresholds = [{ upTo: 25, label: '合格', score: 0 }, { upTo: 30, label: '注意', score: -5 }, { upTo: null, label: '不合格', score: -10 }]
   scoring.formulaType = 'ratio'
   scoring.formulaInputs = [{ key: 'actual', label: '实测值' }, { key: 'standard', label: '标准值' }]
+  scoring.formula = ''
   scoring.formulaMaxScore = 10
   scoring.formulaMinScore = 0
 }
@@ -711,7 +835,7 @@ async function handleSave() {
     }
     if (scoring.mode === 'WEIGHTED_MULTI') {
       if (scoring.dimensions.length < 1) {
-        scoring.dimensions = [{ key: 'dim1', label: '维度1', weight: 100, maxScore: 10 }]
+        scoring.dimensions = [{ key: 'dim1', label: '维度1', weight: 100, maxScore: 100, mode: 'DIRECT' }]
         corrections.push(`多维加权至少需要 1 个维度, 已补全默认维度`)
       }
       const weightSum = scoring.dimensions.reduce((s, d) => s + d.weight, 0)
@@ -725,12 +849,13 @@ async function handleSave() {
       }
     }
     if (scoring.mode === 'THRESHOLD' && scoring.thresholds.length < 1) {
-      scoring.thresholds = [{ max: null, label: '默认', score: 10 }]
+      scoring.thresholds = [{ upTo: null, label: '默认', score: 0 }]
       corrections.push(`区间评分至少需要 1 个区间, 已补全默认区间`)
     }
     if (scoring.mode === 'RISK_MATRIX') {
       if (scoring.probabilities.length < 2) { scoring.probabilities = [{ label: '低', value: 1 }, { label: '高', value: 5 }]; corrections.push(`可能性至少需要 2 项, 已补全`) }
       if (scoring.impacts.length < 2) { scoring.impacts = [{ label: '小', value: 1 }, { label: '大', value: 5 }]; corrections.push(`影响至少需要 2 项, 已补全`) }
+      if (scoring.levelToSeverity.length < 1) { scoring.levelToSeverity = DEFAULT_LEVEL_SEVERITY.map(x => ({ ...x })); corrections.push(`风险等级映射为空, 已补全默认 L/M/H/VH`) }
     }
     if (scoring.mode === 'FORMULA' && scoring.formulaInputs.length < 1) {
       scoring.formulaInputs = [{ key: 'value', label: '值' }]
@@ -756,17 +881,22 @@ async function handleSave() {
     }
     if (scoring.mode === 'WEIGHTED_MULTI') {
       scoring.dimensions = scoring.dimensions.filter(d => d.weight > 0 && d.maxScore > 0)
-      if (scoring.dimensions.length < 1) scoring.dimensions = [{ key: 'dim1', label: '维度1', weight: 100, maxScore: 10 }]
+      if (scoring.dimensions.length < 1) scoring.dimensions = [{ key: 'dim1', label: '维度1', weight: 100, maxScore: 100, mode: 'DIRECT' }]
     }
     if (scoring.mode === 'THRESHOLD') {
-      const hasNullMax = scoring.thresholds.some(t => t.max == null)
-      if (!hasNullMax) scoring.thresholds.push({ max: null, label: '其他', score: 0 })
+      const hasNullMax = scoring.thresholds.some(t => t.upTo == null)
+      if (!hasNullMax) scoring.thresholds.push({ upTo: null, label: '其他', score: 0 })
     }
     if (scoring.mode === 'RISK_MATRIX') {
       scoring.probabilities = scoring.probabilities.filter(p => p.value > 0).sort((a, b) => a.value - b.value)
       scoring.impacts = scoring.impacts.filter(i => i.value > 0).sort((a, b) => a.value - b.value)
       if (scoring.probabilities.length < 2) scoring.probabilities = [{ label: '低', value: 1 }, { label: '高', value: 5 }]
       if (scoring.impacts.length < 2) scoring.impacts = [{ label: '小', value: 1 }, { label: '大', value: 5 }]
+      // 矩阵尺寸须与 prob×impact 一致; 不匹配则重建 (尽量保留已编辑格子)
+      const needRows = scoring.probabilities.length
+      const needCols = scoring.impacts.length
+      const sizeOk = scoring.matrix.length === needRows && scoring.matrix.every(r => r.length === needCols)
+      if (!sizeOk) scoring.matrix = buildDefaultMatrix(needRows, needCols, scoring.matrix)
     }
 
     // Auto-remove validation rules not applicable to current scoring mode (已在上方确认)
@@ -1191,14 +1321,19 @@ const scoringFromResponseSet = computed(() =>
                 <div class="ie-list">
                   <div v-for="(dim, i) in scoring.dimensions" :key="i" class="ie-list-row">
                     <input v-model="dim.label" class="ie-list-input w-flex" placeholder="名称" />
-                    <input v-model.number="dim.weight" type="number" class="ie-list-input w-50" placeholder="%" />
-                    <span class="ie-unit">%</span>
+                    <select v-model="dim.mode" class="ie-list-input w-90" title="该维度评分方式">
+                      <option value="DIRECT">直接打分</option>
+                      <option value="LEVEL">等级</option>
+                      <option value="PASS_FAIL">通过/不通过</option>
+                    </select>
+                    <input v-model.number="dim.weight" type="number" class="ie-list-input w-50" placeholder="权重" />
+                    <span class="ie-unit">权</span>
                     <button class="ie-btn-icon-del" :disabled="scoring.dimensions.length <= 1"
                       :title="scoring.dimensions.length <= 1 ? '至少需保留 1 个维度' : '删除'"
                       @click="scoring.dimensions.splice(i, 1)"><Trash2 :size="11" /></button>
                   </div>
                 </div>
-                <button class="ie-link-btn" @click="scoring.dimensions.push({ key: `dim${scoring.dimensions.length+1}`, label: '', weight: 0, maxScore: 10 })"><Plus :size="11" /> 添加</button>
+                <button class="ie-link-btn" @click="scoring.dimensions.push({ key: `dim${scoring.dimensions.length+1}`, label: '', weight: 1, maxScore: 100, mode: 'DIRECT' })"><Plus :size="11" /> 添加</button>
               </template>
               <!-- THRESHOLD -->
               <template v-if="scoring.mode === 'THRESHOLD'">
@@ -1206,7 +1341,7 @@ const scoringFromResponseSet = computed(() =>
                 <div class="ie-list">
                   <div v-for="(th, i) in scoring.thresholds" :key="i" class="ie-list-row">
                     <span class="ie-unit">≤</span>
-                    <input v-model.number="th.max" type="number" class="ie-list-input w-60" :placeholder="i === scoring.thresholds.length - 1 ? '∞' : 'max'" />
+                    <input v-model.number="th.upTo" type="number" class="ie-list-input w-60" :placeholder="i === scoring.thresholds.length - 1 ? '∞' : '上限'" />
                     <input v-model="th.label" class="ie-list-input w-flex" placeholder="标签" />
                     <input v-model.number="th.score" type="number" class="ie-list-input w-60" placeholder="分值" />
                     <button class="ie-btn-icon-del" :disabled="scoring.thresholds.length <= 1"
@@ -1214,7 +1349,7 @@ const scoringFromResponseSet = computed(() =>
                       @click="scoring.thresholds.splice(i, 1)"><Trash2 :size="11" /></button>
                   </div>
                 </div>
-                <button class="ie-link-btn" @click="scoring.thresholds.push({ max: null, label: '', score: 0 })"><Plus :size="11" /> 添加</button>
+                <button class="ie-link-btn" @click="scoring.thresholds.push({ upTo: null, label: '', score: 0 })"><Plus :size="11" /> 添加</button>
               </template>
               <!-- FORMULA -->
               <template v-if="scoring.mode === 'FORMULA'">
@@ -1226,6 +1361,12 @@ const scoringFromResponseSet = computed(() =>
                     <option value="percentage">百分比</option>
                     <option value="compliance_rate">达标率</option>
                   </select>
+                </div>
+                <div class="ie-fld">
+                  <label>计算公式</label>
+                  <textarea v-model="scoring.formula" class="ie-list-input" rows="2"
+                    placeholder="如 value * 2 或 (actual/standard)*100 — 变量 value=录入值" style="width:100%;resize:vertical" />
+                  <span class="ie-hint">支持变量 value / score / response(均为录入数值)及 sqrt/abs/min/max/round 等函数。留空则不计分。</span>
                 </div>
                 <div class="ie-row-2">
                   <div class="ie-fld"><label>最高分</label><input v-model.number="scoring.formulaMaxScore" type="number" /></div>
@@ -1254,6 +1395,35 @@ const scoringFromResponseSet = computed(() =>
                       @click="scoring.impacts.splice(i, 1)"><Trash2 :size="11" /></button>
                   </div>
                 </div>
+                <label class="ie-fld-label">风险矩阵（行=可能性，列=影响，选等级）</label>
+                <table class="ie-matrix">
+                  <thead>
+                    <tr><th class="ie-matrix-corner"></th><th v-for="(imp, c) in scoring.impacts" :key="'h'+c">{{ imp.label }}</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(p, r) in scoring.probabilities" :key="'r'+r">
+                      <th>{{ p.label }}</th>
+                      <td v-for="(imp, c) in scoring.impacts" :key="'c'+c">
+                        <select v-if="scoring.matrix[r]" v-model="scoring.matrix[r][c]" class="ie-matrix-cell">
+                          <option v-for="lv in itemRiskLevels" :key="lv" :value="lv">{{ lv }}</option>
+                        </select>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <label class="ie-fld-label">等级 → 严重度（0~1，越高越严重）</label>
+                <div class="ie-list">
+                  <div v-for="(ls, i) in scoring.levelToSeverity" :key="'ls'+i" class="ie-list-row">
+                    <input v-model="ls.level" class="ie-list-input w-60" placeholder="等级" />
+                    <input v-model.number="ls.severity" type="number" step="0.05" :min="0" :max="1" class="ie-list-input w-60" placeholder="0~1" />
+                    <button class="ie-btn-icon-del" :disabled="scoring.levelToSeverity.length <= 1"
+                      :title="scoring.levelToSeverity.length <= 1 ? '至少保留 1 项' : '删除'"
+                      @click="scoring.levelToSeverity.splice(i, 1)"><Trash2 :size="11" /></button>
+                  </div>
+                </div>
+                <button class="ie-link-btn" @click="scoring.levelToSeverity.push({ level: '', severity: 0 })"><Plus :size="11" /> 添加等级</button>
+                <div class="ie-fld" style="max-width:160px"><label>满分（扣分基数）</label><input v-model.number="scoring.riskMaxScore" type="number" :min="0" /></div>
+                <span class="ie-hint">风险越高扣越多：扣分 = 严重度 × 满分。</span>
               </template>
             </div>
           </template>
