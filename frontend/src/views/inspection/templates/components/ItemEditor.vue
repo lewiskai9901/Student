@@ -1385,6 +1385,7 @@ const scoringFromResponseSet = computed(() =>
                       @click="scoring.probabilities.splice(i, 1)"><Trash2 :size="11" /></button>
                   </div>
                 </div>
+                <button class="ie-link-btn" @click="scoring.probabilities.push({ label: '', value: scoring.probabilities.length + 1 })"><Plus :size="11" /> 添加可能性</button>
                 <label class="ie-fld-label">影响</label>
                 <div class="ie-list">
                   <div v-for="(imp, i) in scoring.impacts" :key="'i'+i" class="ie-list-row">
@@ -1395,6 +1396,7 @@ const scoringFromResponseSet = computed(() =>
                       @click="scoring.impacts.splice(i, 1)"><Trash2 :size="11" /></button>
                   </div>
                 </div>
+                <button class="ie-link-btn" @click="scoring.impacts.push({ label: '', value: scoring.impacts.length + 1 })"><Plus :size="11" /> 添加影响</button>
                 <label class="ie-fld-label">风险矩阵（行=可能性，列=影响，选等级）</label>
                 <table class="ie-matrix">
                   <thead>
