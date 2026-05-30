@@ -1,5 +1,6 @@
 package com.school.management.application.user;
 
+import com.school.management.application.organization.MembershipResolver;
 import com.school.management.application.user.command.CreateUserCommand;
 import com.school.management.application.user.command.UpdateUserCommand;
 import com.school.management.domain.shared.event.DomainEventPublisher;
@@ -61,6 +62,7 @@ public class UserApplicationService {
     private final UniversalPlaceRepository placeRepository;
     private final JwtTokenService jwtTokenService;
     private final PolicyRegistry policyRegistry;
+    private final MembershipResolver membershipResolver;
 
     @Autowired(required = false)
     private ExtensionDispatcher extensionDispatcher;
@@ -119,11 +121,6 @@ public class UserApplicationService {
                 command.getIdCard()
         );
 
-        // 设置主归属组织（持久化字段）
-        if (command.getOrgUnitId() != null) {
-            user.setPrimaryOrgUnitId(command.getOrgUnitId());
-        }
-
         // 分配角色：优先使用命令中指定的角色，否则使用用户类型的默认角色
         List<Long> roleIds = command.getRoleIds();
         if ((roleIds == null || roleIds.isEmpty()) && command.getUserTypeCode() != null) {
@@ -142,18 +139,9 @@ public class UserApplicationService {
         // Phase 2.1: 持久化后注册创建事件，确保 userId 真实
         user.recordCreation();
 
-        // 关联组织（写入 access_relations）
+        // 关联组织（归属统一写 member 关系，grant-or-replace 保证唯一）
         if (command.getOrgUnitId() != null) {
-            accessRelationRepository.save(AccessRelation.builder()
-                    .resourceType("org_unit")
-                    .resourceId(command.getOrgUnitId())
-                    .relation("member")
-                    .subjectType("user")
-                    .subjectId(user.getId())
-                    .accessLevel(AccessLevel.FULL)
-                    .metadata(java.util.Map.of("isPrimary", true, "relationType", "PRIMARY"))
-                    .createdBy(command.getCreatedBy())
-                    .build());
+            membershipResolver.setMembership(user.getId(), command.getOrgUnitId());
         }
 
         // 关联场所
@@ -236,41 +224,9 @@ public class UserApplicationService {
             user.changeUserType(command.getUserTypeCode());
         }
 
-        // 更新主归属组织
+        // 更新主归属组织（归属统一走 MembershipResolver，setMembership 已 revoke-before-grant）
         if (command.getOrgUnitId() != null) {
-            // 查找现有主归属
-            List<AccessRelation> existingOrgRels = accessRelationRepository
-                    .findBySubjectAndResourceType("user", userId, "org_unit");
-            AccessRelation existingPrimary = existingOrgRels.stream()
-                    .filter(r -> r.getBooleanMeta("isPrimary"))
-                    .findFirst().orElse(null);
-
-            if (existingPrimary != null) {
-                if (!command.getOrgUnitId().equals(existingPrimary.getResourceId())) {
-                    accessRelationRepository.deleteById(existingPrimary.getId());
-                    accessRelationRepository.save(AccessRelation.builder()
-                            .resourceType("org_unit")
-                            .resourceId(command.getOrgUnitId())
-                            .relation("member")
-                            .subjectType("user")
-                            .subjectId(userId)
-                            .accessLevel(AccessLevel.FULL)
-                            .metadata(java.util.Map.of("isPrimary", true, "relationType", "PRIMARY"))
-                            .createdBy(command.getUpdatedBy())
-                            .build());
-                }
-            } else {
-                accessRelationRepository.save(AccessRelation.builder()
-                        .resourceType("org_unit")
-                        .resourceId(command.getOrgUnitId())
-                        .relation("member")
-                        .subjectType("user")
-                        .subjectId(userId)
-                        .accessLevel(AccessLevel.FULL)
-                        .metadata(java.util.Map.of("isPrimary", true, "relationType", "PRIMARY"))
-                        .createdBy(command.getUpdatedBy())
-                        .build());
-            }
+            membershipResolver.setMembership(userId, command.getOrgUnitId());
         }
 
         // 更新角色

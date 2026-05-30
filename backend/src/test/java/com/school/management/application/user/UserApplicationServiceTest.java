@@ -79,6 +79,9 @@ class UserApplicationServiceTest {
     @Mock
     private com.school.management.infrastructure.extension.PolicyRegistry policyRegistry;
 
+    @Mock
+    private com.school.management.application.organization.MembershipResolver membershipResolver;
+
     @InjectMocks
     private UserApplicationService service;
 
