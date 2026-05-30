@@ -316,8 +316,8 @@ public class AccessRelationRepositoryImpl implements AccessRelationRepository {
             "INSERT INTO access_relations " +
             "(resource_type, resource_id, relation, subject_type, subject_id, " +
             " include_children, access_level, valid_from, valid_to, metadata, remark, " +
-            " tenant_id, created_by, created_at) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())",
+            " tenant_id, created_by, is_primary, created_at) " +
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())",
             cmd.resourceType(), cmd.resourceId(), cmd.relation(),
             cmd.subjectType(), cmd.subjectId(),
             cmd.includeChildren() ? 1 : 0,
@@ -326,7 +326,8 @@ public class AccessRelationRepositoryImpl implements AccessRelationRepository {
             cmd.validTo(),
             cmd.metadataJson(), cmd.remark(),
             cmd.tenantId() != null ? cmd.tenantId() : 1L,
-            cmd.createdBy());
+            cmd.createdBy(),
+            cmd.isPrimary() ? 1 : 0);
         return jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
     }
 

@@ -461,7 +461,8 @@ public class AccessRelationService {
             r.validFrom, r.validTo,
             metaJson, r.remark,
             r.tenantId != null ? r.tenantId : 1L,
-            r.grantedBy));
+            r.grantedBy,
+            r.isPrimary));
         log.info("[AccessRelation] grant: relation={} {} {}:{} -> {}:{} id={}",
             r.relation, r.subjectType, r.subjectId, r.resourceType, r.resourceId, r.accessLevel, newId);
 
@@ -640,6 +641,12 @@ public class AccessRelationService {
         public String remark;
         public Long grantedBy;
         public Long tenantId;
+        /**
+         * 是否主归属 (写入 access_relations.is_primary 实体列). 默认 false.
+         * member 归属关系由 {@code MembershipResolver.setMembership} 传 true,
+         * 闭合 grant 路径写 is_primary 列的缺口; 其它非归属关系保持 false 不受影响.
+         */
+        public boolean isPrimary = false;
 
         public static GrantRequest of(String subjectType, Long subjectId,
                                       String relation,

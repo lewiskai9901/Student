@@ -196,5 +196,6 @@ public interface AccessRelationRepository {
                                 AccessLevel accessLevel,
                                 LocalDateTime validFrom, LocalDateTime validTo,
                                 String metadataJson, String remark,
-                                Long tenantId, Long createdBy) {}
+                                Long tenantId, Long createdBy,
+                                boolean isPrimary) {}
 }
