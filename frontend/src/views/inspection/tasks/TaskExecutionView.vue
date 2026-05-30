@@ -8,14 +8,16 @@
  *     左：目标导航（target nav）+ 完成进度指示
  *     右：顶部目标选择器 + 字段列表（按 scoringMode 渲染不同控件）+ 底部实时得分
  */
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import SignaturePad from 'signature_pad'
 import {
   ArrowLeft, Play, Send, RotateCcw,
   ChevronLeft, ChevronRight,
   Star, Search, Target, Sparkles,
   Keyboard, LayoutGrid, List, Check,
+  Camera, PenTool, MapPin,
 } from 'lucide-vue-next'
 import { useInspExecutionStore } from '@/stores/inspection/inspExecutionStore'
 import { useScoringShortcuts } from '@/composables/useScoringShortcuts'
@@ -25,11 +27,16 @@ import {
 } from '@/types/insp/enums'
 import type { InspTask, InspSubmission, SubmissionDetail } from '@/types/insp/project'
 import type { LongId } from '@/types/common'
-import type { TemplateSection } from '@/types/insp/template'
+import type { TemplateSection, TemplateItem } from '@/types/insp/template'
 import { getProject } from '@/api/inspection/project'
 import { http } from '@/utils/request'
 import { inspTemplateApi } from '@/api/inspection/template'
-import { createDetail as createDetailApi } from '@/api/inspection/submission'
+import { createDetail as createDetailApi, addEvidence } from '@/api/inspection/submission'
+import { getOptions as getResponseSetOptions } from '@/api/inspection/responseSet'
+import { uploadImage } from '@/api/upload'
+import { uploadFile } from '@/api/file'
+import { useGeolocation } from '@/composables/inspection/useGeolocation'
+import type { EvidenceType } from '@/types/insp/enums'
 import { orgUnitApi } from '@/api/organization'
 import { buildSectionTree, flattenTree, type SectionTreeNode } from '@/utils/sectionTree'
 import ViolationRecordInput from './components/ViolationRecordInput.vue'
@@ -71,6 +78,52 @@ const selectInputs = ref<Record<LongId, string>>({})
 const textInputs = ref<Record<LongId, string>>({})
 // 复杂模式 (WEIGHTED_MULTI / RISK_MATRIX / FORMULA) 多维录入值, keyed by detailId → { dimKey: value }
 const multiInputs = ref<Record<LongId, Record<string, number>>>({})
+// 采集类型专属录入态 (非评分项)
+const multiSelectInputs = ref<Record<LongId, string[]>>({})   // MULTI_SELECT / CHECKBOX
+const dateInputs = ref<Record<LongId, string>>({})            // DATE / TIME / DATETIME
+const mediaInputs = ref<Record<LongId, string>>({})           // PHOTO / VIDEO / FILE_UPLOAD / SIGNATURE (存 url)
+const gpsInputs = ref<Record<LongId, string>>({})             // GPS "lat,lng"
+
+// 采集项选项数据源:
+//  - templateItemMetaMap: templateItemId → { config, responseSetId } (执行端从模板项加载, SubmissionDetail 本身不带)
+//  - responseSetOptionsMap: responseSetId → 已解析选项缓存
+const templateItemMetaMap = ref<Record<LongId, { config: string | null; responseSetId: LongId | null }>>({})
+const responseSetOptionsMap = ref<Record<LongId, { value: string; label: string }[]>>({})
+
+interface CaptureOption { value: string; label: string }
+
+/** 采集项选项: 优先 config.options(内联), 其次 responseSet(已缓存). */
+function captureOptions(detail: SubmissionDetail): CaptureOption[] {
+  const meta = templateItemMetaMap.value[detail.templateItemId]
+  // 1. config 内联 options
+  if (meta?.config) {
+    try {
+      const cfg = JSON.parse(meta.config)
+      if (Array.isArray(cfg?.options) && cfg.options.length > 0) {
+        return cfg.options.map((o: any) => ({
+          value: String(o.value ?? o.label ?? ''),
+          label: String(o.label ?? o.value ?? ''),
+        }))
+      }
+    } catch { /* ignore */ }
+  }
+  // 2. responseSet 选项 (缓存)
+  const rsId = meta?.responseSetId
+  if (rsId && responseSetOptionsMap.value[rsId]) return responseSetOptionsMap.value[rsId]
+  return []
+}
+
+/** 按需加载并缓存 responseSet 选项 (避免重复请求). */
+async function ensureResponseSetOptions(responseSetId: LongId | null | undefined): Promise<void> {
+  if (!responseSetId || responseSetOptionsMap.value[responseSetId]) return
+  try {
+    const opts = await getResponseSetOptions(responseSetId)
+    responseSetOptionsMap.value[responseSetId] = opts
+      .slice()
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+      .map(o => ({ value: o.optionValue, label: o.optionLabel }))
+  } catch { /* 选项加载失败留空, 控件显示无选项 */ }
+}
 
 // G1: 当前键盘聚焦的 detail (用于 1/2 键 PASS_FAIL)
 const focusedDetailId = ref<LongId | null>(null)
@@ -425,11 +478,7 @@ const targetItemProgress = computed(() => {
   for (const g of targetSectionGroups.value) {
     if (g.isIntermediate) continue
     total += g.details.length
-    done += g.details.filter(d =>
-      numberInputs.value[d.id] !== undefined ||
-      selectInputs.value[d.id] !== undefined ||
-      textInputs.value[d.id] !== undefined
-    ).length
+    done += g.details.filter(d => isDetailScored(d)).length
   }
   return { done, total }
 })
@@ -473,7 +522,11 @@ const hasAnyScored = computed(() => {
 function isDetailScored(detail: SubmissionDetail): boolean {
   return numberInputs.value[detail.id] !== undefined ||
     selectInputs.value[detail.id] !== undefined ||
-    textInputs.value[detail.id] !== undefined
+    textInputs.value[detail.id] !== undefined ||
+    (multiSelectInputs.value[detail.id] !== undefined && multiSelectInputs.value[detail.id].length > 0) ||
+    dateInputs.value[detail.id] !== undefined ||
+    mediaInputs.value[detail.id] !== undefined ||
+    gpsInputs.value[detail.id] !== undefined
 }
 
 function scoredCountInGroup(group: TargetSectionGroup): number {
@@ -516,6 +569,10 @@ async function selectTarget(targetId: LongId) {
   selectInputs.value = {}
   textInputs.value = {}
   multiInputs.value = {}
+  multiSelectInputs.value = {}
+  dateInputs.value = {}
+  mediaInputs.value = {}
+  gpsInputs.value = {}
   loadRecurrence(targetId)
 
   detailLoading.value = true
@@ -553,30 +610,38 @@ async function selectTarget(targetId: LongId) {
           if (!detsBySectionId.has(sid)) detsBySectionId.set(sid, [])
           detsBySectionId.get(sid)!.push(d)
         }
-        // For each leaf section, use saved details or load template items as placeholders
+        // For each leaf section, use saved details or load template items as placeholders.
+        // 始终加载模板项以采集 config/responseSetId (SubmissionDetail 不带), 供采集控件选项使用.
         for (const leaf of leafNodes) {
           const savedDets = detsBySectionId.get(leaf.id) || []
           let leafDets: SubmissionDetail[] = savedDets
-          // If no saved details for this section, load from template
+          let items: TemplateItem[] = []
+          try { items = await inspTemplateApi.getItems(leaf.id) } catch { /* skip */ }
+          // 记录每个模板项的 config / responseSetId, 并预取选项集
+          for (const item of items) {
+            templateItemMetaMap.value[item.id] = {
+              config: item.config ?? null,
+              responseSetId: item.responseSetId ?? null,
+            }
+            if (item.responseSetId) void ensureResponseSetOptions(item.responseSetId)
+          }
+          // If no saved details for this section, build placeholders from template items
           if (savedDets.length === 0) {
-            try {
-              const items = await inspTemplateApi.getItems(leaf.id)
-              leafDets = items.map(item => ({
-                id: `tmp-${leaf.id}-${item.id || 0}`,
-                submissionId: sub.id,
-                templateItemId: item.id,
-                itemCode: item.itemCode || '',
-                itemName: item.itemName || '',
-                itemType: item.itemType || 'NUMBER',
-                sectionId: leaf.id,
-                sectionName: leaf.sectionName || '',
-                scoringMode: 'DIRECT' as any,
-                scoringConfig: item.scoringConfig || '',
-                responseValue: '',
-                score: null as any,
-                maxScore: 100,
-              } as unknown as SubmissionDetail))
-            } catch { /* skip */ }
+            leafDets = items.map(item => ({
+              id: `tmp-${leaf.id}-${item.id || 0}`,
+              submissionId: sub.id,
+              templateItemId: item.id,
+              itemCode: item.itemCode || '',
+              itemName: item.itemName || '',
+              itemType: item.itemType || 'NUMBER',
+              sectionId: leaf.id,
+              sectionName: leaf.sectionName || '',
+              scoringMode: 'DIRECT' as any,
+              scoringConfig: item.scoringConfig || '',
+              responseValue: '',
+              score: null as any,
+              maxScore: 100,
+            } as unknown as SubmissionDetail))
           }
           if (leafDets.length === 0) continue
           const leafSection = allSections.value.find(s => s.id === leaf.id) || { id: leaf.id, sectionName: leaf.sectionName } as any
@@ -718,6 +783,22 @@ async function ensureDetailPersisted(detail: SubmissionDetail): Promise<Submissi
       if (multiInputs.value[detail.id] !== undefined) {
         multiInputs.value[created.id] = multiInputs.value[detail.id]
         delete multiInputs.value[detail.id]
+      }
+      if (multiSelectInputs.value[detail.id] !== undefined) {
+        multiSelectInputs.value[created.id] = multiSelectInputs.value[detail.id]
+        delete multiSelectInputs.value[detail.id]
+      }
+      if (dateInputs.value[detail.id] !== undefined) {
+        dateInputs.value[created.id] = dateInputs.value[detail.id]
+        delete dateInputs.value[detail.id]
+      }
+      if (mediaInputs.value[detail.id] !== undefined) {
+        mediaInputs.value[created.id] = mediaInputs.value[detail.id]
+        delete mediaInputs.value[detail.id]
+      }
+      if (gpsInputs.value[detail.id] !== undefined) {
+        gpsInputs.value[created.id] = gpsInputs.value[detail.id]
+        delete gpsInputs.value[detail.id]
       }
       break
     }
@@ -1146,6 +1227,195 @@ async function saveTextInput(detail: SubmissionDetail) {
   } catch (e: any) { console.error('文本保存失败', e); ElMessage.error('文本保存失败，请重试') }
 }
 
+// ==================== 采集类型专属控件 handlers (非评分项, 无 score) ====================
+// responseValue 存储约定:
+//   NUMBER → 数字字符串; SELECT/RADIO → 选中 value; MULTI_SELECT/CHECKBOX → JSON 数组字符串;
+//   DATE/TIME/DATETIME → 格式化字符串; PHOTO/VIDEO/FILE_UPLOAD/SIGNATURE → 文件 url;
+//   GPS → "lat,lng"; TEXT/TEXTAREA/RICH_TEXT/BARCODE/未知 → 原文本 (走 saveTextInput).
+
+/** 统一采集保存: responseValue, 无 score. */
+async function saveCapture(detail: SubmissionDetail, responseValue: string) {
+  try {
+    await persistDetailResponse(detail, { responseValue, score: undefined })
+  } catch (e: any) { console.error('采集保存失败', e); ElMessage.error('保存失败，请重试') }
+}
+
+function saveNumberCapture(detail: SubmissionDetail, val: number | undefined) {
+  if (val === undefined || val === null) { numberInputs.value[detail.id] = undefined as any; return }
+  numberInputs.value[detail.id] = val
+  saveCapture(detail, String(val))
+}
+
+function saveSelectCapture(detail: SubmissionDetail, val: string) {
+  selectInputs.value[detail.id] = val
+  saveCapture(detail, val ?? '')
+}
+
+function saveMultiSelectCapture(detail: SubmissionDetail, vals: string[]) {
+  multiSelectInputs.value[detail.id] = vals
+  saveCapture(detail, JSON.stringify(vals ?? []))
+}
+
+function saveDateCapture(detail: SubmissionDetail, val: string) {
+  dateInputs.value[detail.id] = val
+  saveCapture(detail, val ?? '')
+}
+
+function saveGpsCapture(detail: SubmissionDetail, val: string) {
+  gpsInputs.value[detail.id] = val
+  saveCapture(detail, val)
+}
+
+// ---------- 媒体上传 (PHOTO / VIDEO / FILE_UPLOAD) ----------
+const captureUploading = ref<Record<LongId, boolean>>({})
+
+/** itemType → EvidenceType 映射 (用于 addEvidence 双写). */
+function evidenceTypeFor(itemType: string): EvidenceType {
+  switch (itemType) {
+    case 'PHOTO': return 'PHOTO'
+    case 'VIDEO': return 'VIDEO'
+    case 'SIGNATURE': return 'SIGNATURE'
+    case 'GPS': return 'GPS_POINT'
+    default: return 'DOCUMENT'
+  }
+}
+
+async function handleCaptureUpload(detail: SubmissionDetail, uploadFileObj: any) {
+  const raw: File | undefined = uploadFileObj?.raw ?? uploadFileObj
+  if (!raw) return
+  captureUploading.value[detail.id] = true
+  try {
+    let url: string
+    let fileName: string
+    if (detail.itemType === 'PHOTO') {
+      const r = await uploadImage(raw)
+      url = r.url; fileName = r.name || raw.name
+    } else {
+      const r = await uploadFile(raw, 'inspection-form')
+      url = r.fileUrl; fileName = r.originalName || raw.name
+    }
+    mediaInputs.value[detail.id] = url
+    await saveCapture(detail, url)
+    // 双写证据 (detailId 必须已持久化 → saveCapture 已 ensureDetailPersisted)
+    await persistEvidence(detail, url, fileName)
+    ElMessage.success('上传成功')
+  } catch (e: any) {
+    const msg = e?.response?.data?.message || e?.message || '未知错误'
+    ElMessage.error('上传失败: ' + msg)
+  } finally {
+    captureUploading.value[detail.id] = false
+  }
+}
+
+/** addEvidence 双写: 用持久化后的真实 detailId + submissionId. */
+async function persistEvidence(detail: SubmissionDetail, fileUrl: string, fileName: string) {
+  try {
+    const real = await ensureDetailPersisted(detail)
+    await addEvidence(real.submissionId, {
+      detailId: real.id,
+      evidenceType: evidenceTypeFor(detail.itemType),
+      fileName,
+      fileUrl,
+    })
+  } catch (e: any) { console.error('证据写入失败', e) /* 主值已存, 证据失败不阻断 */ }
+}
+
+// ---------- 手写签名 (SIGNATURE) ----------
+const signatureDialogVisible = ref(false)
+const signatureCanvas = ref<HTMLCanvasElement | null>(null)
+const signatureSaving = ref(false)
+const signatureDetail = ref<SubmissionDetail | null>(null)
+let signaturePad: SignaturePad | null = null
+
+function resizeSignatureCanvas() {
+  const canvas = signatureCanvas.value
+  if (!canvas) return
+  const ratio = Math.max(window.devicePixelRatio || 1, 1)
+  const rect = canvas.getBoundingClientRect()
+  canvas.width = rect.width * ratio
+  canvas.height = rect.height * ratio
+  const ctx = canvas.getContext('2d')
+  if (ctx) ctx.scale(ratio, ratio)
+  signaturePad?.clear()
+}
+
+async function openSignatureDialog(detail: SubmissionDetail) {
+  signatureDetail.value = detail
+  signatureDialogVisible.value = true
+  await nextTick()
+  if (!signatureCanvas.value) return
+  signaturePad = new SignaturePad(signatureCanvas.value, {
+    penColor: '#1f2937',
+    backgroundColor: 'rgba(255,255,255,1)',
+  })
+  resizeSignatureCanvas()
+  window.addEventListener('resize', resizeSignatureCanvas)
+}
+
+function closeSignatureDialog() {
+  window.removeEventListener('resize', resizeSignatureCanvas)
+  signaturePad?.off()
+  signaturePad = null
+  signatureDialogVisible.value = false
+  signatureDetail.value = null
+}
+
+function clearSignature() {
+  signaturePad?.clear()
+}
+
+async function saveSignature() {
+  const detail = signatureDetail.value
+  if (!signaturePad || !signatureCanvas.value || !detail) return
+  if (signaturePad.isEmpty()) { ElMessage.warning('请先签名'); return }
+  signatureSaving.value = true
+  try {
+    const blob: Blob = await new Promise((resolve, reject) => {
+      signatureCanvas.value!.toBlob((b) => {
+        if (b) resolve(b); else reject(new Error('导出签名图片失败'))
+      }, 'image/png')
+    })
+    const file = new File([blob], `signature-${Date.now()}.png`, { type: 'image/png' })
+    const url = (await uploadImage(file)).url
+    mediaInputs.value[detail.id] = url
+    await saveCapture(detail, url)
+    await persistEvidence(detail, url, file.name)
+    ElMessage.success('签名已保存')
+    closeSignatureDialog()
+  } catch (e: any) {
+    const msg = e?.response?.data?.message || e?.message || '未知错误'
+    ElMessage.error('保存失败: ' + msg)
+  } finally {
+    signatureSaving.value = false
+  }
+}
+
+// ---------- GPS 定位 ----------
+const { loading: gpsLoading, error: gpsError, getCurrentPosition } = useGeolocation()
+const gpsActiveDetailId = ref<LongId | null>(null)
+
+async function handleGetGps(detail: SubmissionDetail) {
+  gpsActiveDetailId.value = detail.id
+  try {
+    const pos = await getCurrentPosition()
+    if (pos) {
+      const val = `${pos.latitude.toFixed(6)},${pos.longitude.toFixed(6)}`
+      saveGpsCapture(detail, val)
+      ElMessage.success('定位成功')
+    } else {
+      ElMessage.error('定位失败: ' + (gpsError.value || '无法获取位置'))
+    }
+  } finally {
+    gpsActiveDetailId.value = null
+  }
+}
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', resizeSignatureCanvas)
+  signaturePad?.off()
+  signaturePad = null
+})
+
 // ==================== Init inputs from existing response ====================
 
 function initInputs(list: SubmissionDetail[]) {
@@ -1202,7 +1472,28 @@ function initInputs(list: SubmissionDetail[]) {
         }
       } catch { /* 脏数据忽略 */ }
     } else if (!mode) {
-      textInputs.value[d.id] = d.responseValue
+      // 采集项 (非评分): 按 itemType 回填到对应控件态
+      const t = d.itemType
+      if (t === 'NUMBER') {
+        const n = parseFloat(d.responseValue)
+        if (!isNaN(n)) numberInputs.value[d.id] = n
+      } else if (t === 'SELECT' || t === 'RADIO') {
+        selectInputs.value[d.id] = d.responseValue
+      } else if (t === 'MULTI_SELECT' || t === 'CHECKBOX') {
+        try {
+          const arr = JSON.parse(d.responseValue)
+          multiSelectInputs.value[d.id] = Array.isArray(arr) ? arr.map(String) : []
+        } catch { multiSelectInputs.value[d.id] = [] }
+      } else if (t === 'DATE' || t === 'TIME' || t === 'DATETIME') {
+        dateInputs.value[d.id] = d.responseValue
+      } else if (t === 'PHOTO' || t === 'VIDEO' || t === 'FILE_UPLOAD' || t === 'SIGNATURE') {
+        mediaInputs.value[d.id] = d.responseValue
+      } else if (t === 'GPS') {
+        gpsInputs.value[d.id] = d.responseValue
+      } else {
+        // TEXT / TEXTAREA / RICH_TEXT / BARCODE / 未知
+        textInputs.value[d.id] = d.responseValue
+      }
     }
   }
 }
@@ -1871,7 +2162,130 @@ onMounted(() => loadData())
                     <el-button size="small" type="primary" plain :disabled="!isGroupEditable(group)" @click="handleFormula(detail)">确认</el-button>
                   </div>
                   <div v-else-if="!detail.scoringMode && detail.itemType !== 'VIOLATION_RECORD' && detail.itemType !== 'PERSON_SCORE'" class="card-control card-control--capture">
-                    <el-input v-model="textInputs[detail.id]" :disabled="!isGroupEditable(group)" size="small" placeholder="请填写..." clearable @blur="saveTextInput(detail)" />
+                    <!-- NUMBER -->
+                    <el-input-number v-if="detail.itemType === 'NUMBER'"
+                      v-model="numberInputs[detail.id]" :disabled="!isGroupEditable(group)"
+                      size="small" controls-position="right" style="width: 140px"
+                      @change="(v: any) => saveNumberCapture(detail, v)" />
+
+                    <!-- SELECT -->
+                    <el-select v-else-if="detail.itemType === 'SELECT'"
+                      v-model="selectInputs[detail.id]" :disabled="!isGroupEditable(group)"
+                      size="small" placeholder="请选择" clearable style="width: 200px"
+                      @change="(v: any) => saveSelectCapture(detail, v ?? '')">
+                      <el-option v-for="opt in captureOptions(detail)" :key="opt.value" :label="opt.label" :value="opt.value" />
+                    </el-select>
+
+                    <!-- RADIO -->
+                    <el-radio-group v-else-if="detail.itemType === 'RADIO'"
+                      v-model="selectInputs[detail.id]" :disabled="!isGroupEditable(group)"
+                      size="small" @change="(v: any) => saveSelectCapture(detail, String(v ?? ''))">
+                      <el-radio v-for="opt in captureOptions(detail)" :key="opt.value" :value="opt.value">{{ opt.label }}</el-radio>
+                    </el-radio-group>
+
+                    <!-- MULTI_SELECT -->
+                    <el-select v-else-if="detail.itemType === 'MULTI_SELECT'"
+                      v-model="multiSelectInputs[detail.id]" multiple collapse-tags
+                      :disabled="!isGroupEditable(group)" size="small" placeholder="请选择（多选）"
+                      style="width: 240px" @change="(v: any) => saveMultiSelectCapture(detail, v ?? [])">
+                      <el-option v-for="opt in captureOptions(detail)" :key="opt.value" :label="opt.label" :value="opt.value" />
+                    </el-select>
+
+                    <!-- CHECKBOX -->
+                    <el-checkbox-group v-else-if="detail.itemType === 'CHECKBOX'"
+                      v-model="multiSelectInputs[detail.id]" :disabled="!isGroupEditable(group)"
+                      size="small" @change="(v: any) => saveMultiSelectCapture(detail, v ?? [])">
+                      <el-checkbox v-for="opt in captureOptions(detail)" :key="opt.value" :value="opt.value">{{ opt.label }}</el-checkbox>
+                    </el-checkbox-group>
+
+                    <!-- DATE -->
+                    <el-date-picker v-else-if="detail.itemType === 'DATE'"
+                      v-model="dateInputs[detail.id]" type="date" value-format="YYYY-MM-DD"
+                      :disabled="!isGroupEditable(group)" size="small" placeholder="选择日期" style="width: 160px"
+                      @change="(v: any) => saveDateCapture(detail, v ?? '')" />
+
+                    <!-- TIME -->
+                    <el-time-picker v-else-if="detail.itemType === 'TIME'"
+                      v-model="dateInputs[detail.id]" format="HH:mm" value-format="HH:mm"
+                      :disabled="!isGroupEditable(group)" size="small" placeholder="选择时间" style="width: 140px"
+                      @change="(v: any) => saveDateCapture(detail, v ?? '')" />
+
+                    <!-- DATETIME -->
+                    <el-date-picker v-else-if="detail.itemType === 'DATETIME'"
+                      v-model="dateInputs[detail.id]" type="datetime" value-format="YYYY-MM-DD HH:mm:ss"
+                      :disabled="!isGroupEditable(group)" size="small" placeholder="选择日期时间" style="width: 200px"
+                      @change="(v: any) => saveDateCapture(detail, v ?? '')" />
+
+                    <!-- PHOTO -->
+                    <div v-else-if="detail.itemType === 'PHOTO'" class="capture-media">
+                      <a v-if="mediaInputs[detail.id]" :href="mediaInputs[detail.id]" target="_blank" rel="noopener" class="capture-thumb">
+                        <img :src="mediaInputs[detail.id]" alt="photo" />
+                      </a>
+                      <el-upload :auto-upload="false" :show-file-list="false" accept="image/*"
+                        :disabled="!isGroupEditable(group)" :on-change="(f: any) => handleCaptureUpload(detail, f)">
+                        <el-button size="small" :loading="captureUploading[detail.id]" :disabled="!isGroupEditable(group)">
+                          <Camera :size="13" class="btn-icon" />{{ mediaInputs[detail.id] ? '重新上传' : '上传照片' }}
+                        </el-button>
+                      </el-upload>
+                    </div>
+
+                    <!-- VIDEO -->
+                    <div v-else-if="detail.itemType === 'VIDEO'" class="capture-media">
+                      <a v-if="mediaInputs[detail.id]" :href="mediaInputs[detail.id]" target="_blank" rel="noopener" class="capture-link">查看视频</a>
+                      <el-upload :auto-upload="false" :show-file-list="false" accept="video/*"
+                        :disabled="!isGroupEditable(group)" :on-change="(f: any) => handleCaptureUpload(detail, f)">
+                        <el-button size="small" :loading="captureUploading[detail.id]" :disabled="!isGroupEditable(group)">
+                          {{ mediaInputs[detail.id] ? '重新上传' : '上传视频' }}
+                        </el-button>
+                      </el-upload>
+                    </div>
+
+                    <!-- FILE_UPLOAD -->
+                    <div v-else-if="detail.itemType === 'FILE_UPLOAD'" class="capture-media">
+                      <a v-if="mediaInputs[detail.id]" :href="mediaInputs[detail.id]" target="_blank" rel="noopener" class="capture-link">已上传文件</a>
+                      <el-upload :auto-upload="false" :show-file-list="false"
+                        :disabled="!isGroupEditable(group)" :on-change="(f: any) => handleCaptureUpload(detail, f)">
+                        <el-button size="small" :loading="captureUploading[detail.id]" :disabled="!isGroupEditable(group)">
+                          {{ mediaInputs[detail.id] ? '重新上传' : '选择文件' }}
+                        </el-button>
+                      </el-upload>
+                    </div>
+
+                    <!-- SIGNATURE -->
+                    <div v-else-if="detail.itemType === 'SIGNATURE'" class="capture-media">
+                      <a v-if="mediaInputs[detail.id]" :href="mediaInputs[detail.id]" target="_blank" rel="noopener" class="capture-thumb capture-thumb--sign">
+                        <img :src="mediaInputs[detail.id]" alt="signature" />
+                      </a>
+                      <el-button size="small" :disabled="!isGroupEditable(group)" @click="openSignatureDialog(detail)">
+                        <PenTool :size="13" class="btn-icon" />{{ mediaInputs[detail.id] ? '重新签名' : '签名' }}
+                      </el-button>
+                    </div>
+
+                    <!-- GPS -->
+                    <div v-else-if="detail.itemType === 'GPS'" class="capture-media">
+                      <MapPin :size="14" style="color: var(--gray-400)" />
+                      <span v-if="gpsInputs[detail.id]" class="capture-gps-val">{{ gpsInputs[detail.id] }}</span>
+                      <el-button size="small" :disabled="!isGroupEditable(group)"
+                        :loading="gpsLoading && gpsActiveDetailId === detail.id" @click="handleGetGps(detail)">
+                        {{ gpsInputs[detail.id] ? '重新定位' : '获取当前位置' }}
+                      </el-button>
+                    </div>
+
+                    <!-- TEXTAREA / RICH_TEXT -->
+                    <el-input v-else-if="detail.itemType === 'TEXTAREA' || detail.itemType === 'RICH_TEXT'"
+                      v-model="textInputs[detail.id]" type="textarea" :rows="detail.itemType === 'RICH_TEXT' ? 4 : 2"
+                      :disabled="!isGroupEditable(group)" size="small" placeholder="请填写..." @blur="saveTextInput(detail)" />
+
+                    <!-- BARCODE -->
+                    <div v-else-if="detail.itemType === 'BARCODE'" class="capture-barcode">
+                      <el-input v-model="textInputs[detail.id]" :disabled="!isGroupEditable(group)"
+                        size="small" placeholder="手工录入条码" clearable @blur="saveTextInput(detail)" />
+                      <span class="capture-hint">扫码请用移动端</span>
+                    </div>
+
+                    <!-- TEXT / 未知类型 兜底 -->
+                    <el-input v-else v-model="textInputs[detail.id]" :disabled="!isGroupEditable(group)"
+                      size="small" placeholder="请填写..." clearable @blur="saveTextInput(detail)" />
                   </div>
                   <!-- VIOLATION_RECORD: EVENT_STREAM or INLINE mode -->
                   <template v-else-if="detail.itemType === 'VIOLATION_RECORD'">
@@ -1953,7 +2367,108 @@ onMounted(() => loadData())
       v-model="correctiveDialogVisible"
       :submission-ids="correctiveDialogSubmissions"
     />
+
+    <!-- 采集项 SIGNATURE 手写签名对话框 (单实例共享) -->
+    <el-dialog
+      v-model="signatureDialogVisible"
+      title="手写签名"
+      width="560px"
+      append-to-body
+      :close-on-click-modal="false"
+      @closed="closeSignatureDialog"
+    >
+      <div class="signature-canvas-wrap">
+        <canvas ref="signatureCanvas" class="signature-canvas"></canvas>
+        <p class="signature-hint">在上方框内手写签名</p>
+      </div>
+      <template #footer>
+        <el-button @click="clearSignature">清除</el-button>
+        <el-button @click="closeSignatureDialog">取消</el-button>
+        <el-button type="primary" :loading="signatureSaving" @click="saveSignature">保存签名</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <style scoped src="./TaskExecutionView.css"></style>
+
+<style scoped>
+/* 采集类型专属控件 — 紧凑风格 */
+.card-control--capture {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.capture-media {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.capture-thumb {
+  display: block;
+  width: 56px;
+  height: 56px;
+  border: 1px solid var(--gray-200, #e5e7eb);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.capture-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.capture-thumb--sign {
+  width: auto;
+  min-width: 80px;
+  background: #fff;
+}
+.capture-thumb--sign img {
+  object-fit: contain;
+}
+.capture-link {
+  font-size: 12px;
+  color: var(--blue, #409eff);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.capture-gps-val {
+  font-size: 12px;
+  color: var(--gray-600, #4b5563);
+}
+.capture-barcode {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.capture-hint {
+  font-size: 11px;
+  color: var(--gray-400, #9ca3af);
+}
+.btn-icon {
+  margin-right: 3px;
+  vertical-align: -2px;
+}
+.signature-canvas-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.signature-canvas {
+  width: 100%;
+  height: 200px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  touch-action: none;
+  cursor: crosshair;
+}
+.signature-hint {
+  margin: 0;
+  font-size: 12px;
+  color: #94a3b8;
+  text-align: center;
+}
+</style>
