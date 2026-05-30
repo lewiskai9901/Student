@@ -17,8 +17,6 @@ public class TemplateSectionPO {
     @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private Long parentSectionId;
     @TableField(updateStrategy = FieldStrategy.ALWAYS)
-    private Long refTemplateId;
-    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private String scoringConfig;
     private String sectionCode;
     private String sectionName;
@@ -30,8 +28,6 @@ public class TemplateSectionPO {
     private Long catalogId;
     private String status;
     private Integer latestVersion;
-    @TableField(updateStrategy = FieldStrategy.ALWAYS)
-    private Long refSectionId;
     private Integer sortOrder;
     private Boolean isRepeatable;
     private String conditionLogic;

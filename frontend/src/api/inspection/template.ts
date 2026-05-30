@@ -4,7 +4,6 @@
  * 核心变更：
  * - "模板" = 根 TemplateSection（parentSectionId=null）
  * - 分区 API 改为 /inspection/sections（不再嵌套在 templateId 下）
- * - TemplateModuleRef 被 refSectionId 替代
  */
 import type { LongId } from '@/types/common'
 import { http } from '@/utils/request'

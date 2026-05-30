@@ -134,8 +134,6 @@ public class TemplateSectionRepositoryImpl implements TemplateSectionRepository 
         po.setTenantId(domain.getTenantId() != null ? domain.getTenantId() : 0L);
         po.setTemplateId(domain.getTemplateId());
         po.setParentSectionId(domain.getParentSectionId());
-        po.setRefTemplateId(null); // legacy field, no longer used; refSectionId replaces it
-        po.setRefSectionId(domain.getRefSectionId());
         po.setScoringConfig(domain.getScoringConfig());
         po.setSectionCode(domain.getSectionCode());
         po.setSectionName(domain.getSectionName());
@@ -166,7 +164,6 @@ public class TemplateSectionRepositoryImpl implements TemplateSectionRepository 
                 .id(po.getId())
                 .templateId(po.getTemplateId())
                 .parentSectionId(po.getParentSectionId())
-                .refSectionId(po.getRefSectionId())
                 .scoringConfig(po.getScoringConfig())
                 .sectionCode(po.getSectionCode())
                 .sectionName(po.getSectionName())

@@ -11,7 +11,6 @@ import java.util.List;
  *  统一分区模型（聚合根）
  * 根分区（parentSectionId=null, templateId=null）即原来的模板。
  * 子分区组织内容，一级子分区可设 targetType。
- * 引用分区（refSectionId != null）为只读快捷方式。
  *
  * 状态机（仅根分区）: DRAFT → PUBLISHED → DEPRECATED → ARCHIVED
  */
@@ -20,7 +19,6 @@ public class TemplateSection extends AggregateRoot<Long> {
     private Long tenantId;
     private Long templateId;           // null = 根分区（自己就是根）
     private Long parentSectionId;      // null = 顶层
-    private Long refSectionId;         // 引用的分区ID（只读快捷方式）
     private String sectionCode;
     private String sectionName;
     private String description;
@@ -52,7 +50,6 @@ public class TemplateSection extends AggregateRoot<Long> {
         this.tenantId = builder.tenantId;
         this.templateId = builder.templateId;
         this.parentSectionId = builder.parentSectionId;
-        this.refSectionId = builder.refSectionId;
         this.sectionCode = builder.sectionCode;
         this.sectionName = builder.sectionName;
         this.description = builder.description;
@@ -220,7 +217,6 @@ public class TemplateSection extends AggregateRoot<Long> {
     public Long getTenantId() { return tenantId; }
     public Long getTemplateId() { return templateId; }
     public Long getParentSectionId() { return parentSectionId; }
-    public Long getRefSectionId() { return refSectionId; }
     public String getSectionCode() { return sectionCode; }
     public String getSectionName() { return sectionName; }
     public String getDescription() { return description; }
@@ -251,7 +247,6 @@ public class TemplateSection extends AggregateRoot<Long> {
         private Long tenantId;
         private Long templateId;
         private Long parentSectionId;
-        private Long refSectionId;
         private String sectionCode;
         private String sectionName;
         private String description;
@@ -279,7 +274,6 @@ public class TemplateSection extends AggregateRoot<Long> {
         public Builder tenantId(Long tenantId) { this.tenantId = tenantId; return this; }
         public Builder templateId(Long templateId) { this.templateId = templateId; return this; }
         public Builder parentSectionId(Long parentSectionId) { this.parentSectionId = parentSectionId; return this; }
-        public Builder refSectionId(Long refSectionId) { this.refSectionId = refSectionId; return this; }
         public Builder sectionCode(String sectionCode) { this.sectionCode = sectionCode; return this; }
         public Builder sectionName(String sectionName) { this.sectionName = sectionName; return this; }
         public Builder description(String description) { this.description = description; return this; }

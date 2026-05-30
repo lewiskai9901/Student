@@ -2,7 +2,6 @@
  * V62 检查平台 - 统一分区模型类型定义
  *
  * 核心变更：InspTemplate 被根 TemplateSection 替代。
- * TemplateModuleRef 被 refSectionId 替代。
  * targetType 下沉到一级分区。
  */
 import type { LongId } from '@/types/common'
@@ -49,13 +48,11 @@ export interface UpdateCatalogRequest {
 //
 // 根分区 (parentSectionId=null, templateId=null) 即为"模板"。
 // 一级分区携带 targetType。
-// refSectionId 替代旧的 refTemplateId / TemplateModuleRef。
 
 export interface TemplateSection {
   id: LongId
   templateId: LongId | null
   parentSectionId: LongId | null
-  refSectionId: LongId | null
   sectionCode: string
   sectionName: string
   targetType: TargetType | null

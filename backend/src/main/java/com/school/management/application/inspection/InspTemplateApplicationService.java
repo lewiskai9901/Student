@@ -314,7 +314,6 @@ public class InspTemplateApplicationService {
             TemplateSection copy = TemplateSection.reconstruct(
                     TemplateSection.builder()
                             .parentSectionId(newParentId)
-                            .refSectionId(src.getRefSectionId())
                             .sectionCode(src.getSectionCode() + "-COPY")
                             .sectionName(src.getSectionName())
                             .targetType(src.getTargetType())

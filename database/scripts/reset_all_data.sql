@@ -134,7 +134,6 @@ TRUNCATE TABLE insp_templates;
 TRUNCATE TABLE insp_template_versions;
 TRUNCATE TABLE insp_template_sections;
 TRUNCATE TABLE insp_template_items;
-TRUNCATE TABLE insp_template_module_refs;
 TRUNCATE TABLE insp_template_catalogs;
 TRUNCATE TABLE insp_library_items;
 TRUNCATE TABLE insp_response_sets;
