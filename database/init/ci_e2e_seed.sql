@@ -816,6 +816,28 @@ INSERT INTO `org_units` (`id`, `unit_code`, `unit_name`, `unit_type`, `parent_id
 
 INSERT INTO `teacher_assignments` (`id`, `org_unit_id`, `teacher_id`, `role_type`, `subject_id`, `is_primary`, `start_date`, `end_date`, `status`, `transfer_reason`, `handover_teacher_id`, `workload_hours`, `remark`, `created_at`, `updated_at`, `created_by`, `deleted`, `tenant_id`) VALUES (2041867776339055290,2041867776338956290,2041870507300622337,'HEAD_TEACHER',NULL,1,'2024-09-01',NULL,'ACTIVE',NULL,NULL,NULL,NULL,'2026-04-08 21:36:11','2026-04-08 21:36:11',NULL,0,1);
 
+-- 组织归属统一为 access_relations 的 member|user|org_unit 关系 (每用户唯一)。
+-- 为每个有 primary_org_unit_id (非 NULL) 的用户补一条 member 归属行 (is_primary=1),
+-- 使 Phase 3 读路径切到 member 关系后 fresh-init 数据仍完整。
+-- 派生自 primary_org_unit_id, 不硬编 id; 幂等 (NOT EXISTS 防与 uk_membership_unique 冲突);
+-- FK 列 primary_org_unit_id 值保留, 待 Phase 4 删列时一起去。
+INSERT INTO `access_relations`
+    (`resource_type`, `resource_id`, `relation`, `subject_type`, `subject_id`,
+     `is_primary`, `access_level`, `deleted`, `tenant_id`, `created_at`, `updated_at`)
+SELECT 'org_unit', u.`primary_org_unit_id`, 'member', 'user', u.`id`,
+       1, 'READ', 0, COALESCE(u.`tenant_id`, 1), NOW(), NOW()
+FROM `users` u
+WHERE u.`primary_org_unit_id` IS NOT NULL
+  AND u.`deleted` = 0
+  AND NOT EXISTS (
+      SELECT 1 FROM `access_relations` ar
+      WHERE ar.`relation` = 'member'
+        AND ar.`subject_type` = 'user'
+        AND ar.`subject_id` = u.`id`
+        AND ar.`resource_type` = 'org_unit'
+        AND ar.`deleted` = 0
+  );
+
 
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS = 1;
