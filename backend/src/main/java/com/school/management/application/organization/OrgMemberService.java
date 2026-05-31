@@ -20,7 +20,8 @@ import java.util.stream.Collectors;
 
 /**
  * 组织成员管理服务
- * 基于 user.primary_org_unit_id 归属关系 + access_relations 访问关系
+ * 归属读写统一走 {@link MembershipResolver} (access_relations 的 member 关系, 每用户唯一),
+ * 不再读写 {@code users.primary_org_unit_id} 外键。
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -34,14 +35,20 @@ public class OrgMemberService {
     private final MembershipResolver membershipResolver;
 
     /**
-     * 获取归属成员列表（primary_org_unit_id = orgUnitId）
+     * 获取归属成员列表（member 关系: member|user|org_unit, resource_id = orgUnitId）
      */
     @Transactional(readOnly = true)
     public List<OrgMemberDTO> getBelongingMembers(Long orgUnitId) {
         OrgUnit orgUnit = orgUnitRepository.findById(orgUnitId)
                 .orElseThrow(() -> new IllegalArgumentException("OrgUnit not found: " + orgUnitId));
 
-        List<UserPO> users = userDomainMapper.findByOrgUnitId(orgUnitId);
+        // 归属统一走 member 关系: 该 org 的直接成员 userId 列表
+        List<Long> userIds = membershipResolver.membersOf(orgUnitId);
+        if (userIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        // userId -> 用户详情 (name 等) 仍查 users, 这不是归属查询
+        List<UserPO> users = userDomainMapper.selectBatchIds(userIds);
         return users.stream()
                 .map(u -> toMemberDTO(u, orgUnitId, orgUnit.getUnitName()))
                 .collect(Collectors.toList());
@@ -52,27 +59,39 @@ public class OrgMemberService {
      */
     @Transactional(readOnly = true)
     public List<OrgMemberDTO> getMembersRecursive(Long orgUnitId) {
-        OrgUnit orgUnit = orgUnitRepository.findById(orgUnitId)
+        orgUnitRepository.findById(orgUnitId)
                 .orElseThrow(() -> new IllegalArgumentException("OrgUnit not found: " + orgUnitId));
 
-        // Collect this org + all descendant IDs
-        List<Long> allOrgIds = new ArrayList<>();
-        allOrgIds.add(orgUnitId);
-        collectDescendantIds(orgUnitId, allOrgIds);
-
-        if (allOrgIds.isEmpty()) {
+        // 归属统一走 member 关系: membersOfSubtree 已含自身 + 子树 (内部已展开, 不再叠加)
+        List<Long> userIds = membershipResolver.membersOfSubtree(orgUnitId);
+        if (userIds.isEmpty()) {
             return Collections.emptyList();
         }
 
-        // Build orgId -> orgName map (batch query instead of N+1)
-        List<OrgUnit> allOrgs = orgUnitRepository.findByIds(allOrgIds);
-        Map<Long, String> orgNameMap = allOrgs.stream()
-                .collect(Collectors.toMap(OrgUnit::getId, OrgUnit::getUnitName, (a, b) -> a));
+        // 每个成员归属唯一 — 反查其 member 归属 org, 用于 DTO 的 primaryOrgUnitId/Name
+        Map<Long, Long> userToOrg = new LinkedHashMap<>();
+        Set<Long> memberOrgIds = new LinkedHashSet<>();
+        for (Long uid : userIds) {
+            Long org = membershipResolver.orgOf(uid).orElse(null);
+            userToOrg.put(uid, org);
+            if (org != null) {
+                memberOrgIds.add(org);
+            }
+        }
 
-        List<UserPO> users = userDomainMapper.findByOrgUnitIdIn(allOrgIds);
+        // orgId -> orgName map (批量查, 避免 N+1)
+        Map<Long, String> orgNameMap = memberOrgIds.isEmpty()
+                ? Collections.emptyMap()
+                : orgUnitRepository.findByIds(new ArrayList<>(memberOrgIds)).stream()
+                    .collect(Collectors.toMap(OrgUnit::getId, OrgUnit::getUnitName, (a, b) -> a));
+
+        // userId -> 用户详情 (name 等) 仍查 users, 这不是归属查询
+        List<UserPO> users = userDomainMapper.selectBatchIds(userIds);
         return users.stream()
-                .map(u -> toMemberDTO(u, u.getPrimaryOrgUnitId(),
-                        orgNameMap.getOrDefault(u.getPrimaryOrgUnitId(), "")))
+                .map(u -> {
+                    Long memberOrg = userToOrg.get(u.getId());
+                    return toMemberDTO(u, memberOrg, orgNameMap.getOrDefault(memberOrg, ""));
+                })
                 .collect(Collectors.toList());
     }
 
@@ -86,19 +105,10 @@ public class OrgMemberService {
 
         OrgStatisticsDTO dto = new OrgStatisticsDTO();
         dto.setOrgUnitId(orgUnitId);
-        dto.setBelongingCount(userDomainMapper.countByPrimaryOrgUnitId(orgUnitId));
 
-        // Count by user type
-        List<Map<String, Object>> typeCounts = userDomainMapper.countByPrimaryOrgUnitIdGroupByType(orgUnitId);
-        Map<String, Long> countByType = new LinkedHashMap<>();
-        if (typeCounts != null) {
-            for (Map<String, Object> row : typeCounts) {
-                String typeCode = row.get("user_type_code") != null ? row.get("user_type_code").toString() : "UNKNOWN";
-                Long cnt = row.get("cnt") != null ? ((Number) row.get("cnt")).longValue() : 0L;
-                countByType.put(typeCode, cnt);
-            }
-        }
-        dto.setCountByUserType(countByType);
+        // 归属统一走 member 关系: 直接成员总数 + 按用户类型分组计数
+        dto.setBelongingCount(membershipResolver.countMembers(orgUnitId));
+        dto.setCountByUserType(new LinkedHashMap<>(membershipResolver.countMembersByType(orgUnitId)));
 
         return dto;
     }
@@ -167,21 +177,14 @@ public class OrgMemberService {
 
     // ==================== Helper methods ====================
 
-    private void collectDescendantIds(Long parentId, List<Long> result) {
-        List<OrgUnit> children = orgUnitRepository.findByParentId(parentId);
-        for (OrgUnit child : children) {
-            result.add(child.getId());
-            collectDescendantIds(child.getId(), result);
-        }
-    }
-
     private OrgMemberDTO toMemberDTO(UserPO user, Long orgUnitId, String orgUnitName) {
         OrgMemberDTO dto = new OrgMemberDTO();
         dto.setUserId(user.getId());
         dto.setUserName(user.getRealName() != null ? user.getRealName() : user.getUsername());
         dto.setUserTypeCode(user.getUserTypeCode());
         dto.setMembershipType("belonging");
-        dto.setPrimaryOrgUnitId(user.getPrimaryOrgUnitId());
+        // 归属 org 来自 member 关系 (传入), 不再读 user.primary_org_unit_id 外键
+        dto.setPrimaryOrgUnitId(orgUnitId);
         dto.setPrimaryOrgUnitName(orgUnitName);
         return dto;
     }
