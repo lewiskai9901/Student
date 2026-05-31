@@ -740,6 +740,48 @@ class DataPermissionInterceptorTest {
             // only the ar.tenant_id param is bound (org ids inlined)
             assertThat(paramsOf(cond)).hasSize(1);
         }
+
+        // ── membershipSubjectColumn=user_id: 学生档案表 user_student (主表行不是用户) ──
+        // 主表是挂在用户上的档案, 真正的 subject 是 s.user_id, 被过滤列必须是 s.user_id 而非 s.id。
+        @DataPermission(module = "student", tableAlias = "s",
+                viaMembership = true, membershipSubjectColumn = "user_id")
+        interface StudentMembershipMapper {
+            List<Object> selectList();
+        }
+
+        private DataPermission studentAnnotation() {
+            return StudentMembershipMapper.class.getAnnotation(DataPermission.class);
+        }
+
+        @Test
+        @DisplayName("membershipSubjectColumn=user_id + DEPARTMENT → s.user_id IN (SELECT ar.subject_id ...)")
+        void studentDepartmentFiltersByUserIdColumn() {
+            UserContext ctx = userWithScopedRoles(List.of(scopedRole(2L, ScopeType.ORG_UNIT, 200L, "1.10.200.")));
+            when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(2L), anyString()))
+                    .thenReturn(DataScope.DEPARTMENT.getCode());
+            Object cond = build(studentAnnotation(), moduleConfig(true, "student"), ctx, 1L);
+            assertThat(cond).isNotNull();
+            assertThat(sqlOf(cond))
+                    .startsWith("s.user_id IN (")
+                    .contains("SELECT ar.subject_id FROM access_relations ar")
+                    .contains("ar.relation = 'member'")
+                    .contains("ar.resource_id = ?")
+                    // must NOT collapse to the main-table id column
+                    .doesNotContain("s.id IN (");
+            assertThat(paramsOf(cond)).hasSize(2);
+        }
+
+        @Test
+        @DisplayName("membershipSubjectColumn=user_id + SELF → s.user_id = ? (学生本人)")
+        void studentSelfFiltersByUserIdColumn() {
+            UserContext ctx = userWithScopedRoles(List.of(scopedRole(4L, ScopeType.ALL, 0L, null)));
+            when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(4L), anyString()))
+                    .thenReturn(DataScope.SELF.getCode());
+            Object cond = build(studentAnnotation(), moduleConfig(true, "student"), ctx, 1L);
+            assertThat(cond).isNotNull();
+            assertThat(sqlOf(cond)).isEqualTo("s.user_id = ?");
+            assertThat(paramsOf(cond)).hasSize(1);
+        }
     }
 
     // ==================================================================

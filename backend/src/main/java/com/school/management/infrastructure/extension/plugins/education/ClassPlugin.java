@@ -56,8 +56,15 @@ public class ClassPlugin implements EntityTypePlugin {
     @Override
     public void beforeDelete(ExtensionContext ctx) {
         try {
+            // 班级在读学生数: 按 member 归属反查 (ar.resource_id=班级 org_unit), JOIN user_student
+            // 限定"数的是学生档案"且在读 (student_status=1), 不再读 user_student.org_unit_id 行业列。
             Long count = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM user_student WHERE org_unit_id = ? AND student_status = 1 AND deleted = 0",
+                "SELECT COUNT(*) FROM user_student s " +
+                "JOIN access_relations ar ON ar.subject_id = s.user_id " +
+                "  AND ar.relation = 'member' AND ar.resource_type = 'org_unit' " +
+                "  AND ar.subject_type = 'user' AND ar.deleted = 0 " +
+                "  AND (ar.valid_to IS NULL OR ar.valid_to > NOW()) " +
+                "WHERE ar.resource_id = ? AND s.student_status = 1 AND s.deleted = 0",
                 Long.class, ctx.getEntityId());
             if (count != null && count > 0) {
                 throw new BusinessException("班级下有 " + count + " 名在读学生，无法删除");

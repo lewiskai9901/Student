@@ -73,11 +73,16 @@ public class MajorDataScopeResolver implements DataScopeResolver {
                 "SELECT id FROM majors WHERE lead_teacher_id = ? AND deleted = 0",
                 Long.class, userId);
 
-            // (2) user_teacher.org_unit_id 是某 major 的归属系部
+            // (2) 教师的 member 归属系部是某 major 的归属系部
+            //     —— 教师"属于哪个系部"已统一到 access_relations member 关系
+            //     (subject=user:userId, resource=org_unit), 不再读 user_teacher.org_unit_id。
             List<Long> orgMajors = jdbc.queryForList(
                 "SELECT DISTINCT m.id FROM majors m " +
-                "JOIN user_teacher ut ON ut.org_unit_id = m.org_unit_id " +
-                "WHERE ut.user_id = ? AND ut.deleted = 0 AND m.deleted = 0",
+                "JOIN access_relations ar ON ar.resource_id = m.org_unit_id " +
+                "  AND ar.relation = 'member' AND ar.resource_type = 'org_unit' " +
+                "  AND ar.subject_type = 'user' AND ar.deleted = 0 " +
+                "  AND (ar.valid_to IS NULL OR ar.valid_to > NOW()) " +
+                "WHERE ar.subject_id = ? AND m.deleted = 0",
                 Long.class, userId);
 
             // (3) user_teacher.specialties JSON 包含的 major_id (兼容 JSON 字符串数组)

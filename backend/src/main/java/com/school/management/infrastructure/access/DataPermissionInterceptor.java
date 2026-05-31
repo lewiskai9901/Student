@@ -491,6 +491,11 @@ public class DataPermissionInterceptor implements Interceptor {
             Long orgId, String orgPath, int paramOffset, Set<Long> customOrgIds) {
 
         String alias = annotation.tableAlias().isEmpty() ? "" : sanitizeIdentifier(annotation.tableAlias()) + ".";
+        // 主表中作为 access_relations.subject_id 的列。默认 id(主表行即用户,如 users);
+        // 若主表是"挂在用户上的档案表"(如 user_student),设为 user_id。
+        String subjectCol = sanitizeIdentifier(
+                annotation.membershipSubjectColumn() == null || annotation.membershipSubjectColumn().isEmpty()
+                        ? "id" : annotation.membershipSubjectColumn());
         ParameterizedCondition cond = new ParameterizedCondition();
 
         if (scope == DataScope.ALL) {
@@ -498,7 +503,7 @@ public class DataPermissionInterceptor implements Interceptor {
         }
 
         if (scope == DataScope.SELF) {
-            cond.sql = alias + "id = ?";
+            cond.sql = alias + subjectCol + " = ?";
             cond.addParam("_dp_self_" + paramOffset, userContext.getUserId(), Long.class, JdbcType.BIGINT);
             return cond;
         }
@@ -539,7 +544,7 @@ public class DataPermissionInterceptor implements Interceptor {
         tenantParam.jdbcType = JdbcType.BIGINT;
         cond.params.add(0, tenantParam);
 
-        cond.sql = alias + "id IN ("
+        cond.sql = alias + subjectCol + " IN ("
                 + "SELECT ar.subject_id FROM access_relations ar "
                 + "WHERE ar.relation = 'member' AND ar.resource_type = 'org_unit' "
                 + "AND ar.subject_type = 'user' AND ar.deleted = 0 AND ar.tenant_id = ? "

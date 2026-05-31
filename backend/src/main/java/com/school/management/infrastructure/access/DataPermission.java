@@ -66,4 +66,26 @@ public @interface DataPermission {
      * scoped-role 逻辑,只是把"组织根"换成对 member 关系 resource_id 的过滤。
      */
     boolean viaMembership() default false;
+
+    /**
+     * viaMembership 模式下,主表中"作为 access_relations subject_id"的列名。
+     *
+     * <p>默认 {@code "id"} —— 适用于"主表行本身就是用户"的场景({@code users} 表,
+     * {@code u.id} 即 member 关系的 subject)。
+     *
+     * <p>当主表不是 users 而是某个"挂在用户上的行业档案表"时(如学生档案
+     * {@code user_student},其行不是用户而是档案,真正的 subject 是 {@code s.user_id}),
+     * 设为 {@code "user_id"}。此时注入:
+     * <pre>
+     * {alias}.user_id IN (
+     *   SELECT ar.subject_id FROM access_relations ar
+     *   WHERE ar.relation='member' AND ar.resource_type='org_unit'
+     *     AND ar.subject_type='user' AND ar.deleted=0 AND ar.tenant_id=?
+     *     AND ar.resource_id IN (&lt;scope org ids&gt;))
+     * </pre>
+     * SELF scope 同理过滤 {@code {alias}.user_id = ?}(当前用户)。
+     *
+     * <p>注意:该列名会经标识符白名单清洗([a-zA-Z0-9_]),非法字符被剔除。
+     */
+    String membershipSubjectColumn() default "id";
 }
