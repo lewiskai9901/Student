@@ -153,15 +153,15 @@ public class DashboardOverviewQueryService {
     }
 
     /**
-     * 按 feature (member 归属 ∩ 用户类型能力) 统计人数, 按当前 scope 收敛.
-     *   unrestricted → 全系统该 feature 成员数
-     *   subtree      → 子树范围 (tree_path 前缀)
-     *   single       → 仅该 org 直接成员
+     * 按 feature 统计人数, 按当前 scope 收敛.
+     *   unrestricted → 全系统该类型(feature)用户数 (类型口径, 不要求 org 归属)
+     *   subtree      → 子树范围 member 归属 (tree_path 前缀)
+     *   single       → 仅该 org 直接 member 归属
      */
     private long countMembersByFeature(ScopeFilter filter, String featureKey) {
         try {
             if (filter.unrestricted()) {
-                return membershipResolver.countMembersByFeatureGlobal(featureKey);
+                return membershipResolver.countUsersByFeature(featureKey);
             }
             if (filter.isSubtree()) {
                 return membershipResolver.countMembersByFeatureInSubtree(

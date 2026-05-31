@@ -47,8 +47,9 @@ public class DashboardReadModel {
     public DashboardSummary getDashboardSummary() {
         log.debug("Loading dashboard summary from database");
 
-        // Student count — 走 member 归属 + 学生 feature, 不直查行业扩展表 user_student
-        long studentCount = membershipResolver.countMembersByFeatureGlobal(FEATURE_LEARNER);
+        // Student count — 全局类型口径: 学生 feature 的用户数, 不要求 org 归属 (含无归属学生),
+        // 不直查行业扩展表 user_student
+        long studentCount = membershipResolver.countUsersByFeature(FEATURE_LEARNER);
 
         // Class count
         Long classCount = jdbcTemplate.queryForObject(

@@ -162,13 +162,30 @@ public class MembershipResolver {
         return cnt != null ? cnt : 0L;
     }
 
+    /* countMembersByFeatureGlobal 已移除: 全局总数语义不应要求 org 归属, 改用 countUsersByFeature. */
+
     /**
-     * 全局版: 统计全系统带该 feature 的成员数 (有 member 归属且类型具备该 feature, 按 user 去重).
+     * 全局类型口径: 统计全系统带某 feature 的"用户"数 — 不要求 org 归属.
+     *
+     * <p>语义为"系统里有多少该类型 (具备此 feature) 的用户", 与 member 口径
+     * ({@link #countMembersByFeature}/{@link #countMembersByFeatureInSubtree}) 不同:
+     * 后者要求用户在某 org 有 member 归属关系, 用于"某组织/子树的学生数"; 而全局总数
+     * 应把无任何组织归属的同类型用户也算进去.
+     *
+     * <p>统计口径 = 未删 + status=1 的 users ∩ 用户类型 ({@code entity_type_configs}, entity_type='USER')
+     * 具备该 feature. 不 JOIN access_relations.
+     *
+     * @param featureKey feature 名 (白名单 [a-zA-Z0-9_]); 非法返回 0
      */
-    public long countMembersByFeatureGlobal(String featureKey) {
+    public long countUsersByFeature(String featureKey) {
         if (!isValidFeatureKey(featureKey)) return 0L;
         Long cnt = jdbcTemplate.queryForObject(
-            featureCountSql("1 = 1", featureKey), Long.class);
+            "SELECT COUNT(*) FROM users u " +
+            "JOIN entity_type_configs etc ON etc.entity_type = 'USER' " +
+            "  AND etc.type_code = u.user_type_code AND etc.deleted = 0 " +
+            "WHERE u.deleted = 0 AND u.status = 1 " +
+            "  AND JSON_EXTRACT(etc.features, '$." + featureKey + "') = true",
+            Long.class);
         return cnt != null ? cnt : 0L;
     }
 
