@@ -3,6 +3,7 @@ package com.school.management.security;
 import com.school.management.domain.access.model.ScopeType;
 import com.school.management.domain.access.model.UserRole;
 import com.school.management.domain.access.model.entity.AccessRelation;
+import com.school.management.application.organization.MembershipResolver;
 import com.school.management.domain.access.repository.AccessRelationRepository;
 import com.school.management.domain.access.repository.UserRoleRepository;
 import com.school.management.infrastructure.access.UserContext;
@@ -33,6 +34,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     private final UserDomainMapper userDomainMapper;
     private final AccessRelationRepository accessRelationRepository;
     private final UserRoleRepository userRoleRepository;
+    private final MembershipResolver membershipResolver;
     private final JdbcTemplate jdbcTemplate;
 
     /**
@@ -125,8 +127,8 @@ public class CustomUserDetailsService implements UserDetailsService {
     }
 
     private CustomUserDetails buildUserDetails(UserPO user, List<String> roles, List<String> permissions) {
-        // orgUnitId 直接从 users.primary_org_unit_id 获取
-        Long orgUnitId = user.getPrimaryOrgUnitId();
+        // orgUnitId 走统一归属入口 (access_relations member 关系), 不再读 users.primary_org_unit_id
+        Long orgUnitId = membershipResolver.orgOf(user.getId()).orElse(null);
 
         // 查询角色ID列表
         List<Long> roleIds = userDomainMapper.findRoleIdsByUserId(user.getId());

@@ -1,5 +1,6 @@
 package com.school.management.application.access;
 
+import com.school.management.application.organization.MembershipResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -21,21 +22,16 @@ import java.util.Map;
 public class DataPermissionSimulateApplicationService {
 
     private final JdbcTemplate jdbc;
+    private final MembershipResolver membershipResolver;
 
     /**
-     * 查询模拟用户的 primary_org_unit_id (DEPT / DEPT_AND_BELOW scope 需要).
+     * 查询模拟用户的归属 org (DEPT / DEPT_AND_BELOW scope 需要).
+     * 走统一归属入口 (access_relations member 关系), 不再读 users.primary_org_unit_id.
      * 查不到时返回 null, 不抛异常 — 与原控制器行为一致.
      */
     @Transactional(readOnly = true)
-    public Long findUserPrimaryOrgUnitId(Long userId) {
-        try {
-            return jdbc.queryForObject(
-                "SELECT primary_org_unit_id FROM users WHERE id = ? AND deleted = 0",
-                Long.class, userId);
-        } catch (Exception e) {
-            log.warn("user {} primary_org_unit_id not found: {}", userId, e.getMessage());
-            return null;
-        }
+    public Long findUserOrgUnitId(Long userId) {
+        return membershipResolver.orgOf(userId).orElse(null);
     }
 
     /**

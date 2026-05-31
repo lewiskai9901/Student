@@ -38,8 +38,8 @@ public class DataPermissionSimulateController {
             return Result.success(Map.of("error", "userId 必填"));
         }
 
-        // 查模拟用户的 primaryOrgUnitId (DEPT / DEPT_AND_BELOW 需要)
-        Long userOrgId = simulateService.findUserPrimaryOrgUnitId(req.getUserId());
+        // 查模拟用户的归属 org (DEPT / DEPT_AND_BELOW 需要) — 走 member 关系
+        Long userOrgId = simulateService.findUserOrgUnitId(req.getUserId());
 
         List<Map<String, Object>> results = new ArrayList<>();
         List<ModulePermSnapshot> mps = req.getModulePermissions();
@@ -109,6 +109,10 @@ public class DataPermissionSimulateController {
         switch (moduleCode) {
             case "user":
             case "system_user":
+                // TODO(3.4): user 归属已迁到 access_relations(member), users.primary_org_unit_id 即将删除.
+                // 模拟器 DEPARTMENT scope 的 user 过滤应改为 access_relations member 子查询
+                // (与 @DataPermission(resourceType="user") 子查询对齐), 而非这里的列名;
+                // 但 buildWhere 当前只支持 "orgCol = id" 的列名式过滤, 改造牵扯渲染逻辑, 留 3.4 统一处理.
                 return new ModuleMeta("users", "real_name", "primary_org_unit_id", true, true);
             case "org_unit":
                 return new ModuleMeta("org_units", "unit_name", "id", true, true);
@@ -118,6 +122,9 @@ public class DataPermissionSimulateController {
             case "place":
                 return new ModuleMeta("places", "place_name", "org_unit_id", true, true);
             case "student":
+                // TODO(6.1): 行业字面量泄漏 — "student"/"user_student" 是 education 插件概念,
+                // 不应硬编码在通用核心 controller. 理想由插件注册模块元数据 (无现成下沉机制,
+                // 类似 PluginDataScopeRouter 但针对 module→table 映射), 待 6.1 守护处理.
                 return new ModuleMeta("user_student", "student_no", "org_unit_id", true, true);
             case "school_class":
             case "class":
