@@ -26,11 +26,21 @@ import java.util.Map;
 public class TeacherProfileApplicationService {
 
     private final JdbcTemplate jdbc;
+    private final MembershipResolver membershipResolver;
+
+    /**
+     * 教师归属 (系部) 改由 access_relations member 关系派生 —— 不再读 user_teacher.org_unit_id (已删)。
+     * LEFT JOIN 取该教师 user 的 member 归属行 (resource_type=org_unit), 用别名 mar 暴露 resource_id。
+     */
+    private static final String MEMBER_JOIN =
+        " LEFT JOIN access_relations mar ON mar.subject_type = 'user' AND mar.subject_id = tp.user_id " +
+        "   AND mar.relation = 'member' AND mar.resource_type = 'org_unit' AND mar.deleted = 0 " +
+        "   AND (mar.valid_to IS NULL OR mar.valid_to > NOW())";
 
     private static final String PROFILE_COLUMNS =
         "tp.id, tp.user_id AS userId, tp.employee_no AS employeeNo, " +
         "tp.title, tp.title_level AS titleLevel, " +
-        "tp.org_unit_id AS orgUnitId, ou.name AS orgUnitName, " +
+        "mar.resource_id AS orgUnitId, ou.unit_name AS orgUnitName, " +
         "tp.teaching_group AS teachingGroup, tp.max_weekly_hours AS maxWeeklyHours, " +
         "tp.qualification, tp.specialties, tp.hire_date AS hireDate, " +
         "tp.status, tp.remark, tp.created_at AS createdAt, tp.updated_at AS updatedAt, " +
@@ -45,7 +55,7 @@ public class TeacherProfileApplicationService {
         List<Object> params = new ArrayList<>();
 
         if (orgUnitId != null) {
-            where.append(" AND tp.org_unit_id = ?");
+            where.append(" AND mar.resource_id = ?");
             params.add(orgUnitId);
         }
         if (title != null && !title.isEmpty()) {
@@ -65,14 +75,15 @@ public class TeacherProfileApplicationService {
         }
 
         String countSql = "SELECT COUNT(*) FROM user_teacher tp " +
-            "LEFT JOIN users u ON tp.user_id = u.id" + where;
+            "LEFT JOIN users u ON tp.user_id = u.id" + MEMBER_JOIN + where;
         Long total = jdbc.queryForObject(countSql, Long.class, params.toArray());
 
         int offset = (pageNum - 1) * pageSize;
         String dataSql = "SELECT " + PROFILE_COLUMNS +
             " FROM user_teacher tp" +
             " LEFT JOIN users u ON tp.user_id = u.id" +
-            " LEFT JOIN org_units ou ON tp.org_unit_id = ou.id" +
+            MEMBER_JOIN +
+            " LEFT JOIN org_units ou ON ou.id = mar.resource_id" +
             where +
             " ORDER BY tp.created_at DESC LIMIT ? OFFSET ?";
         List<Object> dataParams = new ArrayList<>(params);
@@ -95,7 +106,8 @@ public class TeacherProfileApplicationService {
             "SELECT " + PROFILE_COLUMNS +
             " FROM user_teacher tp" +
             " LEFT JOIN users u ON tp.user_id = u.id" +
-            " LEFT JOIN org_units ou ON tp.org_unit_id = ou.id" +
+            MEMBER_JOIN +
+            " LEFT JOIN org_units ou ON ou.id = mar.resource_id" +
             " WHERE tp.id = ? AND tp.deleted = 0", id
         );
     }
@@ -109,7 +121,8 @@ public class TeacherProfileApplicationService {
                 "SELECT " + PROFILE_COLUMNS +
                 " FROM user_teacher tp" +
                 " LEFT JOIN users u ON tp.user_id = u.id" +
-                " LEFT JOIN org_units ou ON tp.org_unit_id = ou.id" +
+                MEMBER_JOIN +
+                " LEFT JOIN org_units ou ON ou.id = mar.resource_id" +
                 " WHERE tp.user_id = ? AND tp.deleted = 0", userId
             );
         } catch (EmptyResultDataAccessException e) {
@@ -135,14 +148,13 @@ public class TeacherProfileApplicationService {
         long id = IdWorker.getId();
         jdbc.update(
             "INSERT INTO user_teacher (id, user_id, employee_no, title, title_level, " +
-            "org_unit_id, teaching_group, max_weekly_hours, qualification, specialties, " +
+            "teaching_group, max_weekly_hours, qualification, specialties, " +
             "hire_date, status, remark) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             id, userId,
             data.get("employeeNo"),
             data.get("title"),
             data.get("titleLevel"),
-            toLong(data.get("orgUnitId")),
             data.get("teachingGroup"),
             data.get("maxWeeklyHours") != null ? ((Number) data.get("maxWeeklyHours")).intValue() : 20,
             data.get("qualification"),
@@ -151,6 +163,11 @@ public class TeacherProfileApplicationService {
             data.get("status") != null ? ((Number) data.get("status")).intValue() : 1,
             data.get("remark")
         );
+        // 教师归属 (系部) 统一写 access_relations member 关系 (不再写 user_teacher.org_unit_id)
+        Long orgUnitId = toLong(data.get("orgUnitId"));
+        if (orgUnitId != null) {
+            membershipResolver.setMembership(userId, orgUnitId);
+        }
         return id;
     }
 
@@ -160,14 +177,13 @@ public class TeacherProfileApplicationService {
     public void updateProfile(Long id, Map<String, Object> data) {
         jdbc.update(
             "UPDATE user_teacher SET " +
-            "employee_no = ?, title = ?, title_level = ?, org_unit_id = ?, " +
+            "employee_no = ?, title = ?, title_level = ?, " +
             "teaching_group = ?, max_weekly_hours = ?, qualification = ?, " +
             "specialties = ?, hire_date = ?, status = ?, remark = ? " +
             "WHERE id = ? AND deleted = 0",
             data.get("employeeNo"),
             data.get("title"),
             data.get("titleLevel"),
-            toLong(data.get("orgUnitId")),
             data.get("teachingGroup"),
             data.get("maxWeeklyHours") != null ? ((Number) data.get("maxWeeklyHours")).intValue() : 20,
             data.get("qualification"),
@@ -177,6 +193,15 @@ public class TeacherProfileApplicationService {
             data.get("remark"),
             id
         );
+        // 教师归属 (系部) 变更统一写 access_relations member 关系 (不再写 user_teacher.org_unit_id)
+        Long orgUnitId = toLong(data.get("orgUnitId"));
+        if (orgUnitId != null) {
+            Long userId = jdbc.queryForObject(
+                "SELECT user_id FROM user_teacher WHERE id = ? AND deleted = 0", Long.class, id);
+            if (userId != null) {
+                membershipResolver.setMembership(userId, orgUnitId);
+            }
+        }
     }
 
     // ==================== Delete (soft) ====================
@@ -246,7 +271,8 @@ public class TeacherProfileApplicationService {
             "FROM teacher_course_qualifications tcq " +
             "JOIN user_teacher tp ON tcq.teacher_profile_id = tp.id " +
             "LEFT JOIN users u ON tp.user_id = u.id " +
-            "LEFT JOIN org_units ou ON tp.org_unit_id = ou.id " +
+            MEMBER_JOIN +
+            "LEFT JOIN org_units ou ON ou.id = mar.resource_id " +
             "WHERE tcq.course_id = ? AND tp.deleted = 0 AND tp.status = 1 " +
             "ORDER BY tcq.qualification_level DESC, u.real_name",
             courseId

@@ -36,7 +36,8 @@ public class SimpleUserResponse {
         response.setOrgUnitName(user.getOrgUnitName());
         response.setUserType(user.getUserTypeCode());
         response.setGender(user.getGender());
-        response.setPrimaryOrgUnitId(user.getPrimaryOrgUnitId());
+        // 归属来自 access_relations member 派生 (User.orgUnitId/orgUnitName 由 JOIN 填充)
+        response.setPrimaryOrgUnitId(user.getOrgUnitId());
         response.setPrimaryOrgUnitName(user.getOrgUnitName());
 
         return response;

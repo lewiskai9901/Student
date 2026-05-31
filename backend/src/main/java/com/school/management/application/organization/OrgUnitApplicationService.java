@@ -260,9 +260,7 @@ public class OrgUnitApplicationService {
      * 清除组织关联的所有数据：成员归属、岗位任命、岗位定义、访问关系、场所入住快照
      */
     private void cleanupOrgUnitData(Long orgUnitId, String orgUnitName, String reason) {
-        // 1. 清除归属到该组织的用户（primary_org_unit_id → null）
-        userDomainMapper.clearPrimaryOrgUnitId(orgUnitId);
-        // 2. 删除访问关系
+        // 1. 删除该组织的全部访问关系 (含 member 归属) — 归属唯一真相源
         accessRelationRepository.deleteByResource("org_unit", orgUnitId);
         // 5. 清空场所入住记录中的组织名称快照
         if (orgUnitName != null) {
@@ -315,8 +313,7 @@ public class OrgUnitApplicationService {
         List<FieldChange> changes = orgUnit.dissolve(reason, updatedBy);
         orgUnit = orgUnitRepository.save(orgUnit);
 
-        // 解散时清除成员归属、访问关系、场所入住快照
-        userDomainMapper.clearPrimaryOrgUnitId(id);
+        // 解散时清除成员归属 (access_relations member)、访问关系、场所入住快照
         accessRelationRepository.deleteByResource("org_unit", id);
         if (orgUnit.getUnitName() != null) {
             placeOccupantMapper.clearOrgUnitName(orgUnit.getUnitName());

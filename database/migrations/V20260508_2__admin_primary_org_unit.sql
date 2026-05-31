@@ -1,25 +1,9 @@
--- ============================================================
-SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
--- V20260508_2: 给 admin 用户补 primary_org_unit_id (避免 InspectionDataPermissionFiller
--- 兜底走 SecurityContext 时拿到 NULL → strategy=missed 误报漏率信号).
+-- V20260508_2 (OBSOLETE / NO-OP)
 --
--- 现状: admin (id=1) 的 primary_org_unit_id 为 NULL. 创建 inspection 项目
--- 不显式传 orgUnitId 时, MetaObjectHandler 走 SecurityContext.getOrgUnitId()
--- 兜底也是 NULL → 计入 missed counter, 让生产监控信号失真.
+-- 历史意图: 给 admin 用户补 users.primary_org_unit_id (指向根组织), 让 inspection
+--   创建路径 MetaObjectHandler 走 strategy=context 分支, missed 信号回归真实漏率监控。
 --
--- 兜底逻辑: 把 admin 关联到根组织 (parent_id IS NULL 的第一个 org_unit), 让
--- 创建路径走 strategy=context 分支, missed 信号回归真实漏率监控.
---
--- 幂等条件化: 仅当 admin.primary_org_unit_id IS NULL 时才 update.
--- ============================================================
-
-UPDATE users
-SET primary_org_unit_id = (
-    SELECT id FROM (SELECT id FROM org_units WHERE deleted = 0 AND parent_id IS NULL ORDER BY id LIMIT 1) AS root
-)
-WHERE username = 'admin'
-  AND primary_org_unit_id IS NULL
-  AND EXISTS (SELECT 1 FROM org_units WHERE deleted = 0 AND parent_id IS NULL);
-
--- 验证 (跑后手动执行):
--- SELECT id, username, primary_org_unit_id FROM users WHERE username = 'admin';
+-- 现已作废: 组织归属唯一真相源统一为 access_relations 的 member 关系
+--   (V20260531_4 已删 users.primary_org_unit_id 列)。admin 的归属若需要,
+--   由 seed (init_data.sql / ci_e2e_seed.sql) 写 member 关系承载。该 UPDATE 引用已删列, 改为 no-op。
+SELECT 'V20260508_2 obsolete: admin membership via access_relations member' AS msg;

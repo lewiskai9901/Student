@@ -301,25 +301,6 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
      */
     @Insert("INSERT INTO user_roles (user_id, role_id, created_at) VALUES (#{userId}, #{roleId}, NOW())")
     void insertUserRole(@Param("userId") Long userId, @Param("roleId") Long roleId);
-
-    /**
-     * 清除某组织下所有用户的归属关系（primary_org_unit_id 设为 NULL）
-     */
-    @Update("UPDATE users SET primary_org_unit_id = NULL, updated_at = NOW() " +
-            "WHERE primary_org_unit_id = #{orgUnitId} AND deleted = 0")
-    int clearPrimaryOrgUnitId(@Param("orgUnitId") Long orgUnitId);
-
-    /**
-     * 设置用户的归属组织（primary_org_unit_id）
-     */
-    @Update("UPDATE users SET primary_org_unit_id = #{orgUnitId}, updated_at = NOW() " +
-            "WHERE id = #{userId} AND deleted = 0")
-    int setPrimaryOrgUnitId(@Param("userId") Long userId, @Param("orgUnitId") Long orgUnitId);
-
-    /**
-     * 清除指定用户的归属组织（仅当匹配 orgUnitId 时）
-     */
-    @Update("UPDATE users SET primary_org_unit_id = NULL, updated_at = NOW() " +
-            "WHERE id = #{userId} AND primary_org_unit_id = #{orgUnitId} AND deleted = 0")
-    int clearPrimaryOrgUnitIdForUser(@Param("userId") Long userId, @Param("orgUnitId") Long orgUnitId);
+    // 归属写入已统一到 access_relations member 关系 (MembershipResolver)。
+    // 旧 primary_org_unit_id 写/清方法已删, 列已 DROP (V20260531_4)。
 }

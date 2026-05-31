@@ -353,11 +353,15 @@ public class ScheduleEntryApplicationService {
     }
 
     public List<Map<String, Object>> getTeachersGroupedByDept() {
+        // 归属 (系部) 走统一 access_relations member 关系, 不再读 users.primary_org_unit_id (已删)
         return jdbc.queryForList(
             "SELECT u.id, u.real_name AS realName, u.username, " +
             "COALESCE(ou.unit_name, '未分配') AS deptName, ou.id AS deptId " +
             "FROM users u " +
-            "LEFT JOIN org_units ou ON ou.id = u.primary_org_unit_id AND ou.deleted = 0 " +
+            "LEFT JOIN access_relations mar ON mar.subject_type = 'user' AND mar.subject_id = u.id " +
+            "  AND mar.relation = 'member' AND mar.resource_type = 'org_unit' AND mar.deleted = 0 " +
+            "  AND (mar.valid_to IS NULL OR mar.valid_to > NOW()) " +
+            "LEFT JOIN org_units ou ON ou.id = mar.resource_id AND ou.deleted = 0 " +
             "WHERE u.user_type_code = 'TEACHER' AND u.deleted = 0 " +
             "ORDER BY ou.unit_name, u.real_name");
     }

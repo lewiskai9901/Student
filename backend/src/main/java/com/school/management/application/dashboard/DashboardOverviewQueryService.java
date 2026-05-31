@@ -153,6 +153,31 @@ public class DashboardOverviewQueryService {
     }
 
     /**
+     * 统计 scope 内的活跃用户数. 归属来自 access_relations member 关系 (users.primary_org_unit_id 已删).
+     *   unrestricted → 全系统活跃用户数 (不要求归属)
+     *   subtree      → 在子树内某 org 有 member 归属的去重用户数
+     *   single       → 仅该 org 直接 member 归属的去重用户数
+     */
+    private int countUsersInScope(ScopeFilter filter) {
+        if (filter.unrestricted()) {
+            return countSafe("SELECT COUNT(*) FROM users WHERE deleted = 0 AND status = 1");
+        }
+        String memberJoin =
+            "SELECT COUNT(DISTINCT u.id) FROM users u " +
+            "JOIN access_relations ar ON ar.subject_type = 'user' AND ar.subject_id = u.id " +
+            "  AND ar.relation = 'member' AND ar.resource_type = 'org_unit' AND ar.deleted = 0 " +
+            "  AND (ar.valid_to IS NULL OR ar.valid_to > NOW()) " +
+            "WHERE u.deleted = 0 AND u.status = 1 ";
+        if (filter.isSubtree()) {
+            return countSafe(memberJoin +
+                    "AND ar.resource_id IN (SELECT id FROM org_units " +
+                    "WHERE tenant_id = ? AND tree_path LIKE ? AND deleted = 0)",
+                    filter.tenantId, filter.orgUnitPath + "%");
+        }
+        return countSafe(memberJoin + "AND ar.resource_id = ?", filter.orgUnitId);
+    }
+
+    /**
      * 按 feature 统计人数, 按当前 scope 收敛.
      *   unrestricted → 全系统该类型(feature)用户数 (类型口径, 不要求 org 归属)
      *   subtree      → 子树范围 member 归属 (tree_path 前缀)
@@ -246,8 +271,7 @@ public class DashboardOverviewQueryService {
 
     private Map<String, Object> getSystemStats(ScopeFilter filter) {
         Map<String, Object> stats = new LinkedHashMap<>();
-        stats.put("totalUsers", countByOrgColumn("users",
-                "deleted = 0 AND status = 1", "primary_org_unit_id", filter));
+        stats.put("totalUsers", countUsersInScope(filter));
         // 全局登录次数对平台管理员有意义，子部门管理员看到同一数字
         stats.put("todayLoginCount", countSafe(
                 "SELECT COUNT(*) FROM users WHERE deleted = 0 AND DATE(last_login_time) = CURDATE()"));

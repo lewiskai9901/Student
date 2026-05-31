@@ -109,11 +109,9 @@ public class DataPermissionSimulateController {
         switch (moduleCode) {
             case "user":
             case "system_user":
-                // TODO(3.4): user 归属已迁到 access_relations(member), users.primary_org_unit_id 即将删除.
-                // 模拟器 DEPARTMENT scope 的 user 过滤应改为 access_relations member 子查询
-                // (与 @DataPermission(resourceType="user") 子查询对齐), 而非这里的列名;
-                // 但 buildWhere 当前只支持 "orgCol = id" 的列名式过滤, 改造牵扯渲染逻辑, 留 3.4 统一处理.
-                return new ModuleMeta("users", "real_name", "primary_org_unit_id", true, true);
+                // user 归属来自 access_relations member 关系 (primary_org_unit_id 已删).
+                // orgCol = 主键 id, membershipBased=true → buildWhere 用 member 子查询过滤.
+                return new ModuleMeta("users", "real_name", "id", true, true, true);
             case "org_unit":
                 return new ModuleMeta("org_units", "unit_name", "id", true, true);
             case "role":
@@ -151,28 +149,49 @@ public class DataPermissionSimulateController {
 
             case "DEPARTMENT":
                 if (meta.orgCol == null || userOrgId == null) return null;
+                if (meta.membershipBased) {
+                    return meta.orgCol + " IN (" + memberSubquery(String.valueOf(userOrgId)) + ")" + delFilter;
+                }
                 return meta.orgCol + " = " + userOrgId + delFilter;
 
             case "DEPARTMENT_AND_BELOW":
                 if (meta.orgCol == null || userOrgId == null) return null;
                 // tree_path 本身已包含当前节点 id (且以 '/' 结尾), 子节点的 tree_path 以父的 tree_path 为前缀.
                 // 所以子树 = tree_path LIKE '<parent_tree_path>%'
-                return meta.orgCol + " IN (" +
+                String subtreeOrgIds =
                         "SELECT id FROM org_units WHERE tree_path LIKE CONCAT(" +
-                        "(SELECT IFNULL(tree_path,'') FROM org_units WHERE id = " + userOrgId + "), '%')" +
-                        ")" + delFilter;
+                        "(SELECT IFNULL(tree_path,'') FROM org_units WHERE id = " + userOrgId + "), '%')";
+                if (meta.membershipBased) {
+                    return meta.orgCol + " IN (" + memberSubquery("(" + subtreeOrgIds + ")") + ")" + delFilter;
+                }
+                return meta.orgCol + " IN (" + subtreeOrgIds + ")" + delFilter;
 
             case "CUSTOM":
                 List<Long> ids = extractScopeIds(mp.getScopeItems());
                 if (ids == null || ids.isEmpty()) return "1=0";  // 空自定义 = 空集
                 if (meta.orgCol == null) return null;
                 String joined = ids.stream().map(String::valueOf).collect(Collectors.joining(","));
+                if (meta.membershipBased) {
+                    return meta.orgCol + " IN (" + memberSubquery("(" + joined + ")") + ")" + delFilter;
+                }
                 return meta.orgCol + " IN (" + joined + ")" + delFilter;
 
             default:
                 // BY_CLASS / BY_GRADE / BY_MAJOR / BY_WARD 等插件维度
                 return null;
         }
+    }
+
+    /**
+     * member 关系子查询: 返回归属到 {@code orgExpr} (单 org id 或 "(SELECT id ...)" 子查询) 的 user 主键集合.
+     * 与 @DataPermission(resourceType="user") 的 member 子查询口径对齐.
+     */
+    private String memberSubquery(String orgExpr) {
+        return "SELECT ar.subject_id FROM access_relations ar " +
+               "WHERE ar.relation = 'member' AND ar.resource_type = 'org_unit' " +
+               "AND ar.subject_type = 'user' AND ar.deleted = 0 " +
+               "AND (ar.valid_to IS NULL OR ar.valid_to > NOW()) " +
+               "AND ar.resource_id " + (orgExpr.startsWith("(") ? "IN " + orgExpr : "= " + orgExpr);
     }
 
     /** 兼容两种 scopeItems 格式: List<Long> / List<{scopeId}>. */
@@ -220,13 +239,21 @@ public class DataPermissionSimulateController {
         final String orgCol;     // 组织过滤列, 可能 null (如 roles)
         final boolean hasDeleted;
         final boolean hasCreatedBy;
+        /** true = 该表归属来自 access_relations member 关系 (主键 id 是 member 关系的 subject), 而非物理 orgCol. */
+        final boolean membershipBased;
 
         ModuleMeta(String table, String nameCol, String orgCol, boolean hasDeleted, boolean hasCreatedBy) {
+            this(table, nameCol, orgCol, hasDeleted, hasCreatedBy, false);
+        }
+
+        ModuleMeta(String table, String nameCol, String orgCol, boolean hasDeleted,
+                   boolean hasCreatedBy, boolean membershipBased) {
             this.table = table;
             this.nameCol = nameCol;
             this.orgCol = orgCol;
             this.hasDeleted = hasDeleted;
             this.hasCreatedBy = hasCreatedBy;
+            this.membershipBased = membershipBased;
         }
     }
 }

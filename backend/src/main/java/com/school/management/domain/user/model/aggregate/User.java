@@ -70,11 +70,6 @@ public class User extends AggregateRoot<Long> {
     private String userTypeCode;
 
     /**
-     * 主归属组织ID（直接指向 org_units.id）
-     */
-    private Long primaryOrgUnitId;
-
-    /**
      * 状态
      */
     private UserStatus status;
@@ -180,16 +175,13 @@ public class User extends AggregateRoot<Long> {
 
     /**
      * 根据 UserType 校验聚合状态。
-     * Phase 2.2: features.requiresOrg=true 必须有主归属组织。
+     *
+     * <p>归属唯一真相源已统一到 {@code access_relations} 的 member 关系,
+     * User 聚合不再持有归属 (primary_org_unit_id 已删)。{@code requiresOrg}
+     * 校验 (创建/更新时必须指定归属组织) 已上移到 UserApplicationService。
      */
     public void validateAgainstType(ConfigurableType type) {
-        if (type == null) {
-            return;
-        }
-        if (type.hasFeature("requiresOrg") && this.primaryOrgUnitId == null) {
-            throw new IllegalArgumentException(
-                    "用户类型 " + type.getTypeCode() + " 要求必须指定主归属组织");
-        }
+        // no-op: requiresOrg 校验已上移应用层 (归属在 access_relations member, 不在聚合)
     }
 
     /**
@@ -206,7 +198,6 @@ public class User extends AggregateRoot<Long> {
             Integer gender,
             LocalDate birthDate,
             String idCard,
-            Long primaryOrgUnitId,
             String userTypeCode,
             UserStatus status,
             LocalDateTime lastLoginTime,
@@ -229,7 +220,6 @@ public class User extends AggregateRoot<Long> {
         user.gender = gender;
         user.birthDate = birthDate;
         user.idCard = idCard;
-        user.primaryOrgUnitId = primaryOrgUnitId;
         user.userTypeCode = userTypeCode;
         user.status = status;
         user.lastLoginTime = lastLoginTime;
@@ -398,11 +388,6 @@ public class User extends AggregateRoot<Long> {
     public String getIdCard() { return idCard; }
     public String getUserTypeCode() { return userTypeCode; }
     public void changeUserType(String userTypeCode) { this.userTypeCode = userTypeCode; }
-    public Long getPrimaryOrgUnitId() { return primaryOrgUnitId; }
-    public void setPrimaryOrgUnitId(Long primaryOrgUnitId) {
-        this.primaryOrgUnitId = primaryOrgUnitId;
-        this.updatedAt = java.time.LocalDateTime.now();
-    }
     public UserStatus getStatus() { return status; }
     public LocalDateTime getLastLoginTime() { return lastLoginTime; }
     public String getLastLoginIp() { return lastLoginIp; }

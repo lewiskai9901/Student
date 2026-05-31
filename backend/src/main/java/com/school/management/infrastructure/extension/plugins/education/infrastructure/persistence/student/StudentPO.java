@@ -75,8 +75,12 @@ public class StudentPO {
     private LocalDate expectedGraduationDate;
 
     /**
-     * 班级ID
+     * 班级ID — 派生只读字段。
+     * 归属唯一真相源是 access_relations member 关系；user_student.org_unit_id 物理列已删 (V20260531_4)。
+     * 读路径 (DddStudentMapper.BASE_JOIN_SELECT) 把 {@code ar.resource_id AS org_unit_id} 映射到此字段；
+     * 不再作为物理列被 MyBatis 写入。
      */
+    @TableField(exist = false)
     private Long orgUnitId;
 
     /**

@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS teacher_profiles (
     employee_no VARCHAR(50) COMMENT '工号',
     title VARCHAR(30) COMMENT '职称：教授/副教授/讲师/助教/实训指导',
     title_level VARCHAR(20) COMMENT '职称等级：正高/副高/中级/初级',
-    org_unit_id BIGINT COMMENT '所属系部',
+    -- org_unit_id (所属系部) 已删 (V20260531_4): 归属唯一真相源 = access_relations member 关系
     teaching_group VARCHAR(100) COMMENT '所属教研室/教学组',
     max_weekly_hours INT DEFAULT 20 COMMENT '每周最大课时',
     qualification TEXT COMMENT '教学资质描述',
@@ -17,7 +17,6 @@ CREATE TABLE IF NOT EXISTS teacher_profiles (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     deleted TINYINT DEFAULT 0,
     UNIQUE KEY uk_user_id (user_id),
-    INDEX idx_org_unit (org_unit_id),
     INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='教师档案表';
 

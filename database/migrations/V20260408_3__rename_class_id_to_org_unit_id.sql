@@ -47,7 +47,11 @@ ALTER TABLE schedule_entries CHANGE class_id org_unit_id BIGINT;
 ALTER TABLE schedule_instances CHANGE class_id org_unit_id BIGINT;
 ALTER TABLE student_behavior_alerts CHANGE class_id org_unit_id BIGINT;
 ALTER TABLE student_grades CHANGE class_id org_unit_id BIGINT;
-ALTER TABLE students CHANGE class_id org_unit_id BIGINT;
+-- students(→user_student).class_id 已从 baseline 移除, org_unit_id 列亦于 V20260531_4 删除
+-- (归属唯一真相源 = access_relations member)。条件化: 仅当旧 class_id 列仍存在才改名, 否则跳过。
+SET @sc := (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='students' AND COLUMN_NAME='class_id');
+SET @s := IF(@sc > 0, 'ALTER TABLE students CHANGE class_id org_unit_id BIGINT', 'SELECT 1');
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 ALTER TABLE teacher_assignments CHANGE class_id org_unit_id BIGINT;
 
 -- ========== 同时有 class_id 和 org_unit_id 的表: 删除 class_id ==========

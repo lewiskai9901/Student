@@ -27,7 +27,7 @@ CREATE TABLE `users` (
     `gender` TINYINT DEFAULT 0 COMMENT '性别:0未知,1男,2女',
     `birth_date` DATE COMMENT '出生日期',
     `identity_card` VARCHAR(20) COMMENT '身份证号',
-    `primary_org_unit_id` BIGINT COMMENT '主归属组织ID',
+    -- primary_org_unit_id 已删 (V20260531_4): 组织归属唯一真相源 = access_relations member 关系
     `user_type_code` VARCHAR(50) COMMENT '用户类型编码',
     `status` TINYINT DEFAULT 1 COMMENT '状态:0禁用,1启用',
     `last_login_time` DATETIME COMMENT '最后登录时间',
@@ -344,7 +344,7 @@ CREATE TABLE `students` (
     `id_card` VARCHAR(18) COMMENT '身份证号',
     `phone` VARCHAR(20) COMMENT '手机号',
     `email` VARCHAR(100) COMMENT '邮箱',
-    `class_id` BIGINT COMMENT '班级ID',
+    -- 班级归属列 (class_id→org_unit_id) 已删 (V20260531_4): 归属唯一真相源 = access_relations member 关系
     `enrollment_date` DATE COMMENT '入学日期',
     `graduation_date` DATE COMMENT '毕业日期',
     `status` TINYINT DEFAULT 1 COMMENT '状态:1在读,2休学,3退学,4毕业',
@@ -361,7 +361,6 @@ CREATE TABLE `students` (
     `deleted` TINYINT DEFAULT 0 COMMENT '逻辑删除',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_student_no` (`student_no`),
-    INDEX `idx_class_id` (`class_id`),
     INDEX `idx_status` (`status`),
     INDEX `idx_user_id` (`user_id`),
     INDEX `idx_deleted` (`deleted`)

@@ -13,21 +13,29 @@ SET @CLS_YS   = 2041867780436791297;  -- 艺术2024-1班
 -- ============================================================
 -- 1. 创建 3 个班主任
 -- ============================================================
-INSERT INTO users (username, password, real_name, phone, email, primary_org_unit_id, user_type_code, status, tenant_id)
+-- 班级归属改写 member 关系 (下方), users.primary_org_unit_id / user_teacher.org_unit_id 列已删
+INSERT INTO users (username, password, real_name, phone, email, user_type_code, status, tenant_id)
 VALUES
-('teacher_zhang', @PWD, '张老师', '13800000001', 'zhang@demo.local', @CLS_JING, 'TEACHER', 1, 1),
-('teacher_li',    @PWD, '李老师', '13800000002', 'li@demo.local',    @CLS_QC,   'TEACHER', 1, 1),
-('teacher_wang',  @PWD, '王老师', '13800000003', 'wang@demo.local',  @CLS_YS,   'TEACHER', 1, 1);
+('teacher_zhang', @PWD, '张老师', '13800000001', 'zhang@demo.local', 'TEACHER', 1, 1),
+('teacher_li',    @PWD, '李老师', '13800000002', 'li@demo.local',    'TEACHER', 1, 1),
+('teacher_wang',  @PWD, '王老师', '13800000003', 'wang@demo.local',  'TEACHER', 1, 1);
 
 SET @T_ZHANG = (SELECT id FROM users WHERE username='teacher_zhang');
 SET @T_LI    = (SELECT id FROM users WHERE username='teacher_li');
 SET @T_WANG  = (SELECT id FROM users WHERE username='teacher_wang');
 
-INSERT INTO user_teacher (user_id, employee_no, title, org_unit_id, status)
+INSERT INTO user_teacher (user_id, employee_no, title, status)
 VALUES
-(@T_ZHANG, 'T-2026-001', '中级', @CLS_JING, 1),
-(@T_LI,    'T-2026-002', '中级', @CLS_QC,   1),
-(@T_WANG,  'T-2026-003', '初级', @CLS_YS,   1);
+(@T_ZHANG, 'T-2026-001', '中级', 1),
+(@T_LI,    'T-2026-002', '中级', 1),
+(@T_WANG,  'T-2026-003', '初级', 1);
+
+-- 教师归属 (系部/班级) = member 关系 (is_primary=1)
+INSERT INTO access_relations (resource_type, resource_id, relation, subject_type, subject_id, is_primary, access_level, created_by)
+VALUES
+('org_unit', @CLS_JING, 'member', 'user', @T_ZHANG, 1, 'READ', 1),
+('org_unit', @CLS_QC,   'member', 'user', @T_LI,    1, 'READ', 1),
+('org_unit', @CLS_YS,   'member', 'user', @T_WANG,  1, 'READ', 1);
 
 -- 班主任角色绑定
 INSERT INTO user_roles (user_id, role_id) VALUES
@@ -94,58 +102,73 @@ VALUES
 -- 真实常见姓名, 性别均衡分布给宿舍
 -- ============================================================
 
--- 经济 2024-1 (12 人, 男 6 + 女 6)
-INSERT INTO users (username, password, real_name, gender, primary_org_unit_id, user_type_code, status, tenant_id) VALUES
-('stu_jing_01', @PWD, '张伟',  1, @CLS_JING, 'STUDENT', 1, 1),
-('stu_jing_02', @PWD, '王芳',  2, @CLS_JING, 'STUDENT', 1, 1),
-('stu_jing_03', @PWD, '李娜',  2, @CLS_JING, 'STUDENT', 1, 1),
-('stu_jing_04', @PWD, '刘洋',  1, @CLS_JING, 'STUDENT', 1, 1),
-('stu_jing_05', @PWD, '陈杰',  1, @CLS_JING, 'STUDENT', 1, 1),
-('stu_jing_06', @PWD, '杨敏',  2, @CLS_JING, 'STUDENT', 1, 1),
-('stu_jing_07', @PWD, '赵磊',  1, @CLS_JING, 'STUDENT', 1, 1),
-('stu_jing_08', @PWD, '黄静',  2, @CLS_JING, 'STUDENT', 1, 1),
-('stu_jing_09', @PWD, '周强',  1, @CLS_JING, 'STUDENT', 1, 1),
-('stu_jing_10', @PWD, '吴丽',  2, @CLS_JING, 'STUDENT', 1, 1),
-('stu_jing_11', @PWD, '徐军',  1, @CLS_JING, 'STUDENT', 1, 1),
-('stu_jing_12', @PWD, '孙婷',  2, @CLS_JING, 'STUDENT', 1, 1);
+-- 经济 2024-1 (12 人, 男 6 + 女 6) — 班级归属下方按 username 前缀写 member 关系 (primary_org_unit_id 列已删)
+INSERT INTO users (username, password, real_name, gender, user_type_code, status, tenant_id) VALUES
+('stu_jing_01', @PWD, '张伟',  1, 'STUDENT', 1, 1),
+('stu_jing_02', @PWD, '王芳',  2, 'STUDENT', 1, 1),
+('stu_jing_03', @PWD, '李娜',  2, 'STUDENT', 1, 1),
+('stu_jing_04', @PWD, '刘洋',  1, 'STUDENT', 1, 1),
+('stu_jing_05', @PWD, '陈杰',  1, 'STUDENT', 1, 1),
+('stu_jing_06', @PWD, '杨敏',  2, 'STUDENT', 1, 1),
+('stu_jing_07', @PWD, '赵磊',  1, 'STUDENT', 1, 1),
+('stu_jing_08', @PWD, '黄静',  2, 'STUDENT', 1, 1),
+('stu_jing_09', @PWD, '周强',  1, 'STUDENT', 1, 1),
+('stu_jing_10', @PWD, '吴丽',  2, 'STUDENT', 1, 1),
+('stu_jing_11', @PWD, '徐军',  1, 'STUDENT', 1, 1),
+('stu_jing_12', @PWD, '孙婷',  2, 'STUDENT', 1, 1);
 
 -- 汽车 2024-1 (10 人, 男 7 + 女 3)
-INSERT INTO users (username, password, real_name, gender, primary_org_unit_id, user_type_code, status, tenant_id) VALUES
-('stu_qc_01', @PWD, '马龙',   1, @CLS_QC, 'STUDENT', 1, 1),
-('stu_qc_02', @PWD, '朱涛',   1, @CLS_QC, 'STUDENT', 1, 1),
-('stu_qc_03', @PWD, '胡浩',   1, @CLS_QC, 'STUDENT', 1, 1),
-('stu_qc_04', @PWD, '林峰',   1, @CLS_QC, 'STUDENT', 1, 1),
-('stu_qc_05', @PWD, '何斌',   1, @CLS_QC, 'STUDENT', 1, 1),
-('stu_qc_06', @PWD, '高勇',   1, @CLS_QC, 'STUDENT', 1, 1),
-('stu_qc_07', @PWD, '梁辉',   1, @CLS_QC, 'STUDENT', 1, 1),
-('stu_qc_08', @PWD, '宋雪',   2, @CLS_QC, 'STUDENT', 1, 1),
-('stu_qc_09', @PWD, '韩梅',   2, @CLS_QC, 'STUDENT', 1, 1),
-('stu_qc_10', @PWD, '冯雨',   2, @CLS_QC, 'STUDENT', 1, 1);
+INSERT INTO users (username, password, real_name, gender, user_type_code, status, tenant_id) VALUES
+('stu_qc_01', @PWD, '马龙',   1, 'STUDENT', 1, 1),
+('stu_qc_02', @PWD, '朱涛',   1, 'STUDENT', 1, 1),
+('stu_qc_03', @PWD, '胡浩',   1, 'STUDENT', 1, 1),
+('stu_qc_04', @PWD, '林峰',   1, 'STUDENT', 1, 1),
+('stu_qc_05', @PWD, '何斌',   1, 'STUDENT', 1, 1),
+('stu_qc_06', @PWD, '高勇',   1, 'STUDENT', 1, 1),
+('stu_qc_07', @PWD, '梁辉',   1, 'STUDENT', 1, 1),
+('stu_qc_08', @PWD, '宋雪',   2, 'STUDENT', 1, 1),
+('stu_qc_09', @PWD, '韩梅',   2, 'STUDENT', 1, 1),
+('stu_qc_10', @PWD, '冯雨',   2, 'STUDENT', 1, 1);
 
 -- 艺术 2024-1 (8 人, 男 3 + 女 5)
-INSERT INTO users (username, password, real_name, gender, primary_org_unit_id, user_type_code, status, tenant_id) VALUES
-('stu_ys_01', @PWD, '邓思', 2, @CLS_YS, 'STUDENT', 1, 1),
-('stu_ys_02', @PWD, '曹梦', 2, @CLS_YS, 'STUDENT', 1, 1),
-('stu_ys_03', @PWD, '彭瑶', 2, @CLS_YS, 'STUDENT', 1, 1),
-('stu_ys_04', @PWD, '蒋琳', 2, @CLS_YS, 'STUDENT', 1, 1),
-('stu_ys_05', @PWD, '袁萌', 2, @CLS_YS, 'STUDENT', 1, 1),
-('stu_ys_06', @PWD, '谢辰', 1, @CLS_YS, 'STUDENT', 1, 1),
-('stu_ys_07', @PWD, '余航', 1, @CLS_YS, 'STUDENT', 1, 1),
-('stu_ys_08', @PWD, '潘宇', 1, @CLS_YS, 'STUDENT', 1, 1);
+INSERT INTO users (username, password, real_name, gender, user_type_code, status, tenant_id) VALUES
+('stu_ys_01', @PWD, '邓思', 2, 'STUDENT', 1, 1),
+('stu_ys_02', @PWD, '曹梦', 2, 'STUDENT', 1, 1),
+('stu_ys_03', @PWD, '彭瑶', 2, 'STUDENT', 1, 1),
+('stu_ys_04', @PWD, '蒋琳', 2, 'STUDENT', 1, 1),
+('stu_ys_05', @PWD, '袁萌', 2, 'STUDENT', 1, 1),
+('stu_ys_06', @PWD, '谢辰', 1, 'STUDENT', 1, 1),
+('stu_ys_07', @PWD, '余航', 1, 'STUDENT', 1, 1),
+('stu_ys_08', @PWD, '潘宇', 1, 'STUDENT', 1, 1);
 
 -- 学生角色 + user_student + member of class
+-- 班级归属 (primary_org_unit_id 列已删) 由 username 前缀派生: stu_jing_*→经济, stu_qc_*→汽车, stu_ys_*→艺术
 INSERT INTO user_roles (user_id, role_id)
 SELECT id, 2021993207935557634 FROM users WHERE username LIKE 'stu\_%';
 
-INSERT INTO user_student (user_id, student_no, org_unit_id, grade_id, admission_date, student_status, tenant_id)
-SELECT u.id, CONCAT('S2024-', LPAD(ROW_NUMBER() OVER (ORDER BY u.id), 4, '0')), u.primary_org_unit_id,
-       (SELECT parent_id FROM org_units WHERE id = u.primary_org_unit_id),
-       '2024-09-01', 1, 1
+-- 临时映射: user_id → 班级 org_unit_id (按 username 前缀)
+DROP TEMPORARY TABLE IF EXISTS tmp_stu_class;
+CREATE TEMPORARY TABLE tmp_stu_class AS
+SELECT u.id AS user_id,
+       CASE
+         WHEN u.username LIKE 'stu_jing_%' THEN @CLS_JING
+         WHEN u.username LIKE 'stu_qc_%'   THEN @CLS_QC
+         WHEN u.username LIKE 'stu_ys_%'   THEN @CLS_YS
+       END AS org_unit_id
 FROM users u WHERE u.username LIKE 'stu\_%';
 
-INSERT INTO access_relations (resource_type, resource_id, relation, subject_type, subject_id, access_level, created_by)
-SELECT 'org_unit', primary_org_unit_id, 'member', 'user', id, 'READ', 1
-FROM users WHERE username LIKE 'stu\_%';
+-- user_student 不再写 org_unit_id 物理列 (已删); 班级归属由下方 member 关系承载
+INSERT INTO user_student (user_id, student_no, grade_id, admission_date, student_status, tenant_id)
+SELECT m.user_id, CONCAT('S2024-', LPAD(ROW_NUMBER() OVER (ORDER BY m.user_id), 4, '0')),
+       (SELECT parent_id FROM org_units WHERE id = m.org_unit_id),
+       '2024-09-01', 1, 1
+FROM tmp_stu_class m;
+
+INSERT INTO access_relations (resource_type, resource_id, relation, subject_type, subject_id, is_primary, access_level, created_by)
+SELECT 'org_unit', m.org_unit_id, 'member', 'user', m.user_id, 1, 'READ', 1
+FROM tmp_stu_class m WHERE m.org_unit_id IS NOT NULL;
+
+DROP TEMPORARY TABLE IF EXISTS tmp_stu_class;
 
 -- ============================================================
 -- 5. 学生入住宿舍 (按 gender + 班级)
@@ -155,20 +178,24 @@ FROM users WHERE username LIKE 'stu\_%';
 -- ============================================================
 
 -- 用 access_relations 的 occupies 关系 + place_occupants 表
+-- 班级归属来自 member 关系 (mar.resource_id), 不再读 users.primary_org_unit_id (已删)
 INSERT INTO place_occupants (place_id, occupant_type, occupant_id, occupant_name, username, gender, position_no, check_in_time, status)
 SELECT
   CASE
-    WHEN u.primary_org_unit_id = @CLS_JING AND u.gender = 1 THEN @D_A101
-    WHEN u.primary_org_unit_id = @CLS_JING AND u.gender = 2 THEN @D_A102
-    WHEN u.primary_org_unit_id = @CLS_QC AND u.gender = 1 THEN @D_B201
-    WHEN u.primary_org_unit_id = @CLS_QC AND u.gender = 2 THEN @D_B202
-    WHEN u.primary_org_unit_id = @CLS_YS AND u.gender = 1 THEN @D_C301
-    WHEN u.primary_org_unit_id = @CLS_YS AND u.gender = 2 THEN @D_C302
+    WHEN mar.resource_id = @CLS_JING AND u.gender = 1 THEN @D_A101
+    WHEN mar.resource_id = @CLS_JING AND u.gender = 2 THEN @D_A102
+    WHEN mar.resource_id = @CLS_QC AND u.gender = 1 THEN @D_B201
+    WHEN mar.resource_id = @CLS_QC AND u.gender = 2 THEN @D_B202
+    WHEN mar.resource_id = @CLS_YS AND u.gender = 1 THEN @D_C301
+    WHEN mar.resource_id = @CLS_YS AND u.gender = 2 THEN @D_C302
   END AS place_id,
   'user', u.id, u.real_name, u.username, u.gender,
-  CONCAT('B', LPAD((ROW_NUMBER() OVER (PARTITION BY u.primary_org_unit_id, u.gender ORDER BY u.id)), 2, '0')),
+  CONCAT('B', LPAD((ROW_NUMBER() OVER (PARTITION BY mar.resource_id, u.gender ORDER BY u.id)), 2, '0')),
   NOW(), 1
-FROM users u WHERE u.username LIKE 'stu\_%';
+FROM users u
+JOIN access_relations mar ON mar.subject_type='user' AND mar.subject_id=u.id
+  AND mar.relation='member' AND mar.resource_type='org_unit' AND mar.deleted=0
+WHERE u.username LIKE 'stu\_%';
 
 -- 同步 access_relations occupies
 INSERT INTO access_relations (resource_type, resource_id, relation, subject_type, subject_id, access_level, created_by)
@@ -189,10 +216,10 @@ SET us.dormitory_id = po.place_id, us.bed_number = po.position_no;
 -- 验证输出
 -- ============================================================
 SELECT '=== 班主任 ===' AS '';
-SELECT u.username, u.real_name, ou.unit_name AS class_name FROM users u JOIN org_units ou ON ou.id = u.primary_org_unit_id WHERE u.username LIKE 'teacher\_%';
+SELECT u.username, u.real_name, ou.unit_name AS class_name FROM users u JOIN access_relations mar ON mar.subject_type='user' AND mar.subject_id=u.id AND mar.relation='member' AND mar.resource_type='org_unit' AND mar.deleted=0 JOIN org_units ou ON ou.id = mar.resource_id WHERE u.username LIKE 'teacher\_%';
 SELECT '=== 检查员 ===' AS '';
 SELECT username, real_name FROM users WHERE username LIKE 'insp\_%';
 SELECT '=== 宿舍 + 入住 ===' AS '';
 SELECT place_code, place_name, current_occupancy, capacity FROM places WHERE place_code LIKE 'DORM-%' ORDER BY place_code;
 SELECT '=== 学生分布 ===' AS '';
-SELECT ou.unit_name, COUNT(*) AS student_count FROM users u JOIN org_units ou ON ou.id = u.primary_org_unit_id WHERE u.username LIKE 'stu\_%' GROUP BY ou.unit_name;
+SELECT ou.unit_name, COUNT(*) AS student_count FROM users u JOIN access_relations mar ON mar.subject_type='user' AND mar.subject_id=u.id AND mar.relation='member' AND mar.resource_type='org_unit' AND mar.deleted=0 JOIN org_units ou ON ou.id = mar.resource_id WHERE u.username LIKE 'stu\_%' GROUP BY ou.unit_name;

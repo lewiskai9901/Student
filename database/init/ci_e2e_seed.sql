@@ -16,9 +16,9 @@ SET UNIQUE_CHECKS = 0;
 SET @OLD_SQL_MODE=@@SQL_MODE;
 SET SQL_MODE='NO_AUTO_VALUE_ON_ZERO';
 
-INSERT INTO `users` (`id`, `username`, `password`, `real_name`, `phone`, `email`, `avatar`, `gender`, `birth_date`, `identity_card`, `primary_org_unit_id`, `user_type_code`, `status`, `last_login_time`, `last_login_ip`, `password_changed_at`, `wechat_openid`, `allow_multiple_devices`, `created_at`, `updated_at`, `created_by`, `updated_by`, `deleted`, `tenant_id`, `attributes`) VALUES (1,'admin','$2a$10$NBILuC13J0f71JBhs8sr5uiB02XDpR4BF9uhki3dDsXEaIGanmR6e','超级管理员','13800000000',NULL,NULL,1,NULL,NULL,NULL,'SUPER_ADMIN',1,NULL,NULL,'2026-04-04 19:25:03',NULL,0,'2025-11-05 22:49:34','2026-04-04 19:25:03',1,NULL,0,1,NULL);
-INSERT INTO `users` (`id`, `username`, `password`, `real_name`, `phone`, `email`, `avatar`, `gender`, `birth_date`, `identity_card`, `primary_org_unit_id`, `user_type_code`, `status`, `last_login_time`, `last_login_ip`, `password_changed_at`, `wechat_openid`, `allow_multiple_devices`, `created_at`, `updated_at`, `created_by`, `updated_by`, `deleted`, `tenant_id`, `attributes`) VALUES (2041870507300622337,'teacher01','$2a$10$NBILuC13J0f71JBhs8sr5uiB02XDpR4BF9uhki3dDsXEaIGanmR6e','张明','13810000001',NULL,NULL,1,NULL,NULL,2040636269108707330,'TEACHER',1,NULL,NULL,'2026-04-08 21:27:20',NULL,0,'2026-04-08 21:27:20','2026-04-08 21:27:20',NULL,NULL,0,1,NULL);
-INSERT INTO `users` (`id`, `username`, `password`, `real_name`, `phone`, `email`, `avatar`, `gender`, `birth_date`, `identity_card`, `primary_org_unit_id`, `user_type_code`, `status`, `last_login_time`, `last_login_ip`, `password_changed_at`, `wechat_openid`, `allow_multiple_devices`, `created_at`, `updated_at`, `created_by`, `updated_by`, `deleted`, `tenant_id`, `attributes`) VALUES (2041870508646993922,'teacher02','$2a$10$x7vfQ9F.3zCV1WOM8QlxJuGmIm.cNiN3wt1aE4dSN/hE2/bYC3BTC','李华','13810000002',NULL,NULL,1,NULL,NULL,2041864691411632129,'TEACHER',1,NULL,NULL,'2026-04-08 21:27:20',NULL,0,'2026-04-08 21:27:20','2026-04-08 21:27:20',NULL,NULL,0,1,NULL);
+INSERT INTO `users` (`id`, `username`, `password`, `real_name`, `phone`, `email`, `avatar`, `gender`, `birth_date`, `identity_card`, `user_type_code`, `status`, `last_login_time`, `last_login_ip`, `password_changed_at`, `wechat_openid`, `allow_multiple_devices`, `created_at`, `updated_at`, `created_by`, `updated_by`, `deleted`, `tenant_id`, `attributes`) VALUES (1,'admin','$2a$10$NBILuC13J0f71JBhs8sr5uiB02XDpR4BF9uhki3dDsXEaIGanmR6e','超级管理员','13800000000',NULL,NULL,1,NULL,NULL,'SUPER_ADMIN',1,NULL,NULL,'2026-04-04 19:25:03',NULL,0,'2025-11-05 22:49:34','2026-04-04 19:25:03',1,NULL,0,1,NULL);
+INSERT INTO `users` (`id`, `username`, `password`, `real_name`, `phone`, `email`, `avatar`, `gender`, `birth_date`, `identity_card`, `user_type_code`, `status`, `last_login_time`, `last_login_ip`, `password_changed_at`, `wechat_openid`, `allow_multiple_devices`, `created_at`, `updated_at`, `created_by`, `updated_by`, `deleted`, `tenant_id`, `attributes`) VALUES (2041870507300622337,'teacher01','$2a$10$NBILuC13J0f71JBhs8sr5uiB02XDpR4BF9uhki3dDsXEaIGanmR6e','张明','13810000001',NULL,NULL,1,NULL,NULL,'TEACHER',1,NULL,NULL,'2026-04-08 21:27:20',NULL,0,'2026-04-08 21:27:20','2026-04-08 21:27:20',NULL,NULL,0,1,NULL);
+INSERT INTO `users` (`id`, `username`, `password`, `real_name`, `phone`, `email`, `avatar`, `gender`, `birth_date`, `identity_card`, `user_type_code`, `status`, `last_login_time`, `last_login_ip`, `password_changed_at`, `wechat_openid`, `allow_multiple_devices`, `created_at`, `updated_at`, `created_by`, `updated_by`, `deleted`, `tenant_id`, `attributes`) VALUES (2041870508646993922,'teacher02','$2a$10$x7vfQ9F.3zCV1WOM8QlxJuGmIm.cNiN3wt1aE4dSN/hE2/bYC3BTC','李华','13810000002',NULL,NULL,1,NULL,NULL,'TEACHER',1,NULL,NULL,'2026-04-08 21:27:20',NULL,0,'2026-04-08 21:27:20','2026-04-08 21:27:20',NULL,NULL,0,1,NULL);
 
 INSERT INTO `user_types` (`id`, `type_code`, `type_name`, `parent_type_code`, `icon`, `category`, `description`, `features`, `metadata_schema`, `allowed_child_type_codes`, `max_depth`, `default_role_codes`, `default_org_type_codes`, `default_place_type_codes`, `is_system`, `is_enabled`, `sort_order`, `created_at`, `updated_at`, `deleted`, `tenant_id`) VALUES (27,'STAFF','职工',NULL,'Briefcase','STAFF','行政/后勤职工','{\"canLogin\": true, \"requiresOrg\": true}',NULL,NULL,NULL,NULL,NULL,NULL,1,1,6,'2026-04-04 17:22:26','2026-04-04 17:22:26',0,1);
 INSERT INTO `user_types` (`id`, `type_code`, `type_name`, `parent_type_code`, `icon`, `category`, `description`, `features`, `metadata_schema`, `allowed_child_type_codes`, `max_depth`, `default_role_codes`, `default_org_type_codes`, `default_place_type_codes`, `is_system`, `is_enabled`, `sort_order`, `created_at`, `updated_at`, `deleted`, `tenant_id`) VALUES (3,'STUDENT','学生',NULL,'User','MEMBER','在校学生','{\"canLogin\": true, \"requiresOrg\": true, \"requiresClass\": true}',NULL,NULL,NULL,'STUDENT',NULL,NULL,1,1,5,'2026-02-12 17:05:01','2026-04-04 17:23:43',0,1);
@@ -816,24 +816,26 @@ INSERT INTO `org_units` (`id`, `unit_code`, `unit_name`, `unit_type`, `parent_id
 
 INSERT INTO `teacher_assignments` (`id`, `org_unit_id`, `teacher_id`, `role_type`, `subject_id`, `is_primary`, `start_date`, `end_date`, `status`, `transfer_reason`, `handover_teacher_id`, `workload_hours`, `remark`, `created_at`, `updated_at`, `created_by`, `deleted`, `tenant_id`) VALUES (2041867776339055290,2041867776338956290,2041870507300622337,'HEAD_TEACHER',NULL,1,'2024-09-01',NULL,'ACTIVE',NULL,NULL,NULL,NULL,'2026-04-08 21:36:11','2026-04-08 21:36:11',NULL,0,1);
 
--- 组织归属统一为 access_relations 的 member|user|org_unit 关系 (每用户唯一)。
--- 为每个有 primary_org_unit_id (非 NULL) 的用户补一条 member 归属行 (is_primary=1),
--- 使 Phase 3 读路径切到 member 关系后 fresh-init 数据仍完整。
--- 派生自 primary_org_unit_id, 不硬编 id; 幂等 (NOT EXISTS 防与 uk_membership_unique 冲突);
--- FK 列 primary_org_unit_id 值保留, 待 Phase 4 删列时一起去。
+-- 组织归属统一为 access_relations 的 member|user|org_unit 关系 (每用户唯一, is_primary=1)。
+-- users.primary_org_unit_id 列已删 (V20260531_4) — 归属唯一真相源即此 member 关系。
+-- 教师归属用显式 (subject_id=userId, resource_id=orgUnitId) 对; admin 无组织归属。
+-- 幂等 (NOT EXISTS 防与 uk_membership_unique 冲突)。
 INSERT INTO `access_relations`
     (`resource_type`, `resource_id`, `relation`, `subject_type`, `subject_id`,
      `is_primary`, `access_level`, `deleted`, `tenant_id`, `created_at`, `updated_at`)
-SELECT 'org_unit', u.`primary_org_unit_id`, 'member', 'user', u.`id`,
-       1, 'READ', 0, COALESCE(u.`tenant_id`, 1), NOW(), NOW()
-FROM `users` u
-WHERE u.`primary_org_unit_id` IS NOT NULL
-  AND u.`deleted` = 0
-  AND NOT EXISTS (
+SELECT 'org_unit', m.org_unit_id, 'member', 'user', m.user_id,
+       1, 'READ', 0, 1, NOW(), NOW()
+FROM (
+    SELECT 2041870507300622337 AS user_id, 2040636269108707330 AS org_unit_id  -- teacher01 → 经济与信息技术系
+    UNION ALL
+    SELECT 2041870508646993922, 2041864691411632129                            -- teacher02 → 汽车工程系
+) m
+JOIN `users` u ON u.`id` = m.user_id AND u.`deleted` = 0
+WHERE NOT EXISTS (
       SELECT 1 FROM `access_relations` ar
       WHERE ar.`relation` = 'member'
         AND ar.`subject_type` = 'user'
-        AND ar.`subject_id` = u.`id`
+        AND ar.`subject_id` = m.user_id
         AND ar.`resource_type` = 'org_unit'
         AND ar.`deleted` = 0
   );

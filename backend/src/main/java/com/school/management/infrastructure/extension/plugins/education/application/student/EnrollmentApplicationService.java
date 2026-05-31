@@ -405,13 +405,14 @@ public class EnrollmentApplicationService {
         Long userId = user.getId();
 
         // 2. 建 user_student 专属档案行 (user_id 关联 users; 身份属性不再写 user_student)
+        //    班级归属由上面 createUser(orgUnitId) 写入的 access_relations member 关系承载,
+        //    不再写 user_student.org_unit_id 物理列 (已删)。
         jdbc.update(
-            "INSERT INTO user_student (user_id, student_no, org_unit_id, " +
+            "INSERT INTO user_student (user_id, student_no, " +
             "admission_date, student_status, created_by, created_at) " +
-            "VALUES (?,?,?,?,1,?,NOW())",
+            "VALUES (?,?,?,1,?,NOW())",
             userId,
             studentNo,
-            orgUnitId,
             LocalDate.now(),
             createdBy
         );

@@ -134,7 +134,7 @@ public class StudentRepositoryImpl implements StudentRepository {
         po.setBirthDate(student.getBirthDate());
         po.setEnrollmentDate(student.getEnrollmentDate());
         po.setExpectedGraduationDate(student.getExpectedGraduationDate());
-        po.setOrgUnitId(student.getOrgUnitId());
+        // org_unit_id 不再写 user_student 物理列 — 班级归属由 access_relations member 承载
         po.setStatus(student.getStatus() != null ? student.getStatus().getCode() : null);
         po.setAvatarUrl(student.getAvatarUrl());
         po.setHomeAddress(student.getHomeAddress());

@@ -130,8 +130,8 @@ public class UserApplicationService {
             user.assignRoles(roleIds);
         }
 
-        // Phase 2.2: features 校验（如 requiresOrg）
-        user.validateAgainstType(userType);
+        // requiresOrg 校验上移应用层：归属在 access_relations member，不在 User 聚合
+        validateRequiresOrg(userType, command.getOrgUnitId());
 
         // 保存用户
         user = userRepository.save(user);
@@ -171,6 +171,25 @@ public class UserApplicationService {
 
         log.info("用户创建成功: id={}, username={}", user.getId(), user.getUsername());
         return user;
+    }
+
+    /**
+     * 校验用户类型 {@code requiresOrg} feature：要求必须指定归属组织。
+     *
+     * <p>归属唯一真相源是 {@code access_relations} member 关系（不再是 users.primary_org_unit_id）,
+     * 故该校验从 User 聚合上移到应用层：创建/更新时若类型要求归属而有效 orgUnitId 为空则报错。
+     *
+     * @param type          用户类型（null 不校验）
+     * @param orgUnitId     有效归属组织 id（命令带的或现有 member 归属）
+     */
+    private void validateRequiresOrg(EntityTypeConfig type, Long orgUnitId) {
+        if (type == null) {
+            return;
+        }
+        if (type.hasFeature("requiresOrg") && orgUnitId == null) {
+            throw new BusinessException(
+                    "用户类型 " + type.getTypeCode() + " 要求必须指定主归属组织");
+        }
     }
 
     /**
@@ -234,13 +253,17 @@ public class UserApplicationService {
             user.assignRoles(command.getRoleIds());
         }
 
-        // Phase 2.2: features 校验（若改了 userType 用新 type；否则用现有 type）
+        // requiresOrg 校验上移应用层（若改了 userType 用新 type；否则用现有 type）
         EntityTypeConfig effectiveType = updatedType != null
                 ? updatedType
                 : (user.getUserTypeCode() != null
                     ? entityTypeConfigRepository.findByTypeCode("USER", user.getUserTypeCode()).orElse(null)
                     : null);
-        user.validateAgainstType(effectiveType);
+        // 有效归属 = 本次命令带的 orgUnitId, 否则查现有 member 归属
+        Long effectiveOrgUnitId = command.getOrgUnitId() != null
+                ? command.getOrgUnitId()
+                : membershipResolver.orgOf(userId).orElse(null);
+        validateRequiresOrg(effectiveType, effectiveOrgUnitId);
 
         // 保存
         user = userRepository.save(user);

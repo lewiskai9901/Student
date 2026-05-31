@@ -23,7 +23,6 @@ public class UserPO {
     private LocalDate birthDate;
     @TableField("identity_card")
     private String idCard;
-    private Long primaryOrgUnitId;
     private String userTypeCode;
     private Integer status;
     private LocalDateTime lastLoginTime;
@@ -56,7 +55,6 @@ public class UserPO {
     public Integer getGender() { return gender; }
     public LocalDate getBirthDate() { return birthDate; }
     public String getIdCard() { return idCard; }
-    public Long getPrimaryOrgUnitId() { return primaryOrgUnitId; }
     public String getUserTypeCode() { return userTypeCode; }
     public Integer getStatus() { return status; }
     public LocalDateTime getLastLoginTime() { return lastLoginTime; }
@@ -84,7 +82,6 @@ public class UserPO {
     public void setGender(Integer gender) { this.gender = gender; }
     public void setBirthDate(LocalDate birthDate) { this.birthDate = birthDate; }
     public void setIdCard(String idCard) { this.idCard = idCard; }
-    public void setPrimaryOrgUnitId(Long primaryOrgUnitId) { this.primaryOrgUnitId = primaryOrgUnitId; }
     public void setUserTypeCode(String userTypeCode) { this.userTypeCode = userTypeCode; }
     public void setStatus(Integer status) { this.status = status; }
     public void setLastLoginTime(LocalDateTime lastLoginTime) { this.lastLoginTime = lastLoginTime; }
