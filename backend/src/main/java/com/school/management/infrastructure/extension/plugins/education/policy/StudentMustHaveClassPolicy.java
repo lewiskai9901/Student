@@ -14,8 +14,8 @@ import java.util.Map;
  * 学生用户必须关联班级策略 (BLOCK).
  *
  * <p>语义:BEFORE_CREATE / AFTER_CREATE / BEFORE_UPDATE user 阶段, 若用户
- * 类型是 STUDENT, 必须在 user_student 表有记录且 user_student.org_unit_id
- * 是 CLASS 类型的 org_unit. 没班级 → 阻断.
+ * 类型是 STUDENT, 必须在 user_student 表有记录且通过 access_relations
+ * member 关系归属到 CLASS 类型的 org_unit. 没班级 → 阻断.
  *
  * <p>EDU 插件贡献的 production policy — 防止"游离学生" (admin 误操作改 user_type
  * 为 STUDENT 但忘了关联班级, 导致后续 BY_CLASS / DEPARTMENT_AND_BELOW
@@ -73,18 +73,21 @@ public class StudentMustHaveClassPolicy implements Policy<Object> {
         if ("BEFORE_DELETE".equals(ctx.phase())) return List.of();
 
         try {
-            // 查 user_student 是否存在 + org_unit_id 是否 CLASS 类型
+            // 查 user_student 是否存在 + 是否通过 member 关系归属到 CLASS 类型 org_unit
             Integer ok = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM user_student us " +
-                "JOIN org_units ou ON ou.id = us.org_unit_id AND ou.deleted = 0 " +
-                "WHERE us.user_id = ? AND us.deleted = 0 AND us.org_unit_id IS NOT NULL " +
+                "JOIN access_relations mar ON mar.subject_id = us.user_id AND mar.relation='member' " +
+                "  AND mar.resource_type='org_unit' AND mar.subject_type='user' AND mar.deleted=0 " +
+                "  AND (mar.valid_to IS NULL OR mar.valid_to>NOW()) " +
+                "JOIN org_units ou ON ou.id = mar.resource_id AND ou.deleted = 0 " +
+                "WHERE us.user_id = ? AND us.deleted = 0 " +
                 "  AND EXISTS (SELECT 1 FROM entity_type_configs etc " +
                 "              WHERE etc.entity_type = 'ORG_UNIT' AND etc.type_code = 'CLASS' " +
                 "                AND etc.deleted = 0)",
                 Integer.class, userId);
             if (ok == null || ok == 0) {
                 return List.of(Violation.block(code(),
-                    String.format("学生 user %d 未关联到任何 CLASS 类型的班级 — 请先在 user_student 表配置 org_unit_id",
+                    String.format("学生 user %d 未关联到任何 CLASS 类型的班级 — 请先建立 member 归属关系",
                         userId)));
             }
         } catch (Exception e) {

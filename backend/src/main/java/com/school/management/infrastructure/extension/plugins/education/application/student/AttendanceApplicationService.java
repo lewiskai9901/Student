@@ -102,8 +102,9 @@ public class AttendanceApplicationService {
         List<Map<String, Object>> students = jdbc.queryForList(
             "SELECT s.id AS studentId, s.student_no AS studentNo, u.real_name AS studentName " +
             "FROM user_student s LEFT JOIN users u ON s.user_id = u.id " +
-            "WHERE s.org_unit_id = ? AND s.student_status = 1 AND s.deleted = 0" +
-            orgScopeHelper.orgScopeClause("s.org_unit_id") +
+            "LEFT JOIN access_relations mar ON mar.subject_id = s.user_id AND mar.relation='member' AND mar.resource_type='org_unit' AND mar.subject_type='user' AND mar.deleted=0 AND (mar.valid_to IS NULL OR mar.valid_to>NOW()) " +
+            "WHERE mar.resource_id = ? AND s.student_status = 1 AND s.deleted = 0" +
+            orgScopeHelper.orgScopeClause("mar.resource_id") +
             " ORDER BY s.student_no",
             orgUnitId
         );
@@ -235,7 +236,8 @@ public class AttendanceApplicationService {
                         try {
                             Map<String, Object> stuInfo = jdbc.queryForMap(
                                 "SELECT s.name, sc.name AS class_name FROM user_student s " +
-                                "LEFT JOIN school_classes sc ON s.org_unit_id = sc.id WHERE s.id = ?", studentId);
+                                "LEFT JOIN access_relations mar ON mar.subject_id = s.user_id AND mar.relation='member' AND mar.resource_type='org_unit' AND mar.subject_type='user' AND mar.deleted=0 AND (mar.valid_to IS NULL OR mar.valid_to>NOW()) " +
+                                "LEFT JOIN school_classes sc ON sc.id = mar.resource_id WHERE s.id = ?", studentId);
                             studentName = (String) stuInfo.getOrDefault("name", "");
                             className = (String) stuInfo.getOrDefault("class_name", "");
                         } catch (Exception ignored) {}
@@ -363,17 +365,18 @@ public class AttendanceApplicationService {
             "s.name AS studentName, s.student_no AS studentNo " +
             "FROM leave_requests lr " +
             "LEFT JOIN user_student s ON lr.student_id = s.id " +
+            "LEFT JOIN access_relations mar ON mar.subject_id = s.user_id AND mar.relation='member' AND mar.resource_type='org_unit' AND mar.subject_type='user' AND mar.deleted=0 AND (mar.valid_to IS NULL OR mar.valid_to>NOW()) " +
             "WHERE 1=1"
         );
         List<Object> params = new ArrayList<>();
 
         if (studentId != null) { sql.append(" AND lr.student_id = ?"); params.add(studentId); }
-        if (orgUnitId != null) { sql.append(" AND s.org_unit_id = ?"); params.add(orgUnitId); }
+        if (orgUnitId != null) { sql.append(" AND mar.resource_id = ?"); params.add(orgUnitId); }
         if (approvalStatus != null) { sql.append(" AND lr.approval_status = ?"); params.add(approvalStatus); }
         if (startDate != null) { sql.append(" AND lr.start_date >= ?"); params.add(startDate); }
         if (endDate != null) { sql.append(" AND lr.end_date <= ?"); params.add(endDate); }
 
-        sql.append(orgScopeHelper.orgScopeClause("s.org_unit_id"));
+        sql.append(orgScopeHelper.orgScopeClause("mar.resource_id"));
 
         sql.append(" ORDER BY lr.created_at DESC");
 
@@ -411,8 +414,10 @@ public class AttendanceApplicationService {
         Long orgUnitId;
         try {
             orgUnitId = jdbc.queryForObject(
-                "SELECT s.org_unit_id FROM leave_requests lr " +
-                "LEFT JOIN user_student s ON lr.student_id = s.id WHERE lr.id = ?",
+                "SELECT mar.resource_id FROM leave_requests lr " +
+                "LEFT JOIN user_student s ON lr.student_id = s.id " +
+                "LEFT JOIN access_relations mar ON mar.subject_id = s.user_id AND mar.relation='member' AND mar.resource_type='org_unit' AND mar.subject_type='user' AND mar.deleted=0 AND (mar.valid_to IS NULL OR mar.valid_to>NOW()) " +
+                "WHERE lr.id = ?",
                 Long.class, leaveRequestId);
         } catch (EmptyResultDataAccessException e) {
             throw new SecurityException("请假申请不存在: id=" + leaveRequestId);
@@ -428,11 +433,12 @@ public class AttendanceApplicationService {
             "lr.start_date AS startDate, lr.end_date AS endDate, " +
             "lr.start_period AS startPeriod, lr.end_period AS endPeriod, " +
             "lr.reason, lr.created_at AS createdAt, " +
-            "s.name AS studentName, s.student_no AS studentNo, s.org_unit_id AS classId " +
+            "s.name AS studentName, s.student_no AS studentNo, mar.resource_id AS classId " +
             "FROM leave_requests lr " +
             "LEFT JOIN user_student s ON lr.student_id = s.id " +
+            "LEFT JOIN access_relations mar ON mar.subject_id = s.user_id AND mar.relation='member' AND mar.resource_type='org_unit' AND mar.subject_type='user' AND mar.deleted=0 AND (mar.valid_to IS NULL OR mar.valid_to>NOW()) " +
             "WHERE lr.approval_status = 0" +
-            orgScopeHelper.orgScopeClause("s.org_unit_id") +
+            orgScopeHelper.orgScopeClause("mar.resource_id") +
             " ORDER BY lr.created_at ASC"
         );
     }

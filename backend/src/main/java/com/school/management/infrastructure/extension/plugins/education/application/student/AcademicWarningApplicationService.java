@@ -142,16 +142,17 @@ public class AcademicWarningApplicationService {
                     int minFailCount = getIntParam(params, "minFailCount", 2);
                     flaggedStudents = jdbc.queryForList(
                         "SELECT s.id AS student_id, s.student_no, s.name AS student_name, " +
-                        "s.org_unit_id, sc.name AS class_name, " +
+                        "mar.resource_id AS org_unit_id, sc.name AS class_name, " +
                         "COUNT(*) AS fail_count, " +
                         "GROUP_CONCAT(c.course_name SEPARATOR '、') AS failed_courses " +
                         "FROM student_grades sg " +
                         "JOIN user_student s ON s.id = sg.student_id " +
-                        "LEFT JOIN school_classes sc ON sc.id = s.org_unit_id " +
+                        "LEFT JOIN access_relations mar ON mar.subject_id = s.user_id AND mar.relation='member' AND mar.resource_type='org_unit' AND mar.subject_type='user' AND mar.deleted=0 AND (mar.valid_to IS NULL OR mar.valid_to>NOW()) " +
+                        "LEFT JOIN school_classes sc ON sc.id = mar.resource_id " +
                         "LEFT JOIN courses c ON c.id = sg.course_id " +
                         "WHERE sg.semester_id = ? AND sg.passed = 0 AND s.status = 1 " +
-                        orgScopeHelper.orgScopeClause("s.org_unit_id") + " " +
-                        "GROUP BY s.id, s.student_no, s.name, s.org_unit_id, sc.name " +
+                        orgScopeHelper.orgScopeClause("mar.resource_id") + " " +
+                        "GROUP BY s.id, s.student_no, s.name, mar.resource_id, sc.name " +
                         "HAVING fail_count >= ?",
                         semesterId, minFailCount);
 
@@ -167,16 +168,17 @@ public class AcademicWarningApplicationService {
                     int minRate = getIntParam(params, "minAttendanceRate", 80);
                     flaggedStudents = jdbc.queryForList(
                         "SELECT s.id AS student_id, s.student_no, s.name AS student_name, " +
-                        "s.org_unit_id, sc.name AS class_name, " +
+                        "mar.resource_id AS org_unit_id, sc.name AS class_name, " +
                         "COUNT(*) AS total, " +
                         "SUM(CASE WHEN ar.status IN (1,2) THEN 1 ELSE 0 END) AS attended, " +
                         "ROUND(SUM(CASE WHEN ar.status IN (1,2) THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) AS rate " +
                         "FROM attendance_records ar " +
                         "JOIN user_student s ON s.id = ar.student_id " +
-                        "LEFT JOIN school_classes sc ON sc.id = s.org_unit_id " +
+                        "LEFT JOIN access_relations mar ON mar.subject_id = s.user_id AND mar.relation='member' AND mar.resource_type='org_unit' AND mar.subject_type='user' AND mar.deleted=0 AND (mar.valid_to IS NULL OR mar.valid_to>NOW()) " +
+                        "LEFT JOIN school_classes sc ON sc.id = mar.resource_id " +
                         "WHERE ar.semester_id = ? AND s.status = 1 " +
-                        orgScopeHelper.orgScopeClause("s.org_unit_id") + " " +
-                        "GROUP BY s.id, s.student_no, s.name, s.org_unit_id, sc.name " +
+                        orgScopeHelper.orgScopeClause("mar.resource_id") + " " +
+                        "GROUP BY s.id, s.student_no, s.name, mar.resource_id, sc.name " +
                         "HAVING rate < ?",
                         semesterId, minRate);
 
@@ -193,14 +195,15 @@ public class AcademicWarningApplicationService {
                     int actualBelow = getIntParam(params, "actualCreditsBelow", 20);
                     flaggedStudents = jdbc.queryForList(
                         "SELECT s.id AS student_id, s.student_no, s.name AS student_name, " +
-                        "s.org_unit_id, sc.name AS class_name, " +
+                        "mar.resource_id AS org_unit_id, sc.name AS class_name, " +
                         "COALESCE(SUM(sg.credits_earned), 0) AS earned_credits " +
                         "FROM user_student s " +
-                        "LEFT JOIN school_classes sc ON sc.id = s.org_unit_id " +
+                        "LEFT JOIN access_relations mar ON mar.subject_id = s.user_id AND mar.relation='member' AND mar.resource_type='org_unit' AND mar.subject_type='user' AND mar.deleted=0 AND (mar.valid_to IS NULL OR mar.valid_to>NOW()) " +
+                        "LEFT JOIN school_classes sc ON sc.id = mar.resource_id " +
                         "LEFT JOIN student_grades sg ON sg.student_id = s.id AND sg.semester_id = ? AND sg.passed = 1 " +
                         "WHERE s.status = 1 " +
-                        orgScopeHelper.orgScopeClause("s.org_unit_id") + " " +
-                        "GROUP BY s.id, s.student_no, s.name, s.org_unit_id, sc.name " +
+                        orgScopeHelper.orgScopeClause("mar.resource_id") + " " +
+                        "GROUP BY s.id, s.student_no, s.name, mar.resource_id, sc.name " +
                         "HAVING earned_credits < ?",
                         semesterId, actualBelow);
 
@@ -245,16 +248,17 @@ public class AcademicWarningApplicationService {
                     int minFailCount = getIntParam(params, "minFailCount", 2);
                     flaggedStudents = jdbc.queryForList(
                         "SELECT s.id AS studentId, s.student_no AS studentNo, s.name AS studentName, " +
-                        "s.org_unit_id AS orgUnitId, sc.name AS className, " +
+                        "mar.resource_id AS orgUnitId, sc.name AS className, " +
                         "COUNT(*) AS failCount, " +
                         "GROUP_CONCAT(c.course_name SEPARATOR '、') AS failedCourses " +
                         "FROM student_grades sg " +
                         "JOIN user_student s ON s.id = sg.student_id " +
-                        "LEFT JOIN school_classes sc ON sc.id = s.org_unit_id " +
+                        "LEFT JOIN access_relations mar ON mar.subject_id = s.user_id AND mar.relation='member' AND mar.resource_type='org_unit' AND mar.subject_type='user' AND mar.deleted=0 AND (mar.valid_to IS NULL OR mar.valid_to>NOW()) " +
+                        "LEFT JOIN school_classes sc ON sc.id = mar.resource_id " +
                         "LEFT JOIN courses c ON c.id = sg.course_id " +
                         "WHERE sg.semester_id = ? AND sg.passed = 0 AND s.status = 1 " +
-                        orgScopeHelper.orgScopeClause("s.org_unit_id") + " " +
-                        "GROUP BY s.id, s.student_no, s.name, s.org_unit_id, sc.name " +
+                        orgScopeHelper.orgScopeClause("mar.resource_id") + " " +
+                        "GROUP BY s.id, s.student_no, s.name, mar.resource_id, sc.name " +
                         "HAVING failCount >= ?",
                         semesterId, minFailCount);
                     for (Map<String, Object> s : flaggedStudents) {
@@ -269,14 +273,15 @@ public class AcademicWarningApplicationService {
                     int minRate = getIntParam(params, "minAttendanceRate", 80);
                     flaggedStudents = jdbc.queryForList(
                         "SELECT s.id AS studentId, s.student_no AS studentNo, s.name AS studentName, " +
-                        "s.org_unit_id AS orgUnitId, sc.name AS className, " +
+                        "mar.resource_id AS orgUnitId, sc.name AS className, " +
                         "ROUND(SUM(CASE WHEN ar.status IN (1,2) THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) AS rate " +
                         "FROM attendance_records ar " +
                         "JOIN user_student s ON s.id = ar.student_id " +
-                        "LEFT JOIN school_classes sc ON sc.id = s.org_unit_id " +
+                        "LEFT JOIN access_relations mar ON mar.subject_id = s.user_id AND mar.relation='member' AND mar.resource_type='org_unit' AND mar.subject_type='user' AND mar.deleted=0 AND (mar.valid_to IS NULL OR mar.valid_to>NOW()) " +
+                        "LEFT JOIN school_classes sc ON sc.id = mar.resource_id " +
                         "WHERE ar.semester_id = ? AND s.status = 1 " +
-                        orgScopeHelper.orgScopeClause("s.org_unit_id") + " " +
-                        "GROUP BY s.id, s.student_no, s.name, s.org_unit_id, sc.name " +
+                        orgScopeHelper.orgScopeClause("mar.resource_id") + " " +
+                        "GROUP BY s.id, s.student_no, s.name, mar.resource_id, sc.name " +
                         "HAVING rate < ?",
                         semesterId, minRate);
                     for (Map<String, Object> s : flaggedStudents) {
@@ -292,14 +297,15 @@ public class AcademicWarningApplicationService {
                     int actualBelow = getIntParam(params, "actualCreditsBelow", 20);
                     flaggedStudents = jdbc.queryForList(
                         "SELECT s.id AS studentId, s.student_no AS studentNo, s.name AS studentName, " +
-                        "s.org_unit_id AS orgUnitId, sc.name AS className, " +
+                        "mar.resource_id AS orgUnitId, sc.name AS className, " +
                         "COALESCE(SUM(sg.credits_earned), 0) AS earnedCredits " +
                         "FROM user_student s " +
-                        "LEFT JOIN school_classes sc ON sc.id = s.org_unit_id " +
+                        "LEFT JOIN access_relations mar ON mar.subject_id = s.user_id AND mar.relation='member' AND mar.resource_type='org_unit' AND mar.subject_type='user' AND mar.deleted=0 AND (mar.valid_to IS NULL OR mar.valid_to>NOW()) " +
+                        "LEFT JOIN school_classes sc ON sc.id = mar.resource_id " +
                         "LEFT JOIN student_grades sg ON sg.student_id = s.id AND sg.semester_id = ? AND sg.passed = 1 " +
                         "WHERE s.status = 1 " +
-                        orgScopeHelper.orgScopeClause("s.org_unit_id") + " " +
-                        "GROUP BY s.id, s.student_no, s.name, s.org_unit_id, sc.name " +
+                        orgScopeHelper.orgScopeClause("mar.resource_id") + " " +
+                        "GROUP BY s.id, s.student_no, s.name, mar.resource_id, sc.name " +
                         "HAVING earnedCredits < ?",
                         semesterId, actualBelow);
                     for (Map<String, Object> s : flaggedStudents) {
