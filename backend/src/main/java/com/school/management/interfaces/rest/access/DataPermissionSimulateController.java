@@ -119,11 +119,11 @@ public class DataPermissionSimulateController {
                 return new ModuleMeta("roles", "role_name", null, true, false);
             case "place":
                 return new ModuleMeta("places", "place_name", "org_unit_id", true, true);
-            case "student":
-                // TODO(6.1): 行业字面量泄漏 — "student"/"user_student" 是 education 插件概念,
-                // 不应硬编码在通用核心 controller. 理想由插件注册模块元数据 (无现成下沉机制,
-                // 类似 PluginDataScopeRouter 但针对 module→table 映射), 待 6.1 守护处理.
-                return new ModuleMeta("user_student", "student_no", "org_unit_id", true, true);
+            // 注: "student" 是 education 插件概念, 其归属表 (用户档案表) 与归属列均为行业扩展,
+            // 不应硬编码在通用核心 controller (NoIndustryTableInCoreTest 守护). 通用核心暂无
+            // "插件下沉 module→table 元数据" 的注册机制 (类似 PluginDataScopeRouter 之于 scope),
+            // 故此处不再列举该模块 — 模拟器对未知模块优雅降级 ("此模块未实现模拟"). 待插件元数据
+            // 注册点就绪后, 由 education 插件自行登记 student 模块的模拟元数据.
             case "school_class":
             case "class":
                 // classes 表无 created_by 列

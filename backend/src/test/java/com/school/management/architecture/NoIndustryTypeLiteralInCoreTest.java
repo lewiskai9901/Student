@@ -23,15 +23,30 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class NoIndustryTypeLiteralInCoreTest {
 
-    /** 行业专属类型码 (前后加引号以匹配字面量, 规避中文变量名等) */
+    /**
+     * 行业专属类型码字面量. 含两种形式:
+     *   1. Java 双引号字符串字面量 {@code "STUDENT"} (变量/常量赋值、equals 比较等)
+     *   2. 内嵌 SQL 里的单引号类型码 {@code 'STUDENT'} (形如 {@code ... = 'TEACHER'},
+     *      出现在 Java 字符串中拼接的 SQL 片段). 这同样是行业字面量泄漏到核心.
+     * 中文变量名 / 注释由 stripBlockComments + // 截断规避.
+     */
     private static final String[] FORBIDDEN_LITERALS = {
+        // 双引号 (Java 字符串字面量)
         "\"STUDENT\"",
         "\"TEACHER\"",
         "\"CLASS\"",
         "\"GRADE\"",
         "\"MAJOR\"",
         "\"DORMITORY\"",
-        "\"CLASSROOM\""
+        "\"CLASSROOM\"",
+        // 单引号 (内嵌 SQL 类型码)
+        "'STUDENT'",
+        "'TEACHER'",
+        "'CLASS'",
+        "'GRADE'",
+        "'MAJOR'",
+        "'DORMITORY'",
+        "'CLASSROOM'"
     };
 
     /** 排除的子包 (插件 / 仍保留在 core 的历史包) */
