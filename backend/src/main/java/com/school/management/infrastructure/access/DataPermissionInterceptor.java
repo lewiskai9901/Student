@@ -332,6 +332,19 @@ public class DataPermissionInterceptor implements Interceptor {
         String alias = annotation.tableAlias().isEmpty() ? "" : sanitizeIdentifier(annotation.tableAlias()) + ".";
         ParameterizedCondition cond = new ParameterizedCondition();
 
+        // Membership path: the main-table row IS the subject (user) of a 'member' relation.
+        // Filter by org scope on the relation's resource_id, not on a column of the main table.
+        if (annotation.viaMembership()) {
+            Set<Long> customOrgIds = null;
+            if (scope == DataScope.CUSTOM) {
+                MergedDataScope mergedScope = dataPermissionPolicyService.getMergedScope(
+                        tenantId, Collections.singletonList(roleId), annotation.module());
+                customOrgIds = mergedScope != null ? mergedScope.getOrgUnitIds() : Collections.emptySet();
+            }
+            return buildMembershipCondition(annotation, scope, userContext, tenantId,
+                    orgId, orgPath, paramOffset, customOrgIds);
+        }
+
         String resourceType = annotation.resourceType();
         if (resourceType.isEmpty() && moduleConfig.getResourceType() != null) {
             resourceType = moduleConfig.getResourceType();
@@ -450,6 +463,91 @@ public class DataPermissionInterceptor implements Interceptor {
     }
 
     /**
+     * Build a "membership" condition: the main-table row is the SUBJECT (user) of a
+     * {@code member} relation in {@code access_relations}, and its org membership is the
+     * relation's {@code resource_id}. Used for the {@code users} table whose
+     * {@code primary_org_unit_id} column has been retired in favour of unified relations.
+     *
+     * <p>Emits (scope = DEPARTMENT_AND_BELOW with org path shown):
+     * <pre>
+     * {alias}.id IN (
+     *   SELECT ar.subject_id FROM access_relations ar
+     *   WHERE ar.relation = 'member' AND ar.resource_type = 'org_unit'
+     *     AND ar.subject_type = 'user' AND ar.deleted = 0 AND ar.tenant_id = ?
+     *     AND ar.resource_id IN (
+     *       SELECT id FROM org_units WHERE tenant_id = ? AND tree_path LIKE ? AND deleted = 0))
+     * </pre>
+     * <ul>
+     *   <li>ALL → null (no filter)</li>
+     *   <li>DEPARTMENT → resource_id = ? (single org)</li>
+     *   <li>DEPARTMENT_AND_BELOW → resource_id IN (tree_path subtree)</li>
+     *   <li>SELF → {alias}.id = ? (the user themself)</li>
+     *   <li>CUSTOM → resource_id IN (merged custom org ids), via the membership shell</li>
+     * </ul>
+     */
+    private ParameterizedCondition buildMembershipCondition(
+            DataPermission annotation, DataScope scope,
+            UserContext userContext, Long tenantId,
+            Long orgId, String orgPath, int paramOffset, Set<Long> customOrgIds) {
+
+        String alias = annotation.tableAlias().isEmpty() ? "" : sanitizeIdentifier(annotation.tableAlias()) + ".";
+        ParameterizedCondition cond = new ParameterizedCondition();
+
+        if (scope == DataScope.ALL) {
+            return null; // No filter for this role
+        }
+
+        if (scope == DataScope.SELF) {
+            cond.sql = alias + "id = ?";
+            cond.addParam("_dp_self_" + paramOffset, userContext.getUserId(), Long.class, JdbcType.BIGINT);
+            return cond;
+        }
+
+        // Resolve the org-scope predicate against ar.resource_id.
+        StringBuilder orgPredicate = new StringBuilder();
+        if (scope == DataScope.CUSTOM) {
+            if (customOrgIds == null || customOrgIds.isEmpty()) {
+                cond.sql = "1 = 0"; // CUSTOM with no orgs configured → deny all
+                return cond;
+            }
+            // org ids are safe numerics — inline (mirrors buildPluginDimCondition).
+            String csv = customOrgIds.stream().map(String::valueOf).collect(Collectors.joining(","));
+            orgPredicate.append("ar.resource_id IN (").append(csv).append(")");
+        } else if (scope == DataScope.DEPARTMENT_AND_BELOW && orgPath != null) {
+            orgPredicate.append("ar.resource_id IN (")
+                    .append("SELECT id FROM org_units WHERE tenant_id = ? AND tree_path LIKE ? AND deleted = 0)");
+            cond.addParam("_dp_memTenant_" + paramOffset, tenantId, Long.class, JdbcType.BIGINT);
+            cond.addParam("_dp_memPath_" + paramOffset, orgPath + "%", String.class, JdbcType.VARCHAR);
+        } else if (orgId != null) {
+            // DEPARTMENT, or DEPARTMENT_AND_BELOW without a known path → single org
+            orgPredicate.append("ar.resource_id = ?");
+            cond.addParam("_dp_memOrg_" + paramOffset, orgId, Long.class, JdbcType.BIGINT);
+        } else {
+            // No org root to anchor on → deny all (avoid leaking the full table).
+            cond.sql = "1 = 0";
+            return cond;
+        }
+
+        // The membership param (tenant for the ar row) is bound BEFORE the org predicate params
+        // in positional order, so the SQL string must list them in that same order. We therefore
+        // build the SQL after computing the predicate but bind the ar.tenant_id param FIRST.
+        // To keep positional binding correct, prepend the tenant param to the list.
+        AdditionalParam tenantParam = new AdditionalParam();
+        tenantParam.property = "_dp_memArTenant_" + paramOffset;
+        tenantParam.value = tenantId;
+        tenantParam.javaType = Long.class;
+        tenantParam.jdbcType = JdbcType.BIGINT;
+        cond.params.add(0, tenantParam);
+
+        cond.sql = alias + "id IN ("
+                + "SELECT ar.subject_id FROM access_relations ar "
+                + "WHERE ar.relation = 'member' AND ar.resource_type = 'org_unit' "
+                + "AND ar.subject_type = 'user' AND ar.deleted = 0 AND ar.tenant_id = ? "
+                + "AND " + orgPredicate + ")";
+        return cond;
+    }
+
+    /**
      * Legacy condition builder: used when no scopedRoles are present (backward compatibility).
      */
     private ParameterizedCondition buildLegacyCondition(
@@ -462,6 +560,16 @@ public class DataPermissionInterceptor implements Interceptor {
 
         if (mergedScope == null || mergedScope.isAllScope()) {
             return null;
+        }
+
+        // Membership path (see buildMembershipCondition): filter users by their 'member'
+        // relation's org scope rather than a column on the users table.
+        if (annotation.viaMembership()) {
+            Set<Long> customOrgIds = mergedScope.getEffectiveScope() == DataScope.CUSTOM
+                    ? mergedScope.getOrgUnitIds() : null;
+            return buildMembershipCondition(annotation, mergedScope.getEffectiveScope(),
+                    userContext, tenantId, userContext.getOrgUnitId(), userContext.getOrgUnitPath(), 0,
+                    customOrgIds);
         }
 
         String resourceType = annotation.resourceType();

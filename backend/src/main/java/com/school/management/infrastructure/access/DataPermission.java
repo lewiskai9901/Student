@@ -42,4 +42,28 @@ public @interface DataPermission {
      * 非空时，使用 access_relations 子查询做行级过滤
      */
     String resourceType() default "";
+
+    /**
+     * 是否按"成员归属"(membership)子查询过滤。
+     *
+     * <p>用于"主表的行本身就是 access_relations 的 subject(用户)"的场景,
+     * 典型是 {@code users} 表 —— 用户的组织归属不再是 users 自己的列,
+     * 而是 {@code access_relations} 里一条 {@code relation='member',
+     * resource_type='org_unit', subject_type='user'} 的关系。
+     *
+     * <p>为 true 时,DataPermissionInterceptor 注入:
+     * <pre>
+     * {alias}.id IN (
+     *   SELECT ar.subject_id FROM access_relations ar
+     *   WHERE ar.relation='member' AND ar.resource_type='org_unit'
+     *     AND ar.subject_type='user' AND ar.deleted=0 AND ar.tenant_id=?
+     *     AND ar.resource_id IN (&lt;scope org ids&gt;))
+     * </pre>
+     * 而非常规 {@code resourceType} 路径的 {@code id IN (SELECT ar.resource_id ...)}
+     * (后者用于"主表行是关系的 resource"的场景,如 student 记录)。
+     *
+     * <p>scope 解析(DEPARTMENT / DEPARTMENT_AND_BELOW / CUSTOM ...)沿用同一套
+     * scoped-role 逻辑,只是把"组织根"换成对 member 关系 resource_id 的过滤。
+     */
+    boolean viaMembership() default false;
 }

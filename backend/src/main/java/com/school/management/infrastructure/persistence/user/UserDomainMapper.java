@@ -54,37 +54,45 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
     boolean existsByUsernameAndIdNot(@Param("username") String username, @Param("excludeId") Long excludeId);
 
     /**
-     * 根据组织单元ID查找用户（通过 primary_org_unit_id）
+     * 根据组织单元ID查找用户（通过 access_relations member 派生归属）
      */
-    @DataPermission(module = "user", orgUnitField = "primary_org_unit_id")
-    @Select("SELECT * FROM users WHERE primary_org_unit_id = #{orgUnitId} AND deleted = 0")
+    @DataPermission(module = "user", tableAlias = "u", viaMembership = true)
+    @Select("SELECT u.* FROM users u " +
+            "JOIN access_relations ar ON ar.subject_id = u.id " +
+            "AND ar.relation = 'member' AND ar.resource_type = 'org_unit' " +
+            "AND ar.subject_type = 'user' AND ar.deleted = 0 " +
+            "WHERE ar.resource_id = #{orgUnitId} AND u.deleted = 0")
     List<UserPO> findByOrgUnitId(@Param("orgUnitId") Long orgUnitId);
 
     /**
-     * 根据组织单元ID列表查找用户（通过 primary_org_unit_id）
+     * 根据组织单元ID列表查找用户（通过 access_relations member 派生归属）
      */
-    @DataPermission(module = "user", orgUnitField = "primary_org_unit_id")
+    @DataPermission(module = "user", tableAlias = "u", viaMembership = true)
     @Select("<script>" +
-            "SELECT * FROM users WHERE primary_org_unit_id IN " +
+            "SELECT u.* FROM users u " +
+            "JOIN access_relations ar ON ar.subject_id = u.id " +
+            "AND ar.relation = 'member' AND ar.resource_type = 'org_unit' " +
+            "AND ar.subject_type = 'user' AND ar.deleted = 0 " +
+            "WHERE ar.resource_id IN " +
             "<foreach collection='orgUnitIds' item='id' open='(' separator=',' close=')'>" +
             "#{id}" +
             "</foreach>" +
-            " AND deleted = 0" +
+            " AND u.deleted = 0" +
             "</script>")
     List<UserPO> findByOrgUnitIdIn(@Param("orgUnitIds") List<Long> orgUnitIds);
 
     /**
      * 根据用户类型编码查找所有用户
      */
-    @DataPermission(module = "user", orgUnitField = "primary_org_unit_id")
-    @Select("SELECT * FROM users WHERE user_type_code = #{userTypeCode} AND deleted = 0")
+    @DataPermission(module = "user", tableAlias = "u", viaMembership = true)
+    @Select("SELECT u.* FROM users u WHERE u.user_type_code = #{userTypeCode} AND u.deleted = 0")
     List<UserPO> findByUserTypeCode(@Param("userTypeCode") String userTypeCode);
 
     /**
      * 分页查询用户
      */
-    @DataPermission(module = "user", orgUnitField = "primary_org_unit_id")
-    @Select("SELECT * FROM users WHERE deleted = 0 ORDER BY created_at DESC LIMIT #{offset}, #{size}")
+    @DataPermission(module = "user", tableAlias = "u", viaMembership = true)
+    @Select("SELECT u.* FROM users u WHERE u.deleted = 0 ORDER BY u.created_at DESC LIMIT #{offset}, #{size}")
     List<UserPO> findAllPaged(@Param("offset") int offset, @Param("size") int size);
 
     /**
@@ -94,17 +102,24 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
     long countAll();
 
     /**
-     * 统计某组织的归属成员数（primary_org_unit_id）
+     * 统计某组织的归属成员数（access_relations member 派生归属）
      */
-    @Select("SELECT COUNT(1) FROM users WHERE primary_org_unit_id = #{orgUnitId} AND deleted = 0")
+    @Select("SELECT COUNT(1) FROM access_relations ar " +
+            "JOIN users u ON u.id = ar.subject_id AND u.deleted = 0 " +
+            "WHERE ar.relation = 'member' AND ar.resource_type = 'org_unit' " +
+            "AND ar.subject_type = 'user' AND ar.deleted = 0 " +
+            "AND ar.resource_id = #{orgUnitId}")
     long countByPrimaryOrgUnitId(@Param("orgUnitId") Long orgUnitId);
 
     /**
-     * 按用户类型统计某组织的归属成员数
+     * 按用户类型统计某组织的归属成员数（access_relations member 派生归属）
      */
-    @Select("SELECT user_type_code, COUNT(1) AS cnt FROM users " +
-            "WHERE primary_org_unit_id = #{orgUnitId} AND deleted = 0 " +
-            "GROUP BY user_type_code")
+    @Select("SELECT u.user_type_code, COUNT(1) AS cnt FROM access_relations ar " +
+            "JOIN users u ON u.id = ar.subject_id AND u.deleted = 0 " +
+            "WHERE ar.relation = 'member' AND ar.resource_type = 'org_unit' " +
+            "AND ar.subject_type = 'user' AND ar.deleted = 0 " +
+            "AND ar.resource_id = #{orgUnitId} " +
+            "GROUP BY u.user_type_code")
     List<java.util.Map<String, Object>> countByPrimaryOrgUnitIdGroupByType(@Param("orgUnitId") Long orgUnitId);
 
     /**
@@ -126,12 +141,17 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
     void deleteByIds(@Param("ids") List<Long> ids);
 
     /**
-     * 条件分页查询用户（通过 primary_org_unit_id 关联组织）
+     * 条件分页查询用户（通过 access_relations member 派生归属关联组织）
+     * 列表仍返回 org_unit_id / org_unit_name 字段以保持前端契约不变。
      */
+    @DataPermission(module = "user", tableAlias = "u", viaMembership = true)
     @Select("<script>" +
-            "SELECT u.*, u.primary_org_unit_id AS org_unit_id, ou.unit_name AS org_unit_name " +
+            "SELECT u.*, ar.resource_id AS org_unit_id, ou.unit_name AS org_unit_name " +
             "FROM users u " +
-            "LEFT JOIN org_units ou ON u.primary_org_unit_id = ou.id AND ou.deleted = 0 " +
+            "LEFT JOIN access_relations ar ON ar.subject_id = u.id " +
+            "AND ar.relation = 'member' AND ar.resource_type = 'org_unit' " +
+            "AND ar.subject_type = 'user' AND ar.deleted = 0 " +
+            "LEFT JOIN org_units ou ON ou.id = ar.resource_id AND ou.deleted = 0 " +
             "WHERE u.deleted = 0 " +
             "<if test='username != null and username != \"\"'>" +
             "AND u.username LIKE CONCAT('%', #{username}, '%') " +
@@ -143,7 +163,7 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
             "AND u.phone LIKE CONCAT('%', #{phone}, '%') " +
             "</if>" +
             "<if test='orgUnitId != null'>" +
-            "AND u.primary_org_unit_id = #{orgUnitId} " +
+            "AND ar.resource_id = #{orgUnitId} " +
             "</if>" +
             "<if test='status != null'>" +
             "AND u.status = #{status} " +
@@ -161,10 +181,16 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
             @Param("status") Integer status);
 
     /**
-     * 条件统计用户总数（通过 primary_org_unit_id 关联组织）
+     * 条件统计用户总数（通过 access_relations member 派生归属）
      */
+    @DataPermission(module = "user", tableAlias = "u", viaMembership = true)
     @Select("<script>" +
             "SELECT COUNT(1) FROM users u " +
+            "<if test='orgUnitId != null'>" +
+            "JOIN access_relations ar ON ar.subject_id = u.id " +
+            "AND ar.relation = 'member' AND ar.resource_type = 'org_unit' " +
+            "AND ar.subject_type = 'user' AND ar.deleted = 0 AND ar.resource_id = #{orgUnitId} " +
+            "</if>" +
             "WHERE u.deleted = 0 " +
             "<if test='username != null and username != \"\"'>" +
             "AND u.username LIKE CONCAT('%', #{username}, '%') " +
@@ -174,9 +200,6 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
             "</if>" +
             "<if test='phone != null and phone != \"\"'>" +
             "AND u.phone LIKE CONCAT('%', #{phone}, '%') " +
-            "</if>" +
-            "<if test='orgUnitId != null'>" +
-            "AND u.primary_org_unit_id = #{orgUnitId} " +
             "</if>" +
             "<if test='status != null'>" +
             "AND u.status = #{status} " +
@@ -190,13 +213,17 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
             @Param("status") Integer status);
 
     /**
-     * 获取简单用户列表（用于选择器）
+     * 获取简单用户列表（用于选择器，access_relations member 派生归属）
      */
+    @DataPermission(module = "user", tableAlias = "u", viaMembership = true)
     @Select("<script>" +
             "SELECT u.id, u.username, u.real_name, u.gender, u.user_type_code, " +
-            "u.primary_org_unit_id, o.unit_name AS org_unit_name " +
+            "ar.resource_id AS org_unit_id, o.unit_name AS org_unit_name " +
             "FROM users u " +
-            "LEFT JOIN org_units o ON u.primary_org_unit_id = o.id AND o.deleted = 0 " +
+            "LEFT JOIN access_relations ar ON ar.subject_id = u.id " +
+            "AND ar.relation = 'member' AND ar.resource_type = 'org_unit' " +
+            "AND ar.subject_type = 'user' AND ar.deleted = 0 " +
+            "LEFT JOIN org_units o ON o.id = ar.resource_id AND o.deleted = 0 " +
             "WHERE u.deleted = 0 AND u.status = 1 " +
             "<if test='keyword != null and keyword != \"\"'>" +
             "AND (u.username LIKE CONCAT('%', #{keyword}, '%') OR u.real_name LIKE CONCAT('%', #{keyword}, '%')) " +

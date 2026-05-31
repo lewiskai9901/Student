@@ -620,6 +620,129 @@ class DataPermissionInterceptorTest {
     }
 
     // ==================================================================
+    // buildMembershipCondition — user 资源按 member 关系派生归属过滤
+    // ==================================================================
+    @Nested
+    @DisplayName("buildMembershipCondition — viaMembership 用户归属子查询")
+    class BuildMembershipCondition {
+
+        @DataPermission(module = "user", tableAlias = "u", viaMembership = true)
+        interface MembershipMapper {
+            List<Object> selectList();
+        }
+
+        private DataPermission membershipAnnotation() {
+            return MembershipMapper.class.getAnnotation(DataPermission.class);
+        }
+
+        private Object build(DataPermission ann, DataModulePO module, UserContext ctx, Long tenantId) {
+            return ReflectionTestUtils.invokeMethod(interceptor, "buildScopedCondition",
+                    ann, module, ctx, tenantId);
+        }
+
+        private String sqlOf(Object cond) {
+            return (String) ReflectionTestUtils.getField(cond, "sql");
+        }
+
+        @SuppressWarnings("unchecked")
+        private List<Object> paramsOf(Object cond) {
+            return (List<Object>) ReflectionTestUtils.getField(cond, "params");
+        }
+
+        @Test
+        @DisplayName("ALL scope → 短路 null,不过滤")
+        void allScopeShortCircuits() {
+            UserContext ctx = userWithScopedRoles(List.of(scopedRole(1L, ScopeType.ALL, 0L, null)));
+            when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(1L), anyString()))
+                    .thenReturn(DataScope.ALL.getCode());
+            Object cond = build(membershipAnnotation(), moduleConfig(true, "user"), ctx, 1L);
+            assertThat(cond).isNull();
+        }
+
+        @Test
+        @DisplayName("DEPARTMENT → u.id IN (SELECT ar.subject_id ... member ... ar.resource_id = ?)")
+        void departmentBuildsMembershipSubquery() {
+            UserContext ctx = userWithScopedRoles(List.of(scopedRole(2L, ScopeType.ORG_UNIT, 200L, "1.10.200.")));
+            when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(2L), anyString()))
+                    .thenReturn(DataScope.DEPARTMENT.getCode());
+            Object cond = build(membershipAnnotation(), moduleConfig(true, "user"), ctx, 1L);
+            assertThat(cond).isNotNull();
+            assertThat(sqlOf(cond))
+                    .startsWith("u.id IN (")
+                    .contains("SELECT ar.subject_id FROM access_relations ar")
+                    .contains("ar.relation = 'member'")
+                    .contains("ar.resource_type = 'org_unit'")
+                    .contains("ar.subject_type = 'user'")
+                    .contains("ar.resource_id = ?");
+            // positional params: [ar.tenant_id, ar.resource_id]
+            assertThat(paramsOf(cond)).hasSize(2);
+        }
+
+        @Test
+        @DisplayName("DEPARTMENT_AND_BELOW → ar.resource_id IN (org_units tree_path 子查询)")
+        void departmentAndBelowBuildsTreePathSubquery() {
+            UserContext ctx = userWithScopedRoles(List.of(scopedRole(3L, ScopeType.ORG_UNIT, 300L, "1.10.300.")));
+            when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(3L), anyString()))
+                    .thenReturn(DataScope.DEPARTMENT_AND_BELOW.getCode());
+            Object cond = build(membershipAnnotation(), moduleConfig(true, "user"), ctx, 1L);
+            assertThat(cond).isNotNull();
+            assertThat(sqlOf(cond))
+                    .contains("SELECT ar.subject_id FROM access_relations ar")
+                    .contains("ar.resource_id IN (")
+                    .contains("tree_path LIKE ?");
+            // positional params: [ar.tenant_id, org tenant, org path]
+            assertThat(paramsOf(cond)).hasSize(3);
+        }
+
+        @Test
+        @DisplayName("SELF → u.id = ? (用户本人)")
+        void selfScopeFiltersToSelf() {
+            UserContext ctx = userWithScopedRoles(List.of(scopedRole(4L, ScopeType.ALL, 0L, null)));
+            when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(4L), anyString()))
+                    .thenReturn(DataScope.SELF.getCode());
+            Object cond = build(membershipAnnotation(), moduleConfig(true, "user"), ctx, 1L);
+            assertThat(cond).isNotNull();
+            assertThat(sqlOf(cond)).isEqualTo("u.id = ?");
+            assertThat(paramsOf(cond)).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("CUSTOM 无配置组织 → 拒绝所有 1 = 0")
+        void customWithoutOrgsDeniesAll() {
+            UserContext ctx = userWithScopedRoles(List.of(scopedRole(5L, ScopeType.ALL, 0L, null)));
+            when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(5L), anyString()))
+                    .thenReturn(DataScope.CUSTOM.getCode());
+            MergedDataScope merged = MergedDataScope.builder()
+                    .moduleCode("user").effectiveScope(DataScope.CUSTOM).build();
+            when(dataPermissionPolicyService.getMergedScope(eq(1L), eq(Collections.singletonList(5L)), anyString()))
+                    .thenReturn(merged);
+            Object cond = build(membershipAnnotation(), moduleConfig(true, "user"), ctx, 1L);
+            assertThat(cond).isNotNull();
+            assertThat(sqlOf(cond)).isEqualTo("1 = 0");
+        }
+
+        @Test
+        @DisplayName("CUSTOM 含组织 → ar.resource_id IN (内联 org ids)")
+        void customWithOrgsInlinesIds() {
+            UserContext ctx = userWithScopedRoles(List.of(scopedRole(6L, ScopeType.ALL, 0L, null)));
+            when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(6L), anyString()))
+                    .thenReturn(DataScope.CUSTOM.getCode());
+            MergedDataScope merged = MergedDataScope.builder()
+                    .moduleCode("user").effectiveScope(DataScope.CUSTOM).build();
+            merged.getMergedScopeItems().put("ORG_UNIT", new HashSet<>(Set.of(77L)));
+            when(dataPermissionPolicyService.getMergedScope(eq(1L), eq(Collections.singletonList(6L)), anyString()))
+                    .thenReturn(merged);
+            Object cond = build(membershipAnnotation(), moduleConfig(true, "user"), ctx, 1L);
+            assertThat(cond).isNotNull();
+            assertThat(sqlOf(cond))
+                    .contains("ar.resource_id IN (77)")
+                    .contains("SELECT ar.subject_id FROM access_relations ar");
+            // only the ar.tenant_id param is bound (org ids inlined)
+            assertThat(paramsOf(cond)).hasSize(1);
+        }
+    }
+
+    // ==================================================================
     // buildCustomCondition (legacy custom builder, exercised directly)
     // ==================================================================
     @Nested
