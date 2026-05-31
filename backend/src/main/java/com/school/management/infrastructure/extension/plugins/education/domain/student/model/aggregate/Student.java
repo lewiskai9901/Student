@@ -16,6 +16,11 @@ import java.time.LocalDateTime;
 public class Student extends AggregateRoot<Long> {
 
     /**
+     * 关联用户ID (users 表主键). 学生 = users 行 + user_student 档案.
+     */
+    private Long userId;
+
+    /**
      * 学号
      */
     private String studentNo;
@@ -146,6 +151,7 @@ public class Student extends AggregateRoot<Long> {
      */
     public static Student reconstruct(
             Long id,
+            Long userId,
             String studentNo,
             String name,
             Gender gender,
@@ -167,6 +173,7 @@ public class Student extends AggregateRoot<Long> {
     ) {
         Student student = new Student();
         student.setId(id);
+        student.userId = userId;
         student.studentNo = studentNo;
         student.name = name;
         student.gender = gender;
@@ -302,6 +309,8 @@ public class Student extends AggregateRoot<Long> {
     }
 
     // Getters
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
     public String getStudentNo() { return studentNo; }
     public String getName() { return name; }
     public Gender getGender() { return gender; }

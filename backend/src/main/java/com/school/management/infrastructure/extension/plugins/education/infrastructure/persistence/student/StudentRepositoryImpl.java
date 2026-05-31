@@ -127,11 +127,9 @@ public class StudentRepositoryImpl implements StudentRepository {
     private StudentPO toPO(Student student) {
         StudentPO po = new StudentPO();
         po.setId(student.getId());
+        po.setUserId(student.getUserId());
         po.setStudentNo(student.getStudentNo());
-        po.setName(student.getName());
-        po.setGender(student.getGender() != null ? student.getGender().getCode() : null);
-        po.setIdCard(student.getIdCard());
-        po.setPhone(student.getPhone());
+        // 身份属性 (name/gender/idCard/phone) 落 users 表, 不写 user_student
         po.setEmail(student.getEmail());
         po.setBirthDate(student.getBirthDate());
         po.setEnrollmentDate(student.getEnrollmentDate());
@@ -151,6 +149,7 @@ public class StudentRepositoryImpl implements StudentRepository {
     private Student toDomain(StudentPO po) {
         return Student.reconstruct(
                 po.getId(),
+                po.getUserId(),
                 po.getStudentNo(),
                 po.getName(),
                 po.getGender() != null ? Gender.fromCode(po.getGender()) : null,

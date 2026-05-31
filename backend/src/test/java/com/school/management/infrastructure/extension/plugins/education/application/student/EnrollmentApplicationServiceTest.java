@@ -36,6 +36,9 @@ class EnrollmentApplicationServiceTest {
     @Mock
     private OrgScopeHelper orgScopeHelper;
 
+    @Mock
+    private com.school.management.application.user.UserApplicationService userApplicationService;
+
     @InjectMocks
     private EnrollmentApplicationService service;
 

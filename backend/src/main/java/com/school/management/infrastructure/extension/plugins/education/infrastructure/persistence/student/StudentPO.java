@@ -51,23 +51,27 @@ public class StudentPO {
     private String phone;
 
     /**
-     * 邮箱
+     * 邮箱 (来自users表，user_student 无此列)
      */
+    @TableField(exist = false)
     private String email;
 
     /**
-     * 出生日期
+     * 出生日期 (来自users表，user_student 无此列)
      */
+    @TableField(exist = false)
     private LocalDate birthDate;
 
     /**
-     * 入学日期
+     * 入学日期 (user_student.admission_date)
      */
+    @TableField("admission_date")
     private LocalDate enrollmentDate;
 
     /**
-     * 预计毕业日期
+     * 预计毕业日期 (user_student.graduation_date)
      */
+    @TableField("graduation_date")
     private LocalDate expectedGraduationDate;
 
     /**
@@ -82,8 +86,9 @@ public class StudentPO {
     private Integer status;
 
     /**
-     * 头像URL
+     * 头像URL (来自users表，user_student 无此列)
      */
+    @TableField(exist = false)
     private String avatarUrl;
 
     /**
@@ -102,8 +107,9 @@ public class StudentPO {
     private String emergencyPhone;
 
     /**
-     * 备注
+     * 备注 (user_student.special_notes)
      */
+    @TableField("special_notes")
     private String remark;
 
     private Long tenantId;

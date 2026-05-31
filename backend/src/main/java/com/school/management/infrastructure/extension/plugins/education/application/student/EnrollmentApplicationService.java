@@ -1,7 +1,10 @@
 package com.school.management.infrastructure.extension.plugins.education.application.student;
 
 import com.school.management.application.event.TriggerService;
+import com.school.management.application.user.UserApplicationService;
+import com.school.management.application.user.command.CreateUserCommand;
 import com.school.management.common.util.SecurityUtils;
+import com.school.management.domain.user.model.aggregate.User;
 import com.school.management.infrastructure.access.OrgScopeHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +33,7 @@ public class EnrollmentApplicationService {
 
     private final JdbcTemplate jdbc;
     private final OrgScopeHelper orgScopeHelper;
+    private final UserApplicationService userApplicationService;
 
     @Autowired(required = false)
     private TriggerService triggerService;
@@ -384,15 +388,29 @@ public class EnrollmentApplicationService {
         String studentNo = yearPrefix + String.format("%06d", nextSeq);
 
         Long createdBy = SecurityUtils.getCurrentUserId();
+
+        // 1. 复用通用建用户路径: 建 users 行 (身份属性入 users) + member 归属 (createUser 内部 setMembership)
+        //    username 用学号; 密码缺省由 UserApplicationService 用默认密码
+        Integer genderVal = app.get("gender") != null ? ((Number) app.get("gender")).intValue() : null;
+        User user = userApplicationService.createUser(CreateUserCommand.builder()
+            .username(studentNo)
+            .realName((String) app.get("applicantName"))
+            .gender(genderVal)
+            .phone((String) app.get("phone"))
+            .idCard((String) app.get("idCard"))
+            .userTypeCode("STUDENT")
+            .orgUnitId(orgUnitId)
+            .createdBy(createdBy)
+            .build());
+        Long userId = user.getId();
+
+        // 2. 建 user_student 专属档案行 (user_id 关联 users; 身份属性不再写 user_student)
         jdbc.update(
-            "INSERT INTO user_student (student_no, name, gender, id_card, phone, org_unit_id, " +
-            "enrollment_date, status, created_by, created_at) " +
-            "VALUES (?,?,?,?,?,?,?,1,?,NOW())",
+            "INSERT INTO user_student (user_id, student_no, org_unit_id, " +
+            "admission_date, student_status, created_by, created_at) " +
+            "VALUES (?,?,?,?,1,?,NOW())",
+            userId,
             studentNo,
-            app.get("applicantName"),
-            app.get("gender"),
-            app.get("idCard"),
-            app.get("phone"),
             orgUnitId,
             LocalDate.now(),
             createdBy

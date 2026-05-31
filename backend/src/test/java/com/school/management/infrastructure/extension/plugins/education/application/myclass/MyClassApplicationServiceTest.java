@@ -85,7 +85,7 @@ class MyClassApplicationServiceTest {
     private Student buildStudent(Long id, String studentNo, String name,
                                  Gender gender, StudentStatus status) {
         return Student.reconstruct(
-            id, studentNo, name, gender, "110101200001011234",
+            id, 100L, studentNo, name, gender, "110101200001011234",
             "13800000000", "s@test.com", LocalDate.of(2006, 1, 1),
             LocalDate.of(2024, 9, 1), LocalDate.of(2028, 6, 30),
             10L, status, null, "家庭住址", "联系人", "13900000000",

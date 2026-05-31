@@ -4,7 +4,10 @@ import com.school.management.infrastructure.extension.plugins.education.applicat
 import com.school.management.infrastructure.extension.plugins.education.application.student.query.StudentDTO;
 import com.school.management.infrastructure.extension.plugins.education.application.student.query.StudentQueryCriteria;
 import com.school.management.common.PageResult;
+import com.school.management.application.user.UserApplicationService;
+import com.school.management.application.user.command.CreateUserCommand;
 import com.school.management.domain.shared.event.DomainEventPublisher;
+import com.school.management.domain.user.model.aggregate.User;
 import com.school.management.infrastructure.extension.plugins.education.domain.student.model.aggregate.Student;
 import com.school.management.infrastructure.extension.plugins.education.domain.student.model.valueobject.Gender;
 import com.school.management.infrastructure.extension.plugins.education.domain.student.model.valueobject.StudentStatus;
@@ -35,6 +38,7 @@ public class StudentApplicationService {
     private final StudentRepository studentRepository;
     private final DomainEventPublisher eventPublisher;
     private final StatusChangeRecordService statusChangeRecordService;
+    private final UserApplicationService userApplicationService;
 
     @Autowired(required = false)
     private TriggerService triggerService;
@@ -54,7 +58,25 @@ public class StudentApplicationService {
             throw new BusinessException("身份证号已存在: " + command.getIdCard());
         }
 
-        // 创建学生聚合
+        // 1. 复用通用建用户路径: 建 users 行 (身份属性入 users) + member 归属关系 (createUser 内部 setMembership)
+        //    username 默认用学号; 密码缺省由 UserApplicationService 用默认密码
+        String username = command.getStudentNo();
+        if (username == null || username.isBlank()) {
+            throw new BusinessException("学号不能为空 (作为学生登录用户名)");
+        }
+        User user = userApplicationService.createUser(CreateUserCommand.builder()
+                .username(username)
+                .realName(command.getName())
+                .gender(command.getGender())
+                .phone(command.getPhone())
+                .email(command.getEmail())
+                .birthDate(command.getBirthDate())
+                .idCard(command.getIdCard())
+                .userTypeCode("STUDENT")
+                .orgUnitId(command.getOrgUnitId())
+                .build());
+
+        // 2. 创建学生聚合 (教育专属档案; 身份属性不再落 user_student)
         Student student = Student.enroll(
                 command.getStudentNo(),
                 command.getName(),
@@ -63,8 +85,9 @@ public class StudentApplicationService {
                 command.getOrgUnitId(),
                 command.getEnrollmentDate()
         );
+        student.setUserId(user.getId());
 
-        // 设置其他属性
+        // 设置其他属性 (email/住址/紧急联系人/备注 落 user_student)
         student.updateBasicInfo(
                 command.getName(),
                 command.getGender() != null ? Gender.fromCode(command.getGender()) : null,
@@ -77,7 +100,7 @@ public class StudentApplicationService {
                 command.getRemark()
         );
 
-        // 保存学生
+        // 保存学生档案 (user_student.user_id 关联 users 行)
         Student saved = studentRepository.save(student);
 
         // 发布领域事件

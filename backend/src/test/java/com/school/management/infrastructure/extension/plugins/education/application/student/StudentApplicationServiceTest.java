@@ -5,7 +5,9 @@ import com.school.management.infrastructure.extension.plugins.education.applicat
 import com.school.management.infrastructure.extension.plugins.education.application.student.query.StudentDTO;
 import com.school.management.infrastructure.extension.plugins.education.application.student.query.StudentQueryCriteria;
 import com.school.management.common.PageResult;
+import com.school.management.application.user.UserApplicationService;
 import com.school.management.domain.shared.event.DomainEventPublisher;
+import com.school.management.domain.user.model.aggregate.User;
 import com.school.management.infrastructure.extension.plugins.education.domain.student.model.aggregate.Student;
 import com.school.management.infrastructure.extension.plugins.education.domain.student.model.valueobject.Gender;
 import com.school.management.infrastructure.extension.plugins.education.domain.student.model.valueobject.StudentStatus;
@@ -45,6 +47,9 @@ class StudentApplicationServiceTest {
     @Mock
     private StatusChangeRecordService statusChangeRecordService;
 
+    @Mock
+    private UserApplicationService userApplicationService;
+
     @InjectMocks
     private StudentApplicationService service;
 
@@ -60,6 +65,7 @@ class StudentApplicationServiceTest {
     private Student createStudentWithStatus(Long id, String studentNo, String name, StudentStatus status) {
         return Student.reconstruct(
                 id,
+                100L, // userId
                 studentNo,
                 name,
                 Gender.MALE,
@@ -100,11 +106,14 @@ class StudentApplicationServiceTest {
 
             when(studentRepository.existsByStudentNo("2024001")).thenReturn(false);
             when(studentRepository.existsByIdCard("320123200001011234")).thenReturn(false);
+            User mockUser = User.create("2024001", "pwd", "张三", "STUDENT");
+            mockUser.setId(100L);
+            when(userApplicationService.createUser(any())).thenReturn(mockUser);
             when(studentRepository.save(any(Student.class))).thenAnswer(inv -> {
                 Student s = inv.getArgument(0);
                 // 模拟保存后设置 ID
                 return Student.reconstruct(
-                        1L, s.getStudentNo(), s.getName(), s.getGender(),
+                        1L, s.getUserId(), s.getStudentNo(), s.getName(), s.getGender(),
                         s.getIdCard(), s.getPhone(), s.getEmail(), s.getBirthDate(),
                         s.getEnrollmentDate(), s.getExpectedGraduationDate(), s.getOrgUnitId(),
                         s.getStatus(), s.getAvatarUrl(),
