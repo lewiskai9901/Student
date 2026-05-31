@@ -20,7 +20,7 @@ import java.util.List;
  *   <li>classes.teacher_id = userId → 直接挂的班主任 (兼容老数据)</li>
  * </ul>
  *
- * <p>resource_id (access_relations) 是班级 org_unit_id, 反查 user_student.org_unit_id IN.
+ * <p>resource_id (access_relations) 是班级 org_unit_id, 经 member 关系反查归属该班的学生.
  */
 @Slf4j
 @Component
@@ -79,9 +79,16 @@ public class ClassDataScopeResolver implements DataScopeResolver {
     private List<Long> queryStudentIdsByClasses(List<Long> classOrgUnitIds) {
         if (classOrgUnitIds.isEmpty()) return Collections.emptyList();
         String placeholders = classOrgUnitIds.stream().map(id -> "?").reduce((a, b) -> a + "," + b).orElse("");
+        // 学生班级归属已统一到 access_relations member 关系
+        // (subject=学生 user_id, resource=班级 org_unit), 不再读 user_student.org_unit_id 行业列。
+        // mar.resource_id = 班级 org_unit_id, 反查归属学生档案 id。
         return jdbc.queryForList(
-            "SELECT id FROM user_student " +
-            "WHERE org_unit_id IN (" + placeholders + ") AND deleted = 0",
+            "SELECT s.id FROM user_student s " +
+            "JOIN access_relations mar ON mar.subject_id = s.user_id " +
+            "  AND mar.relation = 'member' AND mar.resource_type = 'org_unit' " +
+            "  AND mar.subject_type = 'user' AND mar.deleted = 0 " +
+            "  AND (mar.valid_to IS NULL OR mar.valid_to > NOW()) " +
+            "WHERE mar.resource_id IN (" + placeholders + ") AND s.deleted = 0",
             Long.class, classOrgUnitIds.toArray());
     }
 
