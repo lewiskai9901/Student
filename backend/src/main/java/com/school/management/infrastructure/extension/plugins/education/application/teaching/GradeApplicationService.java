@@ -227,7 +227,10 @@ public class GradeApplicationService {
                 List<Map<String, Object>> students = jdbc.queryForList(
                     "SELECT s.user_id, u.real_name FROM user_student s " +
                     "JOIN users u ON u.id = s.user_id AND u.deleted = 0 " +
-                    "WHERE s.org_unit_id = ? AND s.deleted = 0",
+                    "LEFT JOIN access_relations mar ON mar.subject_id = s.user_id AND mar.relation = 'member' " +
+                    "AND mar.resource_type = 'org_unit' AND mar.subject_type = 'user' AND mar.deleted = 0 " +
+                    "AND (mar.valid_to IS NULL OR mar.valid_to > NOW()) " +
+                    "WHERE mar.resource_id = ? AND s.deleted = 0",
                     orgUnitId);
                 for (Map<String, Object> stu : students) {
                     Long studentId = ((Number) stu.get("user_id")).longValue();
@@ -860,8 +863,11 @@ public class GradeApplicationService {
                     "SELECT s.id, s.student_no, u.real_name AS name, o.unit_name AS class_name " +
                     "FROM user_student s " +
                     "JOIN users u ON u.id = s.user_id " +
-                    "LEFT JOIN org_units o ON o.id = s.org_unit_id " +
-                    "WHERE s.org_unit_id = ? AND s.deleted = 0 ORDER BY s.student_no",
+                    "LEFT JOIN access_relations mar ON mar.subject_id = s.user_id AND mar.relation = 'member' " +
+                    "AND mar.resource_type = 'org_unit' AND mar.subject_type = 'user' AND mar.deleted = 0 " +
+                    "AND (mar.valid_to IS NULL OR mar.valid_to > NOW()) " +
+                    "LEFT JOIN org_units o ON o.id = mar.resource_id " +
+                    "WHERE mar.resource_id = ? AND s.deleted = 0 ORDER BY s.student_no",
                     orgUnitId
                 );
             } catch (Exception e) {
@@ -878,7 +884,10 @@ public class GradeApplicationService {
                     "FROM student_grades sg " +
                     "JOIN user_student s ON s.id = sg.student_id " +
                     "JOIN users u ON u.id = s.user_id " +
-                    "LEFT JOIN org_units o ON o.id = s.org_unit_id " +
+                    "LEFT JOIN access_relations mar ON mar.subject_id = s.user_id AND mar.relation = 'member' " +
+                    "AND mar.resource_type = 'org_unit' AND mar.subject_type = 'user' AND mar.deleted = 0 " +
+                    "AND (mar.valid_to IS NULL OR mar.valid_to > NOW()) " +
+                    "LEFT JOIN org_units o ON o.id = mar.resource_id " +
                     "WHERE sg.course_id = ? AND sg.deleted = 0 AND s.deleted = 0 " +
                     "ORDER BY s.student_no",
                     courseId

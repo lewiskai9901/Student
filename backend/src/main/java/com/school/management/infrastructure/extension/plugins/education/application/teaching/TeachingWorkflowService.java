@@ -333,8 +333,11 @@ public class TeachingWorkflowService {
             String placeholders = String.join(",", Collections.nCopies(orgUnitIds.size(), "?"));
             try {
                 List<Map<String, Object>> rows = jdbc.queryForList(
-                    "SELECT id, org_unit_id FROM user_student " +
-                    "WHERE org_unit_id IN (" + placeholders + ") AND student_status = 1 AND deleted = 0",
+                    "SELECT s.id, mar.resource_id AS org_unit_id FROM user_student s " +
+                    "JOIN access_relations mar ON mar.subject_id = s.user_id AND mar.relation = 'member' " +
+                    "AND mar.resource_type = 'org_unit' AND mar.subject_type = 'user' AND mar.deleted = 0 " +
+                    "AND (mar.valid_to IS NULL OR mar.valid_to > NOW()) " +
+                    "WHERE mar.resource_id IN (" + placeholders + ") AND s.student_status = 1 AND s.deleted = 0",
                     orgUnitIds.toArray());
                 for (Map<String, Object> row : rows) {
                     Long oid = ((Number) row.get("org_unit_id")).longValue();

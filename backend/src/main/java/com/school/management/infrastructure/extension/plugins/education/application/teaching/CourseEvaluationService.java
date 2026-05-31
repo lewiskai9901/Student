@@ -151,7 +151,8 @@ public class CourseEvaluationService {
                 "INNER JOIN teaching_task_teachers tt ON tt.task_id = t.id AND tt.teacher_role = 1 " +
                 "LEFT JOIN users u ON u.id = tt.teacher_id " +
                 "WHERE t.semester_id = ? AND t.deleted = 0 " +
-                "  AND t.org_unit_id = (SELECT org_unit_id FROM user_student WHERE user_id = ? AND deleted = 0 LIMIT 1)",
+                "  AND t.org_unit_id = (SELECT resource_id FROM access_relations WHERE subject_id = ? " +
+                "    AND relation = 'member' AND resource_type = 'org_unit' AND subject_type = 'user' AND deleted = 0 LIMIT 1)",
                 evaluationId, studentId, eval.getSemesterId(), studentId);
         } catch (Exception e) {
             log.warn("查询学生待评 task 失败: {}", e.getMessage());
@@ -172,7 +173,8 @@ public class CourseEvaluationService {
         Long orgUnitId = null;
         try {
             orgUnitId = jdbc.queryForObject(
-                "SELECT org_unit_id FROM user_student WHERE user_id = ? AND deleted = 0 LIMIT 1",
+                "SELECT resource_id FROM access_relations WHERE subject_id = ? " +
+                "AND relation = 'member' AND resource_type = 'org_unit' AND subject_type = 'user' AND deleted = 0 LIMIT 1",
                 Long.class, studentId);
         } catch (Exception ignored) {}
 

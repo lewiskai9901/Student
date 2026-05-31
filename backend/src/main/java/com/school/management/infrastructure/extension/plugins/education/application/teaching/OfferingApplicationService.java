@@ -199,8 +199,11 @@ public class OfferingApplicationService {
             String placeholders = String.join(",", Collections.nCopies(orgUnitIds.size(), "?"));
             try {
                 List<Map<String, Object>> rows = jdbc.queryForList(
-                    "SELECT org_unit_id, COUNT(1) AS cnt FROM user_student " +
-                    "WHERE org_unit_id IN (" + placeholders + ") AND deleted = 0 GROUP BY org_unit_id",
+                    "SELECT mar.resource_id AS org_unit_id, COUNT(1) AS cnt FROM user_student s " +
+                    "JOIN access_relations mar ON mar.subject_id = s.user_id AND mar.relation = 'member' " +
+                    "AND mar.resource_type = 'org_unit' AND mar.subject_type = 'user' AND mar.deleted = 0 " +
+                    "AND (mar.valid_to IS NULL OR mar.valid_to > NOW()) " +
+                    "WHERE mar.resource_id IN (" + placeholders + ") AND s.deleted = 0 GROUP BY mar.resource_id",
                     orgUnitIds.toArray());
                 for (Map<String, Object> row : rows) {
                     Long oid = ((Number) row.get("org_unit_id")).longValue();
