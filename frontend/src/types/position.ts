@@ -97,9 +97,9 @@ export interface OrgMember {
   userTypeCode?: string
   /** belonging = 归属成员, staff = 岗位人员 */
   membershipType?: string
-  /** 用户归属组织ID */
+  /** 用户归属组织ID — 来自 access_relations member 关系派生（后端字段名沿用 primaryOrgUnitId，语义=归属 orgUnitId） */
   primaryOrgUnitId?: LongId
-  /** 用户归属组织名称 */
+  /** 用户归属组织名称 — 同上派生值 */
   primaryOrgUnitName?: string
   /** 岗位所在组织ID（递归查询时用） */
   orgUnitId?: LongId

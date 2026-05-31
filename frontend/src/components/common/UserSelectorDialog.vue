@@ -185,6 +185,7 @@ const filteredUsers = computed(() => {
       if (!u.realName.toLowerCase().includes(kw) && !u.username.toLowerCase().includes(kw)) return false
     }
     if (filterUserType.value && u.userType !== filterUserType.value) return false
+    // primaryOrgUnitId = 后端 member 关系派生的归属 orgUnitId（字段名沿用），有值=已归属
     if (filterAssignment.value === 'assigned' && !u.primaryOrgUnitId) return false
     if (filterAssignment.value === 'unassigned' && u.primaryOrgUnitId) return false
     return true

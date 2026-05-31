@@ -587,6 +587,7 @@ const handleAddMemberFromSelector = async (users: SimpleUser[]) => {
   if (users.length === 0) return
   const user = users[0]
   // Step 2: Check if user already belongs to another org
+  // primaryOrgUnitId = 后端 member 关系派生的归属 orgUnitId（字段名沿用）
   if (user.primaryOrgUnitId && String(user.primaryOrgUnitId) !== String(props.node.id)) {
     try {
       await ElMessageBox.confirm(

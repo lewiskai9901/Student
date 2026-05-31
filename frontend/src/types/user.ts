@@ -94,7 +94,9 @@ export interface SimpleUser {
   orgUnitName?: string
   userType?: string
   gender?: number
+  /** 用户归属组织 ID — 来自 access_relations member 关系派生（后端字段名沿用 primaryOrgUnitId，语义=orgUnitId） */
   primaryOrgUnitId?: LongId | string
+  /** 用户归属组织名称 — 同上派生值 */
   primaryOrgUnitName?: string
 }
 
