@@ -16,16 +16,30 @@ UPDATE check_item_appeals
 SET appellant_name = appealer_name
 WHERE appellant_name IS NULL AND appealer_name IS NOT NULL;
 
--- 2. 删除旧版字段
-ALTER TABLE check_item_appeals DROP COLUMN IF EXISTS original_deduct_score;
-ALTER TABLE check_item_appeals DROP COLUMN IF EXISTS appealer_id;
-ALTER TABLE check_item_appeals DROP COLUMN IF EXISTS appealer_name;
-ALTER TABLE check_item_appeals DROP COLUMN IF EXISTS appeal_status;
-ALTER TABLE check_item_appeals DROP COLUMN IF EXISTS appeal_photos;
-ALTER TABLE check_item_appeals DROP COLUMN IF EXISTS appeal_videos;
+-- 2. 删除旧版字段 — MySQL 8.0 不支持 DROP COLUMN IF EXISTS, 用 information_schema 条件化
+SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='check_item_appeals' AND COLUMN_NAME='original_deduct_score');
+SET @s := IF(@c>0, "ALTER TABLE check_item_appeals DROP COLUMN original_deduct_score", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
+SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='check_item_appeals' AND COLUMN_NAME='appealer_id');
+SET @s := IF(@c>0, "ALTER TABLE check_item_appeals DROP COLUMN appealer_id", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
+SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='check_item_appeals' AND COLUMN_NAME='appealer_name');
+SET @s := IF(@c>0, "ALTER TABLE check_item_appeals DROP COLUMN appealer_name", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
+SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='check_item_appeals' AND COLUMN_NAME='appeal_status');
+SET @s := IF(@c>0, "ALTER TABLE check_item_appeals DROP COLUMN appeal_status", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
+SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='check_item_appeals' AND COLUMN_NAME='appeal_photos');
+SET @s := IF(@c>0, "ALTER TABLE check_item_appeals DROP COLUMN appeal_photos", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
+SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='check_item_appeals' AND COLUMN_NAME='appeal_videos');
+SET @s := IF(@c>0, "ALTER TABLE check_item_appeals DROP COLUMN appeal_videos", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- 3. 为新字段添加索引（如果不存在）
-CREATE INDEX IF NOT EXISTS idx_appellant_id ON check_item_appeals(appellant_id);
+SET @x := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='check_item_appeals' AND INDEX_NAME='idx_appellant_id');
+SET @s := IF(@x=0, "CREATE INDEX idx_appellant_id ON check_item_appeals(appellant_id)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- 4. 添加字段注释
 ALTER TABLE check_item_appeals

@@ -4,11 +4,15 @@
 --              (single item vs batch management)
 -- =====================================================
 
--- 1. Add management_mode column to asset table
-ALTER TABLE asset ADD COLUMN IF NOT EXISTS management_mode INT DEFAULT 1 COMMENT '管理模式: 1-单品管理, 2-批量管理';
+-- 1. Add management_mode column to asset table (MySQL 8.0 条件化)
+SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='asset' AND COLUMN_NAME='management_mode');
+SET @s := IF(@c=0, "ALTER TABLE asset ADD COLUMN management_mode INT DEFAULT 1 COMMENT '管理模式: 1-单品管理, 2-批量管理'", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- 2. Add default_management_mode column to asset_category table
-ALTER TABLE asset_category ADD COLUMN IF NOT EXISTS default_management_mode INT DEFAULT 1 COMMENT '默认管理模式: 1-单品管理, 2-批量管理';
+SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='asset_category' AND COLUMN_NAME='default_management_mode');
+SET @s := IF(@c=0, "ALTER TABLE asset_category ADD COLUMN default_management_mode INT DEFAULT 1 COMMENT '默认管理模式: 1-单品管理, 2-批量管理'", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- 3. Update existing categories based on category_type
 -- category_type: 1-固定资产, 2-低值易耗品, 3-消耗品
@@ -33,9 +37,13 @@ WHERE a.management_mode IS NULL;
 -- 5. Set default for any remaining assets without management_mode
 UPDATE asset SET management_mode = 1 WHERE management_mode IS NULL;
 
--- 6. Add index for efficient queries
-CREATE INDEX IF NOT EXISTS idx_asset_management_mode ON asset(management_mode);
-CREATE INDEX IF NOT EXISTS idx_asset_category_default_mode ON asset_category(default_management_mode);
+-- 6. Add index for efficient queries (MySQL 8.0 条件化)
+SET @x := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='asset' AND INDEX_NAME='idx_asset_management_mode');
+SET @s := IF(@x=0, "CREATE INDEX idx_asset_management_mode ON asset(management_mode)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
+SET @x := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='asset_category' AND INDEX_NAME='idx_asset_category_default_mode');
+SET @s := IF(@x=0, "CREATE INDEX idx_asset_category_default_mode ON asset_category(default_management_mode)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- 7. Add comment for documentation
 -- Management Mode Explanation:

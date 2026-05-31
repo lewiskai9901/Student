@@ -1667,45 +1667,61 @@ SET NAMES utf8mb4;
 -- Users & Authentication
 -- ---------------------------------------------------------------------------
 -- Covering index for login authentication
-CREATE INDEX IF NOT EXISTS idx_users_login_cover
-    ON users (username, password, status, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND INDEX_NAME = 'idx_users_login_cover');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME IN ('username','password','status','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 4, "CREATE INDEX idx_users_login_cover ON users (username, password, status, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- User search optimization
-CREATE INDEX IF NOT EXISTS idx_users_search
-    ON users (real_name, phone, status);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND INDEX_NAME = 'idx_users_search');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME IN ('real_name','phone','status'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_users_search ON users (real_name, phone, status)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- ---------------------------------------------------------------------------
 -- Roles & Permissions
 -- ---------------------------------------------------------------------------
 -- Role hierarchy lookup
-CREATE INDEX IF NOT EXISTS idx_roles_parent_status
-    ON roles (parent_id, status, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'roles' AND INDEX_NAME = 'idx_roles_parent_status');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'roles' AND COLUMN_NAME IN ('parent_id','status','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_roles_parent_status ON roles (parent_id, status, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Permission tree traversal
-CREATE INDEX IF NOT EXISTS idx_permissions_tree
-    ON permissions (parent_id, permission_type, sort_order);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'permissions' AND INDEX_NAME = 'idx_permissions_tree');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'permissions' AND COLUMN_NAME IN ('parent_id','permission_type','sort_order'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_permissions_tree ON permissions (parent_id, permission_type, sort_order)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- ---------------------------------------------------------------------------
 -- Organization Units
 -- ---------------------------------------------------------------------------
 -- Org unit hierarchy (for tree queries)
-CREATE INDEX IF NOT EXISTS idx_org_units_hierarchy
-    ON org_units (parent_id, unit_level, status, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'org_units' AND INDEX_NAME = 'idx_org_units_hierarchy');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'org_units' AND COLUMN_NAME IN ('parent_id','unit_level','status','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 4, "CREATE INDEX idx_org_units_hierarchy ON org_units (parent_id, unit_level, status, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Org unit by type and code
-CREATE INDEX IF NOT EXISTS idx_org_units_type_code
-    ON org_units (unit_type, unit_code, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'org_units' AND INDEX_NAME = 'idx_org_units_type_code');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'org_units' AND COLUMN_NAME IN ('unit_type','unit_code','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_org_units_type_code ON org_units (unit_type, unit_code, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- ---------------------------------------------------------------------------
 -- Classes
 -- ---------------------------------------------------------------------------
 -- Class by org unit and status (common query pattern)
-CREATE INDEX IF NOT EXISTS idx_classes_org_status
-    ON classes (org_unit_id, status, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'classes' AND INDEX_NAME = 'idx_classes_org_status');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'classes' AND COLUMN_NAME IN ('org_unit_id','status','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_classes_org_status ON classes (org_unit_id, status, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Class by grade and enrollment year
-CREATE INDEX IF NOT EXISTS idx_classes_grade_year
-    ON classes (grade_id, enrollment_year, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'classes' AND INDEX_NAME = 'idx_classes_grade_year');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'classes' AND COLUMN_NAME IN ('grade_id','enrollment_year','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_classes_grade_year ON classes (grade_id, enrollment_year, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Full-text search on class name (if MySQL 5.7+)
 -- CREATE FULLTEXT INDEX IF NOT EXISTS ft_classes_name ON classes (class_name);
@@ -1714,27 +1730,37 @@ CREATE INDEX IF NOT EXISTS idx_classes_grade_year
 -- Students
 -- ---------------------------------------------------------------------------
 -- Student by class (most common lookup)
-CREATE INDEX IF NOT EXISTS idx_students_class
-    ON students (class_id, status, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'students' AND INDEX_NAME = 'idx_students_class');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'students' AND COLUMN_NAME IN ('class_id','status','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_students_class ON students (class_id, status, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Student search optimization
-CREATE INDEX IF NOT EXISTS idx_students_search
-    ON students (name, student_no, id_card, phone);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'students' AND INDEX_NAME = 'idx_students_search');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'students' AND COLUMN_NAME IN ('name','student_no','id_card','phone'));
+SET @s := IF(@idx = 0 AND @cols = 4, "CREATE INDEX idx_students_search ON students (name, student_no, id_card, phone)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Student by dormitory
-CREATE INDEX IF NOT EXISTS idx_students_dormitory
-    ON students (dormitory_id, bed_no, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'students' AND INDEX_NAME = 'idx_students_dormitory');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'students' AND COLUMN_NAME IN ('dormitory_id','bed_no','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_students_dormitory ON students (dormitory_id, bed_no, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- ---------------------------------------------------------------------------
 -- Dormitories
 -- ---------------------------------------------------------------------------
 -- Dormitory by building and floor
-CREATE INDEX IF NOT EXISTS idx_dormitories_location
-    ON dormitories (building_id, floor, status);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'dormitories' AND INDEX_NAME = 'idx_dormitories_location');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'dormitories' AND COLUMN_NAME IN ('building_id','floor','status'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_dormitories_location ON dormitories (building_id, floor, status)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Dormitory capacity management
-CREATE INDEX IF NOT EXISTS idx_dormitories_capacity
-    ON dormitories (capacity, current_count, building_id);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'dormitories' AND INDEX_NAME = 'idx_dormitories_capacity');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'dormitories' AND COLUMN_NAME IN ('capacity','current_count','building_id'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_dormitories_capacity ON dormitories (capacity, current_count, building_id)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- ============================================================================
 -- PART 2: INSPECTION TABLES - Performance Indexes
@@ -1744,91 +1770,127 @@ CREATE INDEX IF NOT EXISTS idx_dormitories_capacity
 -- Check Templates
 -- ---------------------------------------------------------------------------
 -- Template by category and status
-CREATE INDEX IF NOT EXISTS idx_templates_category_status
-    ON check_templates (category_id, status, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_templates' AND INDEX_NAME = 'idx_templates_category_status');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_templates' AND COLUMN_NAME IN ('category_id','status','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_templates_category_status ON check_templates (category_id, status, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Active templates for dropdown
-CREATE INDEX IF NOT EXISTS idx_templates_active
-    ON check_templates (status, deleted, sort_order);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_templates' AND INDEX_NAME = 'idx_templates_active');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_templates' AND COLUMN_NAME IN ('status','deleted','sort_order'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_templates_active ON check_templates (status, deleted, sort_order)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- ---------------------------------------------------------------------------
 -- Check Plans
 -- ---------------------------------------------------------------------------
 -- Plans by date range (most common query)
-CREATE INDEX IF NOT EXISTS idx_plans_date_range
-    ON check_plans (start_date, end_date, status, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_plans' AND INDEX_NAME = 'idx_plans_date_range');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_plans' AND COLUMN_NAME IN ('start_date','end_date','status','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 4, "CREATE INDEX idx_plans_date_range ON check_plans (start_date, end_date, status, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Plans by semester
-CREATE INDEX IF NOT EXISTS idx_plans_semester
-    ON check_plans (semester_id, status, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_plans' AND INDEX_NAME = 'idx_plans_semester');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_plans' AND COLUMN_NAME IN ('semester_id','status','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_plans_semester ON check_plans (semester_id, status, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- ---------------------------------------------------------------------------
 -- Check Records
 -- ---------------------------------------------------------------------------
 -- Records by plan and status (dashboard queries)
-CREATE INDEX IF NOT EXISTS idx_records_plan_status
-    ON check_records (plan_id, status, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_records' AND INDEX_NAME = 'idx_records_plan_status');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_records' AND COLUMN_NAME IN ('plan_id','status','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_records_plan_status ON check_records (plan_id, status, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Records by check date (date-based queries)
-CREATE INDEX IF NOT EXISTS idx_records_check_date
-    ON check_records (check_date, status, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_records' AND INDEX_NAME = 'idx_records_check_date');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_records' AND COLUMN_NAME IN ('check_date','status','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_records_check_date ON check_records (check_date, status, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Records by inspector (my tasks)
-CREATE INDEX IF NOT EXISTS idx_records_inspector
-    ON check_records (inspector_id, status, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_records' AND INDEX_NAME = 'idx_records_inspector');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_records' AND COLUMN_NAME IN ('inspector_id','status','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_records_inspector ON check_records (inspector_id, status, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Records by template and date
-CREATE INDEX IF NOT EXISTS idx_records_template_date
-    ON check_records (template_id, check_date, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_records' AND INDEX_NAME = 'idx_records_template_date');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_records' AND COLUMN_NAME IN ('template_id','check_date','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_records_template_date ON check_records (template_id, check_date, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- ---------------------------------------------------------------------------
 -- Class Scores
 -- ---------------------------------------------------------------------------
 -- Scores by record (record detail page)
-CREATE INDEX IF NOT EXISTS idx_scores_record
-    ON class_scores (record_id, class_id);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'class_scores' AND INDEX_NAME = 'idx_scores_record');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'class_scores' AND COLUMN_NAME IN ('record_id','class_id'));
+SET @s := IF(@idx = 0 AND @cols = 2, "CREATE INDEX idx_scores_record ON class_scores (record_id, class_id)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Scores by class and date range (class statistics)
-CREATE INDEX IF NOT EXISTS idx_scores_class_date
-    ON class_scores (class_id, check_date, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'class_scores' AND INDEX_NAME = 'idx_scores_class_date');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'class_scores' AND COLUMN_NAME IN ('class_id','check_date','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_scores_class_date ON class_scores (class_id, check_date, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Ranking query optimization
-CREATE INDEX IF NOT EXISTS idx_scores_ranking
-    ON class_scores (record_id, final_score DESC, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'class_scores' AND INDEX_NAME = 'idx_scores_ranking');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'class_scores' AND COLUMN_NAME IN ('record_id','final_score','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_scores_ranking ON class_scores (record_id, final_score DESC, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Rating distribution
-CREATE INDEX IF NOT EXISTS idx_scores_rating
-    ON class_scores (record_id, rating, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'class_scores' AND INDEX_NAME = 'idx_scores_rating');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'class_scores' AND COLUMN_NAME IN ('record_id','rating','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_scores_rating ON class_scores (record_id, rating, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- ---------------------------------------------------------------------------
 -- Deduction Details
 -- ---------------------------------------------------------------------------
 -- Deductions by score record
-CREATE INDEX IF NOT EXISTS idx_deductions_score
-    ON deduction_details (score_id, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'deduction_details' AND INDEX_NAME = 'idx_deductions_score');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'deduction_details' AND COLUMN_NAME IN ('score_id','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 2, "CREATE INDEX idx_deductions_score ON deduction_details (score_id, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Deductions by item (item statistics)
-CREATE INDEX IF NOT EXISTS idx_deductions_item
-    ON deduction_details (item_id, record_id, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'deduction_details' AND INDEX_NAME = 'idx_deductions_item');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'deduction_details' AND COLUMN_NAME IN ('item_id','record_id','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_deductions_item ON deduction_details (item_id, record_id, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Deductions by class (class history)
-CREATE INDEX IF NOT EXISTS idx_deductions_class
-    ON deduction_details (class_id, check_date, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'deduction_details' AND INDEX_NAME = 'idx_deductions_class');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'deduction_details' AND COLUMN_NAME IN ('class_id','check_date','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_deductions_class ON deduction_details (class_id, check_date, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- ---------------------------------------------------------------------------
 -- Appeals
 -- ---------------------------------------------------------------------------
 -- Appeals by status (pending review list)
-CREATE INDEX IF NOT EXISTS idx_appeals_status
-    ON check_item_appeals (status, deleted, created_at DESC);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_item_appeals' AND INDEX_NAME = 'idx_appeals_status');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_item_appeals' AND COLUMN_NAME IN ('status','deleted','created_at'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_appeals_status ON check_item_appeals (status, deleted, created_at DESC)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Appeals by class (class appeal history)
-CREATE INDEX IF NOT EXISTS idx_appeals_class
-    ON check_item_appeals (class_id, status, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_item_appeals' AND INDEX_NAME = 'idx_appeals_class');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_item_appeals' AND COLUMN_NAME IN ('class_id','status','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_appeals_class ON check_item_appeals (class_id, status, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Appeals by reviewer (my reviews)
-CREATE INDEX IF NOT EXISTS idx_appeals_reviewer
-    ON check_item_appeals (reviewer_id, status, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_item_appeals' AND INDEX_NAME = 'idx_appeals_reviewer');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_item_appeals' AND COLUMN_NAME IN ('reviewer_id','status','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_appeals_reviewer ON check_item_appeals (reviewer_id, status, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- ============================================================================
 -- PART 3: RATING TABLES - Performance Indexes
@@ -1838,23 +1900,31 @@ CREATE INDEX IF NOT EXISTS idx_appeals_reviewer
 -- Rating Configs
 -- ---------------------------------------------------------------------------
 -- Active config lookup
-CREATE INDEX IF NOT EXISTS idx_rating_configs_active
-    ON rating_configs (status, is_default, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'rating_configs' AND INDEX_NAME = 'idx_rating_configs_active');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'rating_configs' AND COLUMN_NAME IN ('status','is_default','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_rating_configs_active ON rating_configs (status, is_default, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- ---------------------------------------------------------------------------
 -- Check Plan Ratings
 -- ---------------------------------------------------------------------------
 -- Ratings by plan and class (result lookup)
-CREATE INDEX IF NOT EXISTS idx_plan_ratings_lookup
-    ON check_plan_ratings (plan_id, class_id);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_plan_ratings' AND INDEX_NAME = 'idx_plan_ratings_lookup');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_plan_ratings' AND COLUMN_NAME IN ('plan_id','class_id'));
+SET @s := IF(@idx = 0 AND @cols = 2, "CREATE INDEX idx_plan_ratings_lookup ON check_plan_ratings (plan_id, class_id)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Ratings by class (class history)
-CREATE INDEX IF NOT EXISTS idx_plan_ratings_class
-    ON check_plan_ratings (class_id, plan_id);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_plan_ratings' AND INDEX_NAME = 'idx_plan_ratings_class');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_plan_ratings' AND COLUMN_NAME IN ('class_id','plan_id'));
+SET @s := IF(@idx = 0 AND @cols = 2, "CREATE INDEX idx_plan_ratings_class ON check_plan_ratings (class_id, plan_id)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Rating distribution by plan
-CREATE INDEX IF NOT EXISTS idx_plan_ratings_distribution
-    ON check_plan_ratings (plan_id, final_rating);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_plan_ratings' AND INDEX_NAME = 'idx_plan_ratings_distribution');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_plan_ratings' AND COLUMN_NAME IN ('plan_id','final_rating'));
+SET @s := IF(@idx = 0 AND @cols = 2, "CREATE INDEX idx_plan_ratings_distribution ON check_plan_ratings (plan_id, final_rating)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- ============================================================================
 -- PART 4: TASK TABLES - Performance Indexes
@@ -1864,42 +1934,58 @@ CREATE INDEX IF NOT EXISTS idx_plan_ratings_distribution
 -- Tasks
 -- ---------------------------------------------------------------------------
 -- Tasks by status (task list queries)
-CREATE INDEX IF NOT EXISTS idx_tasks_status
-    ON tasks (status, deleted, deadline DESC);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tasks' AND INDEX_NAME = 'idx_tasks_status');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tasks' AND COLUMN_NAME IN ('status','deleted','deadline'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_tasks_status ON tasks (status, deleted, deadline DESC)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Tasks by creator
-CREATE INDEX IF NOT EXISTS idx_tasks_creator
-    ON tasks (created_by, status, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tasks' AND INDEX_NAME = 'idx_tasks_creator');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tasks' AND COLUMN_NAME IN ('created_by','status','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_tasks_creator ON tasks (created_by, status, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Tasks by department
-CREATE INDEX IF NOT EXISTS idx_tasks_department
-    ON tasks (department_id, status, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tasks' AND INDEX_NAME = 'idx_tasks_department');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tasks' AND COLUMN_NAME IN ('department_id','status','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_tasks_department ON tasks (department_id, status, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Tasks by deadline (overdue alerts)
-CREATE INDEX IF NOT EXISTS idx_tasks_deadline
-    ON tasks (deadline, status, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tasks' AND INDEX_NAME = 'idx_tasks_deadline');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tasks' AND COLUMN_NAME IN ('deadline','status','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_tasks_deadline ON tasks (deadline, status, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- ---------------------------------------------------------------------------
 -- Task Assignees
 -- ---------------------------------------------------------------------------
 -- My tasks (most common query)
-CREATE INDEX IF NOT EXISTS idx_assignees_user
-    ON task_assignees (user_id, status, task_id);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'task_assignees' AND INDEX_NAME = 'idx_assignees_user');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'task_assignees' AND COLUMN_NAME IN ('user_id','status','task_id'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_assignees_user ON task_assignees (user_id, status, task_id)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Task members
-CREATE INDEX IF NOT EXISTS idx_assignees_task
-    ON task_assignees (task_id, assignee_type, status);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'task_assignees' AND INDEX_NAME = 'idx_assignees_task');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'task_assignees' AND COLUMN_NAME IN ('task_id','assignee_type','status'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_assignees_task ON task_assignees (task_id, assignee_type, status)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- ---------------------------------------------------------------------------
 -- Task Submissions
 -- ---------------------------------------------------------------------------
 -- Submissions by task and user
-CREATE INDEX IF NOT EXISTS idx_submissions_task_user
-    ON task_submissions (task_id, submitted_by, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'task_submissions' AND INDEX_NAME = 'idx_submissions_task_user');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'task_submissions' AND COLUMN_NAME IN ('task_id','submitted_by','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_submissions_task_user ON task_submissions (task_id, submitted_by, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Submissions by status
-CREATE INDEX IF NOT EXISTS idx_submissions_status
-    ON task_submissions (task_id, status, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'task_submissions' AND INDEX_NAME = 'idx_submissions_status');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'task_submissions' AND COLUMN_NAME IN ('task_id','status','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_submissions_status ON task_submissions (task_id, status, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- ============================================================================
 -- PART 5: AUDIT & LOG TABLES - Performance Indexes
@@ -1909,58 +1995,77 @@ CREATE INDEX IF NOT EXISTS idx_submissions_status
 -- Operation Logs
 -- ---------------------------------------------------------------------------
 -- Logs by user and time (user activity)
-CREATE INDEX IF NOT EXISTS idx_oplogs_user_time
-    ON operation_logs (user_id, created_at DESC, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'operation_logs' AND INDEX_NAME = 'idx_oplogs_user_time');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'operation_logs' AND COLUMN_NAME IN ('user_id','created_at','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_oplogs_user_time ON operation_logs (user_id, created_at DESC, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Logs by module (module audit)
-CREATE INDEX IF NOT EXISTS idx_oplogs_module_time
-    ON operation_logs (operation_module, created_at DESC, deleted);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'operation_logs' AND INDEX_NAME = 'idx_oplogs_module_time');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'operation_logs' AND COLUMN_NAME IN ('operation_module','created_at','deleted'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_oplogs_module_time ON operation_logs (operation_module, created_at DESC, deleted)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- ---------------------------------------------------------------------------
 -- Audit Logs
 -- ---------------------------------------------------------------------------
 -- Audit by target (entity audit trail)
-CREATE INDEX IF NOT EXISTS idx_auditlogs_target_time
-    ON audit_logs (target_type, target_id, created_at DESC);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'audit_logs' AND INDEX_NAME = 'idx_auditlogs_target_time');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'audit_logs' AND COLUMN_NAME IN ('target_type','target_id','created_at'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_auditlogs_target_time ON audit_logs (target_type, target_id, created_at DESC)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- ---------------------------------------------------------------------------
 -- Domain Events
 -- ---------------------------------------------------------------------------
 -- Events by aggregate (aggregate history)
-CREATE INDEX IF NOT EXISTS idx_events_aggregate_version
-    ON domain_events (aggregate_type, aggregate_id, aggregate_version);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'domain_events' AND INDEX_NAME = 'idx_events_aggregate_version');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'domain_events' AND COLUMN_NAME IN ('aggregate_type','aggregate_id','aggregate_version'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_events_aggregate_version ON domain_events (aggregate_type, aggregate_id, aggregate_version)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Events by time range (event replay)
-CREATE INDEX IF NOT EXISTS idx_events_time_range
-    ON domain_events (occurred_at, aggregate_type);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'domain_events' AND INDEX_NAME = 'idx_events_time_range');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'domain_events' AND COLUMN_NAME IN ('occurred_at','aggregate_type'));
+SET @s := IF(@idx = 0 AND @cols = 2, "CREATE INDEX idx_events_time_range ON domain_events (occurred_at, aggregate_type)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- ---------------------------------------------------------------------------
 -- Snapshots
 -- ---------------------------------------------------------------------------
 -- Class size by date range
-CREATE INDEX IF NOT EXISTS idx_class_size_date_range
-    ON class_size_snapshots (snapshot_date, class_id);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'class_size_snapshots' AND INDEX_NAME = 'idx_class_size_date_range');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'class_size_snapshots' AND COLUMN_NAME IN ('snapshot_date','class_id'));
+SET @s := IF(@idx = 0 AND @cols = 2, "CREATE INDEX idx_class_size_date_range ON class_size_snapshots (snapshot_date, class_id)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Student relationship by date
-CREATE INDEX IF NOT EXISTS idx_student_rel_date
-    ON student_relationship_snapshots (snapshot_date, student_id);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'student_relationship_snapshots' AND INDEX_NAME = 'idx_student_rel_date');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'student_relationship_snapshots' AND COLUMN_NAME IN ('snapshot_date','student_id'));
+SET @s := IF(@idx = 0 AND @cols = 2, "CREATE INDEX idx_student_rel_date ON student_relationship_snapshots (snapshot_date, student_id)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- ============================================================================
 -- PART 6: STATISTICS & REPORTING - Materialized View-like Indexes
 -- ============================================================================
 
 -- For daily statistics aggregation
-CREATE INDEX IF NOT EXISTS idx_records_daily_stats
-    ON check_records (check_date, template_id, status)
-    WHERE deleted = 0;
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_records' AND INDEX_NAME = 'idx_records_daily_stats');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'check_records' AND COLUMN_NAME IN ('check_date','template_id','status'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_records_daily_stats ON check_records (check_date, template_id, status)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- For class ranking across multiple records
-CREATE INDEX IF NOT EXISTS idx_scores_class_ranking
-    ON class_scores (class_id, final_score, check_date);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'class_scores' AND INDEX_NAME = 'idx_scores_class_ranking');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'class_scores' AND COLUMN_NAME IN ('class_id','final_score','check_date'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_scores_class_ranking ON class_scores (class_id, final_score, check_date)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- For deduction item frequency analysis
-CREATE INDEX IF NOT EXISTS idx_deductions_item_freq
-    ON deduction_details (item_id, check_date, class_id);
+SET @idx := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'deduction_details' AND INDEX_NAME = 'idx_deductions_item_freq');
+SET @cols := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'deduction_details' AND COLUMN_NAME IN ('item_id','check_date','class_id'));
+SET @s := IF(@idx = 0 AND @cols = 3, "CREATE INDEX idx_deductions_item_freq ON deduction_details (item_id, check_date, class_id)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- ============================================================================
 -- INDEX MAINTENANCE NOTES

@@ -4,13 +4,21 @@
 -- =====================================================
 
 -- 1. 扩展 space 表，添加班级归属和性别类型字段（org_unit_id已存在）
-ALTER TABLE space
-ADD COLUMN IF NOT EXISTS class_id BIGINT NULL COMMENT '归属班级ID（班主任管理）' AFTER org_unit_id,
-ADD COLUMN IF NOT EXISTS gender_type TINYINT DEFAULT 0 COMMENT '性别类型：0-不限/混合，1-男，2-女' AFTER class_id;
+-- MySQL 8.0 不支持 ADD COLUMN / CREATE INDEX IF NOT EXISTS, 用 information_schema 条件化
+SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='space' AND COLUMN_NAME='class_id');
+SET @s := IF(@c=0, "ALTER TABLE space ADD COLUMN class_id BIGINT NULL COMMENT '归属班级ID（班主任管理）' AFTER org_unit_id", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
+SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='space' AND COLUMN_NAME='gender_type');
+SET @s := IF(@c=0, "ALTER TABLE space ADD COLUMN gender_type TINYINT DEFAULT 0 COMMENT '性别类型：0-不限/混合，1-男，2-女' AFTER class_id", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- 添加索引（如果不存在）
-CREATE INDEX IF NOT EXISTS idx_space_class ON space(class_id);
-CREATE INDEX IF NOT EXISTS idx_space_gender_type ON space(gender_type);
+SET @x := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='space' AND INDEX_NAME='idx_space_class');
+SET @s := IF(@x=0, "CREATE INDEX idx_space_class ON space(class_id)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
+SET @x := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='space' AND INDEX_NAME='idx_space_gender_type');
+SET @s := IF(@x=0, "CREATE INDEX idx_space_gender_type ON space(gender_type)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- 2. 创建场所-班级分配表（支持一个场所分配给多个班级的场景）
 CREATE TABLE IF NOT EXISTS space_class_assignment (

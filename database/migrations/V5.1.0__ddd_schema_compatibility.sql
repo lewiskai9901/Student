@@ -10,8 +10,10 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- ---------------------------------------------------------------------------
 -- 1. Tasks table - Add version column for optimistic locking
 -- ---------------------------------------------------------------------------
-ALTER TABLE `tasks`
-ADD COLUMN IF NOT EXISTS `version` INT DEFAULT 0 COMMENT 'Optimistic Lock Version' AFTER `attachment_ids`;
+-- MySQL 8.0 不支持 ADD COLUMN IF NOT EXISTS, 用 information_schema 条件化
+SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='tasks' AND COLUMN_NAME='version');
+SET @s := IF(@c=0, "ALTER TABLE `tasks` ADD COLUMN `version` INT DEFAULT 0 COMMENT 'Optimistic Lock Version' AFTER `attachment_ids`", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- ---------------------------------------------------------------------------
 -- 2. Students table - Ensure all columns exist for StudentPO
@@ -181,15 +183,23 @@ DROP PROCEDURE IF EXISTS add_column_if_not_exists;
 -- ---------------------------------------------------------------------------
 -- 7. Create indexes for better query performance
 -- ---------------------------------------------------------------------------
--- Students indexes
-CREATE INDEX IF NOT EXISTS `idx_students_name` ON `students` (`name`);
-CREATE INDEX IF NOT EXISTS `idx_students_enrollment_date` ON `students` (`enrollment_date`);
+-- Students indexes (MySQL 8.0 条件化)
+SET @x := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='students' AND INDEX_NAME='idx_students_name');
+SET @s := IF(@x=0, "CREATE INDEX `idx_students_name` ON `students` (`name`)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
+SET @x := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='students' AND INDEX_NAME='idx_students_enrollment_date');
+SET @s := IF(@x=0, "CREATE INDEX `idx_students_enrollment_date` ON `students` (`enrollment_date`)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Buildings indexes
-CREATE INDEX IF NOT EXISTS `idx_buildings_name` ON `buildings` (`building_name`);
+SET @x := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='buildings' AND INDEX_NAME='idx_buildings_name');
+SET @s := IF(@x=0, "CREATE INDEX `idx_buildings_name` ON `buildings` (`building_name`)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- Dormitories indexes
-CREATE INDEX IF NOT EXISTS `idx_dormitories_floor` ON `dormitories` (`floor_number`);
+SET @x := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='dormitories' AND INDEX_NAME='idx_dormitories_floor');
+SET @s := IF(@x=0, "CREATE INDEX `idx_dormitories_floor` ON `dormitories` (`floor_number`)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 SET FOREIGN_KEY_CHECKS = 1;
 

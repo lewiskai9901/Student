@@ -4,5 +4,7 @@
 -- 确保 complete_schema_v2.sql 与实际 DB 一致
 -- =====================================================
 
--- 删除废弃列 (UserPO 已移除该字段)
-ALTER TABLE `users` DROP COLUMN IF EXISTS `managed_class_id`;
+-- 删除废弃列 (UserPO 已移除该字段) — MySQL 8.0 条件化
+SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='managed_class_id');
+SET @s := IF(@c>0, "ALTER TABLE `users` DROP COLUMN `managed_class_id`", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;

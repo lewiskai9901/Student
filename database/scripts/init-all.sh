@@ -24,7 +24,10 @@ DB_USER="${DB_USER:-root}"
 DB_PW="${DB_PASSWORD:-}"
 SCRIPT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 
-MYSQL_CMD="mysql -u ${DB_USER}"
+# --default-character-set=utf8mb4 必须显式指定: 否则 mysql 客户端按本机默认连接字符集
+# (Windows 常为 gbk/latin1) 读取 piped SQL 文件, 含中文的 INSERT 会报
+# ERROR 1366 Incorrect string value / Illegal mix of collations gbk_chinese_ci。
+MYSQL_CMD="mysql --default-character-set=utf8mb4 -u ${DB_USER}"
 [ -n "$DB_PW" ] && MYSQL_CMD="${MYSQL_CMD} -p${DB_PW}"
 
 echo "[init-all] 1. CREATE DATABASE ${DB_NAME}"
@@ -42,7 +45,9 @@ for f in $(ls "${SCRIPT_DIR}/database/schema/V"*.sql 2>/dev/null | sort -V); do
 done
 
 echo "[init-all] 4. migrations: database/migrations/V*.sql (日期版本)"
-for f in $(ls "${SCRIPT_DIR}/database/migrations/V"*.sql 2>/dev/null | sort); do
+# 必须 sort -V (语义版本排序): 纯 sort 会把 V10/V20260* 排到 V4/V8/V9 之前 (字典序 '1'<'4'),
+# 导致依赖错位 (如 V20260419 在其依赖 V8.2.0 之前跑)。
+for f in $(ls "${SCRIPT_DIR}/database/migrations/V"*.sql 2>/dev/null | sort -V); do
   echo "   apply $(basename "$f")"
   $MYSQL_CMD "${DB_NAME}" < "$f" || { echo "[init-all] FAILED at $f"; exit 1; }
 done

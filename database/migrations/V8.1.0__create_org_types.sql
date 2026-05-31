@@ -71,8 +71,10 @@ PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
--- 添加外键索引
-CREATE INDEX IF NOT EXISTS idx_org_units_type_code ON org_units(type_code);
+-- 添加外键索引 (MySQL 8.0 条件化)
+SET @x := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='org_units' AND INDEX_NAME='idx_org_units_type_code');
+SET @sql = IF(@x=0, 'CREATE INDEX idx_org_units_type_code ON org_units(type_code)', 'SELECT 1');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 -- ==================== 迁移现有数据到新类型系统 ====================
 -- 根据 unit_category 设置 type_code

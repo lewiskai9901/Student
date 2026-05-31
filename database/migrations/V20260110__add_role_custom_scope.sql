@@ -12,8 +12,10 @@ CREATE TABLE IF NOT EXISTS role_custom_scope (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色自定义数据范围';
 
 -- 更新现有role_data_permissions表，添加scope_code字段支持字符串类型
-ALTER TABLE role_data_permissions
-ADD COLUMN IF NOT EXISTS scope_code VARCHAR(50) NULL COMMENT '数据范围代码(V2)' AFTER data_scope;
+-- MySQL 8.0 不支持 ADD COLUMN IF NOT EXISTS, 用 information_schema 条件化
+SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='role_data_permissions' AND COLUMN_NAME='scope_code');
+SET @s := IF(@c=0, "ALTER TABLE role_data_permissions ADD COLUMN scope_code VARCHAR(50) NULL COMMENT '数据范围代码(V2)' AFTER data_scope", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- 数据迁移：将整数scope转换为字符串scope_code
 UPDATE role_data_permissions SET scope_code = 'all' WHERE data_scope = 1 AND scope_code IS NULL;

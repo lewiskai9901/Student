@@ -13,8 +13,13 @@ VALUES
 ('DORM_ROOM', '宿舍房间', 'DORMITORY', '学生宿舍房间，可入住', 1, 1, 0, 0, 'Bed', 12, 1, NOW(), NOW());
 
 -- 2. 删除 students 表中的旧宿舍字段（开发阶段不保留旧列）
-ALTER TABLE students DROP COLUMN IF EXISTS dormitory_id;
-ALTER TABLE students DROP COLUMN IF EXISTS bed_number;
+-- MySQL 8.0 不支持 DROP COLUMN IF EXISTS, 用 information_schema 条件化
+SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'students' AND COLUMN_NAME = 'dormitory_id');
+SET @s := IF(@c > 0, "ALTER TABLE students DROP COLUMN dormitory_id", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
+SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'students' AND COLUMN_NAME = 'bed_number');
+SET @s := IF(@c > 0, "ALTER TABLE students DROP COLUMN bed_number", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- 3. 废弃旧的 place_occupant 表（单数，旧版），数据已迁移到 place_occupants（复数，新版）
 -- 开发阶段直接删除

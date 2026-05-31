@@ -7,16 +7,19 @@
 -- ================================================================
 -- 1. 修改 org_units 表
 -- ================================================================
--- 添加组织类别字段
-ALTER TABLE org_units
-ADD COLUMN IF NOT EXISTS unit_category VARCHAR(20) DEFAULT 'academic' COMMENT '组织类别: academic-教学单位, functional-职能部门';
+-- 添加组织类别字段 (MySQL 8.0 不支持 IF NOT EXISTS, 用 information_schema 条件化)
+SET @c := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='org_units' AND COLUMN_NAME='unit_category');
+SET @s := IF(@c=0, "ALTER TABLE org_units ADD COLUMN unit_category VARCHAR(20) DEFAULT 'academic' COMMENT '组织类别: academic-教学单位, functional-职能部门'", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- 修改 unit_type 为更灵活的 VARCHAR 类型，支持更多类型
 ALTER TABLE org_units
 MODIFY COLUMN unit_type VARCHAR(30) NOT NULL DEFAULT 'department' COMMENT '组织类型';
 
 -- 添加索引
-ALTER TABLE org_units ADD INDEX idx_unit_category (unit_category);
+SET @x := (SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='org_units' AND INDEX_NAME='idx_unit_category');
+SET @s := IF(@x=0, "ALTER TABLE org_units ADD INDEX idx_unit_category (unit_category)", "SELECT 1");
+PREPARE st FROM @s; EXECUTE st; DEALLOCATE PREPARE st;
 
 -- ================================================================
 -- 2. 创建系统模块表
