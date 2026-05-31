@@ -1,5 +1,6 @@
 package com.school.management.application.dashboard;
 
+import com.school.management.application.organization.MembershipResolver;
 import com.school.management.domain.access.model.DataScope;
 import com.school.management.domain.access.model.valueobject.MergedDataScope;
 import com.school.management.infrastructure.access.DataPermissionPolicyService;
@@ -37,8 +38,14 @@ public class DashboardOverviewQueryService {
 
     private static final String MODULE_CODE = "dashboard";
 
+    /** 学生语义 feature (StudentPlugin.getFeatures) — 不写死类型码 STUDENT. */
+    private static final String FEATURE_LEARNER = "isLearner";
+    /** 教师语义 feature (TeacherPlugin.getFeatures) — 不写死类型码 TEACHER. */
+    private static final String FEATURE_TEACHER = "canTeach";
+
     private final JdbcTemplate jdbcTemplate;
     private final DataPermissionPolicyService policyService;
+    private final MembershipResolver membershipResolver;
 
     public Map<String, Object> getOverview() {
         ScopeFilter filter = resolveFilter(UserContextHolder.getContext());
@@ -101,11 +108,9 @@ public class DashboardOverviewQueryService {
                 "deleted = 0 AND status = 1", "org_unit_id", filter));
         stats.put("classCount", countByOrgColumn("classes",
                 "deleted = 0 AND status = 1", "org_unit_id", filter));
-        stats.put("studentCount", countByOrgColumn("user_student",
-                "deleted = 0 AND student_status = 1", "org_unit_id", filter));
-        stats.put("teacherCount", countByOrgColumn("users",
-                "deleted = 0 AND user_type_code = 'TEACHER' AND status = 1",
-                "primary_org_unit_id", filter));
+        // 学生/教师数走 member 归属 + 用户类型 feature, 不直查行业扩展表 user_student/user_teacher.
+        stats.put("studentCount", countMembersByFeature(filter, FEATURE_LEARNER));
+        stats.put("teacherCount", countMembersByFeature(filter, FEATURE_TEACHER));
         return stats;
     }
 
@@ -145,6 +150,28 @@ public class DashboardOverviewQueryService {
         return countSafe(
                 "SELECT COUNT(*) FROM " + table + " WHERE " + where + " AND " + orgColumn + " = ?",
                 filter.orgUnitId);
+    }
+
+    /**
+     * 按 feature (member 归属 ∩ 用户类型能力) 统计人数, 按当前 scope 收敛.
+     *   unrestricted → 全系统该 feature 成员数
+     *   subtree      → 子树范围 (tree_path 前缀)
+     *   single       → 仅该 org 直接成员
+     */
+    private long countMembersByFeature(ScopeFilter filter, String featureKey) {
+        try {
+            if (filter.unrestricted()) {
+                return membershipResolver.countMembersByFeatureGlobal(featureKey);
+            }
+            if (filter.isSubtree()) {
+                return membershipResolver.countMembersByFeatureInSubtree(
+                        filter.tenantId, filter.orgUnitPath, featureKey);
+            }
+            return membershipResolver.countMembersByFeature(filter.orgUnitId, featureKey);
+        } catch (Exception e) {
+            log.debug("Dashboard feature count failed (feature={}): {}", featureKey, e.getMessage());
+            return 0L;
+        }
     }
 
     // ================= Teaching =================

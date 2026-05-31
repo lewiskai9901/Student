@@ -31,8 +31,12 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class DashboardReadModel {
 
+    /** 学生语义 feature (StudentPlugin.getFeatures) — 通用核心不写死类型码 STUDENT. */
+    private static final String FEATURE_LEARNER = "isLearner";
+
     private final JdbcTemplate jdbcTemplate;
     private final CacheService cacheService;
+    private final com.school.management.application.organization.MembershipResolver membershipResolver;
 
     /**
      * Gets dashboard summary statistics.
@@ -43,11 +47,8 @@ public class DashboardReadModel {
     public DashboardSummary getDashboardSummary() {
         log.debug("Loading dashboard summary from database");
 
-        // Student count
-        Long studentCount = jdbcTemplate.queryForObject(
-            "SELECT COUNT(*) FROM user_student WHERE deleted = 0",
-            Long.class
-        );
+        // Student count — 走 member 归属 + 学生 feature, 不直查行业扩展表 user_student
+        long studentCount = membershipResolver.countMembersByFeatureGlobal(FEATURE_LEARNER);
 
         // Class count
         Long classCount = jdbcTemplate.queryForObject(
@@ -80,7 +81,7 @@ public class DashboardReadModel {
         );
 
         return DashboardSummary.builder()
-            .studentCount(studentCount != null ? studentCount : 0)
+            .studentCount(studentCount)
             .classCount(classCount != null ? classCount : 0)
             .userCount(userCount != null ? userCount : 0)
             .todayCheckCount(todayCheckCount != null ? todayCheckCount : 0)
@@ -144,16 +145,30 @@ public class DashboardReadModel {
     public List<OrgUnitStats> getOrgUnitStats() {
         log.debug("Loading org unit statistics from database");
 
+        // student_count 改走 member 归属 + 学生 feature: 统计归属在 d 名下班级 (classes.org_unit_id=d.id)
+        // 的、用户类型具备 isLearner 的成员数, 不再 JOIN 行业扩展表 user_student.
         String sql = """
             SELECT
                 d.id as org_unit_id,
                 d.name as department_name,
                 COUNT(DISTINCT c.id) as class_count,
-                COUNT(DISTINCT s.id) as student_count,
+                (SELECT COUNT(DISTINCT ar2.subject_id)
+                   FROM access_relations ar2
+                   JOIN users su ON su.id = ar2.subject_id AND su.deleted = 0 AND su.status = 1
+                   JOIN entity_type_configs etc ON etc.entity_type = 'USER'
+                        AND etc.type_code = su.user_type_code AND etc.deleted = 0
+                   WHERE ar2.resource_type = 'org_unit'
+                     AND ar2.subject_type = 'user'
+                     AND ar2.relation = 'member'
+                     AND ar2.deleted = 0
+                     AND (ar2.valid_to IS NULL OR ar2.valid_to > NOW())
+                     AND JSON_EXTRACT(etc.features, '$.%s') = true
+                     AND ar2.resource_id IN (
+                         SELECT cc.id FROM classes cc WHERE cc.org_unit_id = d.id AND cc.deleted = 0)
+                ) as student_count,
                 COUNT(DISTINCT u.id) as user_count
             FROM org_units d
             LEFT JOIN classes c ON c.org_unit_id = d.id AND c.deleted = 0
-            LEFT JOIN user_student s ON s.org_unit_id = c.id AND s.deleted = 0
             LEFT JOIN access_relations ar ON ar.resource_type = 'org_unit'
                 AND ar.resource_id = d.id
                 AND ar.subject_type = 'user'
@@ -164,7 +179,7 @@ public class DashboardReadModel {
             WHERE d.deleted = 0
             GROUP BY d.id, d.name
             ORDER BY d.name
-            """;
+            """.formatted(FEATURE_LEARNER);
 
         return jdbcTemplate.query(sql,
             (rs, rowNum) -> OrgUnitStats.builder()

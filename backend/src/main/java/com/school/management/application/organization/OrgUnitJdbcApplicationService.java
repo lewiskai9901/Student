@@ -23,7 +23,13 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class OrgUnitJdbcApplicationService {
 
+    /** 学生语义 feature (StudentPlugin.getFeatures) — 不写死类型码 STUDENT. */
+    private static final String FEATURE_LEARNER = "isLearner";
+    /** 教师语义 feature (TeacherPlugin.getFeatures) — 不写死类型码 TEACHER. */
+    private static final String FEATURE_TEACHER = "canTeach";
+
     private final JdbcTemplate jdbcTemplate;
+    private final MembershipResolver membershipResolver;
 
     /** Marker thrown when the requested org unit does not exist. */
     public static class OrgUnitNotFoundException extends RuntimeException {
@@ -59,12 +65,10 @@ public class OrgUnitJdbcApplicationService {
             Integer.class, treePath + "%", id);
         impact.put("descendantOrgCount", descendants != null ? descendants : 0);
 
-        // 2. 子树下的 students (含本节点 + 后代)
-        Integer studentCount = jdbcTemplate.queryForObject(
-            "SELECT COUNT(*) FROM user_student WHERE deleted = 0 AND org_unit_id IN " +
-            "(SELECT id FROM org_units WHERE deleted = 0 AND tree_path LIKE ?)",
-            Integer.class, treePath + "%");
-        impact.put("studentCount", studentCount != null ? studentCount : 0);
+        // 2. 子树下的 students (含本节点 + 后代) — 走 member 归属 + 学生 feature, 不直查 user_student
+        long studentCount = membershipResolver.countMembersByFeatureInSubtree(
+            null, treePath, FEATURE_LEARNER);
+        impact.put("studentCount", studentCount);
 
         // 3. 子树下的 classes
         Integer classCount = jdbcTemplate.queryForObject(
@@ -80,13 +84,10 @@ public class OrgUnitJdbcApplicationService {
             Integer.class, treePath + "%");
         impact.put("placeCount", placeCount != null ? placeCount : 0);
 
-        // 5. 子树下的 teachers (primary_org_unit_id 在子树)
-        Integer teacherCount = jdbcTemplate.queryForObject(
-            "SELECT COUNT(*) FROM users WHERE deleted = 0 AND user_type_code = 'TEACHER' " +
-            "AND primary_org_unit_id IN " +
-            "(SELECT id FROM org_units WHERE deleted = 0 AND tree_path LIKE ?)",
-            Integer.class, treePath + "%");
-        impact.put("teacherCount", teacherCount != null ? teacherCount : 0);
+        // 5. 子树下的 teachers — 走 member 归属 + 教师 feature, 不直查 user_type_code/primary_org_unit_id
+        long teacherCount = membershipResolver.countMembersByFeatureInSubtree(
+            null, treePath, FEATURE_TEACHER);
+        impact.put("teacherCount", teacherCount);
 
         // 6. access_relations 引用本子树 org_unit 的关系数
         Integer relationCount = jdbcTemplate.queryForObject(
@@ -97,10 +98,10 @@ public class OrgUnitJdbcApplicationService {
         impact.put("accessRelationCount", relationCount != null ? relationCount : 0);
 
         // 7. 警告级别 (用于 UI 是否显示二次确认)
-        int total = (descendants != null ? descendants : 0)
-                  + (studentCount != null ? studentCount : 0)
+        long total = (descendants != null ? descendants : 0)
+                  + studentCount
                   + (classCount != null ? classCount : 0)
-                  + (teacherCount != null ? teacherCount : 0);
+                  + teacherCount;
         String severity = total == 0 ? "NONE"
                         : total < 10 ? "LOW"
                         : total < 100 ? "MEDIUM"

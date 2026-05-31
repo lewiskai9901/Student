@@ -111,6 +111,90 @@ public class MembershipResolver {
         return membersOf(orgUnitId).size();
     }
 
+    // ─────────────── 按 feature 维度统计 (通用核心去行业表耦合) ───────────────
+
+    /**
+     * 统计带某 feature 的成员数 — 通用做法, 替代 {@code FROM user_student} / {@code user_type_code='TEACHER'}.
+     *
+     * <p>"学生/教师"语义不写死类型码, 改用用户类型 ({@code entity_type_configs}, entity_type='USER')
+     * 的 {@code features} JSON 识别: 学生类型有 {@code isLearner}, 教师类型有 {@code canTeach}.
+     * JSON 过滤语法与 {@link com.school.management.application.message.targetmode.ByFeatureTargetMode} 对齐
+     * ({@code JSON_EXTRACT(features,'$.<key>') = true}).
+     *
+     * <p>统计口径 = 该组织的 member 归属 (access_relations) ∩ 用户类型具备该 feature.
+     *
+     * @param orgUnitId 组织; null 返回 0
+     * @param featureKey feature 名 (白名单 [a-zA-Z0-9_]); 非法返回 0
+     */
+    public long countMembersByFeature(Long orgUnitId, String featureKey) {
+        if (orgUnitId == null || !isValidFeatureKey(featureKey)) return 0L;
+        Long cnt = jdbcTemplate.queryForObject(
+            featureCountSql("ar.resource_id = ?", featureKey),
+            Long.class, orgUnitId);
+        return cnt != null ? cnt : 0L;
+    }
+
+    /**
+     * 子树版: 统计 (org 本身 + 全部后代 org) 范围内带该 feature 的成员数 (跨 org 去重按 user).
+     *
+     * @param tenantId 租户
+     * @param treePath 子树根的 tree_path (LIKE 前缀, 末尾自动补 '/' 由调用方保证或这里规范化)
+     * @param featureKey feature 名
+     */
+    public long countMembersByFeatureInSubtree(Long tenantId, String treePath, String featureKey) {
+        if (treePath == null || treePath.isBlank() || !isValidFeatureKey(featureKey)) return 0L;
+        String prefix = treePath.endsWith("/") ? treePath : treePath + "/";
+        Long cnt;
+        if (tenantId == null) {
+            // 单租户 / 无租户上下文 (如 impact 分析): 不加 tenant 过滤
+            cnt = jdbcTemplate.queryForObject(
+                featureCountSql(
+                    "ar.resource_id IN (SELECT id FROM org_units " +
+                    "WHERE tree_path LIKE ? AND deleted = 0)", featureKey),
+                Long.class, prefix + "%");
+        } else {
+            cnt = jdbcTemplate.queryForObject(
+                featureCountSql(
+                    "ar.resource_id IN (SELECT id FROM org_units " +
+                    "WHERE tenant_id = ? AND tree_path LIKE ? AND deleted = 0)", featureKey),
+                Long.class, tenantId, prefix + "%");
+        }
+        return cnt != null ? cnt : 0L;
+    }
+
+    /**
+     * 全局版: 统计全系统带该 feature 的成员数 (有 member 归属且类型具备该 feature, 按 user 去重).
+     */
+    public long countMembersByFeatureGlobal(String featureKey) {
+        if (!isValidFeatureKey(featureKey)) return 0L;
+        Long cnt = jdbcTemplate.queryForObject(
+            featureCountSql("1 = 1", featureKey), Long.class);
+        return cnt != null ? cnt : 0L;
+    }
+
+    /**
+     * 拼 member ∩ feature 计数 SQL. {@code COUNT(DISTINCT ar.subject_id)} 防一个用户多 org 行重复计数
+     * (归属虽唯一, 子树 union 仍按 user 去重最稳).
+     */
+    private String featureCountSql(String resourcePredicate, String featureKey) {
+        return "SELECT COUNT(DISTINCT ar.subject_id) FROM access_relations ar " +
+               "JOIN users u ON ar.subject_id = u.id " +
+               "JOIN entity_type_configs etc ON etc.entity_type = 'USER' " +
+               "  AND etc.type_code = u.user_type_code AND etc.deleted = 0 " +
+               "WHERE ar.relation = '" + RELATION + "' " +
+               "  AND ar.resource_type = '" + RESOURCE_TYPE + "' " +
+               "  AND ar.subject_type = '" + SUBJECT_TYPE + "' " +
+               "  AND ar.deleted = 0 AND u.deleted = 0 AND u.status = 1 " +
+               "  AND (ar.valid_to IS NULL OR ar.valid_to > NOW()) " +
+               "  AND JSON_EXTRACT(etc.features, '$." + featureKey + "') = true " +
+               "  AND " + resourcePredicate;
+    }
+
+    /** feature 名白名单校验, 防 SQL 注入 (拼进 JSON_EXTRACT 路径). */
+    private static boolean isValidFeatureKey(String featureKey) {
+        return featureKey != null && featureKey.matches("[a-zA-Z0-9_]+");
+    }
+
     /**
      * 该组织直接成员按用户类型分组计数 — JOIN users 取 user_type_code.
      * 返回 {typeCode -> count}; user_type_code 为 NULL 归入 "UNKNOWN".

@@ -23,6 +23,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class MyDashboardQueryService {
 
+    /** 学生语义 feature (StudentPlugin.getFeatures) — 通用核心不写死类型码. */
+    private static final String FEATURE_LEARNER = "isLearner";
+
     private final JdbcTemplate jdbcTemplate;
 
     /**
@@ -138,12 +141,19 @@ public class MyDashboardQueryService {
         }
 
         // Step 2: 学生数（一次 SQL 拉全，内存 group）
+        // 走 member 归属 + 学生 feature (isLearner), 不直查行业扩展表 user_student.
         String studentSql =
-                "SELECT org_unit_id, COUNT(*) AS cnt " +
-                "FROM user_student " +
-                "WHERE deleted = 0 AND org_unit_id IN (" +
-                inPlaceholders(classRoles.size()) + ") " +
-                "GROUP BY org_unit_id";
+                "SELECT ar.resource_id AS org_unit_id, COUNT(DISTINCT ar.subject_id) AS cnt " +
+                "FROM access_relations ar " +
+                "JOIN users u ON ar.subject_id = u.id AND u.deleted = 0 AND u.status = 1 " +
+                "JOIN entity_type_configs etc ON etc.entity_type = 'USER' " +
+                "  AND etc.type_code = u.user_type_code AND etc.deleted = 0 " +
+                "WHERE ar.relation = 'member' AND ar.resource_type = 'org_unit' " +
+                "  AND ar.subject_type = 'user' AND ar.deleted = 0 " +
+                "  AND (ar.valid_to IS NULL OR ar.valid_to > NOW()) " +
+                "  AND JSON_EXTRACT(etc.features, '$." + FEATURE_LEARNER + "') = true " +
+                "  AND ar.resource_id IN (" + inPlaceholders(classRoles.size()) + ") " +
+                "GROUP BY ar.resource_id";
         Map<Long, Integer> counts = new HashMap<>();
         jdbcTemplate.query(studentSql, rs -> {
             counts.put(rs.getLong("org_unit_id"), rs.getInt("cnt"));
