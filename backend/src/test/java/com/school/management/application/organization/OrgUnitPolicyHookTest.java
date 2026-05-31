@@ -76,7 +76,7 @@ class OrgUnitPolicyHookTest {
         // BLOCK 发生在业务前, 任何副作用都不应出现.
         verify(orgUnitRepository, never()).findById(any());
         verify(orgUnitRepository, never()).deleteById(any());
-        verify(userDomainMapper, never()).clearPrimaryOrgUnitId(any());
+        // 归属清理已统一到 member 关系 (access_relations); BLOCK 前不应触碰任何关系。
         verify(accessRelationRepository, never()).deleteByResource(any(), any());
     }
 

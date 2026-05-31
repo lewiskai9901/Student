@@ -105,7 +105,6 @@ class UserApplicationServiceTest {
                 1, // male
                 LocalDate.of(1990, 1, 1),
                 "110101199001011234",
-                null, // primaryOrgUnitId
                 "TEACHER", // userTypeCode
                 UserStatus.ENABLED,
                 null, // lastLoginTime
@@ -126,7 +125,6 @@ class UserApplicationServiceTest {
                 "encodedPassword",
                 "禁用用户",
                 null, null, null, null, null, null,
-                null, // primaryOrgUnitId
                 "TEACHER", // userTypeCode
                 UserStatus.DISABLED,
                 null, null, null, null, false,
@@ -723,7 +721,6 @@ class UserApplicationServiceTest {
             User user = User.reconstruct(
                     1L, "testuser", "password", "测试用户",
                     null, null, null, null, null, null,
-                    null, // primaryOrgUnitId
                     "TEACHER", // userTypeCode
                     UserStatus.ENABLED,
                     null, null, null,

@@ -77,8 +77,8 @@ class OrgMemberServiceTest {
         // 统一归属写入走 MembershipResolver (grant-or-replace)。
         verify(membershipResolver).setMembership(999L, 100L);
 
-        // 不再写 primary_org_unit_id 外键, 也不手工建 access_relation。
-        verify(userDomainMapper, never()).setPrimaryOrgUnitId(any(), any());
+        // primary_org_unit_id 外键写方法已随归属统一移除 (列已删, mapper 无此方法);
+        // 归属唯一约束由 MembershipResolver 保证, 此处不手工建 access_relation。
         verify(accessRelationRepository, never()).save(any());
     }
 
@@ -89,8 +89,8 @@ class OrgMemberServiceTest {
         service.removeMember(100L, 999L);
 
         verify(membershipResolver).clearMembership(999L);
-        // 不再写 primary_org_unit_id 外键, 也不手工删 access_relation。
-        verify(userDomainMapper, never()).clearPrimaryOrgUnitIdForUser(any(), any());
+        // primary_org_unit_id 外键清方法已随归属统一移除; 清归属统一走 MembershipResolver,
+        // 此处不再手工删 access_relation。
         verify(accessRelationRepository, never())
                 .deleteByResourceAndSubject(any(), any(), any(), any());
     }
@@ -196,7 +196,6 @@ class OrgMemberServiceTest {
         // 组织解散 — 删除该 org 全部 member 关系是预期行为。
         service.endAllByOrgUnitId(100L, "解散");
         verify(accessRelationRepository).deleteByResource("org_unit", 100L);
-        // 不再清 primary_org_unit_id 外键。
-        verify(userDomainMapper, never()).clearPrimaryOrgUnitId(any());
+        // primary_org_unit_id 外键清方法已随归属统一移除; 解散仅删 member 关系即可。
     }
 }

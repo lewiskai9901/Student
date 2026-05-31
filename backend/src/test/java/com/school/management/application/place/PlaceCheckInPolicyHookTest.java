@@ -87,7 +87,6 @@ class PlaceCheckInPolicyHookTest {
                 null, null, null,
                 1,
                 null, null,
-                null,
                 "STUDENT",
                 UserStatus.ENABLED,
                 null, null, null, null,

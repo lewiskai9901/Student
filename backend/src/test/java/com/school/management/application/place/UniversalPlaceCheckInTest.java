@@ -95,7 +95,6 @@ class UniversalPlaceCheckInTest {
                 null, null, null,
                 1,                   // gender
                 null, null,
-                null,                // primaryOrgUnitId
                 "STUDENT",
                 UserStatus.ENABLED,
                 null, null, null, null,
