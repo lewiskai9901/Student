@@ -83,14 +83,20 @@ public class ScoringProfileOwnershipMigration implements ApplicationRunner {
         List<Map.Entry<Long, Long>> refs = new ArrayList<>();
 
         // 项目级 default_scoring_profile_id
-        jdbcTemplate.query(
-                "SELECT id, default_scoring_profile_id FROM insp_projects " +
-                        "WHERE default_scoring_profile_id IS NOT NULL",
-                (rs, n) -> {
-                    refs.add(new AbstractMap.SimpleEntry<>(
-                            rs.getLong(1), rs.getLong(2)));
-                    return null;
-                });
+        // 项目级 default_scoring_profile_id (检查列存在 — 该列在 V20260523_4 后被撤销,
+        // 全新库无此列, 此一次性迁移在新库上无事可做)
+        if (hasColumn("insp_projects", "default_scoring_profile_id")) {
+            jdbcTemplate.query(
+                    "SELECT id, default_scoring_profile_id FROM insp_projects " +
+                            "WHERE default_scoring_profile_id IS NOT NULL",
+                    (rs, n) -> {
+                        refs.add(new AbstractMap.SimpleEntry<>(
+                                rs.getLong(1), rs.getLong(2)));
+                        return null;
+                    });
+        } else {
+            log.info("[ScoringProfileOwnershipMigration] insp_projects.default_scoring_profile_id 不存在 (已撤销), 跳过项目级扫描");
+        }
 
         // 调度组级 scoring_profile_id (检查列存在 — 早期库可能尚未加列)
         if (hasColumn("insp_inspection_plans", "scoring_profile_id")) {
