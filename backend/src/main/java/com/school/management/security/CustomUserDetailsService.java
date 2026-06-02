@@ -83,8 +83,9 @@ public class CustomUserDetailsService implements UserDetailsService {
         // SUPER_ADMIN角色自动获取系统所有权限
         List<String> permissions;
         if (roles.contains("SUPER_ADMIN")) {
-            permissions = userDomainMapper.findAllPermissionCodes();
-            log.debug("用户 {} 是超级管理员，加载全部 {} 个权限", username, permissions.size());
+            permissions = new java.util.ArrayList<>(userDomainMapper.findAllPermissionCodes());
+            permissions.add("*"); // 通配: 超管可见所有菜单/功能, 不受"某权限码在 permissions 表无对应行"影响
+            log.debug("用户 {} 是超级管理员，加载全部 {} 个权限(含通配 *)", username, permissions.size());
         } else {
             permissions = userDomainMapper.findPermissionCodesByUserId(user.getId());
         }
@@ -112,7 +113,8 @@ public class CustomUserDetailsService implements UserDetailsService {
         // SUPER_ADMIN角色自动获取系统所有权限
         List<String> permissions;
         if (roles.contains("SUPER_ADMIN")) {
-            permissions = userDomainMapper.findAllPermissionCodes();
+            permissions = new java.util.ArrayList<>(userDomainMapper.findAllPermissionCodes());
+            permissions.add("*"); // 通配: 超管可见所有菜单/功能
         } else {
             permissions = userDomainMapper.findPermissionCodesByUserId(user.getId());
         }
