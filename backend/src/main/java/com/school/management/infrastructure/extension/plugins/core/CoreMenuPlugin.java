@@ -46,6 +46,43 @@ public class CoreMenuPlugin implements MenuContributionPlugin {
                     .requiredPermissions(List.of("system:admin"))
             )),
 
+            // ─── 组织管理 (通用核心) ───
+            of("/organization", "组织管理", "building-2", 3).children(List.of(
+                of("/organization/units", "组织架构", "network", 1)
+            )),
+
+            // ─── 场所管理 (通用核心) ───
+            of("/place", "场所管理", "map-pin", 4).children(List.of(
+                of("/place/management", "场所管理", "map", 1)
+            )),
+
+            // ─── 检查平台 (已通用化, 通用核心能力; P0+P1+P2+P3 重构后 36 → 18 菜单) ───
+            of("/inspection", "检查平台", "clipboard-check", 12).children(List.of(
+                of("/inspection/dashboard",        "检查平台总览", "layout-dashboard",  0),
+                of("/inspection/governance",       "治理工作台",   "shield-check",      1),
+                of("/inspection/tasks",            "我的任务",     "list-todo",         5),
+                of("/inspection/my-record",        "我的成绩单",   "badge-check",       6),
+                of("/inspection/my-corrective",    "我的整改",     "wrench",            7),
+                of("/inspection/appeals/my",       "我的申诉",     "scale",             8),
+                of("/inspection/received",             "我的受检中心",   "building-2",     10),
+                of("/inspection/received/inspections", "我被检查的记录", "clipboard-list", 11),
+                of("/inspection/received/trends",      "检查趋势",       "trending-up",    12),
+                of("/inspection/received/recurring",   "高频问题",       "alert-triangle", 13),
+                of("/inspection/tasks/review-risk","待审风险池",   "list-checks",       9),
+                of("/inspection/appeals/review",   "申诉审核",     "gavel",            10),
+                of("/inspection/projects",         "检查项目",     "folder-search",    20),
+                of("/inspection/config",           "检查配置",     "settings",         21),
+                of("/inspection/scoring-profiles", "评分方案",     "calculator",       22),
+                of("/inspection/grade-schemes",    "等级方案",     "award",            23),
+                of("/inspection/issue-categories", "问题分类",     "tags",             24),
+                of("/inspection/analytics",        "分析报表",     "bar-chart-3",      30),
+                of("/inspection/corrective",       "整改管理",     "hammer",           31),
+                of("/inspection/alerts",           "预警看板",     "bell",             32),
+                of("/inspection/export",           "导出中心",     "download",         33),
+                of("/inspection/audit-trail",      "审计日志",     "file-search",      40),
+                of("/inspection/admin/reassign-departed", "离职重派", "user-x",        99)
+            )),
+
             // ─── 资产管理 (通用核心, 非行业特定) ───
             of("/asset", "资产管理", "package", 22).children(List.of(
                 of("/asset/center",       "资产总览",   "layout-dashboard", 1).requiredPermissions(List.of("asset:manage:view")),

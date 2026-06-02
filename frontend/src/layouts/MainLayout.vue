@@ -31,8 +31,13 @@
       <nav class="flex-1 overflow-y-auto py-3 px-3">
         <div class="space-y-0.5">
           <template v-for="(item, index) in menuList" :key="item.path">
-            <!-- 分组分隔线 -->
-            <div v-if="showSeparator(index)" class="my-2 mx-1 border-t border-gray-200/60"></div>
+            <!-- 行业分组段标题: 通用核心 / 行业扩展 -->
+            <template v-if="sectionHeader(index)">
+              <div v-if="!isCollapse" class="px-2 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400 select-none">{{ sectionHeader(index) }}</div>
+              <div v-else class="my-2 mx-1 border-t border-gray-200/60"></div>
+            </template>
+            <!-- 分组分隔线 (回退) -->
+            <div v-else-if="showSeparator(index)" class="my-2 mx-1 border-t border-gray-200/60"></div>
             <!-- 有子菜单的项（单个子项时直接导航） -->
             <div v-if="item.children && item.children.length > 0">
               <!-- 单个子项：直接导航 -->
@@ -446,6 +451,25 @@ const backendOrderMap = computed<Record<string, number>>(() => {
   return map
 })
 
+// 后端菜单的 industry 标签 (path → CORE / EDU / ...), 用于通用核心 vs 行业插件分组
+const backendIndustryMap = computed<Record<string, string>>(() => {
+  const map: Record<string, string> = {}
+  const walk = (items: BackendMenuItem[]) => {
+    for (const it of items) {
+      if (it.path && it.industry) map[it.path] = it.industry
+      if (it.children?.length) walk(it.children)
+    }
+  }
+  walk(backendMenus.value)
+  return map
+})
+
+// 顶层菜单是否属于通用核心 (industry=CORE 或 后端未标注时默认归核心)
+const isCoreTopMenu = (path: string): boolean => {
+  const ind = backendIndustryMap.value[path]
+  return !ind || ind === 'CORE'
+}
+
 // 用后端结果过滤路由菜单(保持 component 由前端静态声明,仅受后端控制可见性/顺序)
 const applyBackendFilter = (items: MenuItem[]): MenuItem[] => {
   const allowed = backendAllowedPaths.value
@@ -477,8 +501,27 @@ const menuList = computed<MenuItem[]>(() => {
       userInfo: authStore.user
     }
   )
-  return sortMenuItems(applyBackendFilter(menus))
+  // 通用核心模块在前、行业插件模块在后, 同组内按 order; 并把 industry 附到顶层项
+  return applyBackendFilter(menus)
+    .map(m => ({ ...m, industry: backendIndustryMap.value[m.path] || 'CORE' }))
+    .sort((a, b) => {
+      const ca = isCoreTopMenu(a.path) ? 0 : 1
+      const cb = isCoreTopMenu(b.path) ? 0 : 1
+      if (ca !== cb) return ca - cb
+      return ((a as any).order ?? 999) - ((b as any).order ?? 999)
+    })
 })
+
+// 行业分组段标题: 第一项前显示"通用核心", 第一个非核心(插件)项前显示"行业扩展"
+const sectionHeader = (index: number): string | null => {
+  const curr = menuList.value[index]
+  if (!curr) return null
+  const currCore = isCoreTopMenu(curr.path)
+  if (index === 0) return currCore ? '通用核心' : '行业扩展'
+  const prevCore = isCoreTopMenu(menuList.value[index - 1].path)
+  if (prevCore && !currCore) return '行业扩展'
+  return null
+}
 
 // 图标映射
 const iconComponents: Record<string, any> = {
