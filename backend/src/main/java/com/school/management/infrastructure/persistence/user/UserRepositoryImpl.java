@@ -35,13 +35,22 @@ public class UserRepositoryImpl implements UserRepository {
             userMapper.updateById(po);
         }
 
-        // 保存角色关联
+        // 保存角色关联 — 差异更新, 不再全量删+裸插。
+        // 旧实现 deleteUserRoles + insertUserRole 会把 UserRoleController 设置的
+        // scope_type/scope_id/expires_at/granted_by 整表抹平 (任何 updateUser 哪怕只改手机号都触发,
+        // 因 findById 已把 roleIds 装进聚合)。改为只删"不再需要"的、只插"新增"的, 未变角色保留其 scope 行。
         if (user.getId() != null && user.getRoleIds() != null) {
-            // 先删除旧的角色关联
-            userMapper.deleteUserRoles(user.getId());
-            // 再插入新的角色关联
-            for (Long roleId : user.getRoleIds()) {
-                userMapper.insertUserRole(user.getId(), roleId);
+            java.util.Set<Long> existing = new java.util.HashSet<>(userMapper.findAllRoleIdsByUserId(user.getId()));
+            java.util.Set<Long> desired = new java.util.LinkedHashSet<>(user.getRoleIds());
+            for (Long roleId : existing) {
+                if (!desired.contains(roleId)) {
+                    userMapper.deleteUserRole(user.getId(), roleId);
+                }
+            }
+            for (Long roleId : desired) {
+                if (!existing.contains(roleId)) {
+                    userMapper.insertUserRole(user.getId(), roleId);
+                }
             }
         }
 

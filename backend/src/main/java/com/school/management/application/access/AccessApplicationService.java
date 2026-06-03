@@ -267,7 +267,22 @@ public class AccessApplicationService {
             throw new IllegalStateException("Cannot delete system role");
         }
 
+        // 先收集受影响用户并清理 user_roles — 否则留下指向已删角色的孤儿行,
+        // 且这些用户的权限不会被撤销/刷新。
+        Set<Long> affectedUserIds = userRoleRepository.findByRoleId(id).stream()
+            .map(UserRole::getUserId)
+            .collect(Collectors.toSet());
+        for (Long userId : affectedUserIds) {
+            userRoleRepository.deleteByUserIdAndRoleId(userId, id);
+        }
+
         roleRepository.deleteById(role.getId());
+
+        // 刷新受影响用户的缓存 (refreshCache 现已联动 CustomUserDetails 30s 缓存失效),
+        // 使删角色后权限撤销即时生效。
+        for (Long userId : affectedUserIds) {
+            authorizationService.refreshCache(userId);
+        }
     }
 
     /**

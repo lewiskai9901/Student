@@ -245,6 +245,7 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
     @Select("SELECT r.role_code FROM roles r " +
             "INNER JOIN user_roles ur ON r.id = ur.role_id " +
             "WHERE ur.user_id = #{userId} AND r.deleted = 0 AND r.plugin_enabled = 1 " +
+            "AND r.status = 1 " +  // 角色启用过滤, 与 CasbinAuthorizationService.getIsEnabled() 口径一致
             "AND ur.is_active = 1 AND (ur.expires_at IS NULL OR ur.expires_at > NOW())")
     List<String> findRoleCodesByUserId(@Param("userId") Long userId);
 
@@ -257,7 +258,8 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
             "INNER JOIN user_roles ur ON rp.role_id = ur.role_id " +
             "INNER JOIN roles r ON r.id = rp.role_id " +
             "WHERE ur.user_id = #{userId} " +
-            "AND p.plugin_enabled = 1 AND r.plugin_enabled = 1 " +
+            "AND p.plugin_enabled = 1 AND r.plugin_enabled = 1 AND r.deleted = 0 " +
+            "AND r.status = 1 " +  // 角色启用过滤, 与 Casbin 路径一致; 禁用角色不再授权
             "AND ur.is_active = 1 AND (ur.expires_at IS NULL OR ur.expires_at > NOW())")
     List<String> findPermissionCodesByUserId(@Param("userId") Long userId);
 
@@ -301,6 +303,14 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
      */
     @Insert("INSERT INTO user_roles (user_id, role_id, created_at) VALUES (#{userId}, #{roleId}, NOW())")
     void insertUserRole(@Param("userId") Long userId, @Param("roleId") Long roleId);
+
+    /** 该用户的全部 user_roles role_id (不过滤 is_active/expires) — 用于 save 时做角色差异比对, 避免全量重写抹掉 scope。 */
+    @Select("SELECT role_id FROM user_roles WHERE user_id = #{userId}")
+    List<Long> findAllRoleIdsByUserId(@Param("userId") Long userId);
+
+    /** 删除某用户的单条角色关联 (差异更新用)。 */
+    @Delete("DELETE FROM user_roles WHERE user_id = #{userId} AND role_id = #{roleId}")
+    void deleteUserRole(@Param("userId") Long userId, @Param("roleId") Long roleId);
     // 归属写入已统一到 access_relations member 关系 (MembershipResolver)。
     // 旧 primary_org_unit_id 写/清方法已删, 列已 DROP (V20260531_4)。
 }

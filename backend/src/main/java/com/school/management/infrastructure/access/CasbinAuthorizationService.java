@@ -7,9 +7,11 @@ import com.school.management.domain.access.repository.PermissionRepository;
 import com.school.management.domain.access.repository.RoleRepository;
 import com.school.management.domain.access.repository.UserRoleRepository;
 import com.school.management.domain.access.service.AuthorizationService;
+import com.school.management.security.CustomUserDetailsService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -26,14 +28,18 @@ public class CasbinAuthorizationService implements AuthorizationService {
     private final UserRoleRepository userRoleRepository;
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
+    /** @Lazy 避免与 CustomUserDetailsService 依赖链潜在的初始化环。 */
+    private final CustomUserDetailsService customUserDetailsService;
 
     public CasbinAuthorizationService(
             UserRoleRepository userRoleRepository,
             RoleRepository roleRepository,
-            PermissionRepository permissionRepository) {
+            PermissionRepository permissionRepository,
+            @Lazy CustomUserDetailsService customUserDetailsService) {
         this.userRoleRepository = userRoleRepository;
         this.roleRepository = roleRepository;
         this.permissionRepository = permissionRepository;
+        this.customUserDetailsService = customUserDetailsService;
     }
 
     @Override
@@ -161,12 +167,16 @@ public class CasbinAuthorizationService implements AuthorizationService {
     @Override
     @CacheEvict(value = {"userPermissions", "userRoles"}, key = "#userId")
     public void refreshCache(Long userId) {
+        // 同步失效 CustomUserDetailsService 30s TTL 缓存 (backing @PreAuthorize authorities + UserContext/数据范围),
+        // 否则角色/权限/数据权限变更最长 30s 不生效 (含权限撤销 — 安全)。此前该 invalidate 方法零调用。
+        customUserDetailsService.invalidateUserCache(userId);
         log.info("Refreshed permission cache for user: {}", userId);
     }
 
     @Override
     @CacheEvict(value = {"userPermissions", "userRoles"}, allEntries = true)
     public void refreshAllCache() {
+        customUserDetailsService.invalidateAllUserCache();
         log.info("Refreshed all permission caches");
     }
 }
