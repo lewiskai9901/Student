@@ -2,6 +2,8 @@ package com.school.management.config;
 
 import com.school.management.security.CustomUserDetailsService;
 import com.school.management.security.JwtAuthenticationFilter;
+import com.school.management.security.WildcardMethodSecurityExpressionHandler;
+import org.springframework.security.access.expression.method.MethodSecurityExpressionHandler;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -65,6 +67,15 @@ public class SecurityConfig {
                 log.info("CORS 配置验证通过，允许的来源: {}", corsOrigins);
             }
         }
+    }
+
+    /**
+     * 方法级安全表达式处理器 — 让超管通配权限 "*" 在 @PreAuthorize 中被识别。
+     * 不加此 bean 时, hasAuthority('X') 精确匹配, 超管 (只持 "*") 会被 21 个端点 403。
+     */
+    @Bean
+    public MethodSecurityExpressionHandler methodSecurityExpressionHandler() {
+        return new WildcardMethodSecurityExpressionHandler();
     }
 
     /**

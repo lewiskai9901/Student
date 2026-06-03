@@ -125,9 +125,10 @@ public class CasbinAuthorizationService implements AuthorizationService {
             }
         }
 
-        // Check for super admin role (string comparison since roleType is now free-form)
+        // 超管判定统一用 role CODE (与 CustomUserDetailsService / DataPermissionApplicationService /
+        // MenuQueryApplicationService 一致); roleType 是 free-form (超管的 role_type 实为 "PRESET"), 不能用来判超管。
         boolean isSuperAdmin = roles.stream()
-            .anyMatch(r -> "SUPER_ADMIN".equals(r.getRoleType()));
+            .anyMatch(r -> "SUPER_ADMIN".equals(r.getRoleCode()));
         if (isSuperAdmin) {
             permissions.add("*");
         }
