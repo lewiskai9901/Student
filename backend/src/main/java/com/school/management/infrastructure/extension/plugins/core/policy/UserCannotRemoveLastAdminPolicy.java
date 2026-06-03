@@ -61,8 +61,9 @@ public class UserCannotRemoveLastAdminPolicy implements Policy<Object> {
                 "SELECT COUNT(*) FROM access_relations " +
                 "WHERE deleted = 0 AND subject_type = 'user' AND subject_id = ? " +
                 "  AND resource_type = 'org_unit' AND resource_id = ? " +
-                "  AND relation IN ('admin', 'SCHOOL_ADMIN', 'DEPT_ADMIN', 'TENANT_ADMIN', " +
-                "                    'CLASS_TEACHER', 'GRADE_DIRECTOR', 'ACADEMIC_DIRECTOR')",
+                // 仅通用管理关系 — 教育角色码 (CLASS_TEACHER/GRADE_DIRECTOR/ACADEMIC_DIRECTOR)
+                // 由教育插件自有策略处理, 核心策略保持行业无关
+                "  AND relation IN ('admin', 'SCHOOL_ADMIN', 'DEPT_ADMIN', 'TENANT_ADMIN')",
                 Integer.class, userId, orgUnitId);
             if (isAdminCount == null || isAdminCount == 0) {
                 // 用户不是 admin, 无关此策略
@@ -74,8 +75,9 @@ public class UserCannotRemoveLastAdminPolicy implements Policy<Object> {
                 "SELECT COUNT(DISTINCT subject_id) FROM access_relations " +
                 "WHERE deleted = 0 AND subject_type = 'user' AND subject_id != ? " +
                 "  AND resource_type = 'org_unit' AND resource_id = ? " +
-                "  AND relation IN ('admin', 'SCHOOL_ADMIN', 'DEPT_ADMIN', 'TENANT_ADMIN', " +
-                "                    'CLASS_TEACHER', 'GRADE_DIRECTOR', 'ACADEMIC_DIRECTOR')",
+                // 仅通用管理关系 — 教育角色码 (CLASS_TEACHER/GRADE_DIRECTOR/ACADEMIC_DIRECTOR)
+                // 由教育插件自有策略处理, 核心策略保持行业无关
+                "  AND relation IN ('admin', 'SCHOOL_ADMIN', 'DEPT_ADMIN', 'TENANT_ADMIN')",
                 Integer.class, userId, orgUnitId);
 
             if (otherAdminCount == null || otherAdminCount == 0) {
