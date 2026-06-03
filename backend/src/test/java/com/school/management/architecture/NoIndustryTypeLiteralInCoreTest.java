@@ -46,7 +46,17 @@ class NoIndustryTypeLiteralInCoreTest {
         "'GRADE'",
         "'MAJOR'",
         "'DORMITORY'",
-        "'CLASSROOM'"
+        "'CLASSROOM'",
+        // 复合教育角色码 — 2026-06-02 核心策略去这些角色码后纳入守护
+        // (原 UserCannotRemoveLastAdminPolicy 硬编码 CLASS_TEACHER/GRADE_DIRECTOR/ACADEMIC_DIRECTOR)
+        "\"CLASS_TEACHER\"",
+        "\"GRADE_DIRECTOR\"",
+        "\"ACADEMIC_DIRECTOR\"",
+        "\"SUBJECT_TEACHER\"",
+        "'CLASS_TEACHER'",
+        "'GRADE_DIRECTOR'",
+        "'ACADEMIC_DIRECTOR'",
+        "'SUBJECT_TEACHER'"
     };
 
     /** 排除的子包 (插件 / 仍保留在 core 的历史包) */

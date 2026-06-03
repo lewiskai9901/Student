@@ -28,11 +28,25 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class NoIndustryTableInCoreTest {
 
-    /** 行业扩展表名 (用户档案表). */
+    /** 行业扩展表名 (用户档案表 + 教育业务表). */
     private static final String[] FORBIDDEN_TABLES = {
+        // 用户档案表
         "user_student",
         "user_teacher",
-        "user_counselor"
+        "user_counselor",
+        // 教育业务表 — 2026-06-02 教师/教务垂直 + 看板教务统计迁出核心后纳入守护,
+        // 防止核心再次直接 FROM/JOIN 这些行业表 (应走插件贡献点 / MembershipResolver)
+        "classes",
+        "courses",
+        "teacher_assignments",
+        "teacher_course_qualifications",
+        "semesters",
+        "teaching_tasks",
+        "schedule_instances",
+        "schedule_entries",
+        "curriculum_plans",
+        "student_grades",
+        "exam_arrangements"
     };
 
     /** SQL 上下文关键字 — 只在 from/join 后紧跟表名才算引用. */
@@ -46,16 +60,17 @@ class NoIndustryTableInCoreTest {
     };
 
     /**
-     * 已知遗留豁免 (按文件名结尾匹配). 这些核心文件直接查 user_teacher, 是归属统一重构
-     * <b>之前</b>就存在的债务 —— 整个教师档案服务+控制器本应迁入 education 插件
-     * (项目规则: 教育业务代码放 plugins/education/**). 该迁移是独立大工程, 不在本守护任务范围.
-     * 守护先收口防 <b>新增</b> 泄漏 + 已删列残留; 此豁免随后续"档案服务下沉插件"任务清零.
+     * 已知遗留豁免 (按文件名结尾匹配). 教师档案/任职垂直已于 2026-06-02 迁入 plugins/education,
+     * 原 TeacherProfileApplicationService 豁免已删除。
      *
-     * <p>TODO(arch): 将 TeacherProfileApplicationService / TeacherProfileController 迁入
-     * plugins/education/ 后删除此豁免.
+     * <p>当前唯一残留: {@code OrgUnitJdbcApplicationService} 的组织影响分析 (org-impact) 仍
+     * {@code COUNT(*) FROM classes} 统计子树班级数 (审计 LOW)。org-impact 应改为可扩展贡献点
+     * (类似 DashboardSectionContributor) 让教育插件贡献 classCount, 届时删除此豁免。
+     *
+     * <p>TODO(arch): org-impact 贡献点化后删除此豁免。
      */
     private static final String[] LEGACY_EXEMPT_FILES = {
-        "TeacherProfileApplicationService.java"
+        "OrgUnitJdbcApplicationService.java"
     };
 
     @Test
