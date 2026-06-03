@@ -1,6 +1,6 @@
-package com.school.management.interfaces.rest.organization;
+package com.school.management.infrastructure.extension.plugins.education.interfaces.rest.teacher;
 
-import com.school.management.application.organization.TeacherProfileApplicationService;
+import com.school.management.infrastructure.extension.plugins.education.application.teacher.TeacherProfileApplicationService;
 import com.school.management.common.result.Result;
 import com.school.management.infrastructure.casbin.CasbinAccess;
 import io.swagger.v3.oas.annotations.Operation;

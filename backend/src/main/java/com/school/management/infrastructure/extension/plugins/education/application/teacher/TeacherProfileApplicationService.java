@@ -1,6 +1,7 @@
-package com.school.management.application.organization;
+package com.school.management.infrastructure.extension.plugins.education.application.teacher;
 
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import com.school.management.application.organization.MembershipResolver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.EmptyResultDataAccessException;

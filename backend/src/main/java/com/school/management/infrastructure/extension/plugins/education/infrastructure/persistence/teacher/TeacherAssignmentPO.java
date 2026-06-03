@@ -1,4 +1,4 @@
-package com.school.management.infrastructure.persistence.organization;
+package com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.teacher;
 
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;

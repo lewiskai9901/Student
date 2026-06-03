@@ -1,4 +1,4 @@
-package com.school.management.infrastructure.persistence.organization;
+package com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.teacher;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
