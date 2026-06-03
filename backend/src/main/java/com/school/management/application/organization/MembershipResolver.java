@@ -183,6 +183,7 @@ public class MembershipResolver {
             "SELECT COUNT(*) FROM users u " +
             "JOIN entity_type_configs etc ON etc.entity_type = 'USER' " +
             "  AND etc.type_code = u.user_type_code AND etc.deleted = 0 " +
+            "  AND etc.is_enabled = 1 " +
             "WHERE u.deleted = 0 AND u.status = 1 " +
             "  AND JSON_EXTRACT(etc.features, '$." + featureKey + "') = true",
             Long.class);
@@ -198,6 +199,7 @@ public class MembershipResolver {
                "JOIN users u ON ar.subject_id = u.id " +
                "JOIN entity_type_configs etc ON etc.entity_type = 'USER' " +
                "  AND etc.type_code = u.user_type_code AND etc.deleted = 0 " +
+               "  AND etc.is_enabled = 1 " +
                "WHERE ar.relation = '" + RELATION + "' " +
                "  AND ar.resource_type = '" + RESOURCE_TYPE + "' " +
                "  AND ar.subject_type = '" + SUBJECT_TYPE + "' " +

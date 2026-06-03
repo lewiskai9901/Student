@@ -60,6 +60,7 @@ public class ByFeatureTargetMode implements TargetModeResolver {
                     "SELECT u.id FROM users u " +
                     "JOIN entity_type_configs c ON c.entity_type = 'USER' " +
                     "  AND c.type_code = u.user_type_code AND c.deleted = 0 " +
+                    "  AND c.is_enabled = 1 " +
                     "WHERE u.deleted = 0 AND u.status = 1 ");
             for (String feature : features) {
                 sb.append("  AND JSON_EXTRACT(c.features, '$.").append(feature).append("') = true ");

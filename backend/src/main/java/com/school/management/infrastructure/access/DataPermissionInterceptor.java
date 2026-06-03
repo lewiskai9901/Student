@@ -70,6 +70,11 @@ public class DataPermissionInterceptor implements Interceptor {
         }
 
         UserContext userContext = UserContextHolder.getContext();
+        // userContext == null 仅出现在后台线程 (定时任务 / 异步 / 启动初始化), 这些不经
+        // JwtAuthenticationFilter, 没有用户身份 → 故意 fail-open (系统操作需全量访问)。
+        // 真实 HTTP 请求一定先过 filter 设上下文 (SecurityConfig anyRequest().authenticated()),
+        // 不会落到 null 分支; 若要对某后台路径关数据权限, 用 isDataPermissionEnabled 开关而非依赖此处。
+        // 超管同样跳过过滤 (全量数据)。
         if (userContext == null || userContext.isSuperAdmin()) {
             return invocation.proceed();
         }
