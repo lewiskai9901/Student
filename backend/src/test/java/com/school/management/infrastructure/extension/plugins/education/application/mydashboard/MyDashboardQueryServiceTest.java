@@ -1,4 +1,4 @@
-package com.school.management.application.my;
+package com.school.management.infrastructure.extension.plugins.education.application.mydashboard;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

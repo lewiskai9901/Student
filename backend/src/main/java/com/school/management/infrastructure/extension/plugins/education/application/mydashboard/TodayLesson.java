@@ -1,4 +1,4 @@
-package com.school.management.application.my;
+package com.school.management.infrastructure.extension.plugins.education.application.mydashboard;
 
 /**
  * /my/schedule/today 一节课次。

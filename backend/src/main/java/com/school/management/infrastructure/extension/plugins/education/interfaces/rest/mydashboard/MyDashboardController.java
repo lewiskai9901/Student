@@ -1,10 +1,10 @@
-package com.school.management.interfaces.rest.my;
+package com.school.management.infrastructure.extension.plugins.education.interfaces.rest.mydashboard;
 
-import com.school.management.application.my.DashboardSummary;
-import com.school.management.application.my.MyClass;
-import com.school.management.application.my.MyDashboardQueryService;
-import com.school.management.application.my.SubstituteTask;
-import com.school.management.application.my.TodayLesson;
+import com.school.management.infrastructure.extension.plugins.education.application.mydashboard.DashboardSummary;
+import com.school.management.infrastructure.extension.plugins.education.application.mydashboard.MyClass;
+import com.school.management.infrastructure.extension.plugins.education.application.mydashboard.MyDashboardQueryService;
+import com.school.management.infrastructure.extension.plugins.education.application.mydashboard.SubstituteTask;
+import com.school.management.infrastructure.extension.plugins.education.application.mydashboard.TodayLesson;
 import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
 import com.school.management.domain.access.model.PermissionScope;
