@@ -288,16 +288,11 @@ public class CorePermissionProvider implements PermissionProvider {
             of("msg-config:view", "查看消息配置", ""),
             of("msg-notification:delete", "删除通知", ""),
             of("msg-notification:edit", "编辑通知", ""),
-            of("msg-notification:view", "查看通知", ""),
+            of("msg-notification:view", "查看通知", "")
 
-            // ─── my:* 自我相关 ───
-            of("my:schedule:view", "查看我的课表", ""),
-            of("my:substitute:view", "查看我的代课", ""),
-            of("my:user_student:view", "查看我的学生", "")
-
-            // ─── quantification 量化考核 ───
-            // quantification:* 已迁至 EducationPermissionProvider (2026-04-21)
-            // 原因: 量化考核是学生工作场景特有, 不属于通用核心
+            // ─── 已迁至 EducationPermissionProvider (教育行业特有, 不属通用核心) ───
+            // quantification:* (2026-04-21);
+            // my:schedule:view / my:substitute:view / my:user_student:view (2026-06-02, 课表/代课/我的学生)
         );
     }
 }

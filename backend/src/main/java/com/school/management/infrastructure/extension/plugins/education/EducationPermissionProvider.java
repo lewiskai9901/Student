@@ -178,7 +178,12 @@ public class EducationPermissionProvider implements PermissionProvider {
             of("quantification:config:add", "新增量化配置", ""),
             of("quantification:config:delete", "删除量化配置", ""),
             of("quantification:config:edit", "编辑量化配置", ""),
-            of("quantification:config:view", "查看量化配置", "")
+            of("quantification:config:view", "查看量化配置", ""),
+
+            // ─── my:* 教育自我相关 (从 CorePermissionProvider 迁入 2026-06-02; 课表/代课/我的学生) ───
+            of("my:schedule:view", "查看我的课表", ""),
+            of("my:substitute:view", "查看我的代课", ""),
+            of("my:user_student:view", "查看我的学生", "")
         );
     }
 }
