@@ -30,7 +30,10 @@ public class EducationMenuPlugin implements MenuContributionPlugin {
                 of("/academic/courses",  "课程",     "book",        2)
                     .requiredPermissions(List.of(ACADEMIC_COURSE_VIEW)),
                 of("/academic/curriculum","培养方案","list-tree",   3)
-                    .requiredPermissions(List.of(ACADEMIC_CURRICULUM_VIEW))
+                    .requiredPermissions(List.of(ACADEMIC_CURRICULUM_VIEW)),
+                // 学期管理 — 从 CoreMenuPlugin /system 迁入 (教育特有, 路由仍 /system/semesters)
+                of("/system/semesters", "学期管理", "calendar", 4)
+                    .requiredPermissions(List.of("system:config:view"))
             )),
 
             // ─── 学生管理 ───
@@ -56,7 +59,10 @@ public class EducationMenuPlugin implements MenuContributionPlugin {
                 of("/teaching/schedule", "课程表", "calendar-days", 1),
                 of("/teaching/exam",     "考试",   "calendar-clock",2),
                 of("/teaching/offering", "开课",   "book-copy",     3)
-                    .requiredPermissions(List.of(TEACHING_CLASSROOM_VIEW))
+                    .requiredPermissions(List.of(TEACHING_CLASSROOM_VIEW)),
+                // 教师档案 — 从 CoreMenuPlugin /system 迁入 (教育特有, 路由仍 /system/teachers)
+                of("/system/teachers", "教师档案", "users-round", 4)
+                    .requiredPermissions(List.of("system:admin"))
             ))
         );
     }

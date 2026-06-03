@@ -30,6 +30,8 @@ public class OrgUnitJdbcApplicationService {
 
     private final JdbcTemplate jdbcTemplate;
     private final MembershipResolver membershipResolver;
+    /** 行业插件贡献的影响项 (如教育班级数)。无 bean 时 Spring 注入空 List, 核心不感知行业。 */
+    private final java.util.List<OrgImpactContributor> impactContributors;
 
     /** Marker thrown when the requested org unit does not exist. */
     public static class OrgUnitNotFoundException extends RuntimeException {
@@ -70,12 +72,8 @@ public class OrgUnitJdbcApplicationService {
             null, treePath, FEATURE_LEARNER);
         impact.put("studentCount", studentCount);
 
-        // 3. 子树下的 classes
-        Integer classCount = jdbcTemplate.queryForObject(
-            "SELECT COUNT(*) FROM classes WHERE deleted = 0 AND org_unit_id IN " +
-            "(SELECT id FROM org_units WHERE deleted = 0 AND tree_path LIKE ?)",
-            Integer.class, treePath + "%");
-        impact.put("classCount", classCount != null ? classCount : 0);
+        // 3. 子树下的 classes(教育)— 已移至教育插件 ClassImpactContributor 贡献,
+        //    见下方 impactContributors 循环。班级本身是 org_unit, 已计入 descendantOrgCount。
 
         // 4. 子树下的 places
         Integer placeCount = jdbcTemplate.queryForObject(
@@ -97,10 +95,14 @@ public class OrgUnitJdbcApplicationService {
             Integer.class, treePath + "%");
         impact.put("accessRelationCount", relationCount != null ? relationCount : 0);
 
-        // 7. 警告级别 (用于 UI 是否显示二次确认)
+        // 7. 行业插件贡献的影响项 (如教育班级数 classCount; 仅展示, 不计入 total — 班级已计入 descendants)
+        for (OrgImpactContributor c : impactContributors) {
+            impact.putAll(c.contribute(treePath));
+        }
+
+        // 8. 警告级别 (用于 UI 是否显示二次确认)
         long total = (descendants != null ? descendants : 0)
                   + studentCount
-                  + (classCount != null ? classCount : 0)
                   + teacherCount;
         String severity = total == 0 ? "NONE"
                         : total < 10 ? "LOW"

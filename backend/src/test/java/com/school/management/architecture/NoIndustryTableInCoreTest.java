@@ -60,17 +60,11 @@ class NoIndustryTableInCoreTest {
     };
 
     /**
-     * 已知遗留豁免 (按文件名结尾匹配). 教师档案/任职垂直已于 2026-06-02 迁入 plugins/education,
-     * 原 TeacherProfileApplicationService 豁免已删除。
-     *
-     * <p>当前唯一残留: {@code OrgUnitJdbcApplicationService} 的组织影响分析 (org-impact) 仍
-     * {@code COUNT(*) FROM classes} 统计子树班级数 (审计 LOW)。org-impact 应改为可扩展贡献点
-     * (类似 DashboardSectionContributor) 让教育插件贡献 classCount, 届时删除此豁免。
-     *
-     * <p>TODO(arch): org-impact 贡献点化后删除此豁免。
+     * 已知遗留豁免 (按文件名结尾匹配). 目前为空 —— 2026-06-02 教师档案/任职垂直迁入
+     * plugins/education、org-impact 的 classCount 改 OrgImpactContributor 贡献点后,
+     * 核心已无任何对教育业务表的 FROM/JOIN, 全部豁免清零。
      */
     private static final String[] LEGACY_EXEMPT_FILES = {
-        "OrgUnitJdbcApplicationService.java"
     };
 
     @Test

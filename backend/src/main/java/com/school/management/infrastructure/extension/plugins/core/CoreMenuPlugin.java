@@ -109,10 +109,8 @@ public class CoreMenuPlugin implements MenuContributionPlugin {
                     .requiredPermissions(List.of("system:config:view")),
                 of("/system/configs", "系统配置", "sliders", 6)
                     .requiredPermissions(List.of("system:config:view")),
-                of("/system/teachers", "教师档案", "users-round", 7)
-                    .requiredPermissions(List.of("system:admin")),
-                of("/system/semesters", "学期管理", "calendar", 8)
-                    .requiredPermissions(List.of("system:config:view")),
+                // 教师档案(/system/teachers)/学期管理(/system/semesters) 是教育菜单,
+                // 已迁至 EducationMenuPlugin (学术/教务 下), industry 归正为 EDU。
                 of("/system/tenants", "租户管理", "building", 9)
                     .requiredPermissions(List.of("system:admin")),
                 of("/system/login-customization", "登录定制", "palette", 10)
