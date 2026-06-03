@@ -36,13 +36,19 @@ public class CoreMenuPlugin implements MenuContributionPlugin {
                 of("/message/preferences", "消息偏好", "sliders", 5)
             )),
 
-            // ─── 访问控制 (关系 / 关系字典 / 数据权限) ───
+            // ─── 访问控制 (RBAC 用户/角色/权限 + ReBAC 关系 + 数据权限) ───
             of("/access", "访问控制", "shield", 6).children(List.of(
-                of("/access/relations", "关系绑定", "link-2", 1)
+                of("/system/users", "用户管理", "users", 1)
+                    .requiredPermissions(List.of("system:user:view")),
+                of("/system/roles", "角色管理", "user-cog", 2)
+                    .requiredPermissions(List.of("system:role:view")),
+                of("/system/permissions", "权限管理", "lock", 3)
+                    .requiredPermissions(List.of("system:permission:view")),
+                of("/access/relations", "关系绑定", "link-2", 4)
                     .requiredPermissions(List.of("system:admin")),
-                of("/access/relation-types", "关系字典", "book", 2)
+                of("/access/relation-types", "关系字典", "book", 5)
                     .requiredPermissions(List.of("system:admin")),
-                of("/access/data-permissions", "数据权限", "shield-check", 3)
+                of("/access/data-permissions", "数据权限", "shield-check", 6)
                     .requiredPermissions(List.of("system:admin"))
             )),
 
@@ -97,12 +103,7 @@ public class CoreMenuPlugin implements MenuContributionPlugin {
 
             // ─── 系统设置 ───
             of("/system", "系统管理", "settings", 90).children(List.of(
-                of("/system/users", "用户管理", "users", 1)
-                    .requiredPermissions(List.of("system:user:view")),
-                of("/system/roles", "角色管理", "user-cog", 2)
-                    .requiredPermissions(List.of("system:role:view")),
-                of("/system/permissions", "权限管理", "lock", 3)
-                    .requiredPermissions(List.of("system:permission:view")),
+                // 用户/角色/权限(RBAC) 已迁至"访问控制"(/access), 与关系+数据权限统一
                 of("/system/entity-types", "类型配置", "layout-grid", 4)
                     .requiredPermissions(List.of("system:config:view")),
                 of("/system/plugins", "插件平台", "package", 5)

@@ -5,7 +5,7 @@ const systemRoutes: RouteRecordRaw[] = [
   {
     path: '/system',
     name: 'System',
-    redirect: '/system/users',
+    redirect: '/system/entity-types',
     meta: {
       title: '系统管理',
       icon: 'Setting',
@@ -14,39 +14,8 @@ const systemRoutes: RouteRecordRaw[] = [
       group: 'system'
     },
     children: [
-      {
-        path: '/system/users',
-        name: 'SystemUsers',
-        component: () => import('@/views/system/UsersView.vue'),
-        meta: {
-          title: '用户管理',
-          requiresAuth: true,
-          permission: 'system:user:view',
-          order: 1
-        }
-      },
-      {
-        path: '/system/roles',
-        name: 'SystemRoles',
-        component: () => import('@/views/system/RolesView.vue'),
-        meta: {
-          title: '角色管理',
-          requiresAuth: true,
-          permission: 'system:role:view',
-          order: 2
-        }
-      },
-      {
-        path: '/system/permissions',
-        name: 'SystemPermissions',
-        component: () => import('@/views/system/PermissionsView.vue'),
-        meta: {
-          title: '权限管理',
-          requiresAuth: true,
-          permission: 'system:permission:view',
-          order: 3
-        }
-      },
+      // 用户管理/角色管理/权限管理(RBAC) 已迁至 router/modules/access.ts (访问控制),
+      // 与关系(ReBAC)/数据权限统一在"访问控制"下。
       {
         path: '/system/entity-types',
         name: 'EntityTypeConfig',
