@@ -188,6 +188,9 @@ public class OrgUnitDomainService {
             child.moveToParent(targetId, updatedBy);
             child.setTreePosition(target.getTreePath(), target.getTreeLevel());
             orgUnitRepository.save(child);
+            // setTreePosition 只重算被移动节点自身的 tree_path; 其后代仍带旧前缀 → 子树脱锚,
+            // 所有 tree_path LIKE 子树统计失真。递归修复每个被移动子节点的后代。
+            repairChildren(child);
             movedChildren.add(child);
         }
 

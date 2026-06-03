@@ -58,7 +58,10 @@ public class ClassDataScopeResolver implements DataScopeResolver {
                 "SELECT DISTINCT ar.resource_id FROM access_relations ar " +
                 "WHERE ar.deleted = 0 AND ar.subject_type = 'user' AND ar.subject_id = ? " +
                 "  AND ar.resource_type = 'org_unit' " +
-                "  AND ar.relation IN ('CLASS_TEACHER', 'SUBJECT_TEACHER', 'admin')",
+                "  AND ar.relation IN ('CLASS_TEACHER', 'SUBJECT_TEACHER', 'admin') " +
+                // 时效过滤: 到期(valid_to 已过)的班主任/任课关系不应再保有数据权限范围
+                // (与下方 queryStudentIdsByClasses 的 member 关系口径一致)
+                "  AND (ar.valid_to IS NULL OR ar.valid_to > NOW())",
                 Long.class, userId);
 
             // (2) classes.teacher_id 直接命中 (老数据兼容)
