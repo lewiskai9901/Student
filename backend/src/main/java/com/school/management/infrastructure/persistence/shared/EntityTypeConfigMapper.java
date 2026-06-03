@@ -34,7 +34,11 @@ public interface EntityTypeConfigMapper extends BaseMapper<EntityTypeConfigPO> {
     List<EntityTypeConfigPO> findByCategory(@Param("entityType") String entityType,
                                              @Param("category") String category);
 
-    @Select("SELECT * FROM entity_type_configs WHERE entity_type = #{entityType} AND JSON_EXTRACT(features, CONCAT('$.', #{featureKey})) = true AND deleted = 0 ORDER BY sort_order")
+    // is_enabled=1 AND plugin_enabled=1: 停用 / 被禁插件的类型不应被能力查询命中
+    // (与 findAllEnabled 口径一致; 与计数 SQL MembershipResolver/ByFeatureTargetMode 的 is_enabled 过滤对齐)
+    @Select("SELECT * FROM entity_type_configs WHERE entity_type = #{entityType} " +
+            "AND JSON_EXTRACT(features, CONCAT('$.', #{featureKey})) = true " +
+            "AND is_enabled = 1 AND plugin_enabled = 1 AND deleted = 0 ORDER BY sort_order")
     List<EntityTypeConfigPO> findByFeature(@Param("entityType") String entityType,
                                             @Param("featureKey") String featureKey);
 

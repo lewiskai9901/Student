@@ -43,8 +43,13 @@ public class EntityTypeConfigApplicationService {
         "plugin_class AS pluginClass, industry, origin, " +
         "overridden_fields AS overriddenFields";
 
-    /** 可被管理员覆写的字段白名单。 */
-    public static final Set<String> OVERRIDABLE_FIELDS = Set.of("typeName", "category", "uiConfig");
+    /**
+     * 可被管理员覆写的字段白名单。
+     * 必须与 {@link #update} 追踪进 overridden_fields 的键集 + {@link #resetField} 支持恢复的键集三者一致,
+     * 否则会出现"可覆写却不可重置"的单向锁死 (features 等)。
+     */
+    public static final Set<String> OVERRIDABLE_FIELDS = Set.of(
+            "typeName", "category", "uiConfig", "features", "parentTypeCode", "allowedChildTypeCodes");
 
     /**
      * 查询某实体类型下的所有类型配置。
@@ -192,20 +197,39 @@ public class EntityTypeConfigApplicationService {
             }
         }
 
-        // 更新本身 + 同步 overridden_fields (插件类型才需要)
-        String overriddenJson = isPlugin ? om.writeValueAsString(new ArrayList<>(overridden)) : null;
+        // 动态列更新: 只 SET 请求里实际出现的字段, 避免 partial-update 把未传字段清空
+        // (此前无条件写全 7 列, 只改 typeName 的请求会把 category/parent/features/ui_config 抹成 NULL、
+        //  children 重置 []。改为按 data.containsKey 动态拼列)。
+        List<String> setClauses = new ArrayList<>();
+        List<Object> params = new ArrayList<>();
+        if (data.containsKey("typeName")) { setClauses.add("type_name=?"); params.add(data.get("typeName")); }
+        if (data.containsKey("category")) { setClauses.add("category=?"); params.add(newCategory); }
+        if (data.containsKey("parentTypeCode")) { setClauses.add("parent_type_code=?"); params.add(data.get("parentTypeCode")); }
+        if (data.containsKey("allowedChildTypeCodes")) {
+            setClauses.add("allowed_child_type_codes=?");
+            params.add(om.writeValueAsString(data.getOrDefault("allowedChildTypeCodes", List.of())));
+        }
+        if (featuresObj != null) {
+            setClauses.add("features=?");
+            params.add(featuresObj instanceof String ? (String) featuresObj : om.writeValueAsString(featuresObj));
+        }
+        if (data.containsKey("uiConfig")) {
+            setClauses.add("ui_config=?");
+            params.add(data.get("uiConfig") instanceof String ? (String) data.get("uiConfig")
+                    : (data.get("uiConfig") != null ? om.writeValueAsString(data.get("uiConfig")) : null));
+        }
+        // overridden_fields 始终随插件类型同步 (反映本次覆写追踪结果)
+        if (isPlugin) {
+            setClauses.add("overridden_fields=?");
+            params.add(om.writeValueAsString(new ArrayList<>(overridden)));
+        }
+        if (setClauses.isEmpty()) {
+            return; // 无任何字段需要更新
+        }
+        params.add(id);
         jdbc.update(
-            "UPDATE entity_type_configs SET type_name=?, category=?, parent_type_code=?, " +
-            "allowed_child_type_codes=?, features=?, ui_config=?, overridden_fields=? " +
-            "WHERE id=? AND deleted=0",
-            data.get("typeName"), newCategory, data.get("parentTypeCode"),
-            om.writeValueAsString(data.getOrDefault("allowedChildTypeCodes", List.of())),
-            featuresObj instanceof String ? (String) featuresObj
-                    : (featuresObj != null ? om.writeValueAsString(featuresObj) : null),
-            data.get("uiConfig") instanceof String ? (String) data.get("uiConfig")
-                    : (data.get("uiConfig") != null ? om.writeValueAsString(data.get("uiConfig")) : null),
-            overriddenJson,
-            id);
+            "UPDATE entity_type_configs SET " + String.join(", ", setClauses) + " WHERE id=? AND deleted=0",
+            params.toArray());
     }
 
     /**
