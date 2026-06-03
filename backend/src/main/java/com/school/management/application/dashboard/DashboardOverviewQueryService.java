@@ -46,15 +46,21 @@ public class DashboardOverviewQueryService {
     private final JdbcTemplate jdbcTemplate;
     private final DataPermissionPolicyService policyService;
     private final MembershipResolver membershipResolver;
+    /** 行业插件贡献的看板分区 (如教务 teaching)。无 bean 时 Spring 注入空 List, 核心不感知行业。 */
+    private final java.util.List<DashboardSectionContributor> sectionContributors;
 
     public Map<String, Object> getOverview() {
         ScopeFilter filter = resolveFilter(UserContextHolder.getContext());
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("organization", getOrgStats(filter));
-        result.put("teaching", getTeachingStats(filter));
         result.put("inspection", getInspectionStats());
         result.put("system", getSystemStats(filter));
+        // 行业插件分区 (教务统计等由 EDU 的 DashboardSectionContributor 贡献; 核心不硬编码行业)
+        DashboardScope scope = filter.toScope();
+        for (DashboardSectionContributor c : sectionContributors) {
+            result.put(c.sectionKey(), c.contribute(scope));
+        }
         return result;
     }
 
@@ -200,52 +206,9 @@ public class DashboardOverviewQueryService {
     }
 
     // ================= Teaching =================
-
-    private Map<String, Object> getTeachingStats(ScopeFilter filter) {
-        Map<String, Object> stats = new LinkedHashMap<>();
-
-        stats.put("currentSemester", stringSafe(
-                "SELECT semester_code FROM semesters WHERE is_current = 1 LIMIT 1", "--"));
-
-        long semesterId = longSafe("SELECT id FROM semesters WHERE is_current = 1 LIMIT 1");
-
-        stats.put("courseCount", countSafe(
-                "SELECT COUNT(*) FROM courses WHERE deleted = 0 AND status = 1"));
-
-        if (semesterId <= 0 || filter.deniesAll()) {
-            stats.put("taskCount", 0);
-            stats.put("scheduledRate", 0);
-            stats.put("unscheduledCount", 0);
-            return stats;
-        }
-
-        int taskCount = countTeachingTasks(filter, semesterId, "deleted = 0 AND semester_id = ?");
-        int totalTasks = countTeachingTasks(filter, semesterId,
-                "deleted = 0 AND task_status = 1 AND semester_id = ?");
-        int scheduledTasks = countTeachingTasks(filter, semesterId,
-                "deleted = 0 AND task_status = 1 AND scheduling_status = 2 AND semester_id = ?");
-
-        stats.put("taskCount", taskCount);
-        stats.put("scheduledRate", totalTasks > 0 ? (int) Math.round(scheduledTasks * 100.0 / totalTasks) : 0);
-        stats.put("unscheduledCount", totalTasks - scheduledTasks);
-        return stats;
-    }
-
-    private int countTeachingTasks(ScopeFilter filter, long semesterId, String predicate) {
-        if (filter.unrestricted()) {
-            return countSafe("SELECT COUNT(*) FROM teaching_tasks WHERE " + predicate, semesterId);
-        }
-        if (filter.isSubtree()) {
-            return countSafe(
-                    "SELECT COUNT(*) FROM teaching_tasks WHERE " + predicate +
-                            " AND org_unit_id IN (SELECT id FROM org_units " +
-                            "WHERE tenant_id = ? AND tree_path LIKE ? AND deleted = 0)",
-                    semesterId, filter.tenantId, filter.orgUnitPath + "%");
-        }
-        return countSafe(
-                "SELECT COUNT(*) FROM teaching_tasks WHERE " + predicate + " AND org_unit_id = ?",
-                semesterId, filter.orgUnitId);
-    }
+    // 教务统计 (semesters/courses/teaching_tasks) 已迁至教育插件
+    // plugins/education 的 TeachingDashboardContributor (DashboardSectionContributor 实现)。
+    // 核心不再硬编码行业统计。
 
     // ================= Inspection =================
 
@@ -329,6 +292,11 @@ public class DashboardOverviewQueryService {
             this.tenantId = tenantId;
             this.orgUnitPath = orgUnitPath;
             this.orgUnitId = orgUnitId;
+        }
+
+        /** 转为传给插件贡献点的公共范围 DTO。 */
+        DashboardScope toScope() {
+            return new DashboardScope(kind.name(), tenantId, orgUnitPath, orgUnitId);
         }
 
         static ScopeFilter unrestricted(Long tenantId) {
