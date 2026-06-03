@@ -1,13 +1,13 @@
 import type { RouteRecordRaw } from 'vue-router'
 
-/** Access 模块路由 — 关系管理. order: 1.7 */
+/** Access 模块路由 — 访问控制 (关系 / 关系字典 / 数据权限). order: 1.7 */
 const accessRoutes: RouteRecordRaw[] = [
   {
     path: '/access',
     name: 'AccessCenter',
     redirect: '/access/relations',
     meta: {
-      title: '关系管理',
+      title: '访问控制',
       icon: 'Connection',
       requiresAuth: true,
       order: 1.7,
@@ -18,7 +18,7 @@ const accessRoutes: RouteRecordRaw[] = [
         path: '/access/relations',
         name: 'RelationManager',
         component: () => import('@/views/access/RelationManagerView.vue'),
-        meta: { title: '关系管理', requiresAuth: true, permission: 'system:config:view', order: 1 }
+        meta: { title: '关系绑定', requiresAuth: true, permission: 'system:config:view', order: 1 }
       },
       {
         path: '/access/relation-types',

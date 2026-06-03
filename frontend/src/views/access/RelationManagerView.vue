@@ -3,8 +3,8 @@
     <!-- 模式切换: 场景 vs 数据表 -->
     <div class="flex items-center justify-between mb-4">
       <div>
-        <h2 class="text-lg font-semibold">关系管理</h2>
-        <p class="text-xs text-gray-500 mt-1">绑定人与班级、场所、其他人的关系</p>
+        <h2 class="text-lg font-semibold">关系绑定</h2>
+        <p class="text-xs text-gray-500 mt-1">绑定用户与组织、场所、其他用户之间的关系</p>
       </div>
       <div class="flex gap-1 text-sm">
         <button :class="viewBtnCls(viewMode === 'scene')" @click="viewMode = 'scene'">业务场景</button>

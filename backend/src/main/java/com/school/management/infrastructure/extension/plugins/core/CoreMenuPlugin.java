@@ -36,9 +36,9 @@ public class CoreMenuPlugin implements MenuContributionPlugin {
                 of("/message/preferences", "消息偏好", "sliders", 5)
             )),
 
-            // ─── 关系管理 ───
-            of("/access", "权限管理", "shield", 6).children(List.of(
-                of("/access/relations", "关系管理", "link-2", 1)
+            // ─── 访问控制 (关系 / 关系字典 / 数据权限) ───
+            of("/access", "访问控制", "shield", 6).children(List.of(
+                of("/access/relations", "关系绑定", "link-2", 1)
                     .requiredPermissions(List.of("system:admin")),
                 of("/access/relation-types", "关系字典", "book", 2)
                     .requiredPermissions(List.of("system:admin")),
