@@ -140,7 +140,8 @@ public class EntityTypeConfigApplicationService {
 
         // 读当前行: 判断是否插件类型 + 当前值 + 已有覆写集合
         Map<String, Object> current = jdbc.queryForMap(
-            "SELECT is_plugin_registered, type_name, category, ui_config, overridden_fields " +
+            "SELECT is_plugin_registered, type_name, category, ui_config, features, " +
+            "parent_type_code, allowed_child_type_codes, overridden_fields " +
             "FROM entity_type_configs WHERE id=? AND deleted=0", id);
         boolean isPlugin = toBool(current.get("is_plugin_registered"));
         Set<String> overridden = parseOverriddenFields(current.get("overridden_fields"), om);
@@ -170,6 +171,24 @@ public class EntityTypeConfigApplicationService {
                         ? (String) newUiConfig : om.writeValueAsString(newUiConfig);
                 String curUi = str(current.get("ui_config"));
                 if (!Objects.equals(newUi, curUi)) overridden.add("uiConfig");
+            }
+            // features / parentTypeCode / allowedChildTypeCodes 同样可被管理员覆写 —
+            // 必须独立追踪, 否则 PluginRegistrar 重启合并时会用插件声明覆盖管理员改动。
+            if (featuresObj != null) {
+                String newFeatures = featuresObj instanceof String
+                        ? (String) featuresObj : om.writeValueAsString(featuresObj);
+                String curFeatures = str(current.get("features"));
+                if (!Objects.equals(newFeatures, curFeatures)) overridden.add("features");
+            }
+            if (data.containsKey("parentTypeCode")) {
+                String newParent = str(data.get("parentTypeCode"));
+                String curParent = str(current.get("parent_type_code"));
+                if (!Objects.equals(newParent, curParent)) overridden.add("parentTypeCode");
+            }
+            if (data.containsKey("allowedChildTypeCodes")) {
+                String newChildren = om.writeValueAsString(data.getOrDefault("allowedChildTypeCodes", List.of()));
+                String curChildren = str(current.get("allowed_child_type_codes"));
+                if (!Objects.equals(newChildren, curChildren)) overridden.add("allowedChildTypeCodes");
             }
         }
 
@@ -231,6 +250,20 @@ public class EntityTypeConfigApplicationService {
                 String uiJson = original instanceof String ? (String) original : om.writeValueAsString(original);
                 jdbc.update("UPDATE entity_type_configs SET ui_config=?, overridden_fields=? WHERE id=? AND deleted=0",
                         uiJson, overriddenJson, id);
+                break;
+            case "features":
+                String featJson = original instanceof String ? (String) original : om.writeValueAsString(original);
+                jdbc.update("UPDATE entity_type_configs SET features=?, overridden_fields=? WHERE id=? AND deleted=0",
+                        featJson, overriddenJson, id);
+                break;
+            case "parentTypeCode":
+                jdbc.update("UPDATE entity_type_configs SET parent_type_code=?, overridden_fields=? WHERE id=? AND deleted=0",
+                        original, overriddenJson, id);
+                break;
+            case "allowedChildTypeCodes":
+                String childJson = original instanceof String ? (String) original : om.writeValueAsString(original);
+                jdbc.update("UPDATE entity_type_configs SET allowed_child_type_codes=?, overridden_fields=? WHERE id=? AND deleted=0",
+                        childJson, overriddenJson, id);
                 break;
         }
         return null;
@@ -313,6 +346,8 @@ public class EntityTypeConfigApplicationService {
                 case "category": return invoke(bean, "getCategory");
                 case "uiConfig":  return invoke(bean, "getUiConfig");
                 case "features":  return invoke(bean, "getFeatures");
+                case "parentTypeCode": return invoke(bean, "getParentTypeCode");
+                case "allowedChildTypeCodes": return invoke(bean, "getAllowedChildTypeCodes");
                 default: return null;
             }
         } catch (Exception e) {

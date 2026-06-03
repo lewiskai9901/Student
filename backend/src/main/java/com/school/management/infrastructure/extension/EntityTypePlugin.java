@@ -40,6 +40,16 @@ public interface EntityTypePlugin {
     /** 允许的子类型编码 */
     default List<String> getAllowedChildTypeCodes() { return List.of(); }
 
+    /**
+     * 该类型用户创建时默认分配的角色编码 (仅 entity_type=USER 有意义)。
+     *
+     * <p>语义为"部署绑定": 角色编码取决于具体部署的角色目录, 因此默认空。
+     * 返回非空时, {@link PluginRegistrar} 在<b>新建</b>类型行时写入 default_role_codes;
+     * 合并已存在行时, 空集合视为"无意见", 保留 seed / 管理员设定值, 不覆盖。
+     * 被 {@link com.school.management.application.user.UserTypeDefaultProvisioner} 消费。
+     */
+    default List<String> getDefaultRoleCodes() { return List.of(); }
+
     /** 系统字段定义（管理员不可删除） */
     List<FieldDefinition> getSystemFields();
 

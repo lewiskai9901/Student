@@ -66,6 +66,8 @@ public class PluginRegistrar extends AbstractPluginRegistrar<EntityTypePlugin, E
         String childCodesJson = objectMapper.writeValueAsString(plugin.getAllowedChildTypeCodes());
         String featuresJson = objectMapper.writeValueAsString(plugin.getFeatures());
         String uiConfigJson = objectMapper.writeValueAsString(plugin.getUiConfig());
+        List<String> pluginDefaultRoles = plugin.getDefaultRoleCodes();
+        String defaultRolesJson = objectMapper.writeValueAsString(pluginDefaultRoles);
 
         String origin = resolveOrigin(plugin);
         if (exists == null || exists == 0) {
@@ -73,16 +75,17 @@ public class PluginRegistrar extends AbstractPluginRegistrar<EntityTypePlugin, E
             jdbc.update(
                 "INSERT INTO entity_type_configs (entity_type, type_code, type_name, category, " +
                 "parent_type_code, allowed_child_type_codes, metadata_schema, features, ui_config, " +
-                "is_plugin_registered, plugin_class, industry, origin, is_enabled, deleted) " +
-                "VALUES (?,?,?,?,?,?,?,?,?,1,?,?,?,1,0)",
+                "default_role_codes, is_plugin_registered, plugin_class, industry, origin, is_enabled, deleted) " +
+                "VALUES (?,?,?,?,?,?,?,?,?,?,1,?,?,?,1,0)",
                 entityType, typeCode, plugin.getTypeName(), plugin.getCategory(),
                 plugin.getParentTypeCode(), childCodesJson, schemaJson,
-                featuresJson, uiConfigJson, pluginClass, industry, origin);
+                featuresJson, uiConfigJson, defaultRolesJson, pluginClass, industry, origin);
             return UpsertResult.CREATED;
         }
         // 合并: 保留 admin 自定义字段
         Map<String, Object> existingRow = jdbc.queryForMap(
-            "SELECT metadata_schema, type_name, category, ui_config, features, overridden_fields " +
+            "SELECT metadata_schema, type_name, category, ui_config, features, " +
+            "parent_type_code, allowed_child_type_codes, default_role_codes, overridden_fields " +
             "FROM entity_type_configs WHERE entity_type=? AND type_code=? AND deleted=0",
             entityType, typeCode);
         String currentSchemaStr = (String) existingRow.get("metadata_schema");
@@ -90,7 +93,8 @@ public class PluginRegistrar extends AbstractPluginRegistrar<EntityTypePlugin, E
         String mergedSchema = buildSchemaJson(plugin.getSystemFields(), customFields);
 
         // ── 字段级合并: 被管理员覆写的字段保留现值, 其他跟插件声明走 ──
-        // overridden_fields 是 JSON 数组, 如 ["typeName","category"]
+        // overridden_fields 是 JSON 数组, 如 ["typeName","features","parentTypeCode"]
+        // 每个可覆写字段独立判断 (features 不再与 category 耦合 — 修复 admin 单改 features 重启被覆盖)。
         Set<String> overridden = parseOverriddenFields(existingRow.get("overridden_fields"));
 
         String finalTypeName = overridden.contains("typeName")
@@ -102,18 +106,27 @@ public class PluginRegistrar extends AbstractPluginRegistrar<EntityTypePlugin, E
         String finalUiConfig = overridden.contains("uiConfig")
                 ? (String) existingRow.get("ui_config")
                 : uiConfigJson;
-        // features 和 category 绑定 — category 被覆写时 features 也跟着保留
-        String finalFeatures = overridden.contains("category")
+        String finalFeatures = overridden.contains("features")
                 ? (String) existingRow.get("features")
                 : featuresJson;
+        String finalParent = overridden.contains("parentTypeCode")
+                ? (String) existingRow.get("parent_type_code")
+                : plugin.getParentTypeCode();
+        String finalChildCodes = overridden.contains("allowedChildTypeCodes")
+                ? (String) existingRow.get("allowed_child_type_codes")
+                : childCodesJson;
+        // default_role_codes 是部署绑定: 插件空集合 = 无意见 → 保留 seed/admin 现值, 不覆盖。
+        String finalDefaultRoles = (overridden.contains("defaultRoleCodes") || pluginDefaultRoles.isEmpty())
+                ? (String) existingRow.get("default_role_codes")
+                : defaultRolesJson;
 
         jdbc.update(
             "UPDATE entity_type_configs SET type_name=?, category=?, parent_type_code=?, " +
-            "allowed_child_type_codes=?, metadata_schema=?, features=?, ui_config=?, " +
+            "allowed_child_type_codes=?, metadata_schema=?, features=?, ui_config=?, default_role_codes=?, " +
             "is_plugin_registered=1, plugin_class=?, industry=?, origin=? " +
             "WHERE entity_type=? AND type_code=? AND deleted=0",
-            finalTypeName, finalCategory, plugin.getParentTypeCode(),
-            childCodesJson, mergedSchema, finalFeatures, finalUiConfig,
+            finalTypeName, finalCategory, finalParent,
+            finalChildCodes, mergedSchema, finalFeatures, finalUiConfig, finalDefaultRoles,
             pluginClass, industry, origin, entityType, typeCode);
         if (!overridden.isEmpty()) {
             log.info("[PluginRegistrar] {}/{} 有管理员覆写字段: {}", entityType, typeCode, overridden);

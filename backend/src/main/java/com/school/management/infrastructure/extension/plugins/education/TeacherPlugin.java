@@ -15,6 +15,9 @@ public class TeacherPlugin implements EntityTypePlugin {
     public String getTypeName() { return "教师"; }
     public String getCategory() { return "STAFF"; }
 
+    @Override
+    public List<String> getDefaultRoleCodes() { return List.of("TEACHER"); }
+
     public List<FieldDefinition> getSystemFields() {
         return List.of(
             // 工号 — 已于 V104 从 users 表删除, 现由 TeacherPlugin 声明, 存 user_teacher.employee_no

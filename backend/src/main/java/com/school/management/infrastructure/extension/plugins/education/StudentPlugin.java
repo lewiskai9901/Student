@@ -15,6 +15,9 @@ public class StudentPlugin implements EntityTypePlugin {
     public String getTypeName() { return "学生"; }
     public String getCategory() { return "MEMBER"; }
 
+    @Override
+    public List<String> getDefaultRoleCodes() { return List.of("STUDENT"); }
+
     public List<FieldDefinition> getSystemFields() {
         return List.of(
             FieldDefinition.of("studentNo", "学号", "text", "基本信息", true, Map.of()),
