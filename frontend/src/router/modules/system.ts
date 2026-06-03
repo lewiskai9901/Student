@@ -107,17 +107,7 @@ const systemRoutes: RouteRecordRaw[] = [
           order: 9
         }
       },
-      {
-        path: '/system/semesters',
-        name: 'SystemSemesters',
-        component: () => import('@/views/system/SemesterView.vue'),
-        meta: {
-          title: '学期管理',
-          requiresAuth: true,
-          permission: 'system:semester:view',
-          order: 9
-        }
-      },
+      // 学期管理(/system/semesters) 是教育菜单, 已迁至 router/plugins/edu.ts (学术管理下)
       {
         path: '/system/announcements',
         name: 'SystemAnnouncements',
@@ -153,17 +143,7 @@ const systemRoutes: RouteRecordRaw[] = [
           order: 12
         }
       },
-      {
-        path: '/system/teachers',
-        name: 'TeacherProfiles',
-        component: () => import('@/views/system/TeacherProfileView.vue'),
-        meta: {
-          title: '教师档案',
-          requiresAuth: true,
-          permission: 'system:teacher:view',
-          order: 13
-        }
-      },
+      // 教师档案(/system/teachers) 是教育菜单, 已迁至 router/plugins/edu.ts (教务管理下)
       {
         path: '/system/audit',
         name: 'AuditTrail',

@@ -95,6 +95,18 @@ const eduRoutes: RouteRecordRaw[] = [
           permission: 'academic:curriculum:view',
           order: 3
         }
+      },
+      {
+        // 教育菜单: 从 system.ts 迁入 (路径保持 /system/semesters, 后端菜单已归位学术管理下)
+        path: '/system/semesters',
+        name: 'SystemSemesters',
+        component: () => import('@/views/system/SemesterView.vue'),
+        meta: {
+          title: '学期管理',
+          requiresAuth: true,
+          permission: 'system:semester:view',
+          order: 9
+        }
       }
     ]
   },
@@ -282,6 +294,18 @@ const eduRoutes: RouteRecordRaw[] = [
           requiresAuth: true,
           permission: 'teaching:grade:view',
           order: 9
+        }
+      },
+      {
+        // 教育菜单: 从 system.ts 迁入 (路径保持 /system/teachers, 后端菜单已归位教务管理下)
+        path: '/system/teachers',
+        name: 'TeacherProfiles',
+        component: () => import('@/views/system/TeacherProfileView.vue'),
+        meta: {
+          title: '教师档案',
+          requiresAuth: true,
+          permission: 'system:teacher:view',
+          order: 10
         }
       }
     ]
