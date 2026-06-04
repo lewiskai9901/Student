@@ -87,12 +87,22 @@
         layout="total, prev, pager, next" @current-change="p => { page = p; load() }" />
     </div>
 
-    <!-- 向导抽屉 (右侧滑出) -->
-    <el-drawer v-model="wizardVisible" :title="wizardTitle" direction="rtl" size="440px" :close-on-click-modal="false">
-      <div v-if="wizardCode" class="wizard-form">
+    <!-- 向导抽屉 (右侧滑出, 统一 tm-drawer 风格, 与"添加用户"一致) -->
+    <Teleport to="body">
+      <Transition name="tm-drawer">
+        <div v-if="wizardVisible" class="tm-drawer-overlay" @click.self="wizardVisible = false">
+          <div class="tm-drawer" style="width: 460px;">
+            <div class="tm-drawer-header">
+              <h2 class="tm-drawer-title">{{ wizardTitle }}</h2>
+              <button class="tm-drawer-close" @click="wizardVisible = false">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <div class="tm-drawer-body">
+              <div v-if="wizardCode" class="tm-section">
         <!-- 步骤 1: 选择主体 (谁) -->
-        <div class="field">
-          <label class="field-label">{{ wizardMeta.subjectLabel }}</label>
+        <div class="tm-field">
+          <label class="tm-label">{{ wizardMeta.subjectLabel }}</label>
           <el-select v-if="wizardMeta.subjectType === 'user'"
             v-model="wiz.subjectId" filterable remote :remote-method="searchUsers"
             :loading="searchLoading" placeholder="输入姓名/工号搜索..." style="width:100%" @change="onWizChange">
@@ -108,8 +118,8 @@
         </div>
 
         <!-- 步骤 2: 选择资源 (对象) -->
-        <div class="field">
-          <label class="field-label">{{ wizardMeta.resourceLabel }}</label>
+        <div class="tm-field">
+          <label class="tm-label">{{ wizardMeta.resourceLabel }}</label>
           <el-cascader v-if="wizardMeta.resourceType === 'org_unit'"
             v-model="wiz.resourceId" :options="orgTreeOpts" :props="cascaderProps"
             placeholder="选择组织" style="width:100%" @change="onWizChange" />
@@ -125,9 +135,9 @@
           </el-select>
         </div>
 
-        <div class="field">
-          <label class="field-label">备注（可选）</label>
-          <el-input v-model="wiz.remark" placeholder="描述这个关系的用途" />
+        <div class="tm-field">
+          <label class="tm-label">备注（可选）</label>
+          <input v-model="wiz.remark" type="text" placeholder="描述这个关系的用途" class="tm-input" />
         </div>
 
         <!-- 预览 -->
@@ -143,16 +153,16 @@
             !️ 该资源已有 {{ existingConflict.count }} 个{{ relationLabel(wizardMeta.relation) }}，建议先撤销原有。
           </div>
         </div>
-      </div>
-      <template #footer>
-        <div class="drawer-footer">
-          <el-button @click="wizardVisible = false">取消</el-button>
-          <el-button type="primary" :disabled="!wiz.subjectId || !wiz.resourceId" @click="handleWizardSubmit">
-            确认绑定
-          </el-button>
+              </div>
+            </div>
+            <div class="tm-drawer-footer">
+              <button class="tm-btn tm-btn-secondary" @click="wizardVisible = false">取消</button>
+              <button class="tm-btn tm-btn-primary" :disabled="!wiz.subjectId || !wiz.resourceId" @click="handleWizardSubmit">确认绑定</button>
+            </div>
+          </div>
         </div>
-      </template>
-    </el-drawer>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -450,13 +460,14 @@ onMounted(async () => {
 .recent-revoke { color: #ef4444; font-size: 12px; border: none; background: transparent; cursor: pointer; padding: 4px 8px; }
 .recent-revoke:hover { background: #fef2f2; border-radius: 4px; }
 
-.wizard-form { display: flex; flex-direction: column; gap: 16px; }
-.drawer-footer { display: flex; justify-content: flex-end; gap: 8px; }
-.field { display: flex; flex-direction: column; gap: 6px; }
-.field-label { font-size: 13px; color: #374151; font-weight: 500; }
-.preview-panel { background: #f3f4f6; border-radius: 6px; padding: 12px; }
+.preview-panel { background: #f3f4f6; border-radius: 6px; padding: 12px; margin-top: 4px; }
 .preview-label { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
 .preview-line { font-size: 14px; color: #111827; }
 .preview-line em { color: #2563eb; font-style: normal; font-weight: 500; margin: 0 2px; }
 .preview-warning { margin-top: 8px; padding: 6px 10px; background: #fef3c7; color: #92400e; font-size: 12px; border-radius: 4px; }
+</style>
+
+<!-- 非 scoped: 引入统一表单样式 (tm-drawer / tm-section / tm-field / tm-input / tm-btn), 与"添加用户"一致 -->
+<style>
+@import '@/styles/teaching-ui.css';
 </style>
