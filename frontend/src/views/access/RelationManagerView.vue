@@ -91,7 +91,7 @@
     <Teleport to="body">
       <Transition name="tm-drawer">
         <div v-if="wizardVisible" class="tm-drawer-overlay" @click.self="wizardVisible = false">
-          <div class="tm-drawer" style="width: 460px;">
+          <div class="tm-drawer rel-wizard-drawer" style="width: 460px;">
             <div class="tm-drawer-header">
               <h2 class="tm-drawer-title">{{ wizardTitle }}</h2>
               <button class="tm-drawer-close" @click="wizardVisible = false">
@@ -470,4 +470,28 @@ onMounted(async () => {
 <!-- 非 scoped: 引入统一表单样式 (tm-drawer / tm-section / tm-field / tm-input / tm-btn), 与"添加用户"一致 -->
 <style>
 @import '@/styles/teaching-ui.css';
+
+/* 让本抽屉内的 el-select / el-cascader 边框圆角背景与 tm-input 像素对齐 (限 .rel-wizard-drawer 作用域) */
+.rel-wizard-drawer .el-select__wrapper,
+.rel-wizard-drawer .el-cascader .el-input__wrapper {
+  border-radius: 7px;
+  background-color: #fafafa;
+  box-shadow: 0 0 0 1px #e5e7eb inset;
+  min-height: 36px;
+  padding: 4px 10px;
+  font-size: 13px;
+  transition: box-shadow 0.15s, background-color 0.15s;
+}
+/* 不随 hover 变 (对齐 tm-input 仅 focus 高亮) */
+.rel-wizard-drawer .el-select__wrapper:hover,
+.rel-wizard-drawer .el-cascader:not(.is-disabled):hover .el-input__wrapper {
+  box-shadow: 0 0 0 1px #e5e7eb inset;
+}
+/* focus: 蓝边 + 3px 柔光环, 与 tm-input:focus 一致 */
+.rel-wizard-drawer .el-select__wrapper.is-focused,
+.rel-wizard-drawer .el-cascader .el-input__wrapper.is-focus,
+.rel-wizard-drawer .el-cascader.is-focus .el-input__wrapper {
+  background-color: #fff;
+  box-shadow: 0 0 0 1px #2563eb inset, 0 0 0 3px rgba(37, 99, 235, 0.06);
+}
 </style>
