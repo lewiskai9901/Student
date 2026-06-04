@@ -11,4 +11,6 @@ import lombok.Data;
 public class UpdateRoleCommand {
     private String roleName;
     private String description;
+    /** 启用/禁用 (null=不改)。落库到 roles.status。 */
+    private Boolean isEnabled;
 }

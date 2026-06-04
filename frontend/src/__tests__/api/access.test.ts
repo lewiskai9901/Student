@@ -158,21 +158,6 @@ describe('access API', () => {
       })
     })
 
-    it('checkPermission GET 携带 permissionCode 参数', async () => {
-      vi.mocked(http.get).mockResolvedValueOnce(true)
-      await accessApi.checkPermission('user:read')
-      expect(http.get).toHaveBeenCalledWith('/users/current/check', {
-        params: { permissionCode: 'user:read' },
-      })
-    })
-
-    it('checkPermissions POST 批量', async () => {
-      vi.mocked(http.post).mockResolvedValueOnce({})
-      await accessApi.checkPermissions(['a', 'b'])
-      expect(http.post).toHaveBeenCalledWith('/users/current/check-batch', {
-        permissionCodes: ['a', 'b'],
-      })
-    })
   })
 
   describe('数据权限 API', () => {

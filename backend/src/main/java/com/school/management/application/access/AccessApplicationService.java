@@ -219,7 +219,18 @@ public class AccessApplicationService {
 
         role.updateInfo(command.getRoleName(), command.getDescription());
 
+        // 启用/禁用 (null=不改)。禁用角色后该角色不再授予权限 (见 findRole/PermissionCodesByUserId 的 r.status=1
+        // 过滤), 故变更后刷新持有该角色用户的缓存使其即时生效。
+        boolean enabledChanged = false;
+        if (command.getIsEnabled() != null && !command.getIsEnabled().equals(role.getIsEnabled())) {
+            if (command.getIsEnabled()) role.enable(); else role.disable();
+            enabledChanged = true;
+        }
+
         role = roleRepository.save(role);
+        if (enabledChanged) {
+            refreshCacheForRole(role.getId());
+        }
         return role;
     }
 

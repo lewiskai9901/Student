@@ -90,7 +90,8 @@ export interface UpdateRoleRequest {
   roleType?: string
   level?: number
   description?: string
-  enabled?: boolean
+  /** 启用/禁用 (折叠进 PUT /roles/{id}, 与后端 UpdateRoleRequest.isEnabled 对应)。 */
+  isEnabled?: boolean
 }
 
 // 设置权限请求

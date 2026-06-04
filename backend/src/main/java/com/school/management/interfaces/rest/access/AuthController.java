@@ -44,6 +44,7 @@ public class AuthController {
     private final AuthJdbcApplicationService authJdbcService;
     private final com.school.management.infrastructure.extension.TenantPluginService tenantPluginService;
     private final com.school.management.security.LoginAttemptService loginAttemptService;
+    private final com.school.management.application.user.UserApplicationService userApplicationService;
 
     /** 是否信任反向代理头 (X-Forwarded-For/X-Real-IP) — 默认 false, 部署在 nginx 后由 ops 置 true. */
     @org.springframework.beans.factory.annotation.Value("${security.trust-proxy-headers:false}")
@@ -184,6 +185,50 @@ public class AuthController {
 
         LoginResponse.UserInfo userInfo = buildUserInfo(userDetails, user);
         return Result.success(userInfo);
+    }
+
+    @PutMapping("/profile")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "更新当前用户个人资料")
+    @AuditEvent(module = "access", action = "UPDATE", resourceType = "USER", label = "更新个人资料")
+    public Result<Void> updateProfile(@RequestBody java.util.Map<String, Object> body) {
+        Long userId = currentUserId();
+        userApplicationService.updateProfile(
+                userId,
+                (String) body.get("realName"),
+                (String) body.get("phone"),
+                (String) body.get("email"),
+                body.get("gender") == null ? null : ((Number) body.get("gender")).intValue());
+        // 失效用户详情缓存, 让昵称等变更即时反映 (否则受 30s TTL 影响)
+        userDetailsService.invalidateUserCache(userId);
+        return Result.success();
+    }
+
+    @PutMapping("/password")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "修改当前用户密码")
+    @AuditEvent(module = "access", action = "UPDATE", resourceType = "USER", label = "修改密码")
+    public Result<Void> changePassword(@RequestBody java.util.Map<String, Object> body) {
+        String oldPassword = (String) body.get("oldPassword");
+        String newPassword = (String) body.get("newPassword");
+        String confirmPassword = (String) body.get("confirmPassword");
+        if (newPassword == null || newPassword.isBlank()) {
+            return Result.error("新密码不能为空");
+        }
+        if (!newPassword.equals(confirmPassword)) {
+            return Result.error("两次输入的新密码不一致");
+        }
+        userApplicationService.changePassword(currentUserId(), oldPassword, newPassword);
+        return Result.success();
+    }
+
+    /** 取当前登录用户 id, 未登录抛错。 */
+    private Long currentUserId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof CustomUserDetails userDetails)) {
+            throw new IllegalStateException("用户未登录");
+        }
+        return userDetails.getUserId();
     }
 
     private LoginResponse buildLoginResponse(String accessToken, String refreshToken,

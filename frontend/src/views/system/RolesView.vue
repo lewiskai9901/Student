@@ -542,7 +542,6 @@ import {
 } from 'lucide-vue-next'
 // DDD API
 import {
-  getRolesPage,
   createRole,
   updateRole,
   deleteRole,
@@ -550,8 +549,7 @@ import {
   getRolePermissionIds,
   setRolePermissions,
   getPermissions,
-  enableRole,
-  disableRole,
+  getRoles,
   type RoleResponse
 } from '@/api/access'
 import type {
@@ -693,15 +691,24 @@ const getAllPermissionIds = (permissions: any[]): (string | number)[] => {
 const loadRoleList = async () => {
   loading.value = true
   try {
-    const res = await getRolesPage({
-      pageNum: queryParams.pageNum,
-      pageSize: queryParams.pageSize,
+    // 后端 GET /roles 只支持 roleType 过滤; roleName/roleCode/status 在客户端过滤
+    // (与 getRolesPage 的客户端分页同源)。
+    const all = await getRoles({
       roleType: queryParams.roleType,
       // 管理员视图: 显示所属插件被禁的角色 (pluginEnabled=false), 由前端灰显
       includeDisabled: true
     })
-    roleList.value = res.records
-    total.value = res.total
+    const nameKw = (queryParams.roleName || '').trim().toLowerCase()
+    const codeKw = (queryParams.roleCode || '').trim().toLowerCase()
+    const filtered = all.filter(r => {
+      if (nameKw && !(r.roleName || '').toLowerCase().includes(nameKw)) return false
+      if (codeKw && !(r.roleCode || '').toLowerCase().includes(codeKw)) return false
+      if (queryParams.status != null && r.isEnabled !== (queryParams.status === 1)) return false
+      return true
+    })
+    total.value = filtered.length
+    const start = (queryParams.pageNum - 1) * queryParams.pageSize
+    roleList.value = filtered.slice(start, start + queryParams.pageSize)
   } catch (error) {
     ElMessage.error('加载失败')
   } finally {
@@ -782,15 +789,11 @@ const handleSubmit = async () => {
       const updateData: UpdateRoleRequest = {
         roleName: formData.roleName,
         description: formData.description,
-        level: formData.sortOrder
+        level: formData.sortOrder,
+        // 启用/禁用折叠进 PUT (后端 UpdateRoleRequest.isEnabled), 不再调已不存在的 enable/disable 端点
+        isEnabled: formData.status === 1
       }
       await updateRole(currentRoleId.value, updateData)
-      // 处理启用/禁用状态
-      if (formData.status === 1) {
-        await enableRole(currentRoleId.value)
-      } else {
-        await disableRole(currentRoleId.value)
-      }
       ElMessage.success('更新成功')
     } else {
       // 创建请求

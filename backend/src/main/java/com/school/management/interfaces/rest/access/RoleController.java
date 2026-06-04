@@ -91,6 +91,7 @@ public class RoleController {
         UpdateRoleCommand command = UpdateRoleCommand.builder()
             .roleName(request.getRoleName())
             .description(request.getDescription())
+            .isEnabled(request.getIsEnabled())
             .build();
 
         Role role = accessService.updateRole(id, command);

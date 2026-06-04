@@ -359,6 +359,19 @@ public class UserApplicationService {
         userRepository.save(user);
     }
 
+    /**
+     * 更新当前用户的个人资料 — 只动 realName/phone/email/gender, 保留 birthDate/idCard 等其它字段
+     * (不复用 updateUser, 因其 updateBasicInfo 会把未传的 birthDate/idCard 抹空)。供个人中心 /auth/profile 用。
+     */
+    @Transactional
+    public User updateProfile(Long userId, String realName, String phone, String email, Integer gender) {
+        User user = getUserOrThrow(userId);
+        user.updateBasicInfo(realName, phone, email, gender, user.getBirthDate(), user.getIdCard());
+        user = userRepository.save(user);
+        publishEvents(user);
+        return user;
+    }
+
     // ==================== 删除操作 ====================
 
     /**

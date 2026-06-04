@@ -881,6 +881,8 @@ const handleEdit = async (row: UserListItem) => {
     idCard: row.idCard || '',
     userTypeCode: row.userType || '',
     orgUnitId: row.orgUnitId || undefined,
+    // 重置 placeId, 避免残留上一次编辑/新增的场所 (后端 update 不消费 placeId, 仅修正选择器显示)
+    placeId: (row as any).placeId ?? undefined,
     status: normalizeStatus(row.status)
   })
   currentUserId.value = row.id

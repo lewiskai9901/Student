@@ -186,20 +186,6 @@ export function batchDeleteRoles(ids: (string | number)[]): Promise<void[]> {
 }
 
 /**
- * 启用角色
- */
-export function enableRole(id: LongId): Promise<void> {
-  return http.post(`${ROLE_URL}/${id}/enable`)
-}
-
-/**
- * 禁用角色
- */
-export function disableRole(id: LongId): Promise<void> {
-  return http.post(`${ROLE_URL}/${id}/disable`)
-}
-
-/**
  * 设置角色权限
  */
 export function setRolePermissions(id: LongId, permissionIds: (string | number)[]): Promise<RoleResponse> {
@@ -275,28 +261,14 @@ export function removeUserRoleWithScope(userId: LongId | string, roleId: LongId 
  * 获取当前用户权限
  */
 export function getCurrentUserPermissions(): Promise<Permission[]> {
-  return http.get<Permission[]>(`${USER_URL}/current/permissions`)
+  return http.get<Permission[]>(`${USER_URL}/me/permissions`)
 }
 
 /**
  * 获取当前用户角色
  */
 export function getCurrentUserRoles(): Promise<UserRole[]> {
-  return http.get<UserRole[]>(`${USER_URL}/current/roles`)
-}
-
-/**
- * 检查当前用户权限
- */
-export function checkPermission(permissionCode: string): Promise<boolean> {
-  return http.get<boolean>(`${USER_URL}/current/check`, { params: { permissionCode } })
-}
-
-/**
- * 批量检查权限
- */
-export function checkPermissions(permissionCodes: string[]): Promise<Record<string, boolean>> {
-  return http.post<Record<string, boolean>>(`${USER_URL}/current/check-batch`, { permissionCodes })
+  return http.get<UserRole[]>(`${USER_URL}/me/roles`)
 }
 
 // ==================== API 对象封装（供 Store 使用） ====================
@@ -327,8 +299,6 @@ export const roleApi = {
   update: updateRole,
   delete: deleteRole,
   batchDelete: batchDeleteRoles,
-  enable: enableRole,
-  disable: disableRole,
   setPermissions: setRolePermissions,
   getPermissionIds: getRolePermissionIds,
   getPermissions: getRolePermissions,
@@ -346,9 +316,7 @@ export const userRoleApi = {
   removeRole: removeUserRole,
   removeRoleWithScope: removeUserRoleWithScope,
   getCurrentPermissions: getCurrentUserPermissions,
-  getCurrentRoles: getCurrentUserRoles,
-  checkPermission,
-  checkPermissions
+  getCurrentRoles: getCurrentUserRoles
 }
 
 // ==================== 权限同步检查 API ====================
