@@ -677,7 +677,6 @@
 import { ref, reactive, computed, onMounted, markRaw } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  Palette,
   Save,
   RotateCcw,
   Image,
