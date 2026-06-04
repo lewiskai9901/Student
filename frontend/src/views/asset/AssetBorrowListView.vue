@@ -25,6 +25,7 @@ import AssetReturnDialog from './components/AssetReturnDialog.vue'
 // 设计系统组件
 import StatCard from '@/components/design-system/cards/StatCard.vue'
 import EmptyState from '@/components/design-system/feedback/EmptyState.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
 
 // 状态
 const loading = ref(false)
@@ -169,22 +170,12 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-full bg-gray-50/50 p-6">
+  <div class="min-h-full bg-gray-50/50 p-4">
     <!-- 页面标题 -->
-    <div class="mb-8">
-      <div class="flex items-center gap-3 mb-2">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-          <Package class="w-5 h-5 text-white" />
-        </div>
-        <div>
-          <h1 class="text-2xl font-bold text-gray-900">借用管理</h1>
-          <p class="text-sm text-gray-500">管理资产的借用和领用记录</p>
-        </div>
-      </div>
-    </div>
+    <PageHeader title="借用管理" subtitle="管理资产的借用和领用记录" />
 
     <!-- 统计卡片 - 使用设计系统 -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
       <StatCard
         title="借出中"
         :value="statistics.borrowedCount"

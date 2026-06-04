@@ -1,35 +1,26 @@
 <template>
-  <div class="min-h-screen bg-gray-50/50 p-6">
+  <div class="min-h-screen bg-gray-50/50 p-4">
     <!-- 页面头部 -->
-    <div class="mb-6 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-500 p-6 shadow-lg">
-      <div class="flex items-center justify-between">
-        <div>
-          <h1 class="flex items-center gap-3 text-2xl font-bold text-white">
-            <Palette class="h-8 w-8" />
-            登录页自定义
-          </h1>
-          <p class="mt-1 text-indigo-100">自定义登录页背景和品牌展示</p>
-        </div>
-        <div class="flex gap-3">
-          <button
-            @click="resetToDefault"
-            class="flex items-center gap-2 rounded-lg bg-white/20 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition-all hover:bg-white/30"
-          >
-            <RotateCcw class="h-4 w-4" />
-            恢复默认
-          </button>
-          <button
-            @click="saveConfig"
-            :disabled="saving"
-            class="flex items-center gap-2 rounded-lg bg-white/95 px-4 py-2 font-medium text-indigo-600 shadow-md transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-lg disabled:opacity-50"
-          >
-            <Loader2 v-if="saving" class="h-5 w-5 animate-spin" />
-            <Save v-else class="h-5 w-5" />
-            保存配置
-          </button>
-        </div>
-      </div>
-    </div>
+    <PageHeader title="登录页自定义" subtitle="自定义登录页背景和品牌展示">
+      <template #actions>
+        <button
+          @click="resetToDefault"
+          class="inline-flex h-8 items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 text-sm text-gray-600 hover:bg-gray-50"
+        >
+          <RotateCcw class="h-4 w-4" />
+          恢复默认
+        </button>
+        <button
+          @click="saveConfig"
+          :disabled="saving"
+          class="inline-flex h-8 items-center gap-1.5 rounded-md bg-blue-600 px-3 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+        >
+          <Loader2 v-if="saving" class="h-4 w-4 animate-spin" />
+          <Save v-else class="h-4 w-4" />
+          保存配置
+        </button>
+      </template>
+    </PageHeader>
 
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
       <!-- 左侧配置表单 (3列宽) -->
@@ -710,6 +701,7 @@ import {
 } from 'lucide-vue-next'
 import { http } from '@/utils/request'
 import { useConfigStore } from '@/stores/config'
+import PageHeader from '@/components/common/PageHeader.vue'
 import ImageCropper from '@/components/common/ImageCropper.vue'
 import LoginPreview from '@/components/settings/LoginPreview.vue'
 import DecorationImageManager from '@/components/settings/DecorationImageManager.vue'

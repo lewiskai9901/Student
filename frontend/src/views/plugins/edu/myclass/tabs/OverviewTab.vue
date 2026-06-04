@@ -6,67 +6,16 @@
     </div>
 
     <template v-else>
-      <!-- 统计卡片 -->
-      <div class="stats-cards">
-        <div class="stat-card">
-          <div class="stat-icon student-icon">
-            <Users :size="24" />
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ overview?.studentCount ?? '-' }}</div>
-            <div class="stat-label">学生人数</div>
-            <div v-if="overview" class="stat-extra">
-              男 {{ overview.maleCount }} / 女 {{ overview.femaleCount }}
-            </div>
-          </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-icon rank-icon">
-            <Trophy :size="24" />
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">
-              <span v-if="overview?.classRank">{{ overview.classRank }}</span>
-              <span v-else>-</span>
-              <span v-if="overview?.totalClasses" class="stat-suffix">
-                / {{ overview.totalClasses }}
-              </span>
-            </div>
-            <div class="stat-label">班级排名</div>
-          </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-icon score-icon">
-            <Star :size="24" />
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">
-              {{ overview?.averageScore?.toFixed(1) ?? '-' }}
-              <span class="stat-unit">分</span>
-            </div>
-            <div class="stat-label">平均分</div>
-            <div v-if="overview?.scoreTrend !== undefined" class="stat-extra" :class="trendClass">
-              <TrendingUp v-if="overview.scoreTrend > 0" :size="14" />
-              <TrendingDown v-else-if="overview.scoreTrend < 0" :size="14" />
-              <Minus v-else :size="14" />
-              {{ Math.abs(overview.scoreTrend).toFixed(1) }}%
-            </div>
-          </div>
-        </div>
-
-        <div class="stat-card clickable" @click="goToAppeals">
-          <div class="stat-icon appeal-icon">
-            <AlertCircle :size="24" />
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ overview?.pendingAppeals ?? 0 }}</div>
-            <div class="stat-label">待处理申诉</div>
-            <div class="stat-extra">点击查看</div>
-          </div>
-        </div>
-      </div>
+      <!-- 统计条 -->
+      <StatBar
+        class="mb-6"
+        :items="[
+          { label: '学生人数', value: overview?.studentCount ?? '-' },
+          { label: '班级排名', value: overview?.classRank ? `${overview.classRank}${overview.totalClasses ? ' / ' + overview.totalClasses : ''}` : '-' },
+          { label: '平均分', value: overview?.averageScore != null ? overview.averageScore.toFixed(1) : '-' },
+          { label: '待处理申诉', value: overview?.pendingAppeals ?? 0 },
+        ]"
+      />
 
       <!-- 趋势图区域 -->
       <div class="trend-section">
@@ -167,17 +116,11 @@
 
 <script setup lang="ts">
 import type { LongId } from '@/types/common'
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   Users,
-  Trophy,
-  Star,
-  AlertCircle,
-  TrendingUp,
-  TrendingDown,
-  Minus,
   Download,
   Building,
   BarChart3,
@@ -186,6 +129,7 @@ import {
 import { getClassOverview } from '@/api-generated/sdk.gen'
 import type { MyClassOverview, RecentCheckRecord } from '@/types/myClass'
 import TrendChart from '../components/TrendChart.vue'
+import StatBar from '@/components/common/StatBar.vue'
 
 const props = defineProps<{
   orgUnitId: LongId
@@ -214,14 +158,6 @@ const loadOverview = async () => {
     loading.value = false
   }
 }
-
-// 趋势样式
-const trendClass = computed(() => {
-  if (!overview.value?.scoreTrend) return ''
-  if (overview.value.scoreTrend > 0) return 'trend-up'
-  if (overview.value.scoreTrend < 0) return 'trend-down'
-  return 'trend-flat'
-})
 
 // 格式化日期
 const formatDate = (dateStr: string): string => {
@@ -266,11 +202,6 @@ const handleViewRecord = (record: RecentCheckRecord) => {
   router.push(`/inspection/check-record/${record.id}`)
 }
 
-// 跳转到申诉管理
-const goToAppeals = () => {
-  router.push('/inspection/appeals')
-}
-
 // 监听 orgUnitId 变化
 watch(() => props.orgUnitId, () => {
   loadOverview()
@@ -293,128 +224,6 @@ onMounted(() => {
   padding: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   border: 1px solid #ebeef5;
-}
-
-// 统计卡片
-.stats-cards {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
-
-  @media (max-width: 1200px) {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  @media (max-width: 576px) {
-    grid-template-columns: 1fr;
-  }
-}
-
-.stat-card {
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  border: 1px solid #ebeef5;
-  transition: all 0.3s;
-
-  &:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  }
-
-  &.clickable {
-    cursor: pointer;
-
-    &:hover {
-      border-color: #409eff;
-      transform: translateY(-2px);
-    }
-  }
-}
-
-.stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-
-  &.student-icon {
-    background: #e8f4ff;
-    color: #409eff;
-  }
-
-  &.rank-icon {
-    background: #fdf6ec;
-    color: #e6a23c;
-  }
-
-  &.score-icon {
-    background: #f0f9eb;
-    color: #67c23a;
-  }
-
-  &.appeal-icon {
-    background: #fef0f0;
-    color: #f56c6c;
-  }
-}
-
-.stat-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.stat-value {
-  font-size: 28px;
-  font-weight: 700;
-  color: #303133;
-  line-height: 1.2;
-
-  .stat-suffix {
-    font-size: 16px;
-    font-weight: 400;
-    color: #909399;
-  }
-
-  .stat-unit {
-    font-size: 14px;
-    font-weight: 400;
-    color: #909399;
-  }
-}
-
-.stat-label {
-  font-size: 14px;
-  color: #909399;
-  margin-top: 4px;
-}
-
-.stat-extra {
-  font-size: 12px;
-  color: #909399;
-  margin-top: 4px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-
-  &.trend-up {
-    color: #67c23a;
-  }
-
-  &.trend-down {
-    color: #f56c6c;
-  }
-
-  &.trend-flat {
-    color: #909399;
-  }
 }
 
 // 趋势图区域

@@ -1,10 +1,7 @@
 <template>
-  <div class="p-6 bg-gray-50 min-h-full">
+  <div class="p-4 bg-gray-50 min-h-full">
     <!-- 页面标题 -->
-    <div class="mb-6">
-      <h1 class="text-xl font-semibold text-gray-900">学生管理</h1>
-      <p class="mt-1 text-sm text-gray-500">管理学生基本信息、班级分配和宿舍安排</p>
-    </div>
+    <PageHeader title="学生管理" subtitle="管理学生基本信息、班级分配和宿舍安排" class="mb-4" />
 
     <!-- 统计卡片 - 设计系统 -->
     <div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -524,6 +521,7 @@ import { getAllCohorts, type Cohort } from '@/api/organization'
 import StudentDetail from '@/components/student/StudentDetail.vue'
 import StudentForm from '@/components/student/StudentForm.vue'
 import { StatCard } from '@/components/design-system'
+import PageHeader from '@/components/common/PageHeader.vue'
 import StudentImport from '@/components/student/StudentImport.vue'
 import StudentExport from '@/components/student/StudentExport.vue'
 

@@ -24,6 +24,7 @@ import { CategoryType, CategoryTypeMap, ManagementMode, ManagementModeMap } from
 
 // 设计系统组件
 import EmptyState from '@/components/design-system/feedback/EmptyState.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
 
 const loading = ref(false)
 const categoryTree = ref<AssetCategory[]>([])
@@ -219,19 +220,9 @@ function handleDialogClose() {
 </script>
 
 <template>
-  <div class="min-h-full bg-gray-50/50 p-6">
+  <div class="min-h-full bg-gray-50/50 p-4">
     <!-- 页面头部 -->
-    <div class="mb-8">
-      <div class="flex items-center gap-3 mb-2">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-teal-500/20">
-          <FolderTree class="w-5 h-5 text-white" />
-        </div>
-        <div>
-          <h1 class="text-2xl font-bold text-gray-900">资产分类管理</h1>
-          <p class="text-sm text-gray-500">管理资产分类树，支持多级分类结构</p>
-        </div>
-      </div>
-    </div>
+    <PageHeader title="资产分类管理" subtitle="管理资产分类树，支持多级分类结构" />
 
     <!-- 操作栏 -->
     <div class="bg-white rounded-xl border border-gray-200 p-4 mb-6 shadow-sm">

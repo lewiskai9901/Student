@@ -33,6 +33,7 @@ import AssetInventoryDetailDialog from './components/AssetInventoryDetailDialog.
 // 设计系统组件
 import StatCard from '@/components/design-system/cards/StatCard.vue'
 import EmptyState from '@/components/design-system/feedback/EmptyState.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
 
 // 状态
 const loading = ref(false)
@@ -187,22 +188,12 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-full bg-gray-50/50 p-6">
+  <div class="min-h-full bg-gray-50/50 p-4">
     <!-- 页面头部 -->
-    <div class="mb-8">
-      <div class="flex items-center gap-3 mb-2">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
-          <ClipboardList class="w-5 h-5 text-white" />
-        </div>
-        <div>
-          <h1 class="text-2xl font-bold text-gray-900">资产盘点</h1>
-          <p class="text-sm text-gray-500">创建盘点任务，核查资产实际情况</p>
-        </div>
-      </div>
-    </div>
+    <PageHeader title="资产盘点" subtitle="创建盘点任务，核查资产实际情况" />
 
     <!-- 统计卡片 - 使用设计系统 -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
       <StatCard
         title="进行中"
         :value="statistics.inProgressCount"
