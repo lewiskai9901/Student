@@ -1,0 +1,57 @@
+/**
+ * Element Plus 全局主题统一
+ * ------------------------------------------------------------------
+ * 把 Element Plus 的 --el-* 设计变量映射到本系统设计令牌 (design-tokens.css),
+ * 让所有 EP 组件 (按钮/输入/表格/分页/标签/弹窗...) 与系统设计语言一致。
+ *
+ * 分批推进, 本文件按 batch 注释分区, 每批独立验证:
+ *   - Batch 1: 基础 token (主色 / 状态色 / 圆角 / 边框 / 文字 / 字体)
+ *
+ * 注意: 必须在 element-plus/dist/index.css 之后引入 (main.ts 顺序保证)。
+ */
+
+/* ============================================================
+   Batch 1 — 基础设计 token
+   ============================================================ */
+:root {
+  /* ---- 主色: 深邃蓝 #2563eb (含 EP 派生浅/深阶, 按 EP mix 算法预算) ---- */
+  --el-color-primary: var(--color-primary-500);
+  --el-color-primary-light-3: #6692f1;
+  --el-color-primary-light-5: #92b1f5;
+  --el-color-primary-light-7: #bed0f9;
+  --el-color-primary-light-8: #d3e0fb;
+  --el-color-primary-light-9: #e9effd;
+  --el-color-primary-dark-2: #1e4fbc;
+
+  /* ---- 状态色 (base + 极浅底色 light-9, 供 plain/标签底用) ---- */
+  --el-color-success: var(--color-success-500);
+  --el-color-success-light-9: var(--color-success-50);
+  --el-color-warning: var(--color-warning-500);
+  --el-color-warning-light-9: var(--color-warning-50);
+  --el-color-danger: var(--color-danger-500);
+  --el-color-error: var(--color-danger-500);
+  --el-color-danger-light-9: var(--color-danger-50);
+  --el-color-error-light-9: var(--color-danger-50);
+  --el-color-info: var(--color-gray-500);
+
+  /* ---- 圆角: 与 tm-input(7) / --radius-sm(6) 对齐 ---- */
+  --el-border-radius-base: 7px;
+  --el-border-radius-small: 6px;
+
+  /* ---- 边框色: 石墨灰阶 ---- */
+  --el-border-color: var(--color-gray-200);
+  --el-border-color-light: #eceef1;
+  --el-border-color-lighter: #f1f3f5;
+  --el-border-color-extra-light: #f7f8fa;
+  --el-border-color-hover: var(--color-gray-300);
+  --el-border-color-darker: var(--color-gray-300);
+
+  /* ---- 文字色: 石墨阶 ---- */
+  --el-text-color-primary: var(--color-gray-900);
+  --el-text-color-regular: var(--color-gray-700);
+  --el-text-color-secondary: var(--color-gray-500);
+  --el-text-color-placeholder: var(--color-gray-400);
+
+  /* ---- 字体: 系统 body 字体 ---- */
+  --el-font-family: var(--font-body);
+}

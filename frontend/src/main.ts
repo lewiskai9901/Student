@@ -15,6 +15,8 @@ import i18n from '@/locales'
 
 // 引入设计系统令牌 (最高优先级)
 import '@/styles/design-tokens.css'
+// Element Plus 全局主题统一 — 把 --el-* 映射到系统设计令牌 (必须在 element-plus css 之后)
+import '@/styles/element-overrides.css'
 // Inspection 模块设计令牌 — Audit Console 美学
 import '@/styles/inspection-tokens.css'
 // 引入 Tailwind CSS 全局样式
