@@ -155,16 +155,9 @@ function industryColor(code: string): string {
 }
 
 function inferIndustry(role: RoleResponse): string {
-  // 优先用后端 industry 字段 (如果有)
-  const anyRole = role as any
-  if (anyRole.industry) return anyRole.industry
-  // 兜底: 按 roleCode 前缀推断
-  const code = (role.roleCode || '').toUpperCase()
-  if (code.startsWith('EDU_') || /TEACHER|STUDENT|GRADE|CLASS/i.test(code)) return 'EDU'
-  if (code.startsWith('HEALTH_') || /DOCTOR|NURSE|PATIENT/i.test(code)) return 'HEALTH'
-  if (code.startsWith('CARE_') || /ELDERLY|CAREGIVER/i.test(code)) return 'CARE'
-  if (code.startsWith('CUSTOM_')) return 'CUSTOM'
-  return 'CORE'
+  // 角色的行业归属以后端 role.industry 为准 (data 层已分层); 缺失兜底 CORE。
+  // 不在核心里按角色名猜行业 (旧 TEACHER/STUDENT 正则已删 — 那是行业知识漏进核心)。
+  return (role as any).industry || 'CORE'
 }
 
 interface RoleGroup {

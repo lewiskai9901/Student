@@ -1,6 +1,7 @@
 import type { RouteRecordRaw } from 'vue-router'
 import { registerRelationScenes } from '@/components/access/relationScenes'
 import { registerScopeSpecializations } from '@/views/access/data-permissions/dataScopeSpecializations'
+import { registerRoleTemplates } from '@/views/access/data-permissions/composables/useTemplateLibrary'
 
 /**
  * 教育行业 (EDU) 路由 — Phase 4A 条件加载
@@ -46,6 +47,20 @@ registerScopeSpecializations('EDU', [
       BY_CLASS: ['BY_GRADE', 'BY_MAJOR', 'ALL', 'SELF'],
       BY_MAJOR: ['BY_GRADE', 'BY_CLASS', 'ALL', 'SELF'],
     },
+  },
+])
+
+// 数据权限模板库 — EDU 行业模板 (班主任/年级主任), 仅 EDU 启用时出现在模板库。
+registerRoleTemplates('EDU', [
+  {
+    id: 'class-teacher', name: '班主任', icon: 'BookOpen', industry: 'EDU',
+    description: '我带的班级学生 + 本部门数据', scenario: '中小学班主任、辅导员',
+    scene: { primary: 'DEPARTMENT', specializations: { student: 'BY_CLASS' }, bizAutoFollow: true },
+  },
+  {
+    id: 'grade-director', name: '年级主任', icon: 'GraduationCap', industry: 'EDU',
+    description: '我管的年级全部数据 + 部门及以下', scenario: '年级组长、高中年级主任',
+    scene: { primary: 'DEPARTMENT_AND_BELOW', specializations: { student: 'BY_GRADE' }, bizAutoFollow: true },
   },
 ])
 const eduRoutes: RouteRecordRaw[] = [

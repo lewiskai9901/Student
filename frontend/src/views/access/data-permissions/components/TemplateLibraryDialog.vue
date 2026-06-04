@@ -9,7 +9,7 @@
               <Library class="h-5 w-5 text-blue-600" />
               <h3 class="text-lg font-semibold text-gray-900">模板库</h3>
               <span class="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500">
-                {{ BUILTIN_TEMPLATES.length }}
+                {{ templates.length }}
               </span>
             </div>
             <button class="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600" @click="close">
@@ -24,7 +24,7 @@
 
             <div class="grid grid-cols-2 gap-3 md:grid-cols-3">
               <button
-                v-for="tpl in BUILTIN_TEMPLATES"
+                v-for="tpl in templates"
                 :key="tpl.id"
                 class="group relative flex flex-col items-start rounded-lg border border-gray-200 bg-white p-4 text-left transition hover:border-blue-400 hover:shadow-md"
                 @click="apply(tpl)"
@@ -85,13 +85,19 @@ import {
   User,
   Settings,
 } from 'lucide-vue-next'
-import { BUILTIN_TEMPLATES, type RoleTemplate } from '../composables/useTemplateLibrary'
+import { computed } from 'vue'
+import { allTemplates, type RoleTemplate } from '../composables/useTemplateLibrary'
+import { usePluginsStore } from '@/stores/plugins'
 
 interface Props {
   visible: boolean
 }
 
 defineProps<Props>()
+
+const pluginsStore = usePluginsStore()
+/** 核心模板 + 已启用插件贡献的模板 (EDU 关掉则班主任/年级主任不出现) */
+const templates = computed(() => allTemplates(pluginsStore.codes))
 const emit = defineEmits<{
   'update:visible': [value: boolean]
   apply: [template: RoleTemplate]

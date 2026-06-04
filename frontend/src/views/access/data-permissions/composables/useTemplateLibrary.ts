@@ -2,6 +2,7 @@
  * 内置角色模板库 — 6 个覆盖 80% 场景的预置模板
  * 用户点击 "应用" > sceneToModuleScopes 展开为 28 模块 scope > PUT 保存
  */
+import { reactive } from 'vue'
 import type { SceneDecision } from './useSceneTemplate'
 
 export interface RoleTemplate {
@@ -38,33 +39,6 @@ export const BUILTIN_TEMPLATES: RoleTemplate[] = [
     scene: { primary: 'DEPARTMENT_AND_BELOW', bizAutoFollow: true },
   },
   {
-    id: 'class-teacher',
-    name: '班主任',
-    icon: 'BookOpen',
-    industry: 'EDU',
-    description: '我带的班级学生 + 本部门数据',
-    scenario: '中小学班主任、辅导员',
-    scene: { primary: 'DEPARTMENT', specializations: { student: 'BY_CLASS' }, bizAutoFollow: true },
-  },
-  {
-    id: 'grade-director',
-    name: '年级主任',
-    icon: 'GraduationCap',
-    industry: 'EDU',
-    description: '我管的年级全部数据 + 部门及以下',
-    scenario: '年级组长、高中年级主任',
-    scene: { primary: 'DEPARTMENT_AND_BELOW', specializations: { student: 'BY_GRADE' }, bizAutoFollow: true },
-  },
-  {
-    id: 'doctor',
-    name: '医师',
-    icon: 'Stethoscope',
-    industry: 'HEALTH',
-    description: '本部门数据 (病区维度暂未支持)',
-    scenario: '临床医师、住院医师',
-    scene: { primary: 'DEPARTMENT', bizAutoFollow: true },
-  },
-  {
     id: 'personal-only',
     name: '访客 / 个人',
     icon: 'User',
@@ -75,11 +49,18 @@ export const BUILTIN_TEMPLATES: RoleTemplate[] = [
   },
 ]
 
-export function findTemplate(id: string): RoleTemplate | undefined {
-  return BUILTIN_TEMPLATES.find(t => t.id === id)
+/** 行业插件贡献的模板 (按插件码登记, 仅该插件启用时出现) — 与 relationScenes/scopeSpecializations 同模式 */
+const pluginTemplates = reactive<Record<string, RoleTemplate[]>>({})
+
+export function registerRoleTemplates(pluginCode: string, templates: RoleTemplate[]): void {
+  pluginTemplates[pluginCode] = templates
 }
 
-export function templatesByIndustry(industry?: string): RoleTemplate[] {
-  if (!industry) return BUILTIN_TEMPLATES
-  return BUILTIN_TEMPLATES.filter(t => t.industry === industry)
+/** 核心模板 + 已启用插件贡献的模板 */
+export function allTemplates(enabledCodes: readonly string[]): RoleTemplate[] {
+  return [...BUILTIN_TEMPLATES, ...enabledCodes.flatMap(c => pluginTemplates[c] ?? [])]
+}
+
+export function findTemplate(id: string, enabledCodes: readonly string[] = []): RoleTemplate | undefined {
+  return allTemplates(enabledCodes).find(t => t.id === id)
 }
