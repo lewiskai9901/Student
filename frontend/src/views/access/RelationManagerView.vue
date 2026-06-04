@@ -160,37 +160,23 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { http } from '@/utils/request'
 import { accessRelationApi } from '@/api/accessRelation'
 import { relationTypeApi, type RelationTypeDef } from '@/api/relationType'
+import { usePluginsStore } from '@/stores/plugins'
+import { CORE_RELATION_SCENES, enabledPluginScenes } from '@/components/access/relationScenes'
 
 const route = useRoute()
 const viewMode = ref<'scene' | 'data'>('scene')
 
 // ─── 场景定义 ───
-const scenes = [
-  { code: 'ASSIGN_CLASS_ADMIN', title: '指定班主任', desc: '给班级或年级绑定主管理员', emoji: '‍', color: '#f59e0b' },
-  { code: 'ADD_GUARDIAN',       title: '添加监护人',   desc: '为学生绑定家长监护关系',   emoji: '‍‍', color: '#2563eb' },
-  { code: 'ASSIGN_PLACE_ADMIN', title: '场所负责人',   desc: '指定教室/宿舍/实验室负责人', emoji: '', color: '#10b981' },
-  { code: 'ADD_MEMBER',         title: '加入组织',     desc: '把用户加入某组织作为成员',  emoji: '', color: '#8b5cf6' },
-  { code: 'PLACE_BELONGS_ORG',  title: '场所归属',     desc: '绑定场所到某组织',         emoji: '', color: '#06b6d4' },
-]
-
-const sceneMap: Record<string, {
-  relation: string; subjectType: string; resourceType: string;
-  subjectLabel: string; resourceLabel: string;
-}> = {
-  ASSIGN_CLASS_ADMIN: { relation: 'admin',       subjectType: 'user',     resourceType: 'org_unit', subjectLabel: '选择老师（作为班主任）', resourceLabel: '选择班级/年级' },
-  ADD_GUARDIAN:       { relation: 'guardian_of', subjectType: 'user',     resourceType: 'user',     subjectLabel: '选择家长',              resourceLabel: '选择学生' },
-  ASSIGN_PLACE_ADMIN: { relation: 'admin',       subjectType: 'user',     resourceType: 'place',    subjectLabel: '选择负责人',            resourceLabel: '选择场所' },
-  ADD_MEMBER:         { relation: 'member',      subjectType: 'user',     resourceType: 'org_unit', subjectLabel: '选择用户',              resourceLabel: '选择组织' },
-  PLACE_BELONGS_ORG:  { relation: 'belongs_to',  subjectType: 'place',    resourceType: 'org_unit', subjectLabel: '选择场所',              resourceLabel: '归属组织' },
-}
+// 通用核心场景 + 已启用行业插件贡献的场景 (如 EDU 的"指定班主任")。
+// 行业场景由插件前端入口 registerRelationScenes 登记, 按插件启用态过滤 —— 核心页零行业概念。
+const pluginsStore = usePluginsStore()
+const scenes = computed(() => [...CORE_RELATION_SCENES, ...enabledPluginScenes(pluginsStore.codes)])
 
 // ─── 向导状态 ───
 const wizardVisible = ref(false)
 const wizardCode = ref<string>('')
-const wizardMeta = computed(() => wizardCode.value ? sceneMap[wizardCode.value] : null as any)
-const wizardTitle = computed(() => wizardCode.value
-  ? (scenes.find(s => s.code === wizardCode.value)?.title || '新建关系')
-  : '')
+const wizardMeta = computed(() => scenes.value.find(s => s.code === wizardCode.value) || null as any)
+const wizardTitle = computed(() => wizardMeta.value?.title || '新建关系')
 const wiz = ref<any>({
   subjectId: null, subjectName: '',
   resourceId: null, resourceName: '',
@@ -247,6 +233,8 @@ async function handleWizardSubmit() {
       subjectType: m.subjectType,
       subjectId: wiz.value.subjectId!,
       accessLevel: 'FULL',
+      // 行业场景附带的 metadata (如班主任写 {role:'CLASS_TEACHER'} 与通用 admin 区分)
+      metadata: m.metadata || undefined,
       remark: wiz.value.remark || undefined
     } as any)
     ElMessage.success('关系已创建')

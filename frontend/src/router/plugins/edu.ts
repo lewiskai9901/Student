@@ -1,4 +1,5 @@
 import type { RouteRecordRaw } from 'vue-router'
+import { registerRelationScenes } from '@/components/access/relationScenes'
 
 /**
  * 教育行业 (EDU) 路由 — Phase 4A 条件加载
@@ -10,6 +11,18 @@ import type { RouteRecordRaw } from 'vue-router'
  * /organization/* 下的 6 个 legacy redirect 仍留在 router/index.ts —
  * 它们禁用 EDU 后会 redirect > NotFound, 这是预期行为 (兼容老链接)。
  */
+
+// 关系绑定"业务场景"贡献 — 本模块仅在 EDU 启用时被 bootstrap 动态 import, 故此登记只在启用时生效。
+// "指定班主任" = 通用 admin 关系 + metadata.role='CLASS_TEACHER' (与后端 EducationManifest 建模一致,
+// 区别于通用"组织管理员")。
+registerRelationScenes('EDU', [
+  {
+    code: 'ASSIGN_CLASS_ADMIN', title: '指定班主任', desc: '给班级绑定班主任', emoji: '🧑‍🏫', color: '#f59e0b',
+    relation: 'admin', subjectType: 'user', resourceType: 'org_unit',
+    subjectLabel: '选择老师（作为班主任）', resourceLabel: '选择班级/年级',
+    metadata: { role: 'CLASS_TEACHER' },
+  },
+])
 const eduRoutes: RouteRecordRaw[] = [
   // ==================== 我的班级 /my-class (order: 2) ====================
   {
