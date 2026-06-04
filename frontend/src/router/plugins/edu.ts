@@ -17,7 +17,7 @@ import { registerRelationScenes } from '@/components/access/relationScenes'
 // 区别于通用"组织管理员")。
 registerRelationScenes('EDU', [
   {
-    code: 'ASSIGN_CLASS_ADMIN', title: '指定班主任', desc: '给班级绑定班主任', emoji: '🧑‍🏫', color: '#f59e0b',
+    code: 'ASSIGN_CLASS_ADMIN', title: '指定班主任', desc: '给班级绑定班主任',
     relation: 'admin', subjectType: 'user', resourceType: 'org_unit',
     subjectLabel: '选择老师（作为班主任）', resourceLabel: '选择班级/年级',
     metadata: { role: 'CLASS_TEACHER' },

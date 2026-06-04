@@ -1,23 +1,19 @@
 <template>
-  <div class="p-4">
-    <!-- 模式切换: 场景 vs 数据表 -->
-    <div class="flex items-center justify-between mb-4">
-      <div>
-        <h2 class="text-lg font-semibold">关系绑定</h2>
-        <p class="text-xs text-gray-500 mt-1">绑定用户与组织、场所、其他用户之间的关系</p>
-      </div>
-      <div class="flex gap-1 text-sm">
-        <button :class="viewBtnCls(viewMode === 'scene')" @click="viewMode = 'scene'">业务场景</button>
-        <button :class="viewBtnCls(viewMode === 'data')" @click="viewMode = 'data'">数据表</button>
-      </div>
-    </div>
+  <div class="p-4 space-y-4">
+    <PageHeader title="关系绑定" subtitle="绑定用户与组织、场所、其他用户之间的关系">
+      <template #actions>
+        <div class="flex gap-1 text-sm">
+          <button :class="viewBtnCls(viewMode === 'scene')" @click="viewMode = 'scene'">业务场景</button>
+          <button :class="viewBtnCls(viewMode === 'data')" @click="viewMode = 'data'">数据表</button>
+        </div>
+      </template>
+    </PageHeader>
 
     <!-- 场景视图 -->
     <div v-if="viewMode === 'scene'">
       <h3 class="text-sm font-medium text-gray-700 mb-3">常用场景</h3>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+      <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-2.5 mb-6">
         <button v-for="sc in scenes" :key="sc.code" class="scene-card" @click="openScene(sc.code)">
-          <div class="scene-icon" :style="{ color: sc.color }">{{ sc.emoji }}</div>
           <div class="scene-title">{{ sc.title }}</div>
           <div class="scene-desc">{{ sc.desc }}</div>
         </button>
@@ -162,6 +158,7 @@ import { accessRelationApi } from '@/api/accessRelation'
 import { relationTypeApi, type RelationTypeDef } from '@/api/relationType'
 import { usePluginsStore } from '@/stores/plugins'
 import { CORE_RELATION_SCENES, enabledPluginScenes } from '@/components/access/relationScenes'
+import PageHeader from '@/components/common/PageHeader.vue'
 
 const route = useRoute()
 const viewMode = ref<'scene' | 'data'>('scene')
@@ -369,7 +366,8 @@ async function revoke(row: any) {
   try {
     await accessRelationApi.delete(row.id)
     ElMessage.success('已撤销')
-    await Promise.all([loadRecent(), viewMode.value === 'data' ? load() : Promise.resolve()])
+    // 两个视图共享同一份数据, 撤销后都刷新, 避免切到"数据表"看到已撤销的残留行
+    await Promise.all([loadRecent(), load()])
   } catch (e: any) { ElMessage.error('撤销失败: ' + (e?.message || e)) }
 }
 
@@ -420,18 +418,17 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  padding: 16px;
+  padding: 12px 14px;
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: border-color 0.15s, box-shadow 0.15s;
   text-align: left;
 }
-.scene-card:hover { border-color: #3b82f6; box-shadow: 0 2px 8px rgba(59,130,246,0.15); transform: translateY(-1px); }
-.scene-icon { font-size: 28px; margin-bottom: 4px; }
-.scene-title { font-size: 15px; font-weight: 600; color: #111827; }
-.scene-desc { font-size: 12px; color: #6b7280; margin-top: 2px; }
+.scene-card:hover { border-color: #3b82f6; box-shadow: 0 1px 4px rgba(59,130,246,0.12); }
+.scene-title { font-size: 14px; font-weight: 600; color: #111827; }
+.scene-desc { font-size: 12px; color: #6b7280; margin-top: 3px; line-height: 1.4; }
 
 .recent-list { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; }
 .recent-item { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid #f3f4f6; font-size: 13px; }

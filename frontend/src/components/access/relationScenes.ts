@@ -11,8 +11,6 @@ export interface RelationScene {
   code: string
   title: string
   desc: string
-  emoji: string
-  color: string
   /** access_relations.relation 关系码 */
   relation: string
   subjectType: string
@@ -28,27 +26,27 @@ export interface RelationScene {
  */
 export const CORE_RELATION_SCENES: RelationScene[] = [
   {
-    code: 'ASSIGN_ORG_ADMIN', title: '组织管理员', desc: '指定某组织的管理员', emoji: '🛡️', color: '#f59e0b',
+    code: 'ASSIGN_ORG_ADMIN', title: '组织管理员', desc: '指定某组织的管理员',
     relation: 'admin', subjectType: 'user', resourceType: 'org_unit',
     subjectLabel: '选择管理员', resourceLabel: '选择组织',
   },
   {
-    code: 'ADD_MEMBER', title: '加入组织', desc: '把用户加入某组织作为成员', emoji: '👥', color: '#8b5cf6',
+    code: 'ADD_MEMBER', title: '加入组织', desc: '把用户加入某组织作为成员',
     relation: 'member', subjectType: 'user', resourceType: 'org_unit',
     subjectLabel: '选择用户', resourceLabel: '选择组织',
   },
   {
-    code: 'ASSIGN_PLACE_ADMIN', title: '场所负责人', desc: '指定某场所的负责人', emoji: '🏠', color: '#10b981',
+    code: 'ASSIGN_PLACE_ADMIN', title: '场所负责人', desc: '指定某场所的负责人',
     relation: 'admin', subjectType: 'user', resourceType: 'place',
     subjectLabel: '选择负责人', resourceLabel: '选择场所',
   },
   {
-    code: 'PLACE_BELONGS_ORG', title: '场所归属', desc: '绑定场所到某组织', emoji: '📍', color: '#06b6d4',
+    code: 'PLACE_BELONGS_ORG', title: '场所归属', desc: '绑定场所到某组织',
     relation: 'belongs_to', subjectType: 'place', resourceType: 'org_unit',
     subjectLabel: '选择场所', resourceLabel: '归属组织',
   },
   {
-    code: 'ADD_GUARDIAN', title: '添加监护人', desc: '为某人绑定监护关系', emoji: '🤝', color: '#2563eb',
+    code: 'ADD_GUARDIAN', title: '添加监护人', desc: '为某人绑定监护关系',
     relation: 'guardian_of', subjectType: 'user', resourceType: 'user',
     subjectLabel: '选择监护人', resourceLabel: '选择被监护人',
   },
