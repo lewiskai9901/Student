@@ -78,7 +78,6 @@ public class CoreMenuPlugin implements MenuContributionPlugin {
                 of("/inspection/appeals/review",   "申诉审核",     "gavel",            10),
                 of("/inspection/projects",         "检查项目",     "folder-search",    20),
                 of("/inspection/config",           "检查配置",     "settings",         21),
-                of("/inspection/scoring-profiles", "评分方案",     "calculator",       22),
                 of("/inspection/grade-schemes",    "等级方案",     "award",            23),
                 of("/inspection/issue-categories", "问题分类",     "tags",             24),
                 of("/inspection/analytics",        "分析报表",     "bar-chart-3",      30),

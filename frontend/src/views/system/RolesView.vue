@@ -84,6 +84,7 @@
         </div>
         <div class="ml-auto">
           <button
+            v-if="can('system:role:add')"
             @click="handleAdd"
             class="inline-flex h-9 items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700"
           >
@@ -104,6 +105,7 @@
         <div v-if="selectedIds.length > 0" class="flex items-center gap-2">
           <span class="text-sm text-gray-500">已选 {{ selectedIds.length }} 项</span>
           <button
+            v-if="can('system:role:delete')"
             @click="handleBatchDelete"
             class="inline-flex items-center gap-1 rounded bg-red-50 px-2.5 py-1 text-sm text-red-600 hover:bg-red-100"
           >
@@ -198,6 +200,7 @@
             <td class="px-4 py-3">
               <div class="flex items-center justify-center gap-1">
                 <button
+                  v-if="can('system:role:edit')"
                   @click="handleEdit(row)"
                   :disabled="row.pluginEnabled === false"
                   class="rounded p-1.5 text-gray-500 hover:bg-blue-50 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-500"
@@ -206,6 +209,7 @@
                   <Pencil class="h-4 w-4" />
                 </button>
                 <button
+                  v-if="can('system:role:edit')"
                   @click="handleAssignPermissions(row)"
                   :disabled="row.pluginEnabled === false"
                   class="rounded p-1.5 text-gray-500 hover:bg-green-50 hover:text-green-600 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-500"
@@ -214,6 +218,7 @@
                   <Lock class="h-4 w-4" />
                 </button>
                 <button
+                  v-if="can('system:role:edit')"
                   @click="handleDataPermissions(row)"
                   :disabled="row.pluginEnabled === false"
                   class="rounded p-1.5 text-gray-500 hover:bg-purple-50 hover:text-purple-600 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-500"
@@ -222,6 +227,7 @@
                   <Settings class="h-4 w-4" />
                 </button>
                 <button
+                  v-if="can('system:role:delete')"
                   @click="handleDelete(row)"
                   :disabled="row.pluginEnabled === false"
                   class="rounded p-1.5 text-gray-500 hover:bg-red-50 hover:text-red-600 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-500"
@@ -516,6 +522,7 @@
 import type { LongId } from '@/types/common'
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Shield,
@@ -575,6 +582,9 @@ const currentRoleId = ref<LongId>()
 const expandedModules = ref<string[]>([])
 
 const router = useRouter()
+const authStore = useAuthStore()
+/** 按钮级权限: 无权时隐藏对应操作按钮 (超管持 "*" 始终可见)。 */
+const can = (p: string) => authStore.hasPermission(p)
 
 // 查询参数
 interface LocalRoleQueryParams extends RoleQueryParams {

@@ -17,14 +17,6 @@
           <Library class="h-3.5 w-3.5" />
           模板库
         </button>
-        <button
-          class="flex h-8 items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 text-xs font-medium text-gray-600 hover:bg-gray-50"
-          @click="showCompare = !showCompare"
-          :class="{ 'border-blue-500 text-blue-600': showCompare }"
-        >
-          <Columns3 class="h-3.5 w-3.5" />
-          批量对比
-        </button>
       </div>
     </div>
 
@@ -143,7 +135,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { pluginPlatformApi } from '@/api/pluginPlatform'
-import { Shield, Library, Columns3, X, Loader2 } from 'lucide-vue-next'
+import { Shield, Library, X, Loader2 } from 'lucide-vue-next'
 import RoleExplorer from './components/RoleExplorer.vue'
 import PermissionConfigurator from './components/PermissionConfigurator.vue'
 import PreviewPanel from './components/PreviewPanel.vue'
@@ -167,7 +159,6 @@ const router = useRouter()
 
 const configuratorRef = ref<InstanceType<typeof PermissionConfigurator> | null>(null)
 const showTemplates = ref(false)
-const showCompare = ref(false)
 const showCompareDialog = ref(false)
 const compareLoading = ref(false)
 

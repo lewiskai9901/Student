@@ -14,7 +14,7 @@
           <span>今日登录 <b>{{ todayLoginCount }}</b></span>
         </div>
       </div>
-      <button class="tm-btn tm-btn-primary" @click="handleAdd">新增用户</button>
+      <button v-if="can('system:user:add')" class="tm-btn tm-btn-primary" @click="handleAdd">新增用户</button>
     </div>
 
     <!-- Filter Bar -->
@@ -52,7 +52,7 @@
     <!-- Batch Actions Bar -->
     <div v-if="selectedIds.length > 0" class="batch-bar">
       <span class="batch-info">已选 {{ selectedIds.length }} 项</span>
-      <button class="tm-action tm-action-danger" @click="handleBatchDelete">批量删除</button>
+      <button v-if="can('system:user:delete')" class="tm-action tm-action-danger" @click="handleBatchDelete">批量删除</button>
     </div>
 
     <!-- Table -->
@@ -141,11 +141,11 @@
             </td>
             <td class="text-left" style="font-size: 12px; color: #9ca3af;">{{ row.lastLoginTime || '-' }}</td>
             <td>
-              <button class="tm-action" @click="handleEdit(row)">编辑</button>
-              <button class="tm-action" @click="handleAssignRoles(row)">角色</button>
+              <button v-if="can('system:user:edit')" class="tm-action" @click="handleEdit(row)">编辑</button>
+              <button v-if="can('system:role:edit')" class="tm-action" @click="handleAssignRoles(row)">角色</button>
               <button class="tm-action" @click="handleViewRelations(row)">关系</button>
-              <button class="tm-action" @click="handleResetPassword(row)">密码</button>
-              <button class="tm-action tm-action-danger" @click="handleDelete(row)">删除</button>
+              <button v-if="can('system:user:reset')" class="tm-action" @click="handleResetPassword(row)">密码</button>
+              <button v-if="can('system:user:delete')" class="tm-action tm-action-danger" @click="handleDelete(row)">删除</button>
             </td>
           </tr>
         </tbody>
@@ -563,7 +563,11 @@ import type { RoleResponse as Role } from '@/api/access'
 import { useConfigStore } from '@/stores/config'
 import DynamicForm from '@/components/extension/DynamicForm.vue'
 import { entityTypeApi } from '@/api/entityType'
+import { useAuthStore } from '@/stores/auth'
 
+const authStore = useAuthStore()
+/** 按钮级权限: 无权时隐藏对应操作按钮 (超管持 "*" 始终可见)。 */
+const can = (p: string) => authStore.hasPermission(p)
 const configStore = useConfigStore()
 const loading = ref(false)
 const submitLoading = ref(false)
@@ -983,6 +987,16 @@ const handleStatusChange = async (row: UserListItem) => {
   if (!row.id) return
   const currentStatus = normalizeStatus(row.status)
   const newStatus = currentStatus === 1 ? 2 : 1
+  // 禁用是破坏性操作 (用户将立即无法登录), 二次确认; 启用方向免确认
+  if (newStatus === 2) {
+    try {
+      await ElMessageBox.confirm(
+        `确定要禁用用户"${row.realName || row.username}"吗?该用户将立即无法登录。`,
+        '禁用用户', { type: 'warning', confirmButtonText: '禁用', cancelButtonText: '取消' })
+    } catch {
+      return // 用户取消
+    }
+  }
   try {
     await updateUserStatus(row.id, newStatus)
     row.status = newStatus
