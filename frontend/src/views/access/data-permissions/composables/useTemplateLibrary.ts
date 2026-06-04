@@ -44,7 +44,7 @@ export const BUILTIN_TEMPLATES: RoleTemplate[] = [
     industry: 'EDU',
     description: '我带的班级学生 + 本部门数据',
     scenario: '中小学班主任、辅导员',
-    scene: { primary: 'DEPARTMENT', studentScope: 'BY_CLASS', bizAutoFollow: true },
+    scene: { primary: 'DEPARTMENT', specializations: { student: 'BY_CLASS' }, bizAutoFollow: true },
   },
   {
     id: 'grade-director',
@@ -53,7 +53,7 @@ export const BUILTIN_TEMPLATES: RoleTemplate[] = [
     industry: 'EDU',
     description: '我管的年级全部数据 + 部门及以下',
     scenario: '年级组长、高中年级主任',
-    scene: { primary: 'DEPARTMENT_AND_BELOW', studentScope: 'BY_GRADE', bizAutoFollow: true },
+    scene: { primary: 'DEPARTMENT_AND_BELOW', specializations: { student: 'BY_GRADE' }, bizAutoFollow: true },
   },
   {
     id: 'doctor',

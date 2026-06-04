@@ -101,7 +101,7 @@
       <div v-if="mode === 'scene'">
         <SceneTemplatePanel
           :decision="decision"
-          :edu-enabled="eduEnabled"
+          :scope-options="dataScopeOptions"
           @update:decision="onDecisionUpdate"
         />
       </div>
@@ -144,6 +144,8 @@ import {
   type SceneDecision,
   type ScopeFallbackInfo,
 } from '../composables/useSceneTemplate'
+import { enabledScopeSpecializations } from '../dataScopeSpecializations'
+import { usePluginsStore } from '@/stores/plugins'
 
 interface FilterMeta {
   filtered: boolean
@@ -188,10 +190,9 @@ const totalModules = computed(() => {
   return rel + adv
 })
 
-const eduEnabled = computed(() => {
-  const list = props.groupedModules['EDU']
-  return !!list && list.some(m => m.pluginEnabled !== false)
-})
+const pluginsStore = usePluginsStore()
+/** 已启用插件贡献的数据权限特化维度 (传给 scene 映射, 替代写死的 EDU 概念) */
+const specs = computed(() => enabledScopeSpecializations(pluginsStore.codes))
 
 const flatModules = computed(() => {
   const out: { code: string; industry: string; allowedScopes?: string[] | null }[] = []
@@ -237,7 +238,7 @@ async function loadConfig() {
   try {
     const config = await dataPermissionApi.getConfig(props.currentRole.id)
     modulePermissions.value = config.modulePermissions || []
-    decision.value = moduleScopesToScene(modulePermissions.value)
+    decision.value = moduleScopesToScene(modulePermissions.value, specs.value)
     // 加载时不生成 fallback (显示的是已存配置的原值)
     fallbacks.value = []
     emit('config-loaded', modulePermissions.value, decision.value, fallbacks.value)
@@ -252,7 +253,7 @@ function onDecisionUpdate(next: SceneDecision) {
   decision.value = next
   // 场景模式下同步应用到 modulePermissions (实时映射)
   if (mode.value === 'scene') {
-    const res = applySceneToModules(next, flatModules.value, modulePermissions.value, relevantCodes.value)
+    const res = applySceneToModules(next, flatModules.value, modulePermissions.value, specs.value, relevantCodes.value)
     modulePermissions.value = res.modulePermissions
     fallbacks.value = res.fallbacks
   } else {
@@ -264,7 +265,7 @@ function onDecisionUpdate(next: SceneDecision) {
 function onModulePermissionsUpdate(next: ModulePermission[]) {
   modulePermissions.value = next
   // 高级模式修改时反推 scene (让预览区同步)
-  decision.value = moduleScopesToScene(next)
+  decision.value = moduleScopesToScene(next, specs.value)
   // 手动编辑的值已经是用户意图, 无 fallback
   fallbacks.value = []
   emit('config-changed', modulePermissions.value, decision.value, fallbacks.value)
@@ -298,7 +299,7 @@ function onBatchSet(scopeCode: string) {
     }
   }
   modulePermissions.value = next
-  decision.value = moduleScopesToScene(next)
+  decision.value = moduleScopesToScene(next, specs.value)
   fallbacks.value = []
   emit('config-changed', modulePermissions.value, decision.value, fallbacks.value)
   if (violations.length) {
@@ -367,7 +368,7 @@ async function handleReset() {
 /** 由父组件调用: 从模板应用 scene */
 function applyTemplateScene(scene: SceneDecision) {
   decision.value = { ...scene }
-  const res = applySceneToModules(decision.value, flatModules.value, modulePermissions.value, relevantCodes.value)
+  const res = applySceneToModules(decision.value, flatModules.value, modulePermissions.value, specs.value, relevantCodes.value)
   modulePermissions.value = res.modulePermissions
   fallbacks.value = res.fallbacks
   mode.value = 'scene'

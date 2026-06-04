@@ -21,11 +21,11 @@
             </div>
           </div>
 
-          <div v-if="decision.studentScope" class="flex items-start gap-2">
-            <GraduationCap class="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-orange-500" />
+          <div v-for="s in specializationSummaries" :key="s.groupCode" class="flex items-start gap-2">
+            <SlidersHorizontal class="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-orange-500" />
             <div>
-              <div class="font-medium">学生: {{ studentLabel }}</div>
-              <div class="text-[10px] text-gray-400">EDU 特化</div>
+              <div class="font-medium">{{ s.title }}: {{ s.label }}</div>
+              <div class="text-[10px] text-gray-400">{{ s.pluginCode }} 插件特化</div>
             </div>
           </div>
 
@@ -187,7 +187,7 @@ import {
   Building2,
   User,
   Edit3,
-  GraduationCap,
+  SlidersHorizontal,
   CheckCircle2,
   XCircle,
   ChevronRight,
@@ -198,6 +198,10 @@ import { ElMessage } from 'element-plus'
 import type { ModulePermission, DataScopeOption } from '@/types/access'
 import type { SceneDecision, ScopeFallbackInfo } from '../composables/useSceneTemplate'
 import { dataPermissionSimulateApi, type SimulateResult } from '@/api/access'
+import { usePluginsStore } from '@/stores/plugins'
+import { enabledScopeSpecializations } from '../dataScopeSpecializations'
+
+const pluginsStore = usePluginsStore()
 
 interface Props {
   decision: SceneDecision
@@ -248,15 +252,18 @@ const primaryDesc = computed(() => {
   return m[props.decision.primary] || ''
 })
 
-const studentLabel = computed(() => {
-  const m: Record<string, string> = {
-    ALL: '全部学生',
-    BY_CLASS: '我带的班级',
-    BY_GRADE: '我管的年级',
-    BY_MAJOR: '我管的专业',
-    SELF: '仅本人',
+/** 行业特化摘要: 遍历已选 specializations, 用插件 spec 的选项 label 渲染 (核心零行业词汇) */
+const specializationSummaries = computed(() => {
+  const specs = enabledScopeSpecializations(pluginsStore.codes)
+  const sel = props.decision.specializations || {}
+  const out: { groupCode: string; title: string; label: string; pluginCode: string }[] = []
+  for (const spec of specs) {
+    const code = sel[spec.groupCode]
+    if (!code) continue
+    const opt = spec.options.find(o => o.code === code)
+    out.push({ groupCode: spec.groupCode, title: spec.title, label: opt?.label || code, pluginCode: spec.pluginCode })
   }
-  return m[props.decision.studentScope || 'ALL'] || ''
+  return out
 })
 
 const summaryLines = computed<string[]>(() => {
@@ -279,12 +286,11 @@ const summaryLines = computed<string[]>(() => {
     else lines.push(`自定义范围: ${o} 个组织 + ${g} 个年级 + ${c} 个班级`)
   }
 
-  if (d.studentScope === 'BY_CLASS') lines.push('学生数据按班级关系过滤')
-  else if (d.studentScope === 'BY_GRADE') lines.push('学生数据按年级关系过滤')
-  else if (d.studentScope === 'BY_MAJOR') lines.push('学生数据按专业关系过滤')
-  else if (d.studentScope === 'SELF') lines.push('只能看自己绑定的学生')
+  for (const s of specializationSummaries.value) {
+    lines.push(`${s.title}: ${s.label}`)
+  }
 
-  if (d.bizAutoFollow) lines.push('考勤/成绩/检查/任务 自动同步主决策')
+  if (d.bizAutoFollow) lines.push('其它业务模块 自动同步主决策')
   else lines.push('业务模块默认仅本人 — 需在高级里单独配')
 
   return lines

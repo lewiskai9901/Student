@@ -1,5 +1,6 @@
 import type { RouteRecordRaw } from 'vue-router'
 import { registerRelationScenes } from '@/components/access/relationScenes'
+import { registerScopeSpecializations } from '@/views/access/data-permissions/dataScopeSpecializations'
 
 /**
  * 教育行业 (EDU) 路由 — Phase 4A 条件加载
@@ -21,6 +22,30 @@ registerRelationScenes('EDU', [
     relation: 'admin', subjectType: 'user', resourceType: 'org_unit',
     subjectLabel: '选择老师（作为班主任）', resourceLabel: '选择班级/年级',
     metadata: { role: 'CLASS_TEACHER' },
+  },
+])
+
+// 数据权限"我的学生"特化维度 — 仅 EDU 启用时被 bootstrap 动态 import 才登记。
+// scope code (BY_CLASS/BY_GRADE/BY_MAJOR) 是后端 EducationDataScopePlugin 贡献的维度,
+// 这里给主体视角的中文措辞 + 覆盖哪些学生数据模块。
+registerScopeSpecializations('EDU', [
+  {
+    pluginCode: 'EDU',
+    groupCode: 'student',
+    title: '我的学生',
+    moduleCodes: ['student', 'attendance', 'grade_batch', 'student_grade', 'exam', 'enrollment', 'dormitory_student'],
+    options: [
+      { code: 'ALL', label: '全部学生', desc: '所有学生数据' },
+      { code: 'BY_CLASS', label: '我带的班级', desc: '按班级关系' },
+      { code: 'BY_GRADE', label: '我管的年级', desc: '按年级关系' },
+      { code: 'BY_MAJOR', label: '我管的专业', desc: '按专业关系' },
+      { code: 'SELF', label: '仅本人', desc: '只看自己绑定的学生' },
+    ],
+    fallbackChain: {
+      BY_GRADE: ['BY_CLASS', 'BY_MAJOR', 'ALL', 'SELF'],
+      BY_CLASS: ['BY_GRADE', 'BY_MAJOR', 'ALL', 'SELF'],
+      BY_MAJOR: ['BY_GRADE', 'BY_CLASS', 'ALL', 'SELF'],
+    },
   },
 ])
 const eduRoutes: RouteRecordRaw[] = [

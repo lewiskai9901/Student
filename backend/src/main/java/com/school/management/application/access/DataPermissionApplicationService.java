@@ -87,7 +87,9 @@ public class DataPermissionApplicationService {
             dynamic = jdbcTemplate.query(
                 "SELECT dim_code, dim_name, description, domain_code " +
                 "FROM data_scope_dims " +
-                "WHERE is_enabled = 1 " +
+                // plugin_enabled=1: 插件禁用时其 scope 维度 (如 EDU 的 BY_CLASS) 不再出现在字典里
+                // (PluginLifecycleService.disable 级联置 plugin_enabled=0, 但 is_enabled 不动)
+                "WHERE is_enabled = 1 AND plugin_enabled = 1 " +
                 "ORDER BY dim_code",
                 (rs, i) -> new ScopeTypeDTO(
                     rs.getString("dim_code"),

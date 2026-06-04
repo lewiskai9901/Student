@@ -96,10 +96,13 @@
                         {{ scopeLabel(cd.decision.primary) }}
                       </span>
                     </div>
-                    <div class="flex items-center justify-between">
-                      <span class="text-gray-500">学生特化</span>
-                      <span class="font-medium" :class="diffClass(cd, 'studentScope')">
-                        {{ cd.decision.studentScope || '—' }}
+                    <div
+                      v-if="cd.decision.specializations && Object.keys(cd.decision.specializations).length"
+                      class="flex items-center justify-between"
+                    >
+                      <span class="text-gray-500">行业特化</span>
+                      <span class="font-medium">
+                        {{ Object.entries(cd.decision.specializations).map(([g, s]) => `${g}:${scopeLabel(s)}`).join(', ') }}
                       </span>
                     </div>
                     <div class="flex items-center justify-between">
@@ -150,8 +153,10 @@ import type {
   DataScopeOption,
   ModulePermission,
 } from '@/types/access'
-import type { SceneDecision, PrimaryScope, ScopeFallbackInfo } from './composables/useSceneTemplate'
+import type { SceneDecision, ScopeFallbackInfo } from './composables/useSceneTemplate'
 import { moduleScopesToScene } from './composables/useSceneTemplate'
+import { enabledScopeSpecializations } from './dataScopeSpecializations'
+import { usePluginsStore } from '@/stores/plugins'
 import type { RoleTemplate } from './composables/useTemplateLibrary'
 
 const route = useRoute()
@@ -173,6 +178,7 @@ const filterMeta = ref<{
   rolePermModules?: string[]
 }>({ filtered: false })
 const moduleNameMap = ref<Record<string, string>>({})
+const pluginsStore = usePluginsStore()
 const dataScopeOptions = ref<DataScopeOption[]>([])
 const allRoles = ref<RoleResponse[]>([])
 
@@ -342,7 +348,7 @@ async function onCompare(ids: (number | string)[]) {
       if (!role) continue
       const cfg = await dataPermissionApi.getConfig(String(id))
       const mps = cfg.modulePermissions || []
-      list.push({ role, mps, decision: moduleScopesToScene(mps) })
+      list.push({ role, mps, decision: moduleScopesToScene(mps, enabledScopeSpecializations(pluginsStore.codes)) })
     }
     compareData.value = list
   } catch (e) {
@@ -360,7 +366,10 @@ function diffClass(cd: CompareItem, field: keyof SceneDecision): string {
   return allSame ? 'text-gray-700' : 'text-orange-600'
 }
 
-function scopeLabel(code: PrimaryScope): string {
+function scopeLabel(code: string): string {
+  // 优先用后端 scope 字典 (含核心 + 插件维度的中文 label), 兜底核心简称
+  const fromDict = dataScopeOptions.value.find(s => s.scopeCode === code)?.scopeName
+  if (fromDict) return fromDict
   const m: Record<string, string> = {
     ALL: '全部',
     DEPARTMENT_AND_BELOW: '部门及以下',
