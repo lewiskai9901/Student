@@ -87,8 +87,8 @@
         layout="total, prev, pager, next" @current-change="p => { page = p; load() }" />
     </div>
 
-    <!-- 向导 Dialog -->
-    <el-dialog v-model="wizardVisible" :title="wizardTitle" width="560px" :close-on-click-modal="false">
+    <!-- 向导抽屉 (右侧滑出) -->
+    <el-drawer v-model="wizardVisible" :title="wizardTitle" direction="rtl" size="440px" :close-on-click-modal="false">
       <div v-if="wizardCode" class="wizard-form">
         <!-- 步骤 1: 选择主体 (谁) -->
         <div class="field">
@@ -145,12 +145,14 @@
         </div>
       </div>
       <template #footer>
-        <el-button @click="wizardVisible = false">取消</el-button>
-        <el-button type="primary" :disabled="!wiz.subjectId || !wiz.resourceId" @click="handleWizardSubmit">
-          确认绑定
-        </el-button>
+        <div class="drawer-footer">
+          <el-button @click="wizardVisible = false">取消</el-button>
+          <el-button type="primary" :disabled="!wiz.subjectId || !wiz.resourceId" @click="handleWizardSubmit">
+            确认绑定
+          </el-button>
+        </div>
       </template>
-    </el-dialog>
+    </el-drawer>
   </div>
 </template>
 
@@ -449,6 +451,7 @@ onMounted(async () => {
 .recent-revoke:hover { background: #fef2f2; border-radius: 4px; }
 
 .wizard-form { display: flex; flex-direction: column; gap: 16px; }
+.drawer-footer { display: flex; justify-content: flex-end; gap: 8px; }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field-label { font-size: 13px; color: #374151; font-weight: 500; }
 .preview-panel { background: #f3f4f6; border-radius: 6px; padding: 12px; }
