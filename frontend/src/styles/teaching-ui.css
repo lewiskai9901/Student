@@ -455,6 +455,41 @@
   cursor: pointer;
 }
 
+/* Element Plus el-select / el-cascader 在 tm 表单上下文 (tm-field/tm-section/tm-drawer) 内
+   与 tm-input 外观对齐: 圆角 7 / 浅灰底 / 1px 细边 / 36 高 / 13 字号 / focus 蓝边+柔光环。
+   仅作用于 tm 表单内, 不影响 Element Plus 原生筛选条/表格里的 el-select。 */
+.tm-field .el-select__wrapper,
+.tm-section .el-select__wrapper,
+.tm-drawer .el-select__wrapper,
+.tm-field .el-cascader .el-input__wrapper,
+.tm-section .el-cascader .el-input__wrapper,
+.tm-drawer .el-cascader .el-input__wrapper {
+  border-radius: 7px;
+  background-color: #fafafa;
+  box-shadow: 0 0 0 1px #e5e7eb inset;
+  min-height: 36px;
+  padding: 4px 10px;
+  font-size: 13px;
+  transition: box-shadow 0.15s, background-color 0.15s;
+}
+.tm-field .el-select__wrapper:hover,
+.tm-section .el-select__wrapper:hover,
+.tm-drawer .el-select__wrapper:hover,
+.tm-field .el-cascader:not(.is-disabled):hover .el-input__wrapper,
+.tm-section .el-cascader:not(.is-disabled):hover .el-input__wrapper,
+.tm-drawer .el-cascader:not(.is-disabled):hover .el-input__wrapper {
+  box-shadow: 0 0 0 1px #e5e7eb inset;
+}
+.tm-field .el-select__wrapper.is-focused,
+.tm-section .el-select__wrapper.is-focused,
+.tm-drawer .el-select__wrapper.is-focused,
+.tm-field .el-cascader .el-input__wrapper.is-focus,
+.tm-section .el-cascader .el-input__wrapper.is-focus,
+.tm-drawer .el-cascader .el-input__wrapper.is-focus {
+  background-color: #fff;
+  box-shadow: 0 0 0 1px #2563eb inset, 0 0 0 3px rgba(37, 99, 235, 0.06);
+}
+
 .tm-error .tm-input, .tm-error .tm-field-select {
   border-color: #fca5a5;
   background: #fef2f2;
