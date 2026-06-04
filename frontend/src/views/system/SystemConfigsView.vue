@@ -1,97 +1,31 @@
 <template>
-  <div class="min-h-screen bg-gray-50/50 p-6">
-    <!-- 页面头部 -->
-    <div class="mb-6 rounded-xl bg-gradient-to-r from-violet-600 to-purple-500 p-6 shadow-lg">
-      <div class="flex items-center justify-between">
-        <div>
-          <h1 class="flex items-center gap-3 text-2xl font-bold text-white">
-            <Settings class="h-8 w-8" />
-            系统配置
-          </h1>
-          <p class="mt-1 text-violet-100">管理系统参数和业务配置</p>
-        </div>
-        <div class="flex gap-3">
-          <button
-            @click="handleRefreshCache"
-            class="flex items-center gap-2 rounded-lg bg-white/20 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition-all hover:bg-white/30"
-          >
-            <RefreshCw class="h-4 w-4" />
-            刷新缓存
-          </button>
-          <button
-            @click="handleAdd"
-            class="flex items-center gap-2 rounded-lg bg-white/95 px-4 py-2 font-medium text-violet-600 shadow-md transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-lg"
-          >
-            <Plus class="h-5 w-5" />
-            新增配置
-          </button>
-        </div>
-      </div>
-    </div>
+  <div class="p-4 space-y-4">
+    <PageHeader title="系统配置" subtitle="管理系统参数和业务配置">
+      <template #actions>
+        <button
+          @click="handleRefreshCache"
+          class="inline-flex h-8 items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 text-sm text-gray-600 hover:bg-gray-50"
+        >
+          <RefreshCw class="h-4 w-4" />
+          刷新缓存
+        </button>
+        <button
+          @click="handleAdd"
+          class="inline-flex h-8 items-center gap-1.5 rounded-md bg-blue-600 px-3 text-sm font-medium text-white hover:bg-blue-700"
+        >
+          <Plus class="h-4 w-4" />
+          新增配置
+        </button>
+      </template>
+    </PageHeader>
 
-    <!-- 统计卡片 -->
-    <div class="mb-6 grid grid-cols-5 gap-4">
-      <div class="group relative overflow-hidden rounded-xl bg-white p-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-gray-500">全部配置</p>
-            <p class="mt-1 text-2xl font-bold text-violet-600">{{ allConfigs.length }}</p>
-          </div>
-          <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
-            <Database class="h-6 w-6" />
-          </div>
-        </div>
-        <div class="absolute bottom-0 left-0 h-1 w-full bg-gradient-to-r from-violet-500 to-purple-400 opacity-0 transition-opacity group-hover:opacity-100"></div>
-      </div>
-      <div class="group relative overflow-hidden rounded-xl bg-white p-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-gray-500">系统配置</p>
-            <p class="mt-1 text-2xl font-bold text-blue-600">{{ systemConfigs.length }}</p>
-          </div>
-          <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
-            <Cpu class="h-6 w-6" />
-          </div>
-        </div>
-        <div class="absolute bottom-0 left-0 h-1 w-full bg-gradient-to-r from-blue-500 to-blue-400 opacity-0 transition-opacity group-hover:opacity-100"></div>
-      </div>
-      <div class="group relative overflow-hidden rounded-xl bg-white p-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-gray-500">业务配置</p>
-            <p class="mt-1 text-2xl font-bold text-emerald-600">{{ businessConfigs.length }}</p>
-          </div>
-          <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
-            <Briefcase class="h-6 w-6" />
-          </div>
-        </div>
-        <div class="absolute bottom-0 left-0 h-1 w-full bg-gradient-to-r from-emerald-500 to-emerald-400 opacity-0 transition-opacity group-hover:opacity-100"></div>
-      </div>
-      <div class="group relative overflow-hidden rounded-xl bg-white p-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-gray-500">微信配置</p>
-            <p class="mt-1 text-2xl font-bold text-green-600">{{ wechatConfigs.length }}</p>
-          </div>
-          <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-green-100 text-green-600">
-            <MessageCircle class="h-6 w-6" />
-          </div>
-        </div>
-        <div class="absolute bottom-0 left-0 h-1 w-full bg-gradient-to-r from-green-500 to-green-400 opacity-0 transition-opacity group-hover:opacity-100"></div>
-      </div>
-      <div class="group relative overflow-hidden rounded-xl bg-white p-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-gray-500">界面配置</p>
-            <p class="mt-1 text-2xl font-bold text-amber-600">{{ uiConfigs.length }}</p>
-          </div>
-          <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
-            <Palette class="h-6 w-6" />
-          </div>
-        </div>
-        <div class="absolute bottom-0 left-0 h-1 w-full bg-gradient-to-r from-amber-500 to-amber-400 opacity-0 transition-opacity group-hover:opacity-100"></div>
-      </div>
-    </div>
+    <StatBar :items="[
+      { label: '全部配置', value: allConfigs.length },
+      { label: '系统配置', value: systemConfigs.length },
+      { label: '业务配置', value: businessConfigs.length },
+      { label: '微信配置', value: wechatConfigs.length },
+      { label: '界面配置', value: uiConfigs.length },
+    ]" />
 
     <!-- Tab 导航栏 -->
     <div class="mb-6 rounded-xl bg-white p-2 shadow-sm">
@@ -499,6 +433,8 @@ import {
   AlertCircle,
   MessageCircle
 } from 'lucide-vue-next'
+import PageHeader from '@/components/common/PageHeader.vue'
+import StatBar from '@/components/common/StatBar.vue'
 import { http } from '@/utils/request'
 
 // 数据

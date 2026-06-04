@@ -1,69 +1,13 @@
 <template>
-  <div class="min-h-screen bg-gray-50/50 p-6">
-    <!-- 页面头部 -->
-    <div class="mb-6 rounded-xl bg-gradient-to-r from-slate-700 to-slate-600 p-6 shadow-lg">
-      <div class="flex items-center justify-between">
-        <div>
-          <h1 class="flex items-center gap-3 text-2xl font-bold text-white">
-            <ScrollText class="h-8 w-8" />
-            操作日志
-          </h1>
-          <p class="mt-1 text-slate-300">查看系统操作记录与审计信息</p>
-        </div>
-      </div>
-    </div>
+  <div class="p-4 space-y-4">
+    <PageHeader title="操作日志" subtitle="查看系统操作记录与审计信息" />
 
-    <!-- 统计卡片 -->
-    <div class="mb-6 grid grid-cols-4 gap-4">
-      <div class="group relative overflow-hidden rounded-xl bg-white p-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-gray-500">日志总数</p>
-            <p class="mt-1 text-2xl font-bold text-gray-900">{{ statsData.total }}</p>
-          </div>
-          <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
-            <ScrollText class="h-6 w-6" />
-          </div>
-        </div>
-        <div class="absolute bottom-0 left-0 h-1 w-full bg-gradient-to-r from-slate-600 to-slate-400 opacity-0 transition-opacity group-hover:opacity-100"></div>
-      </div>
-      <div class="group relative overflow-hidden rounded-xl bg-white p-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-gray-500">成功操作</p>
-            <p class="mt-1 text-2xl font-bold text-green-600">{{ statsData.success }}</p>
-          </div>
-          <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-green-100 text-green-600">
-            <CheckCircle class="h-6 w-6" />
-          </div>
-        </div>
-        <div class="absolute bottom-0 left-0 h-1 w-full bg-gradient-to-r from-green-500 to-emerald-400 opacity-0 transition-opacity group-hover:opacity-100"></div>
-      </div>
-      <div class="group relative overflow-hidden rounded-xl bg-white p-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-gray-500">失败操作</p>
-            <p class="mt-1 text-2xl font-bold text-red-600">{{ statsData.failed }}</p>
-          </div>
-          <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-red-100 text-red-600">
-            <XCircle class="h-6 w-6" />
-          </div>
-        </div>
-        <div class="absolute bottom-0 left-0 h-1 w-full bg-gradient-to-r from-red-500 to-rose-400 opacity-0 transition-opacity group-hover:opacity-100"></div>
-      </div>
-      <div class="group relative overflow-hidden rounded-xl bg-white p-5 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-gray-500">今日操作</p>
-            <p class="mt-1 text-2xl font-bold text-blue-600">{{ statsData.today }}</p>
-          </div>
-          <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
-            <Activity class="h-6 w-6" />
-          </div>
-        </div>
-        <div class="absolute bottom-0 left-0 h-1 w-full bg-gradient-to-r from-blue-500 to-indigo-400 opacity-0 transition-opacity group-hover:opacity-100"></div>
-      </div>
-    </div>
+    <StatBar :items="[
+      { label: '日志总数', value: statsData.total },
+      { label: '成功操作', value: statsData.success },
+      { label: '失败操作', value: statsData.failed },
+      { label: '今日操作', value: statsData.today },
+    ]" />
 
     <!-- 搜索栏 -->
     <div class="mb-6 rounded-xl bg-white p-5 shadow-sm">
@@ -408,11 +352,10 @@ import {
   X,
   Loader2,
   ChevronLeft,
-  ChevronRight,
-  CheckCircle,
-  XCircle,
-  Activity
+  ChevronRight
 } from 'lucide-vue-next'
+import PageHeader from '@/components/common/PageHeader.vue'
+import StatBar from '@/components/common/StatBar.vue'
 import { listActivityEvents, getActivityStats } from '@/api/activityEvent'
 import type { ActivityEvent, ActivityEventStats } from '@/types/activityEvent'
 
