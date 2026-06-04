@@ -100,6 +100,11 @@
           </el-select>
           <el-cascader v-else-if="wizardMeta.subjectType === 'org_unit'"
             v-model="wiz.subjectId" :options="orgTreeOpts" :props="cascaderProps" placeholder="选择组织" style="width:100%" @change="onWizChange" />
+          <el-select v-else-if="wizardMeta.subjectType === 'place'"
+            v-model="wiz.subjectId" filterable remote :remote-method="searchPlaces"
+            :loading="searchLoading3" placeholder="输入场所名称搜索..." style="width:100%" @change="onWizChange">
+            <el-option v-for="p in placeSearchResults" :key="p.id" :label="p.placeName" :value="p.id" />
+          </el-select>
         </div>
 
         <!-- 步骤 2: 选择资源 (对象) -->
@@ -195,6 +200,9 @@ async function onWizChange() {
     if (u) wiz.value.subjectName = u.realName
   } else if (wiz.value.subjectId && wizardMeta.value?.subjectType === 'org_unit') {
     wiz.value.subjectName = findOrgName(wiz.value.subjectId)
+  } else if (wiz.value.subjectId && wizardMeta.value?.subjectType === 'place') {
+    const p = placeSearchResults.value.find(x => x.id === wiz.value.subjectId)
+    if (p) wiz.value.subjectName = p.placeName
   }
   if (wiz.value.resourceId) {
     if (wizardMeta.value?.resourceType === 'org_unit') wiz.value.resourceName = findOrgName(wiz.value.resourceId)
