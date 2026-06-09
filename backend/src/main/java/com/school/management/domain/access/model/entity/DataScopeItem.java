@@ -54,14 +54,14 @@ public class DataScopeItem implements Entity<Long> {
      * 判断是否为部门类型
      */
     public boolean isOrgUnitType() {
-        return "ORG_UNIT".equals(itemTypeCode);
+        return "ORG_UNIT".equalsIgnoreCase(itemTypeCode);
     }
 
     /**
      * 判断是否为指定类型
      */
     public boolean isType(String typeCode) {
-        return typeCode != null && typeCode.equals(itemTypeCode);
+        return typeCode != null && itemTypeCode != null && typeCode.equalsIgnoreCase(itemTypeCode);
     }
 
     /**

@@ -231,7 +231,7 @@ public class DataPermissionPolicyService {
             List<DataScopeItem> items = orgIds.stream()
                     .map(id -> DataScopeItem.builder()
                             .roleDataPermissionId(permission.getId())
-                            .itemTypeCode("org_unit")     // v3 无 item_type_code,统一 'org_unit'
+                            .itemTypeCode("ORG_UNIT")     // v3 无 item_type_code,统一 'ORG_UNIT' (大写, 与 MergedDataScope.getOrgUnitIds/DataScopeItem.isOrgUnitType 对齐)
                             .scopeId(id)
                             .scopeName(null)              // 按需加载
                             .includeChildren(true)        // v3 默认 include_children
