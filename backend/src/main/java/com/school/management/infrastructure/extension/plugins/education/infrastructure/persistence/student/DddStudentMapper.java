@@ -51,31 +51,36 @@ public interface DddStudentMapper extends BaseMapper<StudentPO> {
         """;
 
     /**
-     * 基础投影: 物理列 {@code s.org_unit_id} 不再作为班级归属来源 —— 显式列出 s 的其余列,
-     * 班级 id 改用 {@code ar.resource_id AS org_unit_id} 派生 (前端契约字段名 org_unit_id 不变)。
+     * 基础投影: 只投 user_student 真实存在的物理列 (2026-06-09 修复)。旧版本投影了
+     * 32 个早已从表上 DROP 的行业列 (id_card_type / ethnicity / grade_id / major_id /
+     * guardian_xxx / hukou_xxx / created_by / ... 见 V20260531 迁移), 导致
+     * "Unknown column s.id_card_type" 错误把整条学生读路径打成 500 (code 2005),
+     * 所有用户(含超管)受影响。
      *
-     * <p>StudentPO 只映射其中一部分列 (id/student_no/user_id/admission_date/graduation_date/
-     * student_status/major_id/home_address/emergency_contact/emergency_phone/special_notes/
-     * tenant_id/deleted/created_at/updated_at + org_unit_id 派生 + users 派生字段), 多余列
-     * MyBatis 自动忽略。这里仍 SELECT 全列是为保持与旧 {@code s.*} 行为最小差异,
-     * 仅把 org_unit_id 一列从物理列替换为 member 派生列。
+     * <p><b>展示字段来源 = 内联 s.* 列</b>: user_student 表自身已有 inline
+     * {@code name/gender/id_card/phone/email/birth_date/avatar_url} 列, 且实测数据填充正确
+     * ({@code s.gender}=1/2 正确, 而 {@code users.gender}=0 是错的)。故不再 JOIN users,
+     * 直接取 s 列, 少一个 JOIN 且取表自身权威数据。
+     *
+     * <p>StudentPO 映射的列 (含 @TableField(exist=false) 别名): id, student_no, user_id,
+     * name, gender, id_card as idCard, phone, email, birth_date as birthDate,
+     * admission_date as enrollmentDate, graduation_date as expectedGraduationDate,
+     * student_status as status, avatar_url as avatarUrl, home_address, emergency_contact,
+     * emergency_phone, special_notes as remark, tenant_id, deleted, created_at, updated_at,
+     * 外加派生 {@code ar.resource_id AS org_unit_id} (member 关系班级归属)。
      */
     String BASE_JOIN_SELECT = """
-        SELECT s.id, s.student_no, s.id_card_type, s.ethnicity, s.political_status,
-               s.user_id, s.grade_id, s.major_id, s.major_direction_id, s.education_level,
-               s.study_length, s.degree_type, s.admission_date, s.graduation_date,
-               s.student_status, s.guardian_name, s.guardian_phone, s.guardian_relation,
-               s.father_name, s.father_id_card, s.father_phone, s.mother_name,
-               s.mother_id_card, s.mother_phone, s.guardian_id_card, s.emergency_contact,
-               s.emergency_phone, s.emergency_contact_relation, s.home_address,
-               s.hukou_province, s.hukou_city, s.hukou_district, s.hukou_address,
-               s.hukou_type, s.postal_code, s.is_poverty_registered, s.financial_aid_type,
-               s.dormitory_id, s.bed_number, s.health_status, s.allergies, s.special_notes,
-               s.created_at, s.updated_at, s.created_by, s.updated_by, s.deleted, s.tenant_id,
-               ar.resource_id AS org_unit_id,
-               u.real_name as name, u.gender, u.phone, u.identity_card as idCard
+        SELECT s.id, s.student_no, s.user_id,
+               s.name, s.gender, s.id_card AS idCard, s.phone, s.email,
+               s.birth_date, s.avatar_url,
+               s.enrollment_date, s.expected_graduation_date,
+               s.admission_date, s.graduation_date, s.student_status,
+               s.dormitory_id, s.bed_number,
+               s.home_address, s.emergency_contact, s.emergency_phone,
+               s.remark, s.special_notes,
+               s.created_at, s.updated_at, s.deleted, s.tenant_id,
+               ar.resource_id AS org_unit_id
         FROM user_student s
-        LEFT JOIN users u ON s.user_id = u.id
         """ + MEMBER_JOIN;
 
     /**
@@ -93,7 +98,7 @@ public interface DddStudentMapper extends BaseMapper<StudentPO> {
     /**
      * 根据身份证号查询
      */
-    @Select(BASE_JOIN_SELECT + " WHERE u.identity_card = #{idCard} AND s.deleted = 0 AND u.deleted = 0")
+    @Select(BASE_JOIN_SELECT + " WHERE s.id_card = #{idCard} AND s.deleted = 0")
     StudentPO selectByIdCard(@Param("idCard") String idCard);
 
     /**
@@ -120,8 +125,8 @@ public interface DddStudentMapper extends BaseMapper<StudentPO> {
     @Select(BASE_JOIN_SELECT + """
         WHERE s.deleted = 0
         AND (s.student_no LIKE CONCAT('%', #{keyword}, '%')
-             OR u.real_name LIKE CONCAT('%', #{keyword}, '%')
-             OR u.phone LIKE CONCAT('%', #{keyword}, '%'))
+             OR s.name LIKE CONCAT('%', #{keyword}, '%')
+             OR s.phone LIKE CONCAT('%', #{keyword}, '%'))
         ORDER BY s.created_at DESC
         LIMIT #{offset}, #{limit}
         """)
@@ -136,7 +141,7 @@ public interface DddStudentMapper extends BaseMapper<StudentPO> {
     /**
      * 检查身份证号是否存在
      */
-    @Select("SELECT COUNT(*) FROM user_student s LEFT JOIN users u ON s.user_id = u.id WHERE u.identity_card = #{idCard} AND s.deleted = 0 AND u.deleted = 0")
+    @Select("SELECT COUNT(*) FROM user_student WHERE id_card = #{idCard} AND deleted = 0")
     long countByIdCard(@Param("idCard") String idCard);
 
     /**
@@ -172,11 +177,10 @@ public interface DddStudentMapper extends BaseMapper<StudentPO> {
      */
     @Select("""
         SELECT COUNT(*) FROM user_student s
-        LEFT JOIN users u ON s.user_id = u.id
         WHERE s.deleted = 0
         AND (s.student_no LIKE CONCAT('%', #{keyword}, '%')
-             OR u.real_name LIKE CONCAT('%', #{keyword}, '%')
-             OR u.phone LIKE CONCAT('%', #{keyword}, '%'))
+             OR s.name LIKE CONCAT('%', #{keyword}, '%')
+             OR s.phone LIKE CONCAT('%', #{keyword}, '%'))
         """)
     long countByKeyword(@Param("keyword") String keyword);
 
@@ -186,11 +190,10 @@ public interface DddStudentMapper extends BaseMapper<StudentPO> {
      * @param gender 性别代码 (1=男, 2=女)
      */
     @Select("SELECT COUNT(*) FROM user_student s " +
-            "LEFT JOIN users u ON s.user_id = u.id " +
             "JOIN access_relations ar ON ar.subject_id = s.user_id " +
             "  AND ar.relation = 'member' AND ar.resource_type = 'org_unit' " +
             "  AND ar.subject_type = 'user' AND ar.deleted = 0 " +
             "  AND (ar.valid_to IS NULL OR ar.valid_to > NOW()) " +
-            "WHERE ar.resource_id = #{orgUnitId} AND u.gender = #{gender} AND s.deleted = 0")
+            "WHERE ar.resource_id = #{orgUnitId} AND s.gender = #{gender} AND s.deleted = 0")
     long countByClassIdAndGender(@Param("orgUnitId") Long orgUnitId, @Param("gender") Integer gender);
 }
