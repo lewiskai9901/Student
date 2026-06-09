@@ -247,7 +247,7 @@ const primaryDesc = computed(() => {
     DEPARTMENT_AND_BELOW: '含子部门数据',
     DEPARTMENT: '不含子部门',
     SELF: '只看自己创建的',
-    CUSTOM: '手选组织/年级/班级',
+    CUSTOM: '手选组织单元',
   }
   return m[props.decision.primary] || ''
 })
@@ -280,10 +280,8 @@ const summaryLines = computed<string[]>(() => {
     lines.push('只能看自己创建/负责的数据')
   } else if (d.primary === 'CUSTOM') {
     const o = d.customOrgIds?.length || 0
-    const g = d.customGradeIds?.length || 0
-    const c = d.customClassIds?.length || 0
-    if (o + g + c === 0) lines.push('自定义范围: 未选择任何项 (实际无权限)')
-    else lines.push(`自定义范围: ${o} 个组织 + ${g} 个年级 + ${c} 个班级`)
+    if (o === 0) lines.push('自定义范围: 未选择任何项 (实际无权限)')
+    else lines.push(`自定义范围: ${o} 个组织单元`)
   }
 
   for (const s of specializationSummaries.value) {

@@ -28,11 +28,7 @@
     <div v-if="decision.primary === 'CUSTOM'" class="rounded-lg border border-blue-200 bg-blue-50/40 p-3">
       <CustomScopeTreePicker
         :org-ids="decision.customOrgIds || []"
-        :grade-ids="decision.customGradeIds || []"
-        :class-ids="decision.customClassIds || []"
         @update:org-ids="v => updateField('customOrgIds', v)"
-        @update:grade-ids="v => updateField('customGradeIds', v)"
-        @update:class-ids="v => updateField('customClassIds', v)"
       />
     </div>
 
@@ -125,8 +121,6 @@ function updatePrimary(code: PrimaryScope) {
     ...props.decision,
     primary: code,
     customOrgIds: code === 'CUSTOM' ? props.decision.customOrgIds : undefined,
-    customGradeIds: code === 'CUSTOM' ? props.decision.customGradeIds : undefined,
-    customClassIds: code === 'CUSTOM' ? props.decision.customClassIds : undefined,
   })
 }
 

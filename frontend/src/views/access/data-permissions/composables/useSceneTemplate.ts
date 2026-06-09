@@ -18,15 +18,13 @@ export type PrimaryScope = 'ALL' | 'DEPARTMENT_AND_BELOW' | 'DEPARTMENT' | 'SELF
  *  - primary: 基础可见范围 (必填)
  *  - specializations: 行业特化 groupCode(如 'student') -> 选中 scope(如 'BY_CLASS'), 由插件 spec 定义
  *  - bizAutoFollow: 业务数据是否跟随主决策
- *  - customOrgIds/customGradeIds/customClassIds: CUSTOM 主决策时的自定义项 (GRADE/CLASS 待后续插件化)
+ *  - customOrgIds: CUSTOM 主决策时选中的组织单元 id (所有自定义项统一为 ORG_UNIT 范围项)
  */
 export interface SceneDecision {
   primary: PrimaryScope
   specializations?: Record<string, string>
   bizAutoFollow: boolean
   customOrgIds?: (number | string)[]
-  customGradeIds?: (number | string)[]
-  customClassIds?: (number | string)[]
 }
 
 /** 模块最小接口 */
@@ -106,12 +104,6 @@ export function sceneToModuleScopes(
     decision.customOrgIds?.forEach(id =>
       customItems.push({ itemTypeCode: 'ORG_UNIT', scopeId: String(id), scopeName: '', includeChildren: true })
     )
-    decision.customGradeIds?.forEach(id =>
-      customItems.push({ itemTypeCode: 'GRADE', scopeId: String(id), scopeName: '', includeChildren: false })
-    )
-    decision.customClassIds?.forEach(id =>
-      customItems.push({ itemTypeCode: 'CLASS', scopeId: String(id), scopeName: '', includeChildren: false })
-    )
   }
 
   for (const mod of modules) {
@@ -184,21 +176,17 @@ export function moduleScopesToScene(mps: ModulePermission[], specs: ScopeSpecial
     }
   }
 
-  // CUSTOM: 合并所有 scopeItems
+  // CUSTOM: 合并所有 scopeItems (自定义项都是 org_unit, 统一收集为 customOrgIds)
   const customOrgIds: (number | string)[] = []
-  const customGradeIds: (number | string)[] = []
-  const customClassIds: (number | string)[] = []
   if (primary === 'CUSTOM') {
     const seen = new Set<string>()
     for (const mp of mps) {
       if (mp.scopeCode !== 'CUSTOM' || !mp.scopeItems) continue
       for (const it of mp.scopeItems) {
-        const key = `${it.itemTypeCode}-${it.scopeId}`
+        const key = String(it.scopeId)
         if (seen.has(key)) continue
         seen.add(key)
-        if (it.itemTypeCode === 'ORG_UNIT') customOrgIds.push(it.scopeId)
-        else if (it.itemTypeCode === 'GRADE') customGradeIds.push(it.scopeId)
-        else if (it.itemTypeCode === 'CLASS') customClassIds.push(it.scopeId)
+        customOrgIds.push(it.scopeId)
       }
     }
   }
@@ -208,8 +196,6 @@ export function moduleScopesToScene(mps: ModulePermission[], specs: ScopeSpecial
     specializations: Object.keys(specializations).length ? specializations : undefined,
     bizAutoFollow,
     customOrgIds: customOrgIds.length ? customOrgIds : undefined,
-    customGradeIds: customGradeIds.length ? customGradeIds : undefined,
-    customClassIds: customClassIds.length ? customClassIds : undefined,
   }
 }
 

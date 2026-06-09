@@ -127,12 +127,8 @@
               class="border-t border-gray-100 p-3"
             >
               <CustomScopeTreePicker
-                :org-ids="getScopeItems(module.code, 'ORG_UNIT')"
-                :grade-ids="getScopeItems(module.code, 'GRADE')"
-                :class-ids="getScopeItems(module.code, 'CLASS')"
-                @update:org-ids="v => onScopeItemsChange(module.code, 'ORG_UNIT', v)"
-                @update:grade-ids="v => onScopeItemsChange(module.code, 'GRADE', v)"
-                @update:class-ids="v => onScopeItemsChange(module.code, 'CLASS', v)"
+                :org-ids="getScopeItems(module.code)"
+                @update:org-ids="v => onScopeItemsChange(module.code, v)"
               />
             </div>
           </div>
@@ -315,9 +311,9 @@ function getCustomCount(code: string): number {
   return props.modulePermissions.find(p => p.moduleCode === code)?.scopeItems?.length || 0
 }
 
-function getScopeItems(code: string, type: string): (number | string)[] {
+function getScopeItems(code: string): (number | string)[] {
   const mp = props.modulePermissions.find(p => p.moduleCode === code)
-  return mp?.scopeItems?.filter(i => i.itemTypeCode === type).map(i => i.scopeId) || []
+  return mp?.scopeItems?.map(i => i.scopeId) || []
 }
 
 function updateModulePermission(code: string, patch: Partial<ModulePermission>) {
@@ -342,20 +338,15 @@ function onScopeChange(code: string, scopeCode: string) {
   updateModulePermission(code, patch)
 }
 
-function onScopeItemsChange(
-  code: string,
-  type: 'ORG_UNIT' | 'GRADE' | 'CLASS',
-  ids: (number | string)[]
-) {
-  const mp = props.modulePermissions.find(p => p.moduleCode === code)
-  const others = (mp?.scopeItems || []).filter(i => i.itemTypeCode !== type)
-  const added: ScopeItem[] = ids.map(id => ({
-    itemTypeCode: type,
+function onScopeItemsChange(code: string, ids: (number | string)[]) {
+  // 自定义项都是 org_unit, CUSTOM 范围项统一为 ORG_UNIT
+  const items: ScopeItem[] = ids.map(id => ({
+    itemTypeCode: 'ORG_UNIT',
     scopeId: String(id),
     scopeName: '',
-    includeChildren: type === 'ORG_UNIT',
+    includeChildren: true,
   }))
-  updateModulePermission(code, { scopeItems: [...others, ...added] })
+  updateModulePermission(code, { scopeItems: items })
 }
 
 function toggleExpand(code: string) {
