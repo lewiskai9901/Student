@@ -520,9 +520,18 @@ public class DataPermissionInterceptor implements Interceptor {
                 cond.sql = "1 = 0"; // CUSTOM with no orgs configured → deny all
                 return cond;
             }
-            // org ids are safe numerics — inline (mirrors buildPluginDimCondition).
+            // Granted org ids must be SUBTREE-expanded (org + all descendants) before matching
+            // member tuples. A student is a 'member' of its CLASS org, NOT of the ancestor GRADE
+            // or department. Granting a GRADE must therefore reach the grade's descendant CLASS
+            // members. Mirrors buildCustomCondition's tree_path subtree pattern. org ids are safe
+            // numerics — inline (mirrors buildPluginDimCondition); the subquery binds o.tenant_id.
             String csv = customOrgIds.stream().map(String::valueOf).collect(Collectors.joining(","));
-            orgPredicate.append("ar.resource_id IN (").append(csv).append(")");
+            orgPredicate.append("ar.resource_id IN (")
+                    .append("SELECT o.id FROM org_units o ")
+                    .append("JOIN org_units g ON g.id IN (").append(csv).append(") ")
+                    .append("WHERE o.tenant_id = ? AND o.deleted = 0 ")
+                    .append("AND o.tree_path LIKE CONCAT(g.tree_path, '%'))");
+            cond.addParam("_dp_memCustomTenant_" + paramOffset, tenantId, Long.class, JdbcType.BIGINT);
         } else if (scope == DataScope.DEPARTMENT_AND_BELOW && orgPath != null) {
             orgPredicate.append("ar.resource_id IN (")
                     .append("SELECT id FROM org_units WHERE tenant_id = ? AND tree_path LIKE ? AND deleted = 0)");

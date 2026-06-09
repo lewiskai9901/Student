@@ -722,7 +722,7 @@ class DataPermissionInterceptorTest {
         }
 
         @Test
-        @DisplayName("CUSTOM 含组织 → ar.resource_id IN (内联 org ids)")
+        @DisplayName("CUSTOM 含组织 → ar.resource_id IN (子树展开 org ids: org + 后代)")
         void customWithOrgsInlinesIds() {
             UserContext ctx = userWithScopedRoles(List.of(scopedRole(6L, ScopeType.ALL, 0L, null)));
             when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(6L), anyString()))
@@ -734,11 +734,16 @@ class DataPermissionInterceptorTest {
                     .thenReturn(merged);
             Object cond = build(membershipAnnotation(), moduleConfig(true, "user"), ctx, 1L);
             assertThat(cond).isNotNull();
+            // Granted org ids are subtree-expanded so a granted GRADE/dept reaches its
+            // descendant CLASS members (members are tied to the leaf class, not the ancestor).
             assertThat(sqlOf(cond))
-                    .contains("ar.resource_id IN (77)")
-                    .contains("SELECT ar.subject_id FROM access_relations ar");
-            // only the ar.tenant_id param is bound (org ids inlined)
-            assertThat(paramsOf(cond)).hasSize(1);
+                    .contains("SELECT ar.subject_id FROM access_relations ar")
+                    .contains("ar.resource_id IN (")
+                    .contains("g.id IN (77)")
+                    .contains("tree_path LIKE CONCAT(g.tree_path, '%')")
+                    .doesNotContain("ar.resource_id IN (77)");
+            // [outer ar.tenant_id, inner subquery o.tenant_id]
+            assertThat(paramsOf(cond)).hasSize(2);
         }
 
         // ── membershipSubjectColumn=user_id: 学生档案表 user_student (主表行不是用户) ──
