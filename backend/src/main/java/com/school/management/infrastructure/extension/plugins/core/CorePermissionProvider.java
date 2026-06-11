@@ -173,6 +173,16 @@ public class CorePermissionProvider implements PermissionProvider {
             of("insp:result:create", "创建指标结果", ""),
             of("insp:result:edit", "编辑指标结果", ""),
             of("insp:result:view", "查看指标结果", ""),
+            // workflow 控制器 (ProcessDefinition/Instance/History) 实际执行的码 —
+            // 之前只注册了 workflow:view 等另一套无人执行的码, 控制器码全未注册不可授
+            of("workflow:definition:view", "流程定义查看", ""),
+            of("workflow:definition:deploy", "流程定义部署", ""),
+            of("workflow:definition:delete", "流程定义删除", ""),
+            of("workflow:definition:manage", "流程定义管理", ""),
+            of("workflow:instance:view", "流程实例查看", ""),
+            of("workflow:instance:start", "流程实例发起", ""),
+            of("workflow:instance:cancel", "流程实例取消", ""),
+            of("workflow:history:view", "流程历史查看", ""),
             of("insp:scoring-policy:create", "创建评分策略", ""),
             of("insp:scoring-policy:delete", "删除评分策略", ""),
             of("insp:scoring-policy:edit", "编辑评分策略", ""),

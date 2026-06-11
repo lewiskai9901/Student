@@ -146,6 +146,7 @@ public class CoreManifest implements PluginPackage {
             "system:audit:view", "system:message:manage",
             "access:relation:view", "access:data-permission:view",
             "plugin-platform:view", "entity-type-config:view",
+            "workflow:definition:view", "workflow:instance:view", "workflow:history:view",
             "calendar:view"
         ).stream().map(c -> (Contribution) c);
     }

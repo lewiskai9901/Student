@@ -169,6 +169,7 @@ public class EducationManifest implements PluginPackage {
                 "academic:major:view", "academic:curriculum:view",
                 "teaching:task:view", "teaching:schedule:view", "teaching:grade:view", "teaching:exam:view",
                 "place:view", "place:edit", "place:add",
+                "student:dormitory:view",
                 "asset:manage:view", "asset:manage:edit", "asset:borrow:view",
                 "insp:platform:view", "insp:template:view", "insp:project:view", "insp:analytics:view",
                 "inspection_appeal:view", "inspection_appeal:review",
@@ -251,11 +252,12 @@ public class EducationManifest implements PluginPackage {
                 "insp:received:view",
                 "calendar:view"),
 
-            // ─── DORMITORY_MANAGER 宿管员: 场所 + 卫生检查执行 ───
+            // ─── DORMITORY_MANAGER 宿管员: 场所 + 住宿分配 + 卫生检查执行 ───
             Contribution.RolePermissionBindingContribution.bindAll("DORMITORY_MANAGER",
                 "dashboard:view",
                 "place:view", "place:edit",
                 "student:info:view",
+                "student:dormitory:view", "dormitory:student:assign",
                 "insp:task:view", "insp:task:execute",
                 "insp:submission:view", "insp:submission:create", "insp:submission:execute",
                 "insp:received:view",

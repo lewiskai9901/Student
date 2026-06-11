@@ -42,8 +42,10 @@ public class EducationMenuPlugin implements MenuContributionPlugin {
                     .requiredPermissions(List.of(STUDENT_INFO_VIEW)),
                 of("/student/class", "班级管理",    "users-round",2)
                     .requiredPermissions(List.of(STUDENT_CLASS_VIEW)),
+                // 成绩页面后端实际执行 teaching:grade:* (22 端点); student:grade:view
+                // 是注册了但零控制器执行的死码 — 菜单须对齐真实执行码
                 of("/student/grade", "成绩管理",    "award",      3)
-                    .requiredPermissions(List.of(STUDENT_GRADE_VIEW))
+                    .requiredPermissions(List.of("teaching:grade:view"))
             )),
 
             // ─── 宿舍管理 ───
@@ -58,11 +60,14 @@ public class EducationMenuPlugin implements MenuContributionPlugin {
             of("/teaching", "教务管理", "school", 20).children(List.of(
                 of("/teaching/schedule", "课程表", "calendar-days", 1),
                 of("/teaching/exam",     "考试",   "calendar-clock",2),
+                // 开课页对应 teaching:offering:* 端点, 原 TEACHING_CLASSROOM_VIEW
+                // (teaching:classroom:view) 无人持有 → 菜单对所有非超管不可见
                 of("/teaching/offering", "开课",   "book-copy",     3)
-                    .requiredPermissions(List.of(TEACHING_CLASSROOM_VIEW)),
+                    .requiredPermissions(List.of("teaching:offering:view")),
                 // 教师档案 — 从 CoreMenuPlugin /system 迁入 (教育特有, 路由仍 /system/teachers)
+                // system:admin 是超管合成码; 用真实码 teacher:profile:view (矩阵已授管理类角色)
                 of("/system/teachers", "教师档案", "users-round", 4)
-                    .requiredPermissions(List.of("system:admin"))
+                    .requiredPermissions(List.of("teacher:profile:view"))
             ))
         );
     }

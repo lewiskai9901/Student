@@ -34,8 +34,9 @@ const workflowRoutes: RouteRecordRaw[] = [
           title: 'BPMN 设计器',
           icon: 'Palette',
           requiresAuth: true,
-          // 设计器属于敏感操作 — 同时要求查看 + 编辑
-          permissions: ['workflow:definition:view', 'workflow:definition:edit'],
+          // 设计器属于敏感操作 — 同时要求查看 + 管理
+          // (码对齐后端 ProcessDefinitionController: manage; workflow:definition:edit 从未存在)
+          permissions: ['workflow:definition:view', 'workflow:definition:manage'],
           order: 2
         }
       },

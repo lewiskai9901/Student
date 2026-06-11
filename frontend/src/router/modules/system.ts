@@ -106,9 +106,10 @@ const systemRoutes: RouteRecordRaw[] = [
         meta: {
           title: '租户管理',
           requiresAuth: true,
-          permission: 'system:tenant:view',
+          permission: 'tenant:view',
           // 多租户管理高敏 — 强制叠加 admin 配置权限
-          permissions: ['system:tenant:view', 'system:config:view'],
+          // (码对齐后端 TenantController @CasbinAccess: tenant:view; system:tenant:view 从未注册)
+          permissions: ['tenant:view', 'system:config:view'],
           order: 12
         }
       },

@@ -141,14 +141,15 @@ class UnifiedPluginPackageTest {
         // Phase 3 W3.1: 加 viewer + responsible_for 各 3 个 (覆盖 user/org/place) → 9+6=15.
         // Phase 5: 加 2 个 WorkflowContribution (leave-approval + hello-world) → 15+2=17.
         // Phase 6 (workflow-engine): 加 access-relation-approval workflow → 17+1=18.
-        // Casbin 缺口修复 (2026-06-12): 加 23 条 TENANT_ADMIN RolePermissionBindingContribution → 18+23=41.
+        // Casbin 缺口修复 (2026-06-12): 加 TENANT_ADMIN RolePermissionBindingContribution
+        // (23 + 菜单对齐补 3 个 workflow 查看码 = 26) → 18+26=44.
         // 旧测试期望"默认空流"已不再适用; 改为校验内容契约.
         long count = core.contribute().count();
-        assertEquals(41, count, "CoreManifest 应贡献 41 个 contribution (15 关系类型 + 3 workflow + 23 TENANT_ADMIN 默认授权)");
+        assertEquals(44, count, "CoreManifest 应贡献 44 个 contribution (15 关系类型 + 3 workflow + 26 TENANT_ADMIN 默认授权)");
         long rolePermCount = new CoreManifest().contribute()
             .filter(c -> c instanceof Contribution.RolePermissionBindingContribution)
             .count();
-        assertEquals(23, rolePermCount, "TENANT_ADMIN 默认功能权限应为 23 条");
+        assertEquals(26, rolePermCount, "TENANT_ADMIN 默认功能权限应为 26 条");
         assertNotNull(core.metadata(), "默认 metadata() 必须非 null");
         assertEquals("CORE", core.metadata().industryCode());
     }

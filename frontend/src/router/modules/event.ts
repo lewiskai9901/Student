@@ -9,7 +9,8 @@ const eventRoutes: RouteRecordRaw[] = [
     meta: {
       title: '事件时间线',
       requiresAuth: true,
-      permissions: ['event:timeline:view'],
+      // 对齐后端 EntityEventController @CasbinAccess 码 (event:timeline:view 从未注册过)
+      permissions: ['entity-event:view'],
       hidden: true
     }
   },
