@@ -8,7 +8,7 @@
  * 设计意图: 解决工作流割裂 — 不再把"待分配/待审核/检查员"切成 3 张独立卡片,
  * 而是以人为中心组织信息, 顶部统计条全局可见, 视图按任务/角色另开两个模式.
  */
-import { ref, computed, watch, onMounted, toRef } from 'vue'
+import { ref, watch, onMounted, toRef } from 'vue'
 import { ElMessage, ElButton, ElSelect, ElOption } from 'element-plus'
 import { Users, ClipboardList, Grid3X3, UserPlus } from 'lucide-vue-next'
 import type { LongId } from '@/types/common'

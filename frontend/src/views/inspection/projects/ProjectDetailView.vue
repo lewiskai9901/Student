@@ -4,15 +4,14 @@ import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  ArrowLeft, Play, Pause, CheckCircle, Send, Trash2, Save, Users, Settings, BarChart3, ClipboardList, Lock,
-  ClipboardCheck, Check, X, ListTree, LayoutDashboard, Copy,
+  ArrowLeft, Play, Pause, CheckCircle, Send, Save, Users, Settings, BarChart3, ClipboardList, Lock,
+  ClipboardCheck, ListTree, LayoutDashboard, Copy,
   AlertTriangle, AlertCircle, Info,
 } from 'lucide-vue-next'
 import { useInspExecutionStore } from '@/stores/inspection/inspExecutionStore'
 import { useAuthStore } from '@/stores/auth'
 import {
-  ProjectStatusConfig, type ProjectStatus,
-  InspectorRoleConfig, type InspectorRole,
+  ProjectStatusConfig, type ProjectStatus, type InspectorRole,
   AssignmentModeConfig, type AssignmentMode, type ScopeType,
 } from '@/types/insp/enums'
 import type { InspProject, ProjectInspector, InspTask, InspSubmission } from '@/types/insp/project'
@@ -31,8 +30,6 @@ import type { OrgUnitTreeNode } from '@/api/organization'
 import type { SimpleUser } from '@/types/user'
 import { getRootSection } from '@/api/inspection/template'
 import SectionConfigView from './components/SectionConfigView.vue'
-import CustomThresholdInput from './components/CustomThresholdInput.vue'
-import PolicyFlowDiagram from './components/PolicyFlowDiagram.vue'
 import ProjectCorrectiveStrategy from './components/ProjectCorrectiveStrategy.vue'
 import ScoringSectionCard from './components/ScoringSectionCard.vue'
 import { buildSectionTree, type SectionTreeNode } from '@/utils/sectionTree'

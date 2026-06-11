@@ -6,7 +6,7 @@
  * 待分配 tab 支持多选 + 批量指派给某检查员; 其他 tab 单条操作 + 批量催办.
  */
 import { ref, computed, watch } from 'vue'
-import { ElButton, ElMessage, ElMessageBox, ElSelect, ElOption, ElCheckbox, ElTooltip } from 'element-plus'
+import { ElButton, ElMessage, ElMessageBox, ElSelect, ElOption, ElCheckbox } from 'element-plus'
 import { Check, X, Send, AlertCircle } from 'lucide-vue-next'
 import type { LongId } from '@/types/common'
 import type { PersonRow, WorkbenchTaskRow } from '@/api/inspection/project'

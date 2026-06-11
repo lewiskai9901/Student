@@ -6,14 +6,13 @@
  * 展开态: 3 段任务列表 (进行中 / 待审核 / 逾期) + 待分配候选快捷指派
  */
 import { ref, computed } from 'vue'
-import { ElButton, ElTooltip, ElMessage, ElMessageBox } from 'element-plus'
+import { ElButton, ElMessage, ElMessageBox } from 'element-plus'
 import {
   ChevronDown, ChevronUp, Crown, ShieldCheck, User as UserIcon,
-  Check, X, AlertCircle, Send, Trash2,
+  Check, X, AlertCircle, Send,
 } from 'lucide-vue-next'
 import type { LongId } from '@/types/common'
 import type { PersonRow, WorkbenchTaskRow } from '@/api/inspection/project'
-import { batchAssignTasks } from '@/api/inspection/project'
 import { assignTask } from '@/api/inspection/task'
 import { http } from '@/utils/request'
 

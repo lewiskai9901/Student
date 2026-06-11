@@ -11,7 +11,7 @@ import { ElTooltip, ElMessage } from 'element-plus'
 import { Check, Minus, Crown } from 'lucide-vue-next'
 import type { LongId } from '@/types/common'
 import type { PersonRow } from '@/api/inspection/project'
-import { useInspectorRoles, type InspectorRole, RoleLabels } from '../composables/useInspectorRoles'
+import { useInspectorRoles, type InspectorRole } from '../composables/useInspectorRoles'
 
 const props = defineProps<{
   projectId: LongId
