@@ -63,6 +63,33 @@ class EduStudentScopeMembershipTest {
     }
 
     @Test
+    void byClass_headTeacherPath_resolvesClassOwnOrgId_notParentGrade() {
+        // classes 是 org_units 上的 VIEW: c.id = 班级自身 org_unit id (学生 member 挂它),
+        // c.org_unit_id = 父节点(年级)。班主任经 attributes.headTeacher 持久化 (= classes.teacher_id),
+        // 此 fallback 路径必须解析到班级自身 org (id), 否则 member join 到年级 → 找不到学生。
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        when(jdbc.queryForList(anyString(), eq(Long.class), any(Object[].class)))
+            .thenReturn(List.of()); // 两个来源查询都返回空即可, 只检视发出的 classes SQL 字符串
+
+        ClassDataScopeResolver resolver = new ClassDataScopeResolver(jdbc);
+        resolver.resolve(42L, "student");
+
+        ArgumentCaptor<String> cap = ArgumentCaptor.forClass(String.class);
+        org.mockito.Mockito.verify(jdbc, org.mockito.Mockito.atLeastOnce())
+            .queryForList(cap.capture(), eq(Long.class), any(Object[].class));
+        String classesSql = cap.getAllValues().stream()
+            .filter(s -> s.contains("classes") && s.contains("teacher_id"))
+            .findFirst().orElse("");
+
+        assertThat(classesSql)
+            .as("班主任(headTeacher)路径必须取班级自身 org id (classes.id)")
+            .contains("SELECT id FROM classes");
+        assertThat(classesSql)
+            .as("不得取 classes.org_unit_id (=父年级, member join 找不到学生)")
+            .doesNotContain("org_unit_id");
+    }
+
+    @Test
     void byMajor_studentLookup_usesAccessRelationsMember_notDroppedMajorId() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         // findUserMajorIds(): 各 queryForList 返回非空 major id, teacherCount(queryForObject) 返回 >0

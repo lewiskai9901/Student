@@ -64,9 +64,11 @@ public class ClassDataScopeResolver implements DataScopeResolver {
                 "  AND (ar.valid_to IS NULL OR ar.valid_to > NOW())",
                 Long.class, userId);
 
-            // (2) classes.teacher_id 直接命中 (老数据兼容)
+            // (2) 班主任经 attributes.headTeacher 持久化 (classes 视图暴露为 teacher_id)。
+            //     classes 是 org_units 视图: 取 c.id = 班级自身 org_unit id (学生 member 挂它),
+            //     **不可**取 c.org_unit_id (=父年级, member join 会找不到学生)。
             List<Long> fromClassesTable = jdbc.queryForList(
-                "SELECT org_unit_id FROM classes WHERE teacher_id = ? AND deleted = 0",
+                "SELECT id FROM classes WHERE teacher_id = ? AND deleted = 0",
                 Long.class, userId);
 
             java.util.Set<Long> all = new java.util.HashSet<>();
