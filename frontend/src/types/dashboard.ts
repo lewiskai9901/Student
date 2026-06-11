@@ -1,19 +1,11 @@
-// Dashboard overview response types
+// Dashboard overview response types (通用核心分区)
+//
+// 行业分区 (如教育的 education/办学规模、teaching/教务) 不在此定义 —
+// 它们由后端对应插件的 DashboardSectionContributor 产出, 经索引签名透传,
+// 类型在各插件卡组件内部声明 (views/plugins/*/dashboard/**)。
 
 export interface OrgStats {
   orgUnitCount: number
-  majorCount: number
-  classCount: number
-  studentCount: number
-  teacherCount: number
-}
-
-export interface TeachingStats {
-  currentSemester: string
-  courseCount: number
-  taskCount: number
-  scheduledRate: number
-  unscheduledCount: number
 }
 
 export interface InspectionStats {
@@ -27,9 +19,13 @@ export interface SystemStats {
   todayLoginCount: number
 }
 
-export interface DashboardOverview {
+interface DashboardOverviewCore {
   organization: OrgStats
-  teaching: TeachingStats
   inspection: InspectionStats
   system: SystemStats
+}
+
+/** 核心分区 + 行业插件分区 (sectionKey → 分区统计 map, 经交叉类型透传) */
+export type DashboardOverview = DashboardOverviewCore & {
+  [sectionKey: string]: unknown
 }

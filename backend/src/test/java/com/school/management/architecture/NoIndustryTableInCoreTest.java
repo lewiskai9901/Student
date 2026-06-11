@@ -46,7 +46,12 @@ class NoIndustryTableInCoreTest {
         "schedule_entries",
         "curriculum_plans",
         "student_grades",
-        "exam_arrangements"
+        "exam_arrangements",
+        // 2026-06-12 dashboard 去教育侵入补充: 学术结构表
+        "majors",
+        "grades",
+        "grade_directors",
+        "major_directions"
     };
 
     /** SQL 上下文关键字 — 只在 from/join 后紧跟表名才算引用. */
@@ -84,6 +89,73 @@ class NoIndustryTableInCoreTest {
         assertThat(violations)
             .as("core Java 代码在 SQL 中直接引用行业扩展表 — 核心应走 access_relations member 关系")
             .isEmpty();
+    }
+
+    /**
+     * 规则 2 (2026-06-12): 核心代码不得出现行业表名的<b>带引号字符串字面量</b>
+     * (如 {@code "classes"})。
+     *
+     * <p>背景: 规则 1 只扫 {@code FROM/JOIN <表>} 文本, 表名作为<b>方法参数</b>传入再
+     * 拼接 SQL (如 {@code countByOrgColumn("classes", ...)} → {@code "FROM " + table})
+     * 可完全绕过 — DashboardOverviewQueryService 的 majors/classes 统计正是这样漏网的。
+     * 核心没有任何正当理由持有行业表名字面量; 需要行业统计走插件贡献点。
+     */
+    /**
+     * 规则 2 的登记豁免 (按文件名结尾匹配) — 均为"基础设施注册表"性质, 非 SQL 查询;
+     * 新文件命中一律先修, 勿无脑加豁免:
+     * <ul>
+     *   <li>RedisConfig — 缓存区名 TTL 注册 (cache region 撞行业表名, 非表引用)</li>
+     *   <li>TenantInterceptor — 租户列表清单 (多租户休眠中; 启用时应改插件贡献)</li>
+     *   <li>DataPermissionSimulateController — TODO 真侵入: simulate 元数据 switch
+     *       硬编码 school_class→classes, 应改 SimulateMeta 贡献点 (独立工作项)</li>
+     * </ul>
+     */
+    private static final String[] QUOTED_LITERAL_EXEMPT_FILES = {
+        "RedisConfig.java",
+        "TenantInterceptor.java",
+        "DataPermissionSimulateController.java"
+    };
+
+    @Test
+    void coreJavaSourceHasNoQuotedIndustryTableLiteral() throws IOException {
+        Path srcRoot = Path.of("src/main/java/com/school/management");
+        List<String> violations = new ArrayList<>();
+        try (Stream<Path> files = Files.walk(srcRoot)) {
+            files
+                .filter(p -> p.toString().endsWith(".java"))
+                .filter(NoIndustryTableInCoreTest::isCorePath)
+                .filter(p -> {
+                    String s = p.toString().replace('\\', '/');
+                    for (String exempt : QUOTED_LITERAL_EXEMPT_FILES) {
+                        if (s.endsWith("/" + exempt)) return false;
+                    }
+                    return true;
+                })
+                .forEach(p -> scanQuotedLiterals(p, violations));
+        }
+        assertThat(violations)
+            .as("core Java 代码持有行业表名字符串字面量 — 参数化拼接同样是对行业表的引用, 应走插件贡献点")
+            .isEmpty();
+    }
+
+    private static void scanQuotedLiterals(Path file, List<String> out) {
+        try {
+            String stripped = stripBlockComments(Files.readString(file));
+            String[] lines = stripped.split("\n", -1);
+            for (int i = 0; i < lines.length; i++) {
+                String trimmed = lines[i].trim();
+                if (trimmed.startsWith("*") || trimmed.startsWith("//")) continue;
+                int commentIdx = lines[i].indexOf("//");
+                String code = commentIdx >= 0 ? lines[i].substring(0, commentIdx) : lines[i];
+                for (String table : FORBIDDEN_TABLES) {
+                    if (code.contains("\"" + table + "\"")) {
+                        out.add(file + ":" + (i + 1) + "  → \"" + table + "\"  // " + trimmed);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read " + file, e);
+        }
     }
 
     private static boolean isCorePath(Path p) {

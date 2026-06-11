@@ -12,7 +12,7 @@
       </span>
     </div>
 
-    <!-- Organization stats bar -->
+    <!-- Organization stats bar (通用核心) -->
     <div class="rounded-lg border border-gray-200 bg-white px-5 py-4">
       <div class="mb-2 text-sm font-medium text-gray-500">组织概览</div>
       <div class="flex items-center gap-0 divide-x divide-gray-200 text-center">
@@ -20,64 +20,33 @@
           <div class="text-2xl font-semibold text-gray-900">{{ org.orgUnitCount }}</div>
           <div class="mt-0.5 text-xs text-gray-500">组织单元</div>
         </div>
-        <div class="flex-1 cursor-pointer px-3 transition-colors hover:bg-gray-50" @click="goTo('/organization/academic/majors')">
-          <div class="text-2xl font-semibold text-gray-900">{{ org.majorCount }}</div>
-          <div class="mt-0.5 text-xs text-gray-500">专业</div>
+        <div class="flex-1 px-3">
+          <div class="text-2xl font-semibold text-gray-900">{{ system.totalUsers }}</div>
+          <div class="mt-0.5 text-xs text-gray-500">用户总数</div>
         </div>
-        <div class="flex-1 cursor-pointer px-3 transition-colors hover:bg-gray-50" @click="goTo('/organization/classes')">
-          <div class="text-2xl font-semibold text-gray-900">{{ org.classCount }}</div>
-          <div class="mt-0.5 text-xs text-gray-500">班级</div>
-        </div>
-        <div class="flex-1 cursor-pointer px-3 transition-colors hover:bg-gray-50" @click="goTo('/organization/students')">
-          <div class="text-2xl font-semibold text-gray-900">{{ org.studentCount }}</div>
-          <div class="mt-0.5 text-xs text-gray-500">学生</div>
-        </div>
-        <div class="flex-1 cursor-pointer px-3 transition-colors hover:bg-gray-50" @click="goTo('/access/users')">
-          <div class="text-2xl font-semibold text-gray-900">{{ org.teacherCount }}</div>
-          <div class="mt-0.5 text-xs text-gray-500">教师</div>
+        <div class="flex-1 px-3">
+          <div class="text-2xl font-semibold text-gray-900">{{ system.todayLoginCount }}</div>
+          <div class="mt-0.5 text-xs text-gray-500">今日登录</div>
         </div>
       </div>
     </div>
 
-    <!-- Middle row: Teaching + Inspection -->
+    <!-- 行业整行卡 (插件经 registerDashboardCards 注册, 数据来自对应 overview 分区) -->
+    <component
+      v-for="card in fullCards"
+      :key="card.code"
+      :is="card.comp"
+      :data="overviewExtra[card.sectionKey]"
+    />
+
+    <!-- Middle row: 行业半宽卡 + Inspection (通用核心) -->
     <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
-      <!-- Teaching card -->
-      <div class="rounded-lg border border-gray-200 bg-white px-5 py-4">
-        <div class="mb-3 flex items-center justify-between">
-          <span class="text-sm font-medium text-gray-500">本学期教学</span>
-          <span class="rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600">{{ teaching.currentSemester }}</span>
-        </div>
-        <div class="flex items-baseline gap-6 text-sm">
-          <div>
-            <span class="text-gray-500">开设课程</span>
-            <span class="ml-1.5 text-lg font-semibold text-gray-900">{{ teaching.courseCount }}</span>
-          </div>
-          <span class="text-gray-300">|</span>
-          <div>
-            <span class="text-gray-500">教学任务</span>
-            <span class="ml-1.5 text-lg font-semibold text-gray-900">{{ teaching.taskCount }}</span>
-          </div>
-          <span class="text-gray-300">|</span>
-          <div>
-            <span class="text-gray-500">未排课</span>
-            <span class="ml-1.5 text-lg font-semibold" :class="teaching.unscheduledCount > 0 ? 'text-amber-600' : 'text-gray-900'">{{ teaching.unscheduledCount }}</span>
-          </div>
-        </div>
-        <!-- Schedule rate progress bar -->
-        <div class="mt-3">
-          <div class="mb-1 flex items-center justify-between text-xs">
-            <span class="text-gray-500">排课进度</span>
-            <span class="font-medium text-gray-700">{{ teaching.scheduledRate }}%</span>
-          </div>
-          <div class="h-2 w-full overflow-hidden rounded-full bg-gray-100">
-            <div
-              class="h-full rounded-full transition-all duration-700"
-              :class="teaching.scheduledRate >= 90 ? 'bg-green-500' : teaching.scheduledRate >= 60 ? 'bg-blue-500' : 'bg-amber-500'"
-              :style="{ width: teaching.scheduledRate + '%' }"
-            ></div>
-          </div>
-        </div>
-      </div>
+      <component
+        v-for="card in halfCards"
+        :key="card.code"
+        :is="card.comp"
+        :data="overviewExtra[card.sectionKey]"
+      />
 
       <!-- Inspection card -->
       <div class="rounded-lg border border-gray-200 bg-white px-5 py-4">
@@ -119,23 +88,7 @@
     <!-- 受检主体个人成绩单 widget -->
     <MyInspectionWidget />
 
-    <!-- System stats bar -->
-    <div class="rounded-lg border border-gray-200 bg-white px-5 py-4">
-      <div class="mb-2 text-sm font-medium text-gray-500">{{ t('dashboard.systemStatus') }}</div>
-      <div class="flex items-baseline gap-6 text-sm">
-        <div>
-          <span class="text-gray-500">用户总数</span>
-          <span class="ml-1.5 text-lg font-semibold text-gray-900">{{ system.totalUsers }}</span>
-        </div>
-        <span class="text-gray-300">|</span>
-        <div>
-          <span class="text-gray-500">今日登录</span>
-          <span class="ml-1.5 text-lg font-semibold text-gray-900">{{ system.todayLoginCount }}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Quick actions -->
+    <!-- Quick actions (核心入口 + 插件注册入口, 统一按权限与路由存在性过滤) -->
     <div class="rounded-lg border border-gray-200 bg-white px-5 py-4">
       <div class="mb-3 text-sm font-medium text-gray-500">快捷入口</div>
       <div class="flex flex-wrap gap-2">
@@ -151,12 +104,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
+import type { Component } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
+import { usePluginsStore } from '@/stores/plugins'
 import { getOverview as getDashboardOverview } from '@/api-generated/sdk.gen'
 import type { DashboardOverview } from '@/types/dashboard'
+import {
+  enabledDashboardCards,
+  enabledDashboardShortcuts,
+  type DashboardCardDef,
+} from '@/views/dashboard/dashboardCards'
 import MyInspectionWidget from '@/components/inspection/MyInspectionWidget.vue'
 
 // F7 i18n 演示 — 后续按模块逐步把硬编码文案改为 t()
@@ -164,6 +124,7 @@ const { t } = useI18n()
 
 const router = useRouter()
 const authStore = useAuthStore()
+const pluginsStore = usePluginsStore()
 
 const currentTime = ref('')
 let timeInterval: number
@@ -190,22 +151,8 @@ const updateTime = () => {
   currentTime.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
 }
 
-// Reactive stats - initialize all to 0
-const org = reactive({
-  orgUnitCount: 0,
-  majorCount: 0,
-  classCount: 0,
-  studentCount: 0,
-  teacherCount: 0
-})
-
-const teaching = reactive({
-  currentSemester: '--',
-  courseCount: 0,
-  taskCount: 0,
-  scheduledRate: 0,
-  unscheduledCount: 0
-})
+// ── 通用核心分区 ──
+const org = reactive({ orgUnitCount: 0 })
 
 const inspection = reactive({
   activeProjectCount: 0,
@@ -218,13 +165,23 @@ const system = reactive({
   todayLoginCount: 0
 })
 
-const allQuickActions = [
+// ── 行业分区原始数据 (sectionKey → 分区 map), 传给插件注册卡 ──
+const overviewExtra = ref<Record<string, Record<string, unknown>>>({})
+
+// ── 插件注册卡 (懒加载组件实例化一次) ──
+type ResolvedCard = DashboardCardDef & { comp: Component }
+const pluginCards = computed<ResolvedCard[]>(() =>
+  enabledDashboardCards(pluginsStore.codes).map((c) => ({
+    ...c,
+    comp: defineAsyncComponent(c.component as () => Promise<Component>),
+  }))
+)
+const fullCards = computed(() => pluginCards.value.filter((c) => c.span === 'full'))
+const halfCards = computed(() => pluginCards.value.filter((c) => c.span === 'half'))
+
+// ── 快捷入口: 核心通用 + 插件注册, 统一过滤 ──
+const coreQuickActions = [
   { label: '组织架构', path: '/organization/units', perm: 'system:org:view' },
-  { label: '班级管理', path: '/student/classes',    perm: 'student:class:view' },
-  { label: '学生管理', path: '/student/list',       perm: 'student:info:view' },
-  { label: '课程管理', path: '/academic/courses',   perm: 'academic:course:view' },
-  { label: '考试管理', path: '/teaching/examinations', perm: 'teaching:exam:view' },
-  { label: '成绩管理', path: '/teaching/grades',    perm: 'teaching:grade:view' },
   { label: '用户管理', path: '/system/users',       perm: 'system:user:view' },
   { label: '角色管理', path: '/system/roles',       perm: 'system:role:view' },
   { label: '检查项目', path: '/inspection/projects',  perm: 'insp:project:view' },
@@ -232,9 +189,9 @@ const allQuickActions = [
   { label: '系统配置', path: '/system/configs',     perm: 'system:config:view' },
 ]
 
-// Phase 4A 扩展: 过滤掉路由未注册的入口 (如 EDU 禁用后 /student/list 不存在)
+// Phase 4A 扩展: 过滤掉路由未注册的入口 (如插件禁用后对应路径不存在)
 const quickActions = computed(() =>
-  allQuickActions.filter(a => {
+  [...coreQuickActions, ...enabledDashboardShortcuts(pluginsStore.codes)].filter(a => {
     if (a.perm && !authStore.hasPermission(a.perm)) return false
     const resolved = router.resolve(a.path)
     return resolved.matched[0]?.name !== 'NotFound'
@@ -250,17 +207,19 @@ const loadData = async () => {
     const res = await getDashboardOverview()
     const data = (res.data?.data ?? {}) as unknown as DashboardOverview
 
-    // Organization
     Object.assign(org, data.organization)
-
-    // Teaching
-    Object.assign(teaching, data.teaching)
-
-    // Inspection
     Object.assign(inspection, data.inspection)
-
-    // System
     Object.assign(system, data.system)
+
+    // 通用分区之外的全部分区原样存下, 供插件注册卡按 sectionKey 取用
+    const coreSections = new Set(['organization', 'inspection', 'system'])
+    const extra: Record<string, Record<string, unknown>> = {}
+    for (const [key, value] of Object.entries(data)) {
+      if (!coreSections.has(key) && value && typeof value === 'object') {
+        extra[key] = value as Record<string, unknown>
+      }
+    }
+    overviewExtra.value = extra
   } catch (error) {
     console.error('Failed to load dashboard data:', error)
   }

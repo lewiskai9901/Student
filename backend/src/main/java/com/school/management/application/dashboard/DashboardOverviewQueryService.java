@@ -1,6 +1,5 @@
 package com.school.management.application.dashboard;
 
-import com.school.management.application.organization.MembershipResolver;
 import com.school.management.domain.access.model.DataScope;
 import com.school.management.domain.access.model.valueobject.MergedDataScope;
 import com.school.management.infrastructure.access.DataPermissionPolicyService;
@@ -38,15 +37,9 @@ public class DashboardOverviewQueryService {
 
     private static final String MODULE_CODE = "dashboard";
 
-    /** 学生语义 feature (StudentPlugin.getFeatures) — 不写死类型码 STUDENT. */
-    private static final String FEATURE_LEARNER = "isLearner";
-    /** 教师语义 feature (TeacherPlugin.getFeatures) — 不写死类型码 TEACHER. */
-    private static final String FEATURE_TEACHER = "canTeach";
-
     private final JdbcTemplate jdbcTemplate;
     private final DataPermissionPolicyService policyService;
-    private final MembershipResolver membershipResolver;
-    /** 行业插件贡献的看板分区 (如教务 teaching)。无 bean 时 Spring 注入空 List, 核心不感知行业。 */
+    /** 行业插件贡献的看板分区 (如教务 teaching / 办学规模 education)。无 bean 时 Spring 注入空 List, 核心不感知行业。 */
     private final java.util.List<DashboardSectionContributor> sectionContributors;
 
     public Map<String, Object> getOverview() {
@@ -100,23 +93,15 @@ public class DashboardOverviewQueryService {
     // ================= Organization =================
 
     private Map<String, Object> getOrgStats(ScopeFilter filter) {
+        // 行业规模统计 (如教育的专业/班级/学生/教师数) 由插件分区贡献
+        // (EDU 的 EducationDashboardContributor, sectionKey=education);
+        // 核心 organization 分区只产通用组织结构统计。
         Map<String, Object> stats = new LinkedHashMap<>();
         if (filter.deniesAll()) {
             stats.put("orgUnitCount", 0);
-            stats.put("majorCount", 0);
-            stats.put("classCount", 0);
-            stats.put("studentCount", 0);
-            stats.put("teacherCount", 0);
             return stats;
         }
         stats.put("orgUnitCount", countOrgUnits(filter));
-        stats.put("majorCount", countByOrgColumn("majors",
-                "deleted = 0 AND status = 1", "org_unit_id", filter));
-        stats.put("classCount", countByOrgColumn("classes",
-                "deleted = 0 AND status = 1", "org_unit_id", filter));
-        // 学生/教师数走 member 归属 + 用户类型 feature, 不直查行业扩展表 user_student/user_teacher.
-        stats.put("studentCount", countMembersByFeature(filter, FEATURE_LEARNER));
-        stats.put("teacherCount", countMembersByFeature(filter, FEATURE_TEACHER));
         return stats;
     }
 
@@ -135,27 +120,6 @@ public class DashboardOverviewQueryService {
                 "SELECT COUNT(*) FROM org_units WHERE deleted = 0 AND status = 'ACTIVE' " +
                         "AND tenant_id = ? AND id = ?",
                 filter.tenantId, filter.orgUnitId);
-    }
-
-    /**
-     * 对带 org 列的业务表：
-     *   unrestricted → 不加 scope 条件
-     *   subtree      → col IN (SELECT id FROM org_units WHERE tenant_id = ? AND tree_path LIKE ?)
-     *   single       → col = ?
-     */
-    private int countByOrgColumn(String table, String where, String orgColumn, ScopeFilter filter) {
-        if (filter.unrestricted()) {
-            return countSafe("SELECT COUNT(*) FROM " + table + " WHERE " + where);
-        }
-        if (filter.isSubtree()) {
-            String sql = "SELECT COUNT(*) FROM " + table + " WHERE " + where +
-                    " AND " + orgColumn + " IN (" +
-                    "SELECT id FROM org_units WHERE tenant_id = ? AND tree_path LIKE ? AND deleted = 0)";
-            return countSafe(sql, filter.tenantId, filter.orgUnitPath + "%");
-        }
-        return countSafe(
-                "SELECT COUNT(*) FROM " + table + " WHERE " + where + " AND " + orgColumn + " = ?",
-                filter.orgUnitId);
     }
 
     /**
@@ -183,32 +147,11 @@ public class DashboardOverviewQueryService {
         return countSafe(memberJoin + "AND ar.resource_id = ?", filter.orgUnitId);
     }
 
-    /**
-     * 按 feature 统计人数, 按当前 scope 收敛.
-     *   unrestricted → 全系统该类型(feature)用户数 (类型口径, 不要求 org 归属)
-     *   subtree      → 子树范围 member 归属 (tree_path 前缀)
-     *   single       → 仅该 org 直接 member 归属
-     */
-    private long countMembersByFeature(ScopeFilter filter, String featureKey) {
-        try {
-            if (filter.unrestricted()) {
-                return membershipResolver.countUsersByFeature(featureKey);
-            }
-            if (filter.isSubtree()) {
-                return membershipResolver.countMembersByFeatureInSubtree(
-                        filter.tenantId, filter.orgUnitPath, featureKey);
-            }
-            return membershipResolver.countMembersByFeature(filter.orgUnitId, featureKey);
-        } catch (Exception e) {
-            log.debug("Dashboard feature count failed (feature={}): {}", featureKey, e.getMessage());
-            return 0L;
-        }
-    }
-
-    // ================= Teaching =================
-    // 教务统计 (semesters/courses/teaching_tasks) 已迁至教育插件
-    // plugins/education 的 TeachingDashboardContributor (DashboardSectionContributor 实现)。
-    // 核心不再硬编码行业统计。
+    // ================= Industry sections =================
+    // 行业统计一律走 DashboardSectionContributor 贡献点:
+    //   teaching  — TeachingDashboardContributor (semesters/courses/teaching_tasks)
+    //   education — EducationDashboardContributor (专业/班级/学生/教师规模, 含 feature 计数)
+    // 核心不持有任何行业表名/行业 feature 键。
 
     // ================= Inspection =================
 
@@ -250,26 +193,6 @@ public class DashboardOverviewQueryService {
         } catch (Exception e) {
             log.debug("Dashboard count query failed ({}): {}", sql, e.getMessage());
             return 0;
-        }
-    }
-
-    private long longSafe(String sql, Object... args) {
-        try {
-            Long val = jdbcTemplate.queryForObject(sql, Long.class, args);
-            return val != null ? val : 0L;
-        } catch (Exception e) {
-            log.debug("Dashboard long query failed: {}", e.getMessage());
-            return 0L;
-        }
-    }
-
-    private String stringSafe(String sql, String defaultValue, Object... args) {
-        try {
-            String val = jdbcTemplate.queryForObject(sql, String.class, args);
-            return val != null ? val : defaultValue;
-        } catch (Exception e) {
-            log.debug("Dashboard string query failed: {}", e.getMessage());
-            return defaultValue;
         }
     }
 

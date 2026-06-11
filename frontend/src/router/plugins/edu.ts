@@ -2,6 +2,7 @@ import type { RouteRecordRaw } from 'vue-router'
 import { registerRelationScenes } from '@/components/access/relationScenes'
 import { registerScopeSpecializations } from '@/views/access/data-permissions/dataScopeSpecializations'
 import { registerRoleTemplates } from '@/views/access/data-permissions/composables/useTemplateLibrary'
+import { registerDashboardCards, registerDashboardShortcuts } from '@/views/dashboard/dashboardCards'
 
 /**
  * 教育行业 (EDU) 路由 — Phase 4A 条件加载
@@ -63,6 +64,29 @@ registerRoleTemplates('EDU', [
     scene: { primary: 'DEPARTMENT_AND_BELOW', specializations: { student: 'BY_GRADE' }, bizAutoFollow: true },
   },
 ])
+// 总览看板"行业卡" — 数据来自后端 EDU 插件 DashboardSectionContributor 产出的分区
+// (education = EducationDashboardContributor / teaching = TeachingDashboardContributor),
+// 卡组件在 views/plugins/edu/dashboard/。EDU 禁用时后端分区与前端卡同时消失。
+registerDashboardCards('EDU', [
+  {
+    code: 'edu-scale', sectionKey: 'education', span: 'full', order: 10,
+    component: () => import('@/views/plugins/edu/dashboard/EducationScaleCard.vue'),
+  },
+  {
+    code: 'edu-teaching', sectionKey: 'teaching', span: 'half', order: 20,
+    component: () => import('@/views/plugins/edu/dashboard/TeachingStatsCard.vue'),
+  },
+])
+
+// 总览看板教育快捷入口 (原硬编码在核心 DashboardView, 2026-06-12 注册化)
+registerDashboardShortcuts('EDU', [
+  { label: '班级管理', path: '/student/classes',       perm: 'student:class:view' },
+  { label: '学生管理', path: '/student/list',          perm: 'student:info:view' },
+  { label: '课程管理', path: '/academic/courses',      perm: 'academic:course:view' },
+  { label: '考试管理', path: '/teaching/examinations', perm: 'teaching:exam:view' },
+  { label: '成绩管理', path: '/teaching/grades',       perm: 'teaching:grade:view' },
+])
+
 const eduRoutes: RouteRecordRaw[] = [
   // ==================== 我的班级 /my-class (order: 2) ====================
   {
