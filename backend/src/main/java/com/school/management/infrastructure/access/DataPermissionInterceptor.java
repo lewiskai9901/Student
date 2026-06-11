@@ -220,6 +220,15 @@ public class DataPermissionInterceptor implements Interceptor {
                 if (resourceType.isEmpty() && moduleConfig.getResourceType() != null) {
                     resourceType = moduleConfig.getResourceType();
                 }
+                // 最终兜底: moduleCode 本身。注解 resourceType 默认 "", 而
+                // moduleConfig.resourceType 映射自 data_resources.access_resource_type
+                // (另一语义: 是否走 access_relations 子查询, student 等均为 NULL) —
+                // 不兜底时 resolver 收到 "" → "not supported" → 一律降级 SELF
+                // (Casbin 缺口 E2E 实测: BY_CLASS 班主任查学生被降成只看自己)。
+                // resolver 的 switch case 就是 data_resources 资源码 (= moduleCode)。
+                if (resourceType.isEmpty()) {
+                    resourceType = moduleCode;
+                }
                 ParameterizedCondition pluginCond = buildPluginDimCondition(
                         rawScopeCode, annotation, resourceType, userContext, globalParamIdx);
                 if (pluginCond != null && !pluginCond.sql.isEmpty()) {
@@ -304,10 +313,20 @@ public class DataPermissionInterceptor implements Interceptor {
         if (ids == null) {
             // Dim not found or resolver unavailable → safe degrade to SELF
             log.warn("[DataPermission] plugin dim '{}' unavailable, degrading to SELF", dimCode);
-            String creatorField = sanitizeIdentifier(
-                    annotation.creatorField() == null || annotation.creatorField().isEmpty()
-                            ? "created_by" : annotation.creatorField());
-            cond.sql = alias + creatorField + " = ?";
+            // viaMembership 主表: 行本身的 subject 列就是"本人"(如 user_student.user_id),
+            // 与静态 SELF 路径 (buildMembershipCondition) 同语义。不可拼 creatorField —
+            // 这类表往往没有 created_by 列 (user_student 的已 DROP), 拼进去直接 SQL 报错。
+            String selfField;
+            if (annotation.viaMembership()) {
+                selfField = sanitizeIdentifier(
+                        annotation.membershipSubjectColumn() == null || annotation.membershipSubjectColumn().isEmpty()
+                                ? "user_id" : annotation.membershipSubjectColumn());
+            } else {
+                selfField = sanitizeIdentifier(
+                        annotation.creatorField() == null || annotation.creatorField().isEmpty()
+                                ? "created_by" : annotation.creatorField());
+            }
+            cond.sql = alias + selfField + " = ?";
             cond.addParam("_dp_pluginSelf_" + paramOffset, userContext.getUserId(),
                     Long.class, JdbcType.BIGINT);
             return cond;
