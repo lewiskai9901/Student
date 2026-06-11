@@ -120,4 +120,30 @@ VALUES
 ON DUPLICATE KEY UPDATE
   `resource_id`=VALUES(`resource_id`),`access_level`=VALUES(`access_level`),`deleted`=VALUES(`deleted`);
 
+-- ---------------------------------------------------------------------------
+-- 5. 班主任 E2E 账号 (Casbin 缺口修复验证, 2026-06-12)
+--    dpt_ct / admin123 — CLASS_TEACHER 角色 + 一班(...1004) CLASS_TEACHER 关系。
+--    用途: 非超管两层贯通验证 — 功能权限 (默认矩阵授 student:info:view 等) +
+--    数据权限 (BY_CLASS → ClassDataScopeResolver → 恰好一班 2 学生);
+--    未授权码 (如 system:role:view) 应 403。
+-- ---------------------------------------------------------------------------
+INSERT INTO `users`
+  (`id`,`username`,`password`,`real_name`,`status`,`deleted`,`tenant_id`)
+VALUES
+  (9000000000000002101,'dpt_ct','$2a$10$NBILuC13J0f71JBhs8sr5uiB02XDpR4BF9uhki3dDsXEaIGanmR6e','DPTEST CT',1,0,1)
+ON DUPLICATE KEY UPDATE
+  `real_name`=VALUES(`real_name`),`status`=VALUES(`status`),`deleted`=VALUES(`deleted`);
+
+INSERT INTO `user_roles` (`id`,`user_id`,`role_id`,`tenant_id`,`is_active`)
+SELECT 9000000000000002102, 9000000000000002101, r.id, 1, 1
+FROM `roles` r WHERE r.role_code='CLASS_TEACHER' AND r.deleted=0 LIMIT 1
+ON DUPLICATE KEY UPDATE `is_active`=VALUES(`is_active`);
+
+INSERT INTO `access_relations`
+  (`id`,`resource_type`,`resource_id`,`relation`,`subject_type`,`subject_id`,`access_level`,`deleted`,`tenant_id`)
+VALUES
+  (9000000000000002103,'org_unit',9000000000000001004,'CLASS_TEACHER','user',9000000000000002101,'READ',0,1)
+ON DUPLICATE KEY UPDATE
+  `resource_id`=VALUES(`resource_id`),`deleted`=VALUES(`deleted`);
+
 SET FOREIGN_KEY_CHECKS = @OLD_FK;

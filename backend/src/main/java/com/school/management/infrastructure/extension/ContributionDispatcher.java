@@ -65,6 +65,7 @@ public class ContributionDispatcher implements ApplicationRunner {
         AtomicInteger domains = new AtomicInteger();
         AtomicInteger workflows = new AtomicInteger();
         AtomicInteger roleScopes = new AtomicInteger();
+        AtomicInteger rolePerms = new AtomicInteger();
 
         Set<String> seenKeys = new HashSet<>();
 
@@ -133,6 +134,11 @@ public class ContributionDispatcher implements ApplicationRunner {
                             rsbc.uniqueKey(), e.getMessage());
                     }
                 }
+                else if (c instanceof Contribution.RolePermissionBindingContribution) {
+                    rolePerms.incrementAndGet();
+                    // UPSERT 不在这里做: dispatcher @Order(60) 跑在角色/权限注册前, 全新库会全部 skip.
+                    // 真正写 role_permissions 的是 RolePermissionBindingRegistrar (@Order 600).
+                }
                 else if (c instanceof Contribution.MenuContribution)         menus.incrementAndGet();
                 else if (c instanceof Contribution.DataScopeContribution)    scopes.incrementAndGet();
                 else if (c instanceof Contribution.RouteContribution)        routes.incrementAndGet();
@@ -158,11 +164,11 @@ public class ContributionDispatcher implements ApplicationRunner {
         }
 
         log.info("[ContributionDispatcher] 扫描 {} 个包, 收到 {} 条 Contribution " +
-                "(entity {}, relation {}, event-domain {}, trigger-point {}, event-type {}, perm {}, role {}, role-scope {}, menu {}, scope {}, route {}, policy {}, target-mode {}, domain {}, workflow {})",
+                "(entity {}, relation {}, event-domain {}, trigger-point {}, event-type {}, perm {}, role {}, role-scope {}, role-perm {}, menu {}, scope {}, route {}, policy {}, target-mode {}, domain {}, workflow {})",
             packages.size(), total.get(),
             entities.get(), relations.get(), events.get(),
             triggerPoints.get(), eventTypes.get(),
-            perms.get(), roles.get(), roleScopes.get(), menus.get(), scopes.get(), routes.get(),
+            perms.get(), roles.get(), roleScopes.get(), rolePerms.get(), menus.get(), scopes.get(), routes.get(),
             policies.get(), targetModes.get(), domains.get(), workflows.get());
     }
 }

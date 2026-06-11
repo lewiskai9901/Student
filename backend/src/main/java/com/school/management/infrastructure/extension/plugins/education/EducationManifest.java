@@ -55,7 +55,8 @@ public class EducationManifest implements PluginPackage {
 
     @Override
     public Stream<Contribution> contribute() {
-        return Stream.concat(relationTypes(), roleScopeBindings());
+        return Stream.concat(relationTypes(),
+               Stream.concat(roleScopeBindings(), rolePermissionBindings()));
     }
 
     private Stream<Contribution> relationTypes() {
@@ -132,6 +133,154 @@ public class EducationManifest implements PluginPackage {
             Contribution.RoleScopeBindingContribution.bind("ACADEMIC_DIRECTOR", "teacher_preference", "ALL"),
             Contribution.RoleScopeBindingContribution.bind("SCHOOL_ADMIN", "teacher_preference", "ALL")
         );
+    }
+
+    /**
+     * 默认功能权限矩阵 — role × permission_code 绑定, 由
+     * {@link com.school.management.infrastructure.extension.RolePermissionBindingRegistrar}
+     * (@Order 600) INSERT IGNORE 到 role_permissions (admin 在 UI 的调整不被覆盖)。
+     *
+     * <p>设计原则 (Casbin 缺口修复, 2026-06-12):
+     * <ul>
+     *   <li><b>最小可用集</b> — 只授角色日常工作流必需的码, view/execute 优先;</li>
+     *   <li><b>不授任何 :delete</b> — 删除一律留给 admin 在 UI 显式授予;</li>
+     *   <li><b>不授 system:role / system:permission / tenant:*</b> — 权限管理权只属于
+     *       TENANT_ADMIN (CoreManifest 声明) 和超管;</li>
+     *   <li>STUDENT / PARENT 不绑 — 它们的端点是 PUBLIC/SELF scope, Casbin 不拦,
+     *       行级隔离由数据权限层 (SELF scope, 见 roleScopeBindings) 负责。</li>
+     * </ul>
+     * 码值守护: PluginDeclarationCoverageTest Test 5 — 引用未声明的角色码/权限码会挂构建。
+     */
+    private Stream<Contribution> rolePermissionBindings() {
+        return Stream.of(
+            // ─── SCHOOL_ADMIN 学校管理员: 全业务面 view + 业务 edit (无 delete / 无权限管理) ───
+            Contribution.RolePermissionBindingContribution.bindAll("SCHOOL_ADMIN",
+                "admin:access", "dashboard:view",
+                "system:org:view", "system:org:edit", "system:org:create", "system:org:update",
+                "system:user:view", "system:user:edit", "system:user:add",
+                "system:audit:view", "system:config:view", "system:message:manage",
+                "student:info:view", "student:info:edit", "student:info:add",
+                "student:class:view", "student:class:edit", "student:class:add",
+                "student:cohort:view", "student:cohort:edit",
+                "student:attendance:view", "student:attendance:edit",
+                "student:warning:view", "student:warning:edit",
+                "teacher:profile:view", "teacher:profile:edit",
+                "enrollment:view", "enrollment:edit",
+                "academic:major:view", "academic:curriculum:view",
+                "teaching:task:view", "teaching:schedule:view", "teaching:grade:view", "teaching:exam:view",
+                "place:view", "place:edit", "place:add",
+                "asset:manage:view", "asset:manage:edit", "asset:borrow:view",
+                "insp:platform:view", "insp:template:view", "insp:project:view", "insp:analytics:view",
+                "inspection_appeal:view", "inspection_appeal:review",
+                "calendar:view", "calendar:edit"),
+
+            // ─── ACADEMIC_DIRECTOR 教务主任: 教学条线全权, 学生/班级只读 ───
+            Contribution.RolePermissionBindingContribution.bindAll("ACADEMIC_DIRECTOR",
+                "dashboard:view",
+                "teaching:task:view", "teaching:task:edit",
+                "teaching:schedule:view", "teaching:schedule:edit",
+                "teaching:grade:view", "teaching:grade:edit",
+                "teaching:exam:view", "teaching:exam:edit",
+                "teaching:offering:view", "teaching:offering:edit",
+                "teaching:class:view", "teaching:class:edit",
+                "teaching:constraint:view", "teaching:constraint:edit",
+                "teaching:workflow:view", "teaching:workflow:edit",
+                "academic:curriculum:view", "academic:curriculum:edit",
+                "academic:major:view", "academic:major:edit",
+                "academic:course:view", "academic:course:edit",
+                "academic:grade-direction:view", "academic:grade-direction:edit",
+                "schedule:policy:view", "schedule:policy:manage",
+                "student:info:view", "student:class:view", "student:cohort:view",
+                "teacher:profile:view",
+                "enrollment:view", "enrollment:edit",
+                "calendar:view", "calendar:edit"),
+
+            // ─── DEPT_ADMIN 系部管理员: 本系业务 view + 学生/班级 edit (数据层 DEPARTMENT_AND_BELOW 圈范围) ───
+            Contribution.RolePermissionBindingContribution.bindAll("DEPT_ADMIN",
+                "dashboard:view",
+                "student:info:view", "student:info:edit",
+                "student:class:view", "student:class:edit",
+                "student:attendance:view", "student:warning:view",
+                "teacher:profile:view",
+                "teaching:task:view", "teaching:schedule:view", "teaching:grade:view",
+                "academic:major:view", "academic:course:view",
+                "system:org:view",
+                "insp:analytics:view", "inspection_record:view",
+                "calendar:view"),
+
+            // ─── GRADE_DIRECTOR 年级主任: 年级面 view + 预警处置 (数据层 BY_GRADE 圈范围) ───
+            Contribution.RolePermissionBindingContribution.bindAll("GRADE_DIRECTOR",
+                "dashboard:view",
+                "student:info:view", "student:class:view",
+                "student:attendance:view",
+                "student:warning:view", "student:warning:edit",
+                "teaching:grade:view", "teaching:schedule:view",
+                "insp:analytics:view", "insp:received:view", "inspection_record:view",
+                "calendar:view"),
+
+            // ─── CLASS_TEACHER 班主任: 本班学生全面管理 + 检查执行/申诉 (数据层 BY_CLASS 圈范围) ───
+            Contribution.RolePermissionBindingContribution.bindAll("CLASS_TEACHER",
+                "dashboard:view",
+                "student:info:view", "student:info:edit",
+                "student:attendance:view", "student:attendance:edit",
+                "student:warning:view", "student:warning:edit",
+                "student:class:view", "student:myclass:view",
+                "teaching:grade:view", "teaching:schedule:view",
+                "insp:task:view", "insp:task:execute",
+                "insp:submission:view", "insp:submission:create", "insp:submission:execute",
+                "insp:received:view",
+                "inspection_appeal:create", "inspection_appeal:view",
+                "place:view", "calendar:view"),
+
+            // ─── SUBJECT_TEACHER 任课教师: 成绩录入 + 考勤 (数据层 BY_CLASS 圈任课班) ───
+            Contribution.RolePermissionBindingContribution.bindAll("SUBJECT_TEACHER",
+                "dashboard:view",
+                "student:info:view",
+                "student:attendance:view", "student:attendance:edit",
+                "teaching:grade:view", "teaching:grade:edit",
+                "teaching:task:view", "teaching:schedule:view", "teaching:exam:view",
+                "place:view", "calendar:view"),
+
+            // ─── COUNSELOR 辅导员: 学生关怀面 (数据层 DEPARTMENT_AND_BELOW 圈范围) ───
+            Contribution.RolePermissionBindingContribution.bindAll("COUNSELOR",
+                "dashboard:view",
+                "student:info:view",
+                "student:attendance:view", "student:attendance:edit",
+                "student:warning:view", "student:warning:edit",
+                "student:class:view",
+                "insp:received:view",
+                "calendar:view"),
+
+            // ─── DORMITORY_MANAGER 宿管员: 场所 + 卫生检查执行 ───
+            Contribution.RolePermissionBindingContribution.bindAll("DORMITORY_MANAGER",
+                "dashboard:view",
+                "place:view", "place:edit",
+                "student:info:view",
+                "insp:task:view", "insp:task:execute",
+                "insp:submission:view", "insp:submission:create", "insp:submission:execute",
+                "insp:received:view",
+                "calendar:view"),
+
+            // ─── INSPECTOR 检查员: 检查执行全链 ───
+            Contribution.RolePermissionBindingContribution.bindAll("INSPECTOR",
+                "dashboard:view",
+                "insp:task:view", "insp:task:execute",
+                "insp:submission:view", "insp:submission:create", "insp:submission:execute",
+                "insp:received:view",
+                "insp:violation:view", "insp:violation:create",
+                "insp:result:view",
+                "insp:template:view", "insp:plan:view",
+                "place:view", "calendar:view"),
+
+            // ─── TEACHER 教师统一角色: 基础只读面 (职责细分靠 teacher_assignments) ───
+            Contribution.RolePermissionBindingContribution.bindAll("TEACHER",
+                "dashboard:view",
+                "student:info:view",
+                "teaching:task:view", "teaching:schedule:view", "teaching:grade:view",
+                "teacher:profile:view",
+                "insp:received:view",
+                "place:view", "calendar:view")
+        ).flatMap(List::stream);
     }
 
     private static Contribution.RelationTypeContribution wrap(RelationTypeDef def) {

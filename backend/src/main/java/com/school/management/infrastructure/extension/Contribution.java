@@ -27,6 +27,7 @@ public sealed interface Contribution permits
     Contribution.PermissionContribution,
     Contribution.RoleContribution,
     Contribution.RoleScopeBindingContribution,
+    Contribution.RolePermissionBindingContribution,
     Contribution.MenuContribution,
     Contribution.DataScopeContribution,
     Contribution.RouteContribution,
@@ -136,6 +137,44 @@ public sealed interface Contribution permits
 
         public static RoleScopeBindingContribution bind(String role, String resource, String scope) {
             return new RoleScopeBindingContribution(role, resource, scope);
+        }
+    }
+
+    /**
+     * 角色 × 功能权限默认绑定贡献 — {@link RoleScopeBindingContribution} 的功能权限对偶.
+     *
+     * <p>P5-1 只补了数据权限的默认 wiring (role_data_scopes); 功能权限的授予层
+     * (role_permissions) 一直没有对等机制 — RolePresetDef.permissionCodes 是从未被
+     * 消费的死字段, 14 个非超管预置角色 0 grants, 任何 MANAGEMENT @CasbinAccess
+     * 端点对非超管一律 403。本 permit 补齐这半边:
+     * <pre>
+     *   Contribution.RolePermissionBindingContribution.bindAll("CLASS_TEACHER",
+     *       "student:info:view", "student:attendance:edit", "insp:task:execute")
+     * </pre>
+     *
+     * <p>由 {@link RolePermissionBindingRegistrar} (@Order(600), 在 PermissionRegistrar /
+     * RolePresetRegistrar 之后) INSERT IGNORE 到 role_permissions — 与 P5-1 同为
+     * "声明式默认 + 命令式覆盖": admin 在 UI 调整后重启不被覆盖。注意**不挂**
+     * ContributionDispatcher (@Order(60) 跑在角色/权限注册前, 全新库会全部 skip)。
+     *
+     * @param roleCode       角色码 (须已由 RoleContribution / RolePresetPlugin 声明)
+     * @param permissionCode 权限码 (须已由 PermissionContribution / PermissionProvider 声明)
+     */
+    record RolePermissionBindingContribution(String roleCode, String permissionCode)
+            implements Contribution {
+        @Override public String uniqueKey() {
+            return "role-perm:" + roleCode + "/" + permissionCode;
+        }
+
+        public static RolePermissionBindingContribution bind(String role, String permission) {
+            return new RolePermissionBindingContribution(role, permission);
+        }
+
+        /** 一个角色批量绑多个权限码的便捷形态 (manifest 里配矩阵用) */
+        public static List<RolePermissionBindingContribution> bindAll(String role, String... permissions) {
+            return java.util.Arrays.stream(permissions)
+                .map(p -> new RolePermissionBindingContribution(role, p))
+                .toList();
         }
     }
 

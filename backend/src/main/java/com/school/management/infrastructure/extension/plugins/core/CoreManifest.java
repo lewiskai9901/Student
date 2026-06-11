@@ -41,7 +41,7 @@ public class CoreManifest implements PluginPackage {
 
     @Override
     public Stream<Contribution> contribute() {
-        return Stream.of(
+        Stream<Contribution> base = Stream.of(
             // 成员关系 — 每用户唯一归属 (maxPerSubject=1), forceGrant 强制
             wrap(RelationTypeDef.of(CoreRelations.MEMBER, "user", "org_unit", "成员",
                 "MEMBERSHIP", "用户属于某组织").withMaxPerSubject(1)),
@@ -121,6 +121,33 @@ public class CoreManifest implements PluginPackage {
                 "processes/access-relation-approval.bpmn20.xml",
                 "关系授权审批流程")
         );
+        return Stream.concat(base, tenantAdminPermissionBindings());
+    }
+
+    /**
+     * TENANT_ADMIN 默认功能权限 — 让"非超管的管理员"真正可用 (Casbin 缺口修复, 2026-06-12)。
+     *
+     * <p>之前 14 个非超管角色 role_permissions 全 0 行, 整个系统只有超管 bypass 在工作。
+     * TENANT_ADMIN 作为核心声明的租户级管理员, 拿到系统管理面 (用户/组织/角色/配置/审计)
+     * + 权限管理 — 这是它与行业管理角色 (如 SCHOOL_ADMIN, 只有业务面) 的边界。
+     * 仍然不授 :delete 与 tenant:* (建租户/删数据留给超管或 UI 显式授予)。
+     *
+     * <p>由 RolePermissionBindingRegistrar (@Order 600) INSERT IGNORE 落库,
+     * admin 在 UI 的调整不被覆盖。码值守护: PluginDeclarationCoverageTest Test 5。
+     */
+    private Stream<Contribution> tenantAdminPermissionBindings() {
+        return Contribution.RolePermissionBindingContribution.bindAll("TENANT_ADMIN",
+            "admin:access", "dashboard:view",
+            "system:user:view", "system:user:edit", "system:user:add",
+            "system:org:view", "system:org:edit", "system:org:create", "system:org:update",
+            "system:role:view", "system:role:edit", "system:role:add",
+            "system:permission:view", "system:permission:tree",
+            "system:config:view", "system:config:edit",
+            "system:audit:view", "system:message:manage",
+            "access:relation:view", "access:data-permission:view",
+            "plugin-platform:view", "entity-type-config:view",
+            "calendar:view"
+        ).stream().map(c -> (Contribution) c);
     }
 
     private static Contribution.RelationTypeContribution wrap(RelationTypeDef def) {

@@ -155,6 +155,73 @@ class PluginDeclarationCoverageTest {
     }
 
     // =============================================================
+    // Test 5: RolePermissionBinding 覆盖度 — 默认授权矩阵里引用的 角色码/权限码
+    //   必须分别有 RolePresetPlugin / PermissionProvider 声明.
+    //   否则 RolePermissionBindingRegistrar 启动时静默 skip (典型: 手滑写错码),
+    //   该角色的默认授权悄悄丢失.
+    // =============================================================
+    @Test
+    @DisplayName("RolePermissionBindingContribution.bind/bindAll 引用的角色码和权限码都必须已声明")
+    void every_role_permission_binding_must_reference_declared_role_and_permission() {
+        Set<String> boundRoles = new TreeSet<>();
+        Set<String> boundPerms = new TreeSet<>();
+
+        // bind("ROLE", "perm")
+        Pattern bindPattern = Pattern.compile(
+            "RolePermissionBindingContribution\\s*\\.\\s*bind\\s*\\(\\s*\"([A-Z_]+)\"\\s*,\\s*\"([^\"]+)\"\\s*\\)");
+        // bindAll("ROLE", "p1", "p2", ...) — var-args 可跨行
+        Pattern bindAllPattern = Pattern.compile(
+            "(?:RolePermissionBindingContribution\\s*\\.\\s*)?bindAll\\s*\\(\\s*\"([A-Z_]+)\"\\s*((?:,\\s*\"[^\"]+\"\\s*)+)\\)",
+            Pattern.DOTALL);
+        Pattern quoted = Pattern.compile("\"([^\"]+)\"");
+
+        for (String src : allJavaSource) {
+            Matcher m = bindPattern.matcher(src);
+            while (m.find()) {
+                boundRoles.add(m.group(1));
+                boundPerms.add(m.group(2));
+            }
+            Matcher ma = bindAllPattern.matcher(src);
+            while (ma.find()) {
+                boundRoles.add(ma.group(1));
+                Matcher q = quoted.matcher(ma.group(2));
+                while (q.find()) boundPerms.add(q.group(1));
+            }
+        }
+
+        // 已声明权限码 (同 Test 1 的 declPattern)
+        Pattern permDeclPattern = Pattern.compile(
+            "(?:PermissionDef\\.)?of\\s*\\(\\s*\"([a-z_][a-zA-Z0-9:_\\.-]*)\"");
+        Set<String> declaredPerms = new TreeSet<>();
+        for (String src : allJavaSource) {
+            if (!src.contains("implements PermissionProvider")) continue;
+            Matcher m = permDeclPattern.matcher(src);
+            while (m.find()) declaredPerms.add(m.group(1));
+        }
+
+        // 已声明角色码 (同 Test 3 的 declPattern)
+        Pattern roleDeclPattern = Pattern.compile(
+            "RolePresetDef\\.of\\s*\\(\\s*\"([A-Z_][A-Z0-9_]*)\"");
+        Set<String> declaredRoles = new TreeSet<>();
+        for (String src : allJavaSource) {
+            if (!src.contains("implements RolePresetPlugin")) continue;
+            Matcher m = roleDeclPattern.matcher(src);
+            while (m.find()) declaredRoles.add(m.group(1));
+        }
+
+        Set<String> missingPerms = new TreeSet<>(boundPerms);
+        missingPerms.removeAll(declaredPerms);
+        Set<String> missingRoles = new TreeSet<>(boundRoles);
+        missingRoles.removeAll(declaredRoles);
+
+        assertTrue(missingPerms.isEmpty() && missingRoles.isEmpty(),
+            String.format("%n默认授权矩阵引用了未声明的码 — Registrar 会静默 skip, 默认授权悄悄丢失:%n" +
+                "未声明权限码 (%d): %s%n未声明角色码 (%d): %s%n" +
+                "修复: 权限码加到 PermissionProvider, 角色码加到 RolePresetPlugin; 或纠正矩阵里的笔误.",
+                missingPerms.size(), missingPerms, missingRoles.size(), missingRoles));
+    }
+
+    // =============================================================
     // Test 4: EntityTypeCode / RelationCode 反模式检查 — memory 约定:
     //   不允许 "STUDENT".equals(user.getType()) 这种字符串匹配, 应该用 hasFeature()
     //   这是已记录的 memory 反模式,此测试只是把它固化为构建期守卫.
