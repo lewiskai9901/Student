@@ -115,8 +115,22 @@ public class MajorDataScopeResolver implements DataScopeResolver {
     private List<Long> queryStudentIdsByMajors(List<Long> majorIds) {
         if (majorIds.isEmpty()) return Collections.emptyList();
         String placeholders = majorIds.stream().map(id -> "?").reduce((a, b) -> a + "," + b).orElse("");
+        // 学生归属已统一到 access_relations member 关系 (subject=学生 user_id, resource=班级 org_unit),
+        // user_student 不再有 major_id 列。专业**不直接含学生**, 经班级:
+        //   major → classes.major_id 反查归属该专业的班级 → member 学生。
+        // 注意 classes 是 org_units 上的 VIEW (WHERE type_code='CLASS'): c.id = 班级自身 org_unit id
+        // (学生即 member 于它), 而 c.org_unit_id = 父节点(年级)。故取 c.id 不取 c.org_unit_id
+        // (与 queryClassIdsByMajors 的 SELECT id 一致)。
         return jdbc.queryForList(
-            "SELECT id FROM user_student WHERE major_id IN (" + placeholders + ") AND deleted = 0",
+            "SELECT s.id FROM user_student s " +
+            "JOIN access_relations mar ON mar.subject_id = s.user_id " +
+            "  AND mar.relation = 'member' AND mar.resource_type = 'org_unit' " +
+            "  AND mar.subject_type = 'user' AND mar.deleted = 0 " +
+            "  AND (mar.valid_to IS NULL OR mar.valid_to > NOW()) " +
+            "WHERE mar.resource_id IN (" +
+            "  SELECT c.id FROM classes c " +
+            "  WHERE c.major_id IN (" + placeholders + ") AND c.deleted = 0" +
+            ") AND s.deleted = 0",
             Long.class, majorIds.toArray());
     }
 

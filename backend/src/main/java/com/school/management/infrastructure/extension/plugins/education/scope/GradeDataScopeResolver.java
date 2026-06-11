@@ -20,8 +20,9 @@ import java.util.List;
  *   <li>{@code counselor_ids} (JSON 数组) 包含 userId</li>
  * </ul>
  *
- * <p>年级 = org_unit 类型 = GRADE. 所以 grade_directors.org_unit_id 反查
- * user_student.grade_id (or org_unit_id 是 GRADE 类型时).
+ * <p>年级 = org_unit 类型 = GRADE. grade_directors.org_unit_id 得到用户负责的年级 org,
+ * 再经 tree_path 子树展开到后代班级 org, 由 access_relations member 关系反查归属学生
+ * (user_student 已无 grade_id 列, 见 {@link #queryStudentIdsByGrades}).
  */
 @Slf4j
 @Component
@@ -72,9 +73,21 @@ public class GradeDataScopeResolver implements DataScopeResolver {
     private List<Long> queryStudentIdsByGrades(List<Long> gradeOrgUnitIds) {
         if (gradeOrgUnitIds.isEmpty()) return Collections.emptyList();
         String placeholders = gradeOrgUnitIds.stream().map(id -> "?").reduce((a, b) -> a + "," + b).orElse("");
+        // 学生归属已统一到 access_relations member 关系 (subject=学生 user_id, resource=班级 org_unit),
+        // user_student 不再有 grade_id 列。年级**不直接含学生**, 经子班级:
+        //   年级 org → tree_path 子树展开到后代班级 org → member 学生
+        // (与 DataPermissionInterceptor.buildMembershipCondition 的 CUSTOM 子树口径、
+        //  以及 ClassDataScopeResolver.queryStudentIdsByClasses 的 member 口径一致)
         return jdbc.queryForList(
-            "SELECT id FROM user_student " +
-            "WHERE grade_id IN (" + placeholders + ") AND deleted = 0",
+            "SELECT s.id FROM user_student s " +
+            "JOIN access_relations mar ON mar.subject_id = s.user_id " +
+            "  AND mar.relation = 'member' AND mar.resource_type = 'org_unit' " +
+            "  AND mar.subject_type = 'user' AND mar.deleted = 0 " +
+            "  AND (mar.valid_to IS NULL OR mar.valid_to > NOW()) " +
+            "WHERE mar.resource_id IN (" +
+            "  SELECT o.id FROM org_units o JOIN org_units g ON g.id IN (" + placeholders + ") " +
+            "  WHERE o.deleted = 0 AND o.tree_path LIKE CONCAT(g.tree_path, '%')" +
+            ") AND s.deleted = 0",
             Long.class, gradeOrgUnitIds.toArray());
     }
 
