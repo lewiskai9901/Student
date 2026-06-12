@@ -36,12 +36,14 @@ export const CORE_RELATION_SCENES: RelationScene[] = [
     subjectLabel: '选择用户', resourceLabel: '选择组织',
   },
   {
-    code: 'ASSIGN_PLACE_ADMIN', title: '场所负责人', desc: '指定某场所的负责人',
+    // admin = 管理权 (权限语义); 业务问责的"场所责任人"走 responsible_for (场所表单维护)
+    code: 'ASSIGN_PLACE_ADMIN', title: '场所管理员', desc: '指定某场所的管理员（管理权限）',
     relation: 'admin', subjectType: 'user', resourceType: 'place',
-    subjectLabel: '选择负责人', resourceLabel: '选择场所',
+    subjectLabel: '选择管理员', resourceLabel: '选择场所',
   },
   {
-    code: 'PLACE_BELONGS_ORG', title: '场所归属', desc: '绑定场所到某组织',
+    // belongs_to = 归属真相源 (覆盖点); 投影列 effective_org_unit_id 由后端投影器同步
+    code: 'PLACE_BELONGS_ORG', title: '场所归属', desc: '绑定场所到某组织（无绑定=继承父场所）',
     relation: 'belongs_to', subjectType: 'place', resourceType: 'org_unit',
     subjectLabel: '选择场所', resourceLabel: '归属组织',
   },
