@@ -30,12 +30,13 @@ import java.util.List;
  * 因为主表 user_student 的行是学生档案, 真正的 subject 是 s.user_id 不是 s.id。
  */
 @Mapper
+// 不配 creatorField: user_student 无 created_by 列 (V20260531 已删), viaMembership 的
+// SELF 语义走 membershipSubjectColumn (s.user_id = 本人), 拦截器各路径均不发出 creatorField。
 @DataPermission(
     module = "student",
     tableAlias = "s",
     viaMembership = true,
-    membershipSubjectColumn = "user_id",
-    creatorField = "created_by"
+    membershipSubjectColumn = "user_id"
 )
 public interface DddStudentMapper extends BaseMapper<StudentPO> {
 
