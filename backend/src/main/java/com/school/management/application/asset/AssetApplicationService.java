@@ -340,6 +340,27 @@ public class AssetApplicationService {
             "FROM asset_history WHERE asset_id = ? ORDER BY operate_time DESC", assetId);
     }
 
+    /**
+     * 场所类型码 → 显示名 (大写 key)。来源 entity_type_configs 的 PLACE 类型字典 —
+     * 行业类型 (如教育的 CLASSROOM→教室/DORMITORY→宿舍) 由对应插件贡献, 插件禁用
+     * (plugin_enabled=0) 即从映射消失, 核心不持有任何行业标签字面量。
+     * 供资产展示 (locationTypeDesc) 用; 表很小, 每请求查一次。
+     */
+    public Map<String, String> placeTypeNames() {
+        Map<String, String> names = new HashMap<>();
+        try {
+            jdbcTemplate.query(
+                "SELECT type_code, type_name FROM entity_type_configs " +
+                "WHERE entity_type = 'PLACE' AND deleted = 0 AND is_enabled = 1 AND plugin_enabled = 1",
+                rs -> {
+                    names.put(rs.getString("type_code").toUpperCase(), rs.getString("type_name"));
+                });
+        } catch (Exception ignored) {
+            // 字典不可用时回退原始码展示, 不影响资产主数据
+        }
+        return names;
+    }
+
     public Map<String, Object> statistics() {
         Map<String, Object> stats = new HashMap<>();
         Map<String, Object> counts = jdbcTemplate.queryForMap(

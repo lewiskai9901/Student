@@ -56,7 +56,13 @@ class NoIndustryTypeLiteralInCoreTest {
         "'CLASS_TEACHER'",
         "'GRADE_DIRECTOR'",
         "'ACADEMIC_DIRECTOR'",
-        "'SUBJECT_TEACHER'"
+        "'SUBJECT_TEACHER'",
+        // 小写场所类型码 + 中文标签 — 2026-06-12 AssetController 标签 switch 下沉
+        // entity_type_configs 后纳入守护 (审计记载的最后一个守护洞)
+        "\"classroom\"",
+        "\"dormitory\"",
+        "\"教室\"",
+        "\"宿舍\""
     };
 
     /** 排除的子包 (插件 / 仍保留在 core 的历史包) */

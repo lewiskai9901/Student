@@ -39,7 +39,8 @@ public class AssetController {
         Map<String, Object> result = assetService.listPaged(pageNum, pageSize, categoryId, status,
             locationType, locationId, keyword);
         List<Map<String, Object>> records = (List<Map<String, Object>>) result.get("records");
-        for (Map<String, Object> r : records) enrichAsset(r);
+        Map<String, String> placeTypes = assetService.placeTypeNames();
+        for (Map<String, Object> r : records) enrichAsset(r, placeTypes);
         return Result.success(result);
     }
 
@@ -48,7 +49,7 @@ public class AssetController {
     public Result<Map<String, Object>> getAsset(@PathVariable Long id) {
         Map<String, Object> asset = assetService.findById(id);
         if (asset == null) return Result.error("资产不存在");
-        enrichAsset(asset);
+        enrichAsset(asset, assetService.placeTypeNames());
         return Result.success(asset);
     }
 
@@ -137,8 +138,9 @@ public class AssetController {
     public Result<Map<String, Object>> getAssetStatistics() {
         Map<String, Object> stats = assetService.statistics();
         List<Map<String, Object>> locStats = (List<Map<String, Object>>) stats.get("locationStatistics");
+        Map<String, String> placeTypes = assetService.placeTypeNames();
         for (Map<String, Object> ls : locStats) {
-            ls.put("locationTypeDesc", getLocationTypeDesc(ls.get("locationType")));
+            ls.put("locationTypeDesc", getLocationTypeDesc(ls.get("locationType"), placeTypes));
         }
         return Result.success(stats);
     }
@@ -171,10 +173,10 @@ public class AssetController {
 
     // ==================== Presentation Helpers ====================
 
-    private void enrichAsset(Map<String, Object> r) {
+    private void enrichAsset(Map<String, Object> r, Map<String, String> placeTypes) {
         r.put("statusDesc", getStatusDesc(r.get("status")));
         r.put("managementModeDesc", getManagementModeDesc(r.get("managementMode")));
-        r.put("locationTypeDesc", getLocationTypeDesc(r.get("locationType")));
+        r.put("locationTypeDesc", getLocationTypeDesc(r.get("locationType"), placeTypes));
     }
 
     private String getStatusDesc(Object status) {
@@ -199,15 +201,21 @@ public class AssetController {
         }
     }
 
-    private String getLocationTypeDesc(Object type) {
+    /**
+     * 位置类型显示名: 先查 entity_type_configs 的 PLACE 类型字典 (行业类型由对应插件
+     * 贡献, 如教育的 CLASSROOM/DORMITORY — 核心不持有行业标签), 字典未命中再走核心
+     * 中性兜底, 最后原样返回。
+     */
+    private String getLocationTypeDesc(Object type, Map<String, String> placeTypes) {
         if (type == null) return null;
-        switch (type.toString()) {
-            case "classroom": return "教室";
-            case "dormitory": return "宿舍";
+        String code = type.toString();
+        String fromDict = placeTypes.get(code.toUpperCase());
+        if (fromDict != null) return fromDict;
+        switch (code) {
             case "office": return "办公室";
             case "warehouse": return "仓库";
             case "other": return "其他";
-            default: return type.toString();
+            default: return code;
         }
     }
 
