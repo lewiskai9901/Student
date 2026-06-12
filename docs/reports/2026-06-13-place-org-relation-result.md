@@ -57,8 +57,28 @@
 
 **已知项 (不在本次范围):**
 - "移动场所父节点"经 REST 不可达 (控制器从不透传 parentId, 既有行为); 代码路径已接投影重算 + 单测覆盖。
-- CRUD 写路径 (`AccessRelationApplicationService.create`) 仍不做 `enforceCardinality`/metadata 校验, 越界靠 DB 唯一键兜底 (报错文案是通用"数据已存在")。双路径 (create vs grant) 统一是后续债; 本次已补齐其**关系事实事件**发布 (投影/未来监听方不漏)。
 - PlaceEventHandler @Async 后审计行 user_name 为 NULL (handler 既有设计, fallback 'system')。
+
+## 6. 追加: create vs grant 双路径统一 (2026-06-13 当日收债)
+
+`AccessRelationApplicationService` 的 create/delete/batchCreate/batchDelete **统一委托
+`AccessRelationService.grant/revoke`**, CRUD 路径(关系管理页唯一外部写入口)由此获得与
+内部 grant 完全一致的保障链, Policy hook (BEFORE/AFTER_GRANT/REVOKE) 保留在 CRUD 层:
+
+| 保障 | 统一前 (CRUD 直写 repo) | 统一后 |
+|---|---|---|
+| relation 注册校验 | 无 (任意字符串可入库) | grant 拒绝未注册 relation — **关掉审计发现的"前端场景与字典无对账"API 缺口** |
+| 审批路由 (approval_required) | 被绕过 (直接落库) | 进入审批队列, 返回未持久化回执 (负 pendingId 约定) |
+| metadata schema 校验 | 无 | grant 路径校验; update 合并后整体校验 |
+| 幂等 | 撞 DB 1062 → 通用报错 | 幂等命中返回现有关系 |
+| 基数强制 | 仅 DB 锁键兜底 (1062 透传) | CardinalityViolation 友好文案("主体已达上限…请先解除原关系") |
+| revoke 归档 | repo.deleteById 仅软删 | history 归档(operation/operator_ip/UA) + valid_to 截断 |
+| check 缓存失效 | **无 (正确性漏洞: 授权缓存吃陈旧关系)** | grant/revoke 内置; update 补对称失效 |
+| 关系事实事件 | 上一提交手工补发 | grant/revoke 单点发布 (手工补发已移除) |
+
+E2E (真启动): U1 未注册 relation 422 拒绝 / U2 合法 belongs_to 创建+投影同步 /
+U3 基数越界友好拒绝 / U4 重复 POST 幂等命中同 id / U5 CRUD DELETE→history 归档+投影回落。
+测试: AccessRelationApplicationServiceTest 重写为委托语义 23/23 绿; 全量回归绿。
 
 ## 5. 文件清单
 

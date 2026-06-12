@@ -53,7 +53,11 @@ class AccessRelationApplicationServiceTest {
     @Mock
     private PolicyRegistry policyRegistry;
     @Mock
-    private org.springframework.context.ApplicationEventPublisher eventPublisher;
+    private AccessRelationService accessRelationService;
+    @Mock
+    private MetadataSchemaValidator metadataSchemaValidator;
+    @Mock
+    private AccessCheckCache checkCache;
 
     @InjectMocks
     private AccessRelationApplicationService service;
@@ -248,11 +252,12 @@ class AccessRelationApplicationServiceTest {
         }
 
         @Test
-        @DisplayName("先 enforce BEFORE_GRANT, save 后 check AFTER_GRANT")
+        @DisplayName("统一委托 grant: BEFORE_GRANT → grant(映射全字段) → findById → AFTER_GRANT")
         void happyPath() {
             AccessRelationApplicationService.CreateCommand c = cmd();
             AccessRelation saved = rel(55L, "place", 100L, "user", 9L, "user");
-            when(accessRelationRepository.save(any(AccessRelation.class))).thenReturn(saved);
+            when(accessRelationService.grant(any(AccessRelationService.GrantRequest.class))).thenReturn(55L);
+            when(accessRelationRepository.findById(55L)).thenReturn(Optional.of(saved));
             when(policyRegistry.check(any(PolicyContext.class))).thenReturn(List.of());
 
             AccessRelation result = service.create(c);
@@ -260,17 +265,32 @@ class AccessRelationApplicationServiceTest {
             assertThat(result).isSameAs(saved);
             verify(policyRegistry).enforce(any(PolicyContext.class));
             verify(policyRegistry).check(any(PolicyContext.class));
-            verify(accessRelationRepository).save(relationCaptor.capture());
-            AccessRelation built = relationCaptor.getValue();
-            assertThat(built.getResourceType()).isEqualTo("place");
-            assertThat(built.getResourceId()).isEqualTo(100L);
-            assertThat(built.getRelation()).isEqualTo("user");
-            assertThat(built.getAccessLevel()).isEqualTo(AccessLevel.READ_ONLY);
-            assertThat(built.isIncludeChildren()).isTrue();
+            ArgumentCaptor<AccessRelationService.GrantRequest> cap =
+                    ArgumentCaptor.forClass(AccessRelationService.GrantRequest.class);
+            verify(accessRelationService).grant(cap.capture());
+            AccessRelationService.GrantRequest r = cap.getValue();
+            assertThat(r.resourceType).isEqualTo("place");
+            assertThat(r.resourceId).isEqualTo(100L);
+            assertThat(r.relation).isEqualTo("user");
+            assertThat(r.accessLevel).isEqualTo(AccessLevel.READ_ONLY);
+            assertThat(r.includeChildren).isTrue();
+            assertThat(r.remark).isEqualTo("备注");
         }
 
         @Test
-        @DisplayName("BEFORE_GRANT 策略阻断时不执行 save")
+        @DisplayName("审批关系: grant 返回负 pendingId → 未持久化回执, 不查库")
+        void pendingApprovalEcho() {
+            when(accessRelationService.grant(any(AccessRelationService.GrantRequest.class))).thenReturn(-77L);
+
+            AccessRelation result = service.create(cmd());
+
+            assertThat(result.getId()).isEqualTo(-77L);
+            assertThat(result.getRemark()).contains("审批单 #77");
+            verify(accessRelationRepository, never()).findById(any(Long.class));
+        }
+
+        @Test
+        @DisplayName("BEFORE_GRANT 策略阻断时不执行 grant")
         void blockedByPolicy() {
             org.mockito.Mockito.doThrow(new RuntimeException("blocked"))
                     .when(policyRegistry).enforce(any(PolicyContext.class));
@@ -278,7 +298,7 @@ class AccessRelationApplicationServiceTest {
             assertThatThrownBy(() -> service.create(cmd()))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessage("blocked");
-            verify(accessRelationRepository, never()).save(any(AccessRelation.class));
+            verify(accessRelationService, never()).grant(any(AccessRelationService.GrantRequest.class));
         }
     }
 
@@ -341,7 +361,7 @@ class AccessRelationApplicationServiceTest {
     class Delete {
 
         @Test
-        @DisplayName("先 enforce BEFORE_REVOKE, 读出 relation, deleteById, check AFTER_REVOKE")
+        @DisplayName("统一委托 revoke: BEFORE_REVOKE → 读出 tuple → revoke → AFTER_REVOKE")
         void happyPath() {
             AccessRelation existing = rel(7L, "place", 1L, "user", 2L, "user");
             when(accessRelationRepository.findById(7L)).thenReturn(Optional.of(existing));
@@ -350,19 +370,23 @@ class AccessRelationApplicationServiceTest {
             service.delete(7L);
 
             verify(policyRegistry).enforce(any(PolicyContext.class));
-            verify(accessRelationRepository).deleteById(7L);
+            ArgumentCaptor<AccessRelationService.RevokeRequest> cap =
+                    ArgumentCaptor.forClass(AccessRelationService.RevokeRequest.class);
+            verify(accessRelationService).revoke(cap.capture());
+            assertThat(cap.getValue().resourceType).isEqualTo("place");
+            assertThat(cap.getValue().resourceId).isEqualTo(1L);
+            assertThat(cap.getValue().subjectId).isEqualTo(2L);
             verify(policyRegistry).check(any(PolicyContext.class));
         }
 
         @Test
-        @DisplayName("关系不存在时仍执行 deleteById, AFTER payload 为 null")
-        void notFoundStillDeletes() {
+        @DisplayName("关系不存在时 no-op, 不发 revoke")
+        void notFoundNoop() {
             when(accessRelationRepository.findById(8L)).thenReturn(Optional.empty());
-            when(policyRegistry.check(any(PolicyContext.class))).thenReturn(List.of());
 
             service.delete(8L);
 
-            verify(accessRelationRepository).deleteById(8L);
+            verify(accessRelationService, never()).revoke(any(AccessRelationService.RevokeRequest.class));
         }
     }
 
@@ -371,7 +395,7 @@ class AccessRelationApplicationServiceTest {
     class Batch {
 
         @Test
-        @DisplayName("batchCreate 映射全部命令并委托 batchSave")
+        @DisplayName("batchCreate 逐条委托 grant; 进入审批队列(负 id)不计入")
         void batchCreate() {
             AccessRelationApplicationService.CreateCommand c1 =
                     new AccessRelationApplicationService.CreateCommand();
@@ -381,23 +405,26 @@ class AccessRelationApplicationServiceTest {
                     new AccessRelationApplicationService.CreateCommand();
             c2.setResourceType("org_unit");
             c2.setResourceId(2L);
-            when(accessRelationRepository.batchSave(any())).thenReturn(2);
+            when(accessRelationService.grant(any(AccessRelationService.GrantRequest.class)))
+                    .thenReturn(11L).thenReturn(-12L);
 
             int n = service.batchCreate(List.of(c1, c2));
 
-            assertThat(n).isEqualTo(2);
-            @SuppressWarnings("unchecked")
-            ArgumentCaptor<List<AccessRelation>> cap = ArgumentCaptor.forClass(List.class);
-            verify(accessRelationRepository).batchSave(cap.capture());
-            assertThat(cap.getValue()).hasSize(2);
+            assertThat(n).isEqualTo(1);
+            verify(accessRelationService, org.mockito.Mockito.times(2))
+                    .grant(any(AccessRelationService.GrantRequest.class));
         }
 
         @Test
-        @DisplayName("batchDelete 委托 batchDeleteByIds")
+        @DisplayName("batchDelete 逐条读出 tuple 委托 revoke; 不存在的跳过")
         void batchDelete() {
-            when(accessRelationRepository.batchDeleteByIds(List.of(1L, 2L))).thenReturn(2);
+            when(accessRelationRepository.findById(1L))
+                    .thenReturn(Optional.of(rel(1L, "place", 1L, "user", 2L, "user")));
+            when(accessRelationRepository.findById(2L)).thenReturn(Optional.empty());
 
-            assertThat(service.batchDelete(List.of(1L, 2L))).isEqualTo(2);
+            assertThat(service.batchDelete(List.of(1L, 2L))).isEqualTo(1);
+            verify(accessRelationService, org.mockito.Mockito.times(1))
+                    .revoke(any(AccessRelationService.RevokeRequest.class));
         }
     }
 
