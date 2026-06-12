@@ -220,8 +220,10 @@ class EntityTypeConfigApplicationServiceTest {
     class UpdateTests {
 
         @Test
-        @DisplayName("非插件类型更新时 overridden_fields 写 null")
+        @DisplayName("非插件类型更新: 动态 SET 只含传入字段, 不碰 overridden_fields")
         void updateNonPlugin() throws Exception {
+            // 7204104c partial-update 语义: SET 按 data.containsKey 动态拼列 (防未传字段被清空);
+            // overridden_fields 是插件类型的覆写追踪, 非插件类型的 UPDATE 完全不含该列。
             Map<String, Object> current = new HashMap<>();
             current.put("is_plugin_registered", 0);
             current.put("type_name", "旧名");
@@ -240,10 +242,16 @@ class EntityTypeConfigApplicationServiceTest {
             ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
             ArgumentCaptor<Object[]> params = ArgumentCaptor.forClass(Object[].class);
             verify(jdbc).update(sql.capture(), params.capture());
-            assertThat(sql.getValue()).contains("UPDATE entity_type_configs SET type_name=?");
-            Object[] p = params.getValue();
-            // overridden_fields 参数 (倒数第二个) 为 null
-            assertThat(p[p.length - 2]).isNull();
+            assertThat(sql.getValue())
+                    .contains("UPDATE entity_type_configs SET ")
+                    .contains("type_name=?")
+                    .contains("category=?")
+                    .doesNotContain("overridden_fields")
+                    // 未传入的字段不得进 SET (partial-update 防清空)
+                    .doesNotContain("ui_config")
+                    .doesNotContain("parent_type_code");
+            // params = [typeName, category, id]
+            assertThat(params.getValue()).containsExactly("新名", "STUDENT", 1L);
         }
 
         @Test
@@ -491,10 +499,11 @@ class EntityTypeConfigApplicationServiceTest {
     class ConstantTests {
 
         @Test
-        @DisplayName("OVERRIDABLE_FIELDS 包含 typeName/category/uiConfig")
+        @DisplayName("OVERRIDABLE_FIELDS = 6 个可覆写字段 (7204104c M4 对齐: +features/parentTypeCode/allowedChildTypeCodes)")
         void overridableFields() {
             assertThat(EntityTypeConfigApplicationService.OVERRIDABLE_FIELDS)
-                    .containsExactlyInAnyOrder("typeName", "category", "uiConfig");
+                    .containsExactlyInAnyOrder("typeName", "category", "uiConfig",
+                            "features", "parentTypeCode", "allowedChildTypeCodes");
         }
     }
 }
