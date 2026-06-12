@@ -73,9 +73,11 @@ public class CoreManifest implements PluginPackage {
                     new Implied("user", "viewer", Implied.OCCUPANTS_OF_PLACE)
                 ))),
 
-            // 归属 — 一个场所只能归属一个主组织
+            // 归属 — 一个场所只能归属一个主组织 (maxPerSubject=1, subject=place)
+            // 真相源: 只存覆盖点, 无关系=沿场所树继承父级; 投影列 places.effective_org_unit_id
+            // 由 PlaceOrgProjector 维护。不支持 valid_to 时效(投影器无法感知过期)。
             wrap(RelationTypeDef.of(CoreRelations.BELONGS_TO, "place", "org_unit", "归属",
-                "ASSOCIATION", "场所归属某组织").withMaxPerResource(1)),
+                "ASSOCIATION", "场所归属某组织").withMaxPerSubject(1)),
 
             // 占用 — 受场所容量约束
             wrap(RelationTypeDef.of(CoreRelations.OCCUPIES, "user", "place", "占用",
@@ -102,8 +104,10 @@ public class CoreManifest implements PluginPackage {
                 "OWNERSHIP", "通用责任 — 对某用户负责 (如导师对学生,医师对病人)")),
             wrap(RelationTypeDef.of(CoreRelations.RESPONSIBLE_FOR, "user", "org_unit", "责任人(对组织)",
                 "OWNERSHIP", "通用责任 — 对某组织负责 (如部门主管,班主任)")),
+            // 一场所至多一个责任人 (对齐旧 places.responsible_user_id 单列语义);
+            // 与 admin|user|place(场所管理权)职责不同: responsible_for=业务问责, 参与场所树继承解析
             wrap(RelationTypeDef.of(CoreRelations.RESPONSIBLE_FOR, "user", "place", "责任人(对场所)",
-                "OWNERSHIP", "通用责任 — 对某场所负责 (如设备责任人,场地负责人)")),
+                "OWNERSHIP", "通用责任 — 对某场所负责 (如设备责任人,场地负责人)").withMaxPerResource(1)),
 
             // Phase 5 — sample workflows (BPMN 文件在 classpath:processes/)
             new Contribution.WorkflowContribution(

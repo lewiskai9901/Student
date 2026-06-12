@@ -266,9 +266,14 @@ CREATE TABLE `access_relations` (
   `tenant_id` bigint NOT NULL DEFAULT '1',
   `is_primary` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否主归属',
   `membership_lock_key` bigint GENERATED ALWAYS AS ((case when ((`relation` = _utf8mb4'member') and (`subject_type` = _utf8mb4'user') and (`resource_type` = _utf8mb4'org_unit') and (`deleted` = 0)) then `subject_id` else NULL end)) STORED COMMENT '归属唯一约束键(活跃 user->org member 取 subject_id)',
+  `place_belongs_lock_key` bigint GENERATED ALWAYS AS ((case when ((`relation` = _utf8mb4'belongs_to') and (`subject_type` = _utf8mb4'place') and (`resource_type` = _utf8mb4'org_unit') and (`deleted` = 0)) then `subject_id` else NULL end)) STORED COMMENT '场所归属唯一约束键(活跃 place->org belongs_to 取 subject_id)',
+  `place_responsible_lock_key` bigint GENERATED ALWAYS AS ((case when ((`relation` = _utf8mb4'responsible_for') and (`subject_type` = _utf8mb4'user') and (`resource_type` = _utf8mb4'place') and (`deleted` = 0)) then `resource_id` else NULL end)) STORED COMMENT '场所责任人唯一约束键(活跃 user->place responsible_for 取 resource_id)',
+  `active_uniq` tinyint GENERATED ALWAYS AS ((case when (`deleted` = 0) then 1 else NULL end)) STORED COMMENT '活跃行唯一性豁免列(归档行 NULL 不参与 uk_relation)',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_relation` (`resource_type`,`resource_id`,`relation`,`subject_type`,`subject_id`,`deleted`),
+  UNIQUE KEY `uk_relation` (`resource_type`,`resource_id`,`relation`,`subject_type`,`subject_id`,`active_uniq`),
   UNIQUE KEY `uk_membership_unique` (`membership_lock_key`),
+  UNIQUE KEY `uk_place_belongs_unique` (`place_belongs_lock_key`),
+  UNIQUE KEY `uk_place_responsible_unique` (`place_responsible_lock_key`),
   KEY `idx_resource` (`resource_type`,`resource_id`,`deleted`),
   KEY `idx_subject` (`subject_type`,`subject_id`,`deleted`),
   KEY `idx_lookup` (`resource_type`,`relation`,`subject_type`,`subject_id`,`deleted`),
@@ -337,6 +342,9 @@ CREATE TABLE `access_relations_history` (
   `archived_at` datetime DEFAULT CURRENT_TIMESTAMP,
   `archived_reason` varchar(100) DEFAULT NULL,
   `archived_by` bigint DEFAULT NULL,
+  `operator_ip` varchar(64) DEFAULT NULL COMMENT '操作者IP (Phase 7 W7.3)',
+  `operator_user_agent` varchar(500) DEFAULT NULL COMMENT '操作者UA (Phase 7 W7.3)',
+  `operation` varchar(20) NOT NULL DEFAULT 'REVOKE' COMMENT '归档操作类型 REVOKE/EXPIRE (Phase 7 W7.3)',
   `tenant_id` bigint NOT NULL DEFAULT '1',
   `created_by` bigint DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -9401,8 +9409,7 @@ CREATE TABLE `places` (
   `level` int DEFAULT '0' COMMENT '层级深度',
   `capacity` int DEFAULT NULL COMMENT '容量',
   `current_occupancy` int DEFAULT '0' COMMENT '当前占用数',
-  `org_unit_id` bigint DEFAULT NULL COMMENT '所属组织ID（NULL=继承父级）',
-  `responsible_user_id` bigint DEFAULT NULL COMMENT '负责人ID',
+  `effective_org_unit_id` bigint DEFAULT NULL COMMENT '有效组织ID投影列(解析后含继承; 真相=belongs_to 关系; PlaceOrgProjector 维护, 业务禁直写)',
   `status` tinyint DEFAULT '1' COMMENT '状态: 0-停用 1-正常 2-维护中',
   `attributes` json DEFAULT NULL COMMENT '扩展属性值',
   `created_by` bigint DEFAULT NULL,
@@ -9420,7 +9427,7 @@ CREATE TABLE `places` (
   KEY `idx_places_path` (`path`(100)),
   KEY `idx_places_parent_id` (`parent_id`),
   KEY `idx_places_type_code` (`type_code`),
-  KEY `idx_places_org_unit_id` (`org_unit_id`),
+  KEY `idx_places_org_unit_id` (`effective_org_unit_id`),
   KEY `idx_places_status` (`status`),
   KEY `idx_places_type_status` (`type_code`,`status`),
   KEY `idx_tenant` (`tenant_id`),
@@ -9429,7 +9436,7 @@ CREATE TABLE `places` (
   KEY `idx_high_occupancy` (`type_code`,`occupancy_rate` DESC,`id`),
   KEY `idx_capacity_range` (`type_code`,`capacity`,`current_occupancy`),
   KEY `idx_available_capacity` (`type_code`,`capacity`,`current_occupancy`,`id`),
-  KEY `idx_parent_inheritance` (`parent_id`,`org_unit_id`) COMMENT '父级继承关系索引（org_unit_id IS NULL 表示继承）'
+  KEY `idx_parent_inheritance` (`parent_id`,`effective_org_unit_id`) COMMENT '父级+有效组织索引(归属真相在 belongs_to 关系, 本列为投影)'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='空间实例表';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -9441,63 +9448,9 @@ LOCK TABLES `places` WRITE;
 /*!40000 ALTER TABLE `places` DISABLE KEYS */;
 /*!40000 ALTER TABLE `places` ENABLE KEYS */;
 UNLOCK TABLES;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_unicode_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
-DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_cascade_org_unit_update` AFTER UPDATE ON `places` FOR EACH ROW BEGIN
-  
-  IF NEW.org_unit_id <> OLD.org_unit_id OR (NEW.org_unit_id IS NULL AND OLD.org_unit_id IS NOT NULL) OR (NEW.org_unit_id IS NOT NULL AND OLD.org_unit_id IS NULL) THEN
-    
-    INSERT INTO place_audit_logs (
-      event_id,
-      request_id,
-      resource_type,
-      resource_id,
-      resource_name,
-      event_name,
-      event_type,
-      event_source,
-      event_time,
-      user_type,
-      source_ip,
-      api_endpoint,
-      changed_fields,
-      reason
-    ) VALUES (
-      UUID(),
-      UUID(),
-      'PLACE',
-      NEW.id,
-      NEW.place_name,
-      'OrgUnitInheritanceChanged',
-      'SystemAction',
-      'inheritance-trigger',
-      NOW(6),
-      'SYSTEM',
-      '127.0.0.1',
-      '/system/inheritance/cascade',
-      JSON_ARRAY(
-        JSON_OBJECT(
-          'fieldName', 'org_unit_id',
-          'oldValue', OLD.org_unit_id,
-          'newValue', NEW.org_unit_id
-        )
-      ),
-      CONCAT('场所 ', NEW.id, ' 的组织归属变更，可能影响 ', (SELECT COUNT(*) FROM places WHERE parent_id = NEW.id AND org_unit_id IS NULL), ' 个子场所')
-    );
-  END IF;
-END */;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
+-- trg_cascade_org_unit_update 触发器已删除 (V20260612_2 场所归属关系化):
+-- 归属审计由 PlaceEventHandler 监听 PlaceOrgAssignedEvent 写 place_audit_logs;
+-- effective_org_unit_id 是投影列, 触发器若留存会把投影器机械重算记成业务审计。
 
 --
 -- Table structure for table `plugin_packages`
@@ -10301,7 +10254,7 @@ CREATE TABLE `relation_types` (
 
 LOCK TABLES `relation_types` WRITE;
 /*!40000 ALTER TABLE `relation_types` DISABLE KEYS */;
-INSERT INTO `relation_types` VALUES ('admin','user','org_unit','主管理员',1,'OWNERSHIP','[\"TEACHER\", \"COUNSELOR\", \"STAFF\", \"ADMIN\", \"SUPER_ADMIN\"]',NULL,NULL,'CORE','CORE','组织的主负责人(如班主任/部门主管),沿子组织传递',1,1,'2026-06-01 22:57:30','[{\"relation\": \"viewer\", \"targetType\": \"user\", \"discoveryRule\": \"MEMBERS_OF_ORG\"}, {\"relation\": \"admin\", \"targetType\": \"org_unit\", \"discoveryRule\": \"DESCENDANTS_OF_ORG\"}]',NULL,0,1,1,0,NULL,NULL,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0'),('admin','user','place','场所负责人',0,'OWNERSHIP','[\"TEACHER\", \"STAFF\", \"ADMIN\", \"SUPER_ADMIN\"]',NULL,NULL,'CORE','CORE','场所的主负责人',1,1,'2026-06-01 22:57:30',NULL,NULL,0,1,1,0,NULL,NULL,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0'),('advisor_of','user','org_unit','辅导员',1,'OWNERSHIP','[\"COUNSELOR\"]','[\"GRADE\", \"CLASS\"]',NULL,'DOMAIN','EducationPlugin','辅导员负责年级或班级 [DEPRECATED → admin + metadata.role=ADVISOR]',0,1,'2026-06-01 22:57:30',NULL,NULL,0,1,NULL,0,NULL,NULL,NULL,NULL,NULL),('belongs_to','place','org_unit','归属',0,'ASSOCIATION',NULL,NULL,NULL,'CORE','CORE','场所归属某组织',1,1,'2026-06-01 22:57:30',NULL,NULL,0,1,1,0,NULL,NULL,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0'),('delegated_to','user','user','委托',0,'DELEGATION',NULL,NULL,'access_relations_delegation_ext','CORE','CORE','权限临时委托给另一用户',1,1,'2026-06-01 22:57:30',NULL,NULL,0,1,NULL,0,NULL,NULL,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0'),('deputy','user','org_unit','副管理员',1,'OWNERSHIP','[\"TEACHER\", \"STAFF\", \"ADMIN\"]',NULL,NULL,'CORE','CORE','组织副负责人',1,1,'2026-06-01 22:57:30',NULL,NULL,0,1,NULL,0,NULL,NULL,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0'),('emergency_contact','user','user','紧急联系人',0,'ASSOCIATION',NULL,NULL,NULL,'COMMON_EXT','CommonExtPlugin','通用紧急联系人 — 入院/事故/失联场景',1,1,'2026-06-01 23:32:04',NULL,NULL,0,1,NULL,0,NULL,NULL,NULL,'PluginPackage:CommonExtPlugin',NULL),('family_of','user','user','亲属',0,'ASSOCIATION',NULL,NULL,NULL,'COMMON_EXT','CommonExtPlugin','家属/家长 — 跨学校(家长↔学生)/医院(家属↔病人)/养老 通用. 消息扇出走 BY_RELATION(family_of, inward) 查 resource user 的家属',1,1,'2026-06-01 23:32:04',NULL,NULL,0,1,NULL,0,NULL,NULL,NULL,'PluginPackage:CommonExtPlugin',NULL),('guardian_of','user','user','监护',0,'ASSOCIATION','[\"PARENT\", \"STAFF\"]','[\"STUDENT\"]',NULL,'COMMON_EXT','CommonExtPlugin','家长监护学生/护工监护病人',1,1,'2026-06-01 22:57:30',NULL,NULL,0,1,NULL,0,NULL,NULL,NULL,NULL,NULL),('manages','user','place','场所管理者',0,'OWNERSHIP',NULL,NULL,NULL,'CORE','CORE','非主责管理者 (保洁/物业等)',1,1,'2026-06-01 22:57:30','[{\"relation\": \"viewer\", \"targetType\": \"user\", \"discoveryRule\": \"OCCUPANTS_OF_PLACE\"}]',NULL,0,1,NULL,0,NULL,NULL,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0'),('member','user','org_unit','成员',0,'MEMBERSHIP',NULL,NULL,NULL,'CORE','CORE','用户属于某组织',1,1,'2026-06-01 22:57:30',NULL,NULL,0,1,NULL,0,NULL,1,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0'),('mentor_of','user','user','导师',0,'ASSOCIATION',NULL,NULL,NULL,'DOMAIN','EducationPlugin','导师指导学生',1,1,'2026-06-01 22:57:30',NULL,NULL,0,1,NULL,0,NULL,NULL,'EDU','PluginPackage:EDU','PLUGIN:EDU@1.0.0'),('occupies','user','place','占用',0,'MEMBERSHIP',NULL,NULL,'access_relations_occupancy_ext','CORE','CORE','宿舍入住/工位使用 (含 check_in/check_out 时间)',1,1,'2026-06-01 22:57:30',NULL,NULL,0,1,NULL,1,NULL,NULL,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0'),('responsible_for','user','org_unit','责任人(对组织)',0,'OWNERSHIP',NULL,NULL,NULL,'CORE','CORE','通用责任 — 对某组织负责 (如部门主管,班主任)',1,1,'2026-06-01 23:32:04',NULL,NULL,0,1,NULL,0,NULL,NULL,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0'),('responsible_for','user','place','责任人(对场所)',0,'OWNERSHIP',NULL,NULL,NULL,'CORE','CORE','通用责任 — 对某场所负责 (如设备责任人,场地负责人)',1,1,'2026-06-01 23:32:05',NULL,NULL,0,1,NULL,0,NULL,NULL,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0'),('responsible_for','user','user','责任人(对人)',0,'OWNERSHIP',NULL,NULL,NULL,'CORE','CORE','通用责任 — 对某用户负责 (如导师对学生,医师对病人)',1,1,'2026-06-01 23:32:04',NULL,NULL,0,1,NULL,0,NULL,NULL,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0'),('supervisor_of','user','user','上级',0,'ASSOCIATION',NULL,NULL,NULL,'COMMON_EXT','CommonExtPlugin','人员上下级关系',1,1,'2026-06-01 22:57:30',NULL,NULL,0,1,NULL,0,NULL,NULL,NULL,NULL,NULL),('teaches','user','org_unit','任课',0,'ASSOCIATION','[\"TEACHER\"]','[\"CLASS\"]','relation_teach_ext','DOMAIN','EducationPlugin','教师任教班级,绑定课程和学期',1,1,'2026-06-01 22:57:30',NULL,NULL,0,1,NULL,0,'{\"CLASS\": 10}',NULL,'EDU','PluginPackage:EDU','PLUGIN:EDU@1.0.0'),('viewer','user','org_unit','查阅者(组织)',0,'ASSOCIATION',NULL,NULL,NULL,'CORE','CORE','通用只读访问 — grant 给某用户对某组织的查阅权',1,1,'2026-06-01 23:32:04',NULL,NULL,0,1,NULL,0,NULL,NULL,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0'),('viewer','user','place','查阅者(场所)',0,'ASSOCIATION',NULL,NULL,NULL,'CORE','CORE','通用只读访问 — grant 给某用户对某场所的查阅权',1,1,'2026-06-01 23:32:04',NULL,NULL,0,1,NULL,0,NULL,NULL,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0'),('viewer','user','user','查阅者(用户)',0,'ASSOCIATION',NULL,NULL,NULL,'CORE','CORE','通用只读访问 — 直接 grant 给某用户对某用户档案的查阅权',1,1,'2026-06-01 23:32:04',NULL,NULL,0,1,NULL,0,NULL,NULL,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0'),('watches','user','org_unit','关注',0,'SUBSCRIPTION',NULL,NULL,NULL,'CORE','CORE','用户订阅某组织的动态',1,1,'2026-06-01 22:57:30',NULL,NULL,0,1,NULL,0,NULL,NULL,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0');
+INSERT INTO `relation_types` VALUES ('admin','user','org_unit','主管理员',1,'OWNERSHIP','[\"TEACHER\", \"COUNSELOR\", \"STAFF\", \"ADMIN\", \"SUPER_ADMIN\"]',NULL,NULL,'CORE','CORE','组织的主负责人(如班主任/部门主管),沿子组织传递',1,1,'2026-06-01 22:57:30','[{\"relation\": \"viewer\", \"targetType\": \"user\", \"discoveryRule\": \"MEMBERS_OF_ORG\"}, {\"relation\": \"admin\", \"targetType\": \"org_unit\", \"discoveryRule\": \"DESCENDANTS_OF_ORG\"}]',NULL,0,1,1,0,NULL,NULL,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0'),('admin','user','place','场所负责人',0,'OWNERSHIP','[\"TEACHER\", \"STAFF\", \"ADMIN\", \"SUPER_ADMIN\"]',NULL,NULL,'CORE','CORE','场所的主负责人',1,1,'2026-06-01 22:57:30',NULL,NULL,0,1,1,0,NULL,NULL,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0'),('advisor_of','user','org_unit','辅导员',1,'OWNERSHIP','[\"COUNSELOR\"]','[\"GRADE\", \"CLASS\"]',NULL,'DOMAIN','EducationPlugin','辅导员负责年级或班级 [DEPRECATED → admin + metadata.role=ADVISOR]',0,1,'2026-06-01 22:57:30',NULL,NULL,0,1,NULL,0,NULL,NULL,NULL,NULL,NULL),('belongs_to','place','org_unit','归属',0,'ASSOCIATION',NULL,NULL,NULL,'CORE','CORE','场所归属某组织',1,1,'2026-06-01 22:57:30',NULL,NULL,0,1,NULL,0,NULL,1,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0'),('delegated_to','user','user','委托',0,'DELEGATION',NULL,NULL,'access_relations_delegation_ext','CORE','CORE','权限临时委托给另一用户',1,1,'2026-06-01 22:57:30',NULL,NULL,0,1,NULL,0,NULL,NULL,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0'),('deputy','user','org_unit','副管理员',1,'OWNERSHIP','[\"TEACHER\", \"STAFF\", \"ADMIN\"]',NULL,NULL,'CORE','CORE','组织副负责人',1,1,'2026-06-01 22:57:30',NULL,NULL,0,1,NULL,0,NULL,NULL,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0'),('emergency_contact','user','user','紧急联系人',0,'ASSOCIATION',NULL,NULL,NULL,'COMMON_EXT','CommonExtPlugin','通用紧急联系人 — 入院/事故/失联场景',1,1,'2026-06-01 23:32:04',NULL,NULL,0,1,NULL,0,NULL,NULL,NULL,'PluginPackage:CommonExtPlugin',NULL),('family_of','user','user','亲属',0,'ASSOCIATION',NULL,NULL,NULL,'COMMON_EXT','CommonExtPlugin','家属/家长 — 跨学校(家长↔学生)/医院(家属↔病人)/养老 通用. 消息扇出走 BY_RELATION(family_of, inward) 查 resource user 的家属',1,1,'2026-06-01 23:32:04',NULL,NULL,0,1,NULL,0,NULL,NULL,NULL,'PluginPackage:CommonExtPlugin',NULL),('guardian_of','user','user','监护',0,'ASSOCIATION','[\"PARENT\", \"STAFF\"]','[\"STUDENT\"]',NULL,'COMMON_EXT','CommonExtPlugin','家长监护学生/护工监护病人',1,1,'2026-06-01 22:57:30',NULL,NULL,0,1,NULL,0,NULL,NULL,NULL,NULL,NULL),('manages','user','place','场所管理者',0,'OWNERSHIP',NULL,NULL,NULL,'CORE','CORE','非主责管理者 (保洁/物业等)',1,1,'2026-06-01 22:57:30','[{\"relation\": \"viewer\", \"targetType\": \"user\", \"discoveryRule\": \"OCCUPANTS_OF_PLACE\"}]',NULL,0,1,NULL,0,NULL,NULL,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0'),('member','user','org_unit','成员',0,'MEMBERSHIP',NULL,NULL,NULL,'CORE','CORE','用户属于某组织',1,1,'2026-06-01 22:57:30',NULL,NULL,0,1,NULL,0,NULL,1,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0'),('mentor_of','user','user','导师',0,'ASSOCIATION',NULL,NULL,NULL,'DOMAIN','EducationPlugin','导师指导学生',1,1,'2026-06-01 22:57:30',NULL,NULL,0,1,NULL,0,NULL,NULL,'EDU','PluginPackage:EDU','PLUGIN:EDU@1.0.0'),('occupies','user','place','占用',0,'MEMBERSHIP',NULL,NULL,'access_relations_occupancy_ext','CORE','CORE','宿舍入住/工位使用 (含 check_in/check_out 时间)',1,1,'2026-06-01 22:57:30',NULL,NULL,0,1,NULL,1,NULL,NULL,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0'),('responsible_for','user','org_unit','责任人(对组织)',0,'OWNERSHIP',NULL,NULL,NULL,'CORE','CORE','通用责任 — 对某组织负责 (如部门主管,班主任)',1,1,'2026-06-01 23:32:04',NULL,NULL,0,1,NULL,0,NULL,NULL,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0'),('responsible_for','user','place','责任人(对场所)',0,'OWNERSHIP',NULL,NULL,NULL,'CORE','CORE','通用责任 — 对某场所负责 (如设备责任人,场地负责人)',1,1,'2026-06-01 23:32:05',NULL,NULL,0,1,1,0,NULL,NULL,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0'),('responsible_for','user','user','责任人(对人)',0,'OWNERSHIP',NULL,NULL,NULL,'CORE','CORE','通用责任 — 对某用户负责 (如导师对学生,医师对病人)',1,1,'2026-06-01 23:32:04',NULL,NULL,0,1,NULL,0,NULL,NULL,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0'),('supervisor_of','user','user','上级',0,'ASSOCIATION',NULL,NULL,NULL,'COMMON_EXT','CommonExtPlugin','人员上下级关系',1,1,'2026-06-01 22:57:30',NULL,NULL,0,1,NULL,0,NULL,NULL,NULL,NULL,NULL),('teaches','user','org_unit','任课',0,'ASSOCIATION','[\"TEACHER\"]','[\"CLASS\"]','relation_teach_ext','DOMAIN','EducationPlugin','教师任教班级,绑定课程和学期',1,1,'2026-06-01 22:57:30',NULL,NULL,0,1,NULL,0,'{\"CLASS\": 10}',NULL,'EDU','PluginPackage:EDU','PLUGIN:EDU@1.0.0'),('viewer','user','org_unit','查阅者(组织)',0,'ASSOCIATION',NULL,NULL,NULL,'CORE','CORE','通用只读访问 — grant 给某用户对某组织的查阅权',1,1,'2026-06-01 23:32:04',NULL,NULL,0,1,NULL,0,NULL,NULL,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0'),('viewer','user','place','查阅者(场所)',0,'ASSOCIATION',NULL,NULL,NULL,'CORE','CORE','通用只读访问 — grant 给某用户对某场所的查阅权',1,1,'2026-06-01 23:32:04',NULL,NULL,0,1,NULL,0,NULL,NULL,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0'),('viewer','user','user','查阅者(用户)',0,'ASSOCIATION',NULL,NULL,NULL,'CORE','CORE','通用只读访问 — 直接 grant 给某用户对某用户档案的查阅权',1,1,'2026-06-01 23:32:04',NULL,NULL,0,1,NULL,0,NULL,NULL,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0'),('watches','user','org_unit','关注',0,'SUBSCRIPTION',NULL,NULL,NULL,'CORE','CORE','用户订阅某组织的动态',1,1,'2026-06-01 22:57:30',NULL,NULL,0,1,NULL,0,NULL,NULL,'CORE','PluginPackage:CORE','PLUGIN:CORE@1.0.0');
 /*!40000 ALTER TABLE `relation_types` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -13158,44 +13111,7 @@ SET @saved_cs_client     = @@character_set_client;
  1 AS `updated_at`*/;
 SET character_set_client = @saved_cs_client;
 
---
--- Temporary view structure for view `v_inheritance_tree`
---
 
-DROP TABLE IF EXISTS `v_inheritance_tree`;
-/*!50001 DROP VIEW IF EXISTS `v_inheritance_tree`*/;
-SET @saved_cs_client     = @@character_set_client;
-/*!50503 SET character_set_client = utf8mb4 */;
-/*!50001 CREATE VIEW `v_inheritance_tree` AS SELECT 
- 1 AS `child_place_id`,
- 1 AS `child_place_name`,
- 1 AS `child_declared_org`,
- 1 AS `parent_id`,
- 1 AS `parent_place_name`,
- 1 AS `parent_declared_org`,
- 1 AS `child_effective_org`,
- 1 AS `parent_effective_org`,
- 1 AS `inherits_from_parent`*/;
-SET character_set_client = @saved_cs_client;
-
---
--- Temporary view structure for view `v_places_effective_org`
---
-
-DROP TABLE IF EXISTS `v_places_effective_org`;
-/*!50001 DROP VIEW IF EXISTS `v_places_effective_org`*/;
-SET @saved_cs_client     = @@character_set_client;
-/*!50503 SET character_set_client = utf8mb4 */;
-/*!50001 CREATE VIEW `v_places_effective_org` AS SELECT 
- 1 AS `place_id`,
- 1 AS `place_name`,
- 1 AS `declared_org_id`,
- 1 AS `effective_org_id`,
- 1 AS `org_assignment_type`,
- 1 AS `effective_org_name`,
- 1 AS `parent_id`,
- 1 AS `parent_place_name`*/;
-SET character_set_client = @saved_cs_client;
 
 --
 -- Temporary view structure for view `v_space_detail`
@@ -13337,68 +13253,7 @@ UNLOCK TABLES;
 --
 -- Dumping routines for database 'sm_rebuild'
 --
-/*!50003 DROP FUNCTION IF EXISTS `get_effective_org_unit_id` */;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_unicode_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
-DELIMITER ;;
-CREATE DEFINER=`root`@`localhost` FUNCTION `get_effective_org_unit_id`(p_place_id BIGINT) RETURNS bigint
-    READS SQL DATA
-    DETERMINISTIC
-BEGIN
-  DECLARE effective_org_id BIGINT;
-  DECLARE current_org_id BIGINT;
-  DECLARE parent_id BIGINT;
-  DECLARE max_depth INT DEFAULT 10;  
-  DECLARE current_depth INT DEFAULT 0;
-
-  
-  SELECT org_unit_id, parent_id
-  INTO current_org_id, parent_id
-  FROM places
-  WHERE id = p_place_id AND deleted = 0;
-
-  
-  IF current_org_id IS NULL AND parent_id IS NULL THEN
-    RETURN NULL;
-  END IF;
-
-  
-  IF current_org_id IS NOT NULL THEN
-    RETURN current_org_id;
-  END IF;
-
-  
-  SET effective_org_id = NULL;
-  SET parent_id = (SELECT parent_id FROM places WHERE id = p_place_id);
-
-  WHILE parent_id IS NOT NULL AND current_depth < max_depth DO
-    SELECT org_unit_id, parent_id
-    INTO current_org_id, parent_id
-    FROM places
-    WHERE id = parent_id AND deleted = 0;
-
-    
-    IF current_org_id IS NOT NULL THEN
-      SET effective_org_id = current_org_id;
-      SET parent_id = NULL;
-    END IF;
-
-    SET current_depth = current_depth + 1;
-  END WHILE;
-
-  RETURN effective_org_id;
-END ;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
+-- get_effective_org_unit_id 函数已删除 (V20260612_2 关系化: 有效组织即 places.effective_org_unit_id 投影列)
 /*!50003 DROP PROCEDURE IF EXISTS `atomic_update_occupancy` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
@@ -13603,63 +13458,7 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
-/*!50003 DROP PROCEDURE IF EXISTS `get_affected_children` */;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb4 */ ;
-/*!50003 SET character_set_results = utf8mb4 */ ;
-/*!50003 SET collation_connection  = utf8mb4_unicode_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
-DELIMITER ;;
-CREATE DEFINER=`root`@`localhost` PROCEDURE `get_affected_children`(
-  IN p_parent_id BIGINT
-)
-BEGIN
-  
-  WITH RECURSIVE place_tree AS (
-    
-    SELECT
-      id,
-      place_name,
-      parent_id,
-      org_unit_id,
-      1 AS depth
-    FROM places
-    WHERE parent_id = p_parent_id
-      AND org_unit_id IS NULL
-      AND deleted = 0
-
-    UNION ALL
-
-    
-    SELECT
-      child.id,
-      child.place_name,
-      child.parent_id,
-      child.org_unit_id,
-      parent.depth + 1 AS depth
-    FROM places child
-    INNER JOIN place_tree parent ON child.parent_id = parent.id
-    WHERE child.org_unit_id IS NULL
-      AND child.deleted = 0
-      AND parent.depth < 10  
-  )
-  SELECT
-    id,
-    place_name,
-    parent_id,
-    get_effective_org_unit_id(id) AS effective_org_id,
-    depth
-  FROM place_tree
-  ORDER BY depth, id;
-END ;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
+-- get_affected_children 过程已删除 (V20260612_2 关系化: 子树重算走 PlaceOrgProjector, 代码零消费)
 /*!50003 DROP PROCEDURE IF EXISTS `refresh_capacity_stats` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
@@ -13969,41 +13768,7 @@ DELIMITER ;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
 
---
--- Final view structure for view `v_inheritance_tree`
---
 
-/*!50001 DROP VIEW IF EXISTS `v_inheritance_tree`*/;
-/*!50001 SET @saved_cs_client          = @@character_set_client */;
-/*!50001 SET @saved_cs_results         = @@character_set_results */;
-/*!50001 SET @saved_col_connection     = @@collation_connection */;
-/*!50001 SET character_set_client      = utf8mb4 */;
-/*!50001 SET character_set_results     = utf8mb4 */;
-/*!50001 SET collation_connection      = utf8mb4_unicode_ci */;
-/*!50001 CREATE ALGORITHM=UNDEFINED */
-/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `v_inheritance_tree` AS select `child`.`id` AS `child_place_id`,`child`.`place_name` AS `child_place_name`,`child`.`org_unit_id` AS `child_declared_org`,`parent`.`id` AS `parent_id`,`parent`.`place_name` AS `parent_place_name`,`parent`.`org_unit_id` AS `parent_declared_org`,`get_effective_org_unit_id`(`child`.`id`) AS `child_effective_org`,`get_effective_org_unit_id`(`parent`.`id`) AS `parent_effective_org`,(case when (`child`.`org_unit_id` is null) then 'YES' else 'NO' end) AS `inherits_from_parent` from (`places` `child` left join `places` `parent` on((`child`.`parent_id` = `parent`.`id`))) where (`child`.`deleted` = 0) */;
-/*!50001 SET character_set_client      = @saved_cs_client */;
-/*!50001 SET character_set_results     = @saved_cs_results */;
-/*!50001 SET collation_connection      = @saved_col_connection */;
-
---
--- Final view structure for view `v_places_effective_org`
---
-
-/*!50001 DROP VIEW IF EXISTS `v_places_effective_org`*/;
-/*!50001 SET @saved_cs_client          = @@character_set_client */;
-/*!50001 SET @saved_cs_results         = @@character_set_results */;
-/*!50001 SET @saved_col_connection     = @@collation_connection */;
-/*!50001 SET character_set_client      = utf8mb4 */;
-/*!50001 SET character_set_results     = utf8mb4 */;
-/*!50001 SET collation_connection      = utf8mb4_unicode_ci */;
-/*!50001 CREATE ALGORITHM=UNDEFINED */
-/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `v_places_effective_org` AS select `up`.`id` AS `place_id`,`up`.`place_name` AS `place_name`,`up`.`org_unit_id` AS `declared_org_id`,`get_effective_org_unit_id`(`up`.`id`) AS `effective_org_id`,(case when (`up`.`org_unit_id` is null) then 'INHERITED' else 'EXPLICIT' end) AS `org_assignment_type`,`ou`.`unit_name` AS `effective_org_name`,`up`.`parent_id` AS `parent_id`,`parent`.`place_name` AS `parent_place_name` from ((`places` `up` left join `org_units` `ou` on((`get_effective_org_unit_id`(`up`.`id`) = `ou`.`id`))) left join `places` `parent` on((`up`.`parent_id` = `parent`.`id`))) where (`up`.`deleted` = 0) */;
-/*!50001 SET character_set_client      = @saved_cs_client */;
-/*!50001 SET character_set_results     = @saved_cs_results */;
-/*!50001 SET collation_connection      = @saved_col_connection */;
 
 --
 -- Final view structure for view `v_space_detail`

@@ -70,15 +70,18 @@ INSERT INTO user_roles (user_id, role_id) VALUES
 
 -- ============================================================
 -- 3. 创建 6 个宿舍 (每班 2 间, 男女各分)
+-- 归属真相 = belongs_to 关系 (V20260612_2 关系化); effective_org_unit_id 为投影列,
+-- seed 直写投影值 (根场所无父可继承, 投影 == 覆盖点)。
+-- 注: 原 room_type 列对 baseline_v3 不存在, 已并入 attributes JSON。
 -- ============================================================
-INSERT INTO places (place_code, place_name, type_code, room_type, parent_id, capacity, current_occupancy, gender, org_unit_id, status, tenant_id, created_by)
+INSERT INTO places (place_code, place_name, type_code, attributes, parent_id, capacity, current_occupancy, gender, effective_org_unit_id, status, tenant_id, created_by)
 VALUES
-('DORM-A101', 'A栋101 (经济男寝)', 'DORM_ROOM', 'STUDENT', NULL, 6, 0, '男', @CLS_JING, 1, 1, 1),
-('DORM-A102', 'A栋102 (经济女寝)', 'DORM_ROOM', 'STUDENT', NULL, 6, 0, '女', @CLS_JING, 1, 1, 1),
-('DORM-B201', 'B栋201 (汽车男寝)', 'DORM_ROOM', 'STUDENT', NULL, 6, 0, '男', @CLS_QC,   1, 1, 1),
-('DORM-B202', 'B栋202 (汽车女寝)', 'DORM_ROOM', 'STUDENT', NULL, 6, 0, '女', @CLS_QC,   1, 1, 1),
-('DORM-C301', 'C栋301 (艺术男寝)', 'DORM_ROOM', 'STUDENT', NULL, 6, 0, '男', @CLS_YS,   1, 1, 1),
-('DORM-C302', 'C栋302 (艺术女寝)', 'DORM_ROOM', 'STUDENT', NULL, 6, 0, '女', @CLS_YS,   1, 1, 1);
+('DORM-A101', 'A栋101 (经济男寝)', 'DORM_ROOM', '{"roomType":"STUDENT"}', NULL, 6, 0, '男', @CLS_JING, 1, 1, 1),
+('DORM-A102', 'A栋102 (经济女寝)', 'DORM_ROOM', '{"roomType":"STUDENT"}', NULL, 6, 0, '女', @CLS_JING, 1, 1, 1),
+('DORM-B201', 'B栋201 (汽车男寝)', 'DORM_ROOM', '{"roomType":"STUDENT"}', NULL, 6, 0, '男', @CLS_QC,   1, 1, 1),
+('DORM-B202', 'B栋202 (汽车女寝)', 'DORM_ROOM', '{"roomType":"STUDENT"}', NULL, 6, 0, '女', @CLS_QC,   1, 1, 1),
+('DORM-C301', 'C栋301 (艺术男寝)', 'DORM_ROOM', '{"roomType":"STUDENT"}', NULL, 6, 0, '男', @CLS_YS,   1, 1, 1),
+('DORM-C302', 'C栋302 (艺术女寝)', 'DORM_ROOM', '{"roomType":"STUDENT"}', NULL, 6, 0, '女', @CLS_YS,   1, 1, 1);
 
 SET @D_A101 = (SELECT id FROM places WHERE place_code='DORM-A101');
 SET @D_A102 = (SELECT id FROM places WHERE place_code='DORM-A102');
@@ -86,6 +89,16 @@ SET @D_B201 = (SELECT id FROM places WHERE place_code='DORM-B201');
 SET @D_B202 = (SELECT id FROM places WHERE place_code='DORM-B202');
 SET @D_C301 = (SELECT id FROM places WHERE place_code='DORM-C301');
 SET @D_C302 = (SELECT id FROM places WHERE place_code='DORM-C302');
+
+-- 归属覆盖点关系 (真相源; uk_place_belongs_unique 保证每场所唯一)
+INSERT INTO access_relations (resource_type, resource_id, relation, subject_type, subject_id, access_level, created_by)
+VALUES
+('org_unit', @CLS_JING, 'belongs_to', 'place', @D_A101, 'FULL', 1),
+('org_unit', @CLS_JING, 'belongs_to', 'place', @D_A102, 'FULL', 1),
+('org_unit', @CLS_QC,   'belongs_to', 'place', @D_B201, 'FULL', 1),
+('org_unit', @CLS_QC,   'belongs_to', 'place', @D_B202, 'FULL', 1),
+('org_unit', @CLS_YS,   'belongs_to', 'place', @D_C301, 'FULL', 1),
+('org_unit', @CLS_YS,   'belongs_to', 'place', @D_C302, 'FULL', 1);
 
 -- 宿舍管理员关系 (insp_dorm 管所有 6 个宿舍)
 INSERT INTO access_relations (resource_type, resource_id, relation, subject_type, subject_id, access_level, created_by)
