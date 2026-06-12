@@ -106,14 +106,13 @@ class NoIndustryTableInCoreTest {
      * <ul>
      *   <li>RedisConfig — 缓存区名 TTL 注册 (cache region 撞行业表名, 非表引用)</li>
      *   <li>TenantInterceptor — 租户列表清单 (多租户休眠中; 启用时应改插件贡献)</li>
-     *   <li>DataPermissionSimulateController — TODO 真侵入: simulate 元数据 switch
-     *       硬编码 school_class→classes, 应改 SimulateMeta 贡献点 (独立工作项)</li>
      * </ul>
+     * (DataPermissionSimulateController 已于 2026-06-12 改 SimulateModuleMetaContributor
+     * 贡献点, 行业元数据由 EDU 插件登记, 豁免移除。)
      */
     private static final String[] QUOTED_LITERAL_EXEMPT_FILES = {
         "RedisConfig.java",
-        "TenantInterceptor.java",
-        "DataPermissionSimulateController.java"
+        "TenantInterceptor.java"
     };
 
     @Test

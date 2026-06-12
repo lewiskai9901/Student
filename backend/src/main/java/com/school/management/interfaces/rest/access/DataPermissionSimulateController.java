@@ -1,9 +1,10 @@
 package com.school.management.interfaces.rest.access;
 
 import com.school.management.application.access.DataPermissionSimulateApplicationService;
+import com.school.management.application.access.SimulateModuleMetaContributor;
+import com.school.management.application.access.SimulateModuleMetaContributor.SimulateModuleMeta;
 import com.school.management.common.result.Result;
 import com.school.management.infrastructure.casbin.CasbinAccess;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,18 +19,42 @@ import java.util.stream.Collectors;
  * 管理员还没保存的配置快照 也能预览, 避免"配完才发现范围不对".
  *
  * MVP 实现:
- *   - 支持的模块: user/org_unit/role/place/student/school_class (按 resolveMeta 列出)
+ *   - 通用模块 (user/org_unit/role/place) 核心内置; 行业模块 (如教育 student/school_class)
+ *     由行业插件经 {@link SimulateModuleMetaContributor} 登记, 插件禁用即优雅降级
  *   - 支持的 scope: ALL / SELF / DEPARTMENT / DEPARTMENT_AND_BELOW / CUSTOM
  *   - 其他维度 (BY_CLASS/BY_GRADE/BY_WARD 等插件 scope) 返回 "暂未支持模拟"
- *   - 部分表无 created_by (classes), SELF scope 会降级 返 "未支持"
+ *   - 无 created_by 的表 SELF scope 降级返 "未支持"
  */
 @RestController
 @RequestMapping("/access/data-permissions/simulate")
-@RequiredArgsConstructor
 @Slf4j
 public class DataPermissionSimulateController {
 
     private final DataPermissionSimulateApplicationService simulateService;
+
+    /** moduleCode → 表元数据: 核心通用模块 + 插件贡献 (后者可覆盖, 以插件口径为准)。 */
+    private final Map<String, SimulateModuleMeta> moduleMetas;
+
+    public DataPermissionSimulateController(
+            DataPermissionSimulateApplicationService simulateService,
+            List<SimulateModuleMetaContributor> contributors) {
+        this.simulateService = simulateService;
+        Map<String, SimulateModuleMeta> metas = new LinkedHashMap<>();
+        // 通用核心模块 — 不含任何行业表
+        // user 归属来自 access_relations member 关系 (primary_org_unit_id 已删):
+        // orgCol = 主键 id, membership → buildWhere 用 member 子查询过滤.
+        metas.put("user", SimulateModuleMeta.membership("users", "real_name", "id", true, true));
+        metas.put("system_user", metas.get("user"));
+        metas.put("org_unit", SimulateModuleMeta.orgColumn("org_units", "unit_name", "id", true, true));
+        metas.put("role", SimulateModuleMeta.orgColumn("roles", "role_name", null, true, false));
+        metas.put("system_role", metas.get("role"));
+        metas.put("place", SimulateModuleMeta.orgColumn("places", "place_name", "org_unit_id", true, true));
+        // 行业模块 (如教育 student/school_class) 由插件贡献
+        for (SimulateModuleMetaContributor c : contributors) {
+            metas.putAll(c.contribute());
+        }
+        this.moduleMetas = metas;
+    }
 
     @PostMapping
     @CasbinAccess(resource = "admin", action = "access")
@@ -64,7 +89,7 @@ public class DataPermissionSimulateController {
         result.put("moduleCode", code);
         result.put("scopeCode", scope);
 
-        ModuleMeta meta = resolveMeta(code);
+        SimulateModuleMeta meta = resolveMeta(code);
         if (meta == null) {
             result.put("accessibleCount", -1);
             result.put("note", "此模块未实现模拟");
@@ -79,11 +104,11 @@ public class DataPermissionSimulateController {
                 return result;
             }
 
-            Long count = simulateService.countByWhere(meta.table, whereClause);
+            Long count = simulateService.countByWhere(meta.table(), whereClause);
             result.put("accessibleCount", count != null ? count : 0);
 
             List<Map<String, Object>> samples =
-                    simulateService.sampleRows(meta.table, meta.nameCol, whereClause);
+                    simulateService.sampleRows(meta.table(), meta.nameCol(), whereClause);
             // id 转 string, 防 JS 精度丢失
             List<Map<String, Object>> normalized = new ArrayList<>();
             for (Map<String, Object> s : samples) {
@@ -103,78 +128,53 @@ public class DataPermissionSimulateController {
         return result;
     }
 
-    /** 模块 → 表元数据. 未列出的模块返 null. */
-    private ModuleMeta resolveMeta(String moduleCode) {
-        if (moduleCode == null) return null;
-        switch (moduleCode) {
-            case "user":
-            case "system_user":
-                // user 归属来自 access_relations member 关系 (primary_org_unit_id 已删).
-                // orgCol = 主键 id, membershipBased=true → buildWhere 用 member 子查询过滤.
-                return new ModuleMeta("users", "real_name", "id", true, true, true);
-            case "org_unit":
-                return new ModuleMeta("org_units", "unit_name", "id", true, true);
-            case "role":
-            case "system_role":
-                return new ModuleMeta("roles", "role_name", null, true, false);
-            case "place":
-                return new ModuleMeta("places", "place_name", "org_unit_id", true, true);
-            // 注: "student" 是 education 插件概念, 其归属表 (用户档案表) 与归属列均为行业扩展,
-            // 不应硬编码在通用核心 controller (NoIndustryTableInCoreTest 守护). 通用核心暂无
-            // "插件下沉 module→table 元数据" 的注册机制 (类似 PluginDataScopeRouter 之于 scope),
-            // 故此处不再列举该模块 — 模拟器对未知模块优雅降级 ("此模块未实现模拟"). 待插件元数据
-            // 注册点就绪后, 由 education 插件自行登记 student 模块的模拟元数据.
-            case "school_class":
-            case "class":
-                // classes 表无 created_by 列
-                return new ModuleMeta("classes", "class_name", "org_unit_id", true, false);
-            default:
-                return null;
-        }
+    /** 模块 → 表元数据 (核心内置 + 插件贡献). 未登记的模块返 null → "此模块未实现模拟". */
+    private SimulateModuleMeta resolveMeta(String moduleCode) {
+        return moduleCode == null ? null : moduleMetas.get(moduleCode);
     }
 
     /** 构造 SQL WHERE. 返 null = 暂未支持. */
     private String buildWhere(String scope, Long userId, Long userOrgId,
-                               ModulePermSnapshot mp, ModuleMeta meta) {
+                               ModulePermSnapshot mp, SimulateModuleMeta meta) {
         if (scope == null) return null;
-        String delFilter = meta.hasDeleted ? " AND deleted = 0" : "";
+        String delFilter = meta.hasDeleted() ? " AND deleted = 0" : "";
 
         switch (scope) {
             case "ALL":
                 return "1=1" + delFilter;
 
             case "SELF":
-                if (!meta.hasCreatedBy) return null;
+                if (!meta.hasCreatedBy()) return null;
                 return "created_by = " + userId + delFilter;
 
             case "DEPARTMENT":
-                if (meta.orgCol == null || userOrgId == null) return null;
-                if (meta.membershipBased) {
-                    return meta.orgCol + " IN (" + memberSubquery(String.valueOf(userOrgId)) + ")" + delFilter;
+                if (meta.orgCol() == null || userOrgId == null) return null;
+                if (meta.membershipBased()) {
+                    return meta.orgCol() + " IN (" + memberSubquery(String.valueOf(userOrgId)) + ")" + delFilter;
                 }
-                return meta.orgCol + " = " + userOrgId + delFilter;
+                return meta.orgCol() + " = " + userOrgId + delFilter;
 
             case "DEPARTMENT_AND_BELOW":
-                if (meta.orgCol == null || userOrgId == null) return null;
+                if (meta.orgCol() == null || userOrgId == null) return null;
                 // tree_path 本身已包含当前节点 id (且以 '/' 结尾), 子节点的 tree_path 以父的 tree_path 为前缀.
                 // 所以子树 = tree_path LIKE '<parent_tree_path>%'
                 String subtreeOrgIds =
                         "SELECT id FROM org_units WHERE tree_path LIKE CONCAT(" +
                         "(SELECT IFNULL(tree_path,'') FROM org_units WHERE id = " + userOrgId + "), '%')";
-                if (meta.membershipBased) {
-                    return meta.orgCol + " IN (" + memberSubquery("(" + subtreeOrgIds + ")") + ")" + delFilter;
+                if (meta.membershipBased()) {
+                    return meta.orgCol() + " IN (" + memberSubquery("(" + subtreeOrgIds + ")") + ")" + delFilter;
                 }
-                return meta.orgCol + " IN (" + subtreeOrgIds + ")" + delFilter;
+                return meta.orgCol() + " IN (" + subtreeOrgIds + ")" + delFilter;
 
             case "CUSTOM":
                 List<Long> ids = extractScopeIds(mp.getScopeItems());
                 if (ids == null || ids.isEmpty()) return "1=0";  // 空自定义 = 空集
-                if (meta.orgCol == null) return null;
+                if (meta.orgCol() == null) return null;
                 String joined = ids.stream().map(String::valueOf).collect(Collectors.joining(","));
-                if (meta.membershipBased) {
-                    return meta.orgCol + " IN (" + memberSubquery("(" + joined + ")") + ")" + delFilter;
+                if (meta.membershipBased()) {
+                    return meta.orgCol() + " IN (" + memberSubquery("(" + joined + ")") + ")" + delFilter;
                 }
-                return meta.orgCol + " IN (" + joined + ")" + delFilter;
+                return meta.orgCol() + " IN (" + joined + ")" + delFilter;
 
             default:
                 // BY_CLASS / BY_GRADE / BY_MAJOR / BY_WARD 等插件维度
@@ -232,28 +232,4 @@ public class DataPermissionSimulateController {
         private List<Object> scopeItems;
     }
 
-    /** 内部表元数据 */
-    private static class ModuleMeta {
-        final String table;
-        final String nameCol;    // 样本名称列, 可能 null
-        final String orgCol;     // 组织过滤列, 可能 null (如 roles)
-        final boolean hasDeleted;
-        final boolean hasCreatedBy;
-        /** true = 该表归属来自 access_relations member 关系 (主键 id 是 member 关系的 subject), 而非物理 orgCol. */
-        final boolean membershipBased;
-
-        ModuleMeta(String table, String nameCol, String orgCol, boolean hasDeleted, boolean hasCreatedBy) {
-            this(table, nameCol, orgCol, hasDeleted, hasCreatedBy, false);
-        }
-
-        ModuleMeta(String table, String nameCol, String orgCol, boolean hasDeleted,
-                   boolean hasCreatedBy, boolean membershipBased) {
-            this.table = table;
-            this.nameCol = nameCol;
-            this.orgCol = orgCol;
-            this.hasDeleted = hasDeleted;
-            this.hasCreatedBy = hasCreatedBy;
-            this.membershipBased = membershipBased;
-        }
-    }
 }
