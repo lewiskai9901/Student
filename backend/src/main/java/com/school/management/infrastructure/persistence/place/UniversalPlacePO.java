@@ -61,14 +61,11 @@ public class UniversalPlacePO {
     private Integer currentOccupancy;
 
     /**
-     * 所属组织单元ID
+     * 有效组织ID投影列 — 真相在 belongs_to 关系, 仅 PlaceOrgProjector (JdbcTemplate 直写) 维护。
+     * updateStrategy=NEVER: 业务 save 永不回写, 防陈旧聚合值覆盖投影。
      */
-    private Long orgUnitId;
-
-    /**
-     * 负责人ID
-     */
-    private Long responsibleUserId;
+    @TableField(value = "effective_org_unit_id", updateStrategy = FieldStrategy.NEVER)
+    private Long effectiveOrgUnitId;
 
     /**
      * 状态
@@ -127,15 +124,4 @@ public class UniversalPlacePO {
     @TableField(exist = false)
     private String parentName;
 
-    /**
-     * 组织单元名称
-     */
-    @TableField(exist = false)
-    private String orgUnitName;
-
-    /**
-     * 负责人名称
-     */
-    @TableField(exist = false)
-    private String responsibleUserName;
 }

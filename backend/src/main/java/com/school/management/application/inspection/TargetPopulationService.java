@@ -247,7 +247,7 @@ public class TargetPopulationService {
             return scopeIds.stream()
                     .map(placeId -> universalPlaceRepository.findById(placeId).orElse(null))
                     .filter(Objects::nonNull)
-                    .map(p -> new TargetInfo(p.getId(), p.getPlaceName(), p.getOrgUnitId()))
+                    .map(p -> new TargetInfo(p.getId(), p.getPlaceName(), p.getEffectiveOrgUnitId()))
                     .collect(Collectors.toList());
         }
 
@@ -263,7 +263,7 @@ public class TargetPopulationService {
                 log.info("  orgId={} → {} places", orgId, places.size());
             }
             for (UniversalPlace p : places) {
-                targets.add(new TargetInfo(p.getId(), p.getPlaceName(), p.getOrgUnitId()));
+                targets.add(new TargetInfo(p.getId(), p.getPlaceName(), p.getEffectiveOrgUnitId()));
             }
         }
         log.info("resolvePlaceTargets: total {} place targets", targets.size());
@@ -423,8 +423,8 @@ public class TargetPopulationService {
             return filtered;
         } else if ("PLACE".equals(parentType)) {
             return universalPlaceRepository.findById(parentId)
-                    .filter(p -> p.getOrgUnitId() != null)
-                    .flatMap(p -> orgUnitRepository.findById(p.getOrgUnitId()))
+                    .filter(p -> p.getEffectiveOrgUnitId() != null)
+                    .flatMap(p -> orgUnitRepository.findById(p.getEffectiveOrgUnitId()))
                     .map(o -> List.of(new TargetInfo(o.getId(), buildOrgDisplayName(o), o.getParentId())))
                     .orElse(Collections.emptyList());
         }
@@ -518,7 +518,7 @@ public class TargetPopulationService {
                     .collect(Collectors.toList());
         }
         return places.stream()
-                .map(p -> new TargetInfo(p.getId(), p.getPlaceName(), p.getOrgUnitId()))
+                .map(p -> new TargetInfo(p.getId(), p.getPlaceName(), p.getEffectiveOrgUnitId()))
                 .collect(Collectors.toList());
     }
 

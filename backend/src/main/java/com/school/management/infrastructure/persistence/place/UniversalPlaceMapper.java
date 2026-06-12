@@ -25,43 +25,47 @@ public interface UniversalPlaceMapper extends BaseMapper<UniversalPlacePO> {
     /**
      * 查询所有根空间
      */
-    @DataPermission(module = "place", orgUnitField = "org_unit_id")
+    @DataPermission(module = "place", orgUnitField = "effective_org_unit_id")
     @Select("SELECT * FROM places WHERE parent_id IS NULL AND deleted = 0 ORDER BY place_name")
     List<UniversalPlacePO> findAllRoots();
 
     /**
      * 查询子空间
      */
-    @DataPermission(module = "place", orgUnitField = "org_unit_id")
+    @DataPermission(module = "place", orgUnitField = "effective_org_unit_id")
     @Select("SELECT * FROM places WHERE parent_id = #{parentId} AND deleted = 0 ORDER BY place_name")
     List<UniversalPlacePO> findChildren(@Param("parentId") Long parentId);
 
     /**
      * 根据路径前缀查询所有后代
      */
-    @DataPermission(module = "place", orgUnitField = "org_unit_id")
+    @DataPermission(module = "place", orgUnitField = "effective_org_unit_id")
     @Select("SELECT * FROM places WHERE path LIKE CONCAT(#{pathPrefix}, '%') AND deleted = 0 ORDER BY level, place_name")
     List<UniversalPlacePO> findByPathPrefix(@Param("pathPrefix") String pathPrefix);
 
     /**
      * 根据类型查询
      */
-    @DataPermission(module = "place", orgUnitField = "org_unit_id")
+    @DataPermission(module = "place", orgUnitField = "effective_org_unit_id")
     @Select("SELECT * FROM places WHERE type_code = #{typeCode} AND deleted = 0 ORDER BY place_name")
     List<UniversalPlacePO> findByTypeCode(@Param("typeCode") String typeCode);
 
     /**
      * 根据组织单元查询
      */
-    @DataPermission(module = "place", orgUnitField = "org_unit_id")
-    @Select("SELECT * FROM places WHERE org_unit_id = #{orgUnitId} AND deleted = 0 ORDER BY place_name")
+    @DataPermission(module = "place", orgUnitField = "effective_org_unit_id")
+    @Select("SELECT * FROM places WHERE effective_org_unit_id = #{orgUnitId} AND deleted = 0 ORDER BY place_name")
     List<UniversalPlacePO> findByOrgUnitId(@Param("orgUnitId") Long orgUnitId);
 
     /**
-     * 根据负责人查询
+     * 根据负责人查询 — 经 responsible_for 关系覆盖点 (语义等价旧列: 仅显式责任人, 不含继承)
      */
-    @DataPermission(module = "place", orgUnitField = "org_unit_id")
-    @Select("SELECT * FROM places WHERE responsible_user_id = #{userId} AND deleted = 0 ORDER BY place_name")
+    @DataPermission(module = "place", orgUnitField = "effective_org_unit_id")
+    @Select("SELECT p.* FROM places p " +
+            "JOIN access_relations ar ON ar.resource_type = 'place' AND ar.resource_id = p.id " +
+            "  AND ar.relation = 'responsible_for' AND ar.subject_type = 'user' " +
+            "  AND ar.subject_id = #{userId} AND ar.deleted = 0 " +
+            "WHERE p.deleted = 0 ORDER BY p.place_name")
     List<UniversalPlacePO> findByResponsibleUserId(@Param("userId") Long userId);
 
     /**
@@ -132,19 +136,4 @@ public interface UniversalPlaceMapper extends BaseMapper<UniversalPlacePO> {
     @Update("UPDATE places SET current_occupancy = #{actualCount} WHERE id = #{placeId} AND deleted = 0")
     int fixOccupancy(@Param("placeId") Long placeId, @Param("actualCount") int actualCount);
 
-    /**
-     * 带关联信息查询
-     */
-    @Select("SELECT s.*, " +
-            "st.type_name, " +
-            "p.place_name AS parent_name, " +
-            "o.unit_name AS org_unit_name, " +
-            "u.real_name AS responsible_user_name " +
-            "FROM places s " +
-            "LEFT JOIN entity_type_configs st ON st.entity_type = 'PLACE' AND s.type_code = st.type_code AND st.deleted = 0 " +
-            "LEFT JOIN places p ON s.parent_id = p.id AND p.deleted = 0 " +
-            "LEFT JOIN org_units o ON s.org_unit_id = o.id AND o.deleted = 0 " +
-            "LEFT JOIN users u ON s.responsible_user_id = u.id AND u.deleted = 0 " +
-            "WHERE s.id = #{id} AND s.deleted = 0")
-    UniversalPlacePO findByIdWithRelations(@Param("id") Long id);
 }

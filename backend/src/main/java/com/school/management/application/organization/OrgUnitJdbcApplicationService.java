@@ -77,7 +77,7 @@ public class OrgUnitJdbcApplicationService {
 
         // 4. 子树下的 places
         Integer placeCount = jdbcTemplate.queryForObject(
-            "SELECT COUNT(*) FROM places WHERE deleted = 0 AND org_unit_id IN " +
+            "SELECT COUNT(*) FROM places WHERE deleted = 0 AND effective_org_unit_id IN " +
             "(SELECT id FROM org_units WHERE deleted = 0 AND tree_path LIKE ?)",
             Integer.class, treePath + "%");
         impact.put("placeCount", placeCount != null ? placeCount : 0);

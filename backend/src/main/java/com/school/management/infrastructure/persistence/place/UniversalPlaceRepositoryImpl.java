@@ -221,7 +221,8 @@ public class UniversalPlaceRepositoryImpl implements UniversalPlaceRepository {
                 wrapper.eq(UniversalPlacePO::getParentId, criteria.getParentId());
             }
             if (criteria.getOrgUnitId() != null) {
-                wrapper.eq(UniversalPlacePO::getOrgUnitId, criteria.getOrgUnitId());
+                // 投影列过滤 — 语义为"有效归属(含继承)", 非显式覆盖点
+                wrapper.eq(UniversalPlacePO::getEffectiveOrgUnitId, criteria.getOrgUnitId());
             }
             if (criteria.getStatus() != null) {
                 wrapper.eq(UniversalPlacePO::getStatus, criteria.getStatus());
@@ -249,8 +250,7 @@ public class UniversalPlaceRepositoryImpl implements UniversalPlaceRepository {
         po.setLevel(entity.getLevel());
         po.setCapacity(entity.getCapacity());
         po.setCurrentOccupancy(entity.getCurrentOccupancy());
-        po.setOrgUnitId(entity.getOrgUnitId());
-        po.setResponsibleUserId(entity.getResponsibleUserId());
+        // effective_org_unit_id 是投影列, 业务 save 不回写 (PO updateStrategy=NEVER 双保险)
         po.setGender(entity.getGender());
         po.setStatus(entity.getStatus() != null ? entity.getStatus().getCode() : PlaceStatus.NORMAL.getCode());
 
@@ -289,8 +289,7 @@ public class UniversalPlaceRepositoryImpl implements UniversalPlaceRepository {
                 .level(po.getLevel() != null ? po.getLevel() : 0)
                 .capacity(po.getCapacity())
                 .currentOccupancy(po.getCurrentOccupancy() != null ? po.getCurrentOccupancy() : 0)
-                .orgUnitId(po.getOrgUnitId())
-                .responsibleUserId(po.getResponsibleUserId())
+                .effectiveOrgUnitId(po.getEffectiveOrgUnitId())
                 .gender(po.getGender())
                 .status(PlaceStatus.fromCode(po.getStatus()))
                 .attributes(attributes)

@@ -52,6 +52,8 @@ class AccessRelationApplicationServiceTest {
     private UserRepository userRepository;
     @Mock
     private PolicyRegistry policyRegistry;
+    @Mock
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private AccessRelationApplicationService service;

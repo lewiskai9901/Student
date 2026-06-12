@@ -48,7 +48,7 @@ public class DataPermissionSimulateController {
         metas.put("org_unit", SimulateModuleMeta.orgColumn("org_units", "unit_name", "id", true, true));
         metas.put("role", SimulateModuleMeta.orgColumn("roles", "role_name", null, true, false));
         metas.put("system_role", metas.get("role"));
-        metas.put("place", SimulateModuleMeta.orgColumn("places", "place_name", "org_unit_id", true, true));
+        metas.put("place", SimulateModuleMeta.orgColumn("places", "place_name", "effective_org_unit_id", true, true));
         // 行业模块 (如教育 student/school_class) 由插件贡献
         for (SimulateModuleMetaContributor c : contributors) {
             metas.putAll(c.contribute());

@@ -5,9 +5,11 @@ import com.school.management.domain.organization.repository.OrgUnitRepository;
 import com.school.management.domain.place.model.aggregate.UniversalPlace;
 import com.school.management.domain.place.model.entity.UniversalPlaceOccupant;
 import com.school.management.domain.place.model.valueobject.PlaceStatus;
+import com.school.management.domain.place.event.PlaceOrgAssignedEvent;
+import com.school.management.domain.place.event.PlaceResponsibleAssignedEvent;
 import com.school.management.domain.place.repository.UniversalPlaceOccupantRepository;
 import com.school.management.domain.place.repository.UniversalPlaceRepository;
-import com.school.management.domain.place.service.PlaceInheritanceService;
+import com.school.management.domain.shared.event.DomainEventPublisher;
 import com.school.management.domain.access.model.entity.AccessRelation;
 import com.school.management.domain.access.model.valueobject.AccessLevel;
 import com.school.management.domain.access.repository.AccessRelationRepository;
@@ -48,7 +50,9 @@ public class UniversalPlaceApplicationService {
     private final OrgUnitRepository orgUnitRepository;
     private final UserRepository userRepository;
     private final AccessRelationRepository accessRelationRepository;
-    private final PlaceInheritanceService inheritanceService;
+    private final PlaceOrgResolver placeOrgResolver;
+    private final PlaceOrgProjector placeOrgProjector;
+    private final DomainEventPublisher domainEventPublisher;
     private final ActivityEventPublisher activityEventPublisher;
     private final PolicyRegistry policyRegistry;
 
@@ -185,10 +189,10 @@ public class UniversalPlaceApplicationService {
                 .collect(Collectors.groupingBy(s -> s.getStatus().getValue(), Collectors.counting()));
         stats.setCountByStatus(statusCount);
 
-        // 按所属组织统计（使用有效组织ID，含继承）
+        // 按所属组织统计（有效组织含继承 — 直接读投影列, 无需递归计算）
         Map<Long, List<UniversalPlace>> byOrg = new java.util.HashMap<>();
         for (UniversalPlace place : allPlaces) {
-            Long effectiveOrgId = inheritanceService.getEffectiveOrgUnitId(place);
+            Long effectiveOrgId = place.getEffectiveOrgUnitId();
             if (effectiveOrgId != null) {
                 byOrg.computeIfAbsent(effectiveOrgId, k -> new java.util.ArrayList<>()).add(place);
             }
@@ -278,8 +282,6 @@ public class UniversalPlaceApplicationService {
 
         place.setDescription(command.getDescription());
         place.setCapacity(command.getCapacity());
-        place.setOrgUnitId(command.getOrgUnitId());
-        place.setResponsibleUserId(command.getResponsibleUserId());
 
         if (command.getAttributes() != null) {
             command.getAttributes().forEach(place::setAttribute);
@@ -302,6 +304,21 @@ public class UniversalPlaceApplicationService {
             saved.setPath("/" + saved.getId() + "/");
         }
         saved = placeRepository.save(saved);
+
+        // 归属/责任人 → 关系覆盖点 (须在 path 落库后: 投影器按 path 拉子树)
+        if (command.getOrgUnitId() != null) {
+            placeOrgResolver.setBelonging(saved.getId(), command.getOrgUnitId());
+            domainEventPublisher.publish(new PlaceOrgAssignedEvent(
+                    saved.getId(), saved.getPlaceName(), null, command.getOrgUnitId(), "创建场所"));
+        } else {
+            // 无覆盖点: 投影 = 继承父级 effective (关系事件不会触发, 显式重算)
+            placeOrgProjector.recomputeSubtree(saved.getId());
+        }
+        if (command.getResponsibleUserId() != null) {
+            placeOrgResolver.setResponsible(saved.getId(), command.getResponsibleUserId());
+            domainEventPublisher.publish(new PlaceResponsibleAssignedEvent(
+                    saved.getId(), saved.getPlaceName(), null, command.getResponsibleUserId(), "创建场所"));
+        }
 
         firePlaceLifecycle("afterCreate", saved, null);
 
@@ -333,9 +350,11 @@ public class UniversalPlaceApplicationService {
 
         String reason = command.getReason();
 
-        // 父节点变更：环路检测 + 路径级联更新
+        // 父节点变更：环路检测 + 路径级联更新 (投影重算在 save 后)
+        boolean parentMoved = false;
         if (command.getParentId() != null && !command.getParentId().equals(place.getParentId())) {
             validateAndMoveParent(id, place, command.getParentId());
+            parentMoved = true;
         }
 
         // 简单属性直接设置
@@ -352,18 +371,6 @@ public class UniversalPlaceApplicationService {
             command.getAttributes().forEach(place::setAttribute);
         }
 
-        // 使用领域方法处理组织分配（会发布事件）
-        if (Boolean.TRUE.equals(command.getClearOrgOverride())) {
-            place.clearOrganizationOverride(reason);
-        } else if (command.getOrgUnitId() != null) {
-            place.assignOrganization(command.getOrgUnitId(), reason);
-        }
-
-        // 使用领域方法处理负责人分配（会发布事件）
-        if (command.getResponsibleUserId() != null) {
-            place.assignResponsible(command.getResponsibleUserId(), reason);
-        }
-
         // 使用领域方法处理状态变更（会发布事件）
         if (command.getStatus() != null) {
             PlaceStatus newStatus = PlaceStatus.fromValue(command.getStatus());
@@ -371,6 +378,37 @@ public class UniversalPlaceApplicationService {
         }
 
         UniversalPlace saved = placeRepository.save(place);
+
+        // 归属/责任人 → 关系覆盖点转译 (须在 save 后: 投影器读 DB 树;
+        // 审计事件由本服务发布, PlaceEventHandler AFTER_COMMIT 写 place_audit_logs)
+        if (Boolean.TRUE.equals(command.getClearOrgOverride())) {
+            Long oldOrg = placeOrgResolver.orgOf(id).orElse(null);
+            if (oldOrg != null) {
+                placeOrgResolver.clearBelonging(id);
+                domainEventPublisher.publish(new PlaceOrgAssignedEvent(
+                        id, saved.getPlaceName(), oldOrg, null, reason));
+            }
+        } else if (command.getOrgUnitId() != null) {
+            Long oldOrg = placeOrgResolver.orgOf(id).orElse(null);
+            if (!command.getOrgUnitId().equals(oldOrg)) {
+                placeOrgResolver.setBelonging(id, command.getOrgUnitId());
+                domainEventPublisher.publish(new PlaceOrgAssignedEvent(
+                        id, saved.getPlaceName(), oldOrg, command.getOrgUnitId(), reason));
+            }
+        }
+        if (command.getResponsibleUserId() != null) {
+            Long oldResp = placeOrgResolver.responsibleOf(id).orElse(null);
+            if (!command.getResponsibleUserId().equals(oldResp)) {
+                placeOrgResolver.setResponsible(id, command.getResponsibleUserId());
+                domainEventPublisher.publish(new PlaceResponsibleAssignedEvent(
+                        id, saved.getPlaceName(), oldResp, command.getResponsibleUserId(), reason));
+            }
+        }
+        // 移动父节点后整支子树投影重算 (path 级联已 save)
+        if (parentMoved) {
+            placeOrgProjector.recomputeSubtree(id);
+        }
+
         firePlaceLifecycle("afterUpdate", saved, null);
 
         // Policy hook — AFTER_UPDATE WARN/INFO 仅记日志
@@ -469,6 +507,9 @@ public class UniversalPlaceApplicationService {
         }
 
         firePlaceLifecycle("beforeDelete", place, null);
+        // 级联清理归属/责任人关系覆盖点 (防 deleted 场所残留活跃关系占用锁键)
+        placeOrgResolver.clearBelonging(id);
+        placeOrgResolver.clearResponsible(id);
         placeRepository.deleteById(id);
         firePlaceLifecycle("afterDelete", place, null);
     }
@@ -565,46 +606,53 @@ public class UniversalPlaceApplicationService {
         node.setLevel(place.getLevel());
         node.setCapacity(place.getCapacity());
         node.setCurrentOccupancy(place.getCurrentOccupancy());
-        node.setOrgUnitId(place.getOrgUnitId());
-        if (place.getOrgUnitId() != null) {
-            orgUnitRepository.findById(place.getOrgUnitId())
+        // orgUnitId/responsibleUserId 语义 = 显式覆盖点 (关系), 绝不能取 effective 投影
+        // — 前端表单以 orgUnitId 是否为空判断"显式归属 vs 继承"并控制 clearOrgOverride
+        Long orgOverride = placeOrgResolver.orgOf(place.getId()).orElse(null);
+        node.setOrgUnitId(orgOverride);
+        if (orgOverride != null) {
+            orgUnitRepository.findById(orgOverride)
                     .ifPresent(org -> node.setOrgUnitName(org.getUnitName()));
         }
-        node.setResponsibleUserId(place.getResponsibleUserId());
-        if (place.getResponsibleUserId() != null) {
-            userRepository.findById(place.getResponsibleUserId())
+        Long respOverride = placeOrgResolver.responsibleOf(place.getId()).orElse(null);
+        node.setResponsibleUserId(respOverride);
+        if (respOverride != null) {
+            userRepository.findById(respOverride)
                     .ifPresent(user -> node.setResponsibleUserName(user.getRealName()));
         }
         node.setStatus(place.getStatus().getValue());
         node.setAttributes(place.getAttributes());
 
-        // 组织继承计算（防御性null检查）
-        try {
-            Long effectiveOrgId = inheritanceService.getEffectiveOrgUnitId(place);
-            node.setEffectiveOrgUnitId(effectiveOrgId);
-            node.setIsOrgInherited(inheritanceService.isOrgInherited(place));
-            if (effectiveOrgId != null && place.getOrgUnitId() == null) {
-                orgUnitRepository.findById(effectiveOrgId)
-                        .ifPresent(org -> node.setEffectiveOrgUnitName(org.getUnitName()));
-            }
-        } catch (Exception e) {
-            log.warn("计算场所[{}]组织继承时出错: {}", place.getId(), e.getMessage());
-            node.setIsOrgInherited(false);
+        // 有效组织 — 直接读投影列, 无需递归计算
+        Long effectiveOrgId = place.getEffectiveOrgUnitId();
+        node.setEffectiveOrgUnitId(effectiveOrgId);
+        node.setIsOrgInherited(orgOverride == null && place.getParentId() != null);
+        if (effectiveOrgId != null && orgOverride == null) {
+            orgUnitRepository.findById(effectiveOrgId)
+                    .ifPresent(org -> node.setEffectiveOrgUnitName(org.getUnitName()));
         }
         if (place.getParentId() != null) {
             placeRepository.findById(place.getParentId()).ifPresent(parent -> {
-                node.setParentOrgUnitId(parent.getOrgUnitId());
-                if (parent.getOrgUnitId() != null) {
-                    orgUnitRepository.findById(parent.getOrgUnitId())
+                // 父级取 effective: 子级继承的就是父的有效值 (父自身继承时旧实现显示不出)
+                node.setParentOrgUnitId(parent.getEffectiveOrgUnitId());
+                if (parent.getEffectiveOrgUnitId() != null) {
+                    orgUnitRepository.findById(parent.getEffectiveOrgUnitId())
                             .ifPresent(org -> node.setParentOrgUnitName(org.getUnitName()));
                 }
             });
         }
 
-        // 负责人继承计算（防御性null检查）
+        // 负责人继承 — 无投影列, 沿场所树上溯第一个 responsible_for 覆盖点
         try {
-            node.setIsResponsibleInherited(inheritanceService.isResponsibleInherited(place));
-            Long effectiveResponsibleId = inheritanceService.getEffectiveResponsibleUserId(place);
+            node.setIsResponsibleInherited(respOverride == null && place.getParentId() != null);
+            Long effectiveResponsibleId = respOverride;
+            Long cursor = place.getParentId();
+            int guard = 0;
+            while (effectiveResponsibleId == null && cursor != null && guard++ < 50) {
+                effectiveResponsibleId = placeOrgResolver.responsibleOf(cursor).orElse(null);
+                cursor = placeRepository.findById(cursor)
+                        .map(UniversalPlace::getParentId).orElse(null);
+            }
             node.setEffectiveResponsibleUserId(effectiveResponsibleId);
             if (effectiveResponsibleId != null) {
                 userRepository.findById(effectiveResponsibleId)
@@ -641,8 +689,9 @@ public class UniversalPlaceApplicationService {
         dto.setLevel(place.getLevel());
         dto.setCapacity(place.getCapacity());
         dto.setCurrentOccupancy(place.getCurrentOccupancy());
-        dto.setOrgUnitId(place.getOrgUnitId());
-        dto.setResponsibleUserId(place.getResponsibleUserId());
+        // DTO 的 orgUnitId/responsibleUserId 语义 = 显式覆盖点 (关系), 与树节点一致
+        dto.setOrgUnitId(placeOrgResolver.orgOf(place.getId()).orElse(null));
+        dto.setResponsibleUserId(placeOrgResolver.responsibleOf(place.getId()).orElse(null));
         dto.setStatus(place.getStatus().getValue());
         dto.setAttributes(place.getAttributes());
 

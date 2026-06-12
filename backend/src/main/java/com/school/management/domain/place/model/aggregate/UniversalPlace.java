@@ -77,14 +77,13 @@ public class UniversalPlace extends AggregateRoot<Long> {
     // ==================== 归属 ====================
 
     /**
-     * 所属组织单元ID
+     * 有效组织ID — <b>投影列</b> (解析后含继承)。
+     * 归属真相在 access_relations 的 {@code belongs_to|place|org_unit} 覆盖点关系
+     * (写入走 {@code PlaceOrgResolver}), 本字段由 {@code PlaceOrgProjector} 维护,
+     * 业务代码只读, save 路径不回写 (PO 层 FieldStrategy.NEVER 兜底)。
+     * 负责人无投影字段, 读时经 {@code responsible_for} 关系 + 场所树继承解析。
      */
-    private Long orgUnitId;
-
-    /**
-     * 负责人ID
-     */
-    private Long responsibleUserId;
+    private Long effectiveOrgUnitId;
 
     // ==================== 性别限制 ====================
 
@@ -116,8 +115,8 @@ public class UniversalPlace extends AggregateRoot<Long> {
     @Builder
     public UniversalPlace(Long id, String placeCode, String placeName, String typeCode,
                           String description, Long parentId, String path, Integer level,
-                          Integer capacity, Integer currentOccupancy, Long orgUnitId,
-                          Long responsibleUserId, String gender, PlaceStatus status,
+                          Integer capacity, Integer currentOccupancy, Long effectiveOrgUnitId,
+                          String gender, PlaceStatus status,
                           Map<String, Object> attributes) {
         setId(id);
         this.placeCode = placeCode;
@@ -129,8 +128,7 @@ public class UniversalPlace extends AggregateRoot<Long> {
         this.level = level != null ? level : 0;
         this.capacity = capacity;
         this.currentOccupancy = currentOccupancy != null ? currentOccupancy : 0;
-        this.orgUnitId = orgUnitId;
-        this.responsibleUserId = responsibleUserId;
+        this.effectiveOrgUnitId = effectiveOrgUnitId;
         this.gender = gender;
         this.status = status != null ? status : PlaceStatus.NORMAL;
         this.attributes = attributes != null ? attributes : new HashMap<>();
@@ -231,60 +229,8 @@ public class UniversalPlace extends AggregateRoot<Long> {
         updateOccupancy(newCount, "MANUAL");
     }
 
-    /**
-     * 分配给组织单元（领域方法，发布事件）
-     *
-     * @param orgUnitId 组织单元ID（传入null表示恢复继承父级）
-     * @param reason 变更原因
-     */
-    public void assignOrganization(Long orgUnitId, String reason) {
-        Long oldOrgUnitId = this.orgUnitId;
-
-        // 值未变化，无需操作
-        if (java.util.Objects.equals(oldOrgUnitId, orgUnitId)) {
-            return;
-        }
-
-        // 更新值
-        this.orgUnitId = orgUnitId;
-
-        // 发布领域事件
-        registerEvent(new com.school.management.domain.place.event.PlaceOrgAssignedEvent(
-                this.id, this.placeName, oldOrgUnitId, orgUnitId, reason
-        ));
-    }
-
-    /**
-     * 取消组织单元分配（恢复继承）
-     *
-     * @param reason 变更原因
-     */
-    public void clearOrganizationOverride(String reason) {
-        assignOrganization(null, reason);
-    }
-
-    /**
-     * 分配负责人（领域方法，发布事件）
-     *
-     * @param userId 负责人用户ID
-     * @param reason 变更原因
-     */
-    public void assignResponsible(Long userId, String reason) {
-        Long oldResponsibleUserId = this.responsibleUserId;
-
-        // 值未变化，无需操作
-        if (java.util.Objects.equals(oldResponsibleUserId, userId)) {
-            return;
-        }
-
-        // 更新值
-        this.responsibleUserId = userId;
-
-        // 发布领域事件
-        registerEvent(new com.school.management.domain.place.event.PlaceResponsibleAssignedEvent(
-                this.id, this.placeName, oldResponsibleUserId, userId, reason
-        ));
-    }
+    // 归属/负责人分配已迁出聚合: 真相在 access_relations 关系 (PlaceOrgResolver 写入),
+    // PlaceOrgAssignedEvent/PlaceResponsibleAssignedEvent 由 ApplicationService 在转译关系操作时发布。
 
     /**
      * 变更状态（领域方法，发布事件）

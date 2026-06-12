@@ -14,6 +14,7 @@ import com.school.management.infrastructure.extension.Violation;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +33,9 @@ public class AccessRelationApplicationService {
     private final OrgUnitRepository orgUnitRepository;
     private final UserRepository userRepository;
     private final PolicyRegistry policyRegistry;
+    /** 关系事实事件 — 与 AccessRelationService.forceGrant/revoke 同事件类型, 保证
+     *  CRUD 写路径(关系管理页)的下游监听方(如 PlaceOrgProjector 投影重算)不漏。 */
+    private final ApplicationEventPublisher eventPublisher;
 
     public List<AccessRelation> findByResource(String resourceType, Long resourceId) {
         List<AccessRelation> relations = accessRelationRepository.findByResource(resourceType, resourceId);
@@ -151,6 +155,11 @@ public class AccessRelationApplicationService {
                 .build();
         AccessRelation saved = accessRelationRepository.save(relation);
 
+        eventPublisher.publishEvent(new AccessRelationService.RelationAssignedEvent(
+                saved.getId(), saved.getResourceType(), saved.getResourceId(),
+                saved.getRelation(), saved.getSubjectType(), saved.getSubjectId(),
+                saved.getCreatedBy()));
+
         // Policy hook — AFTER_GRANT WARN/INFO 仅记日志 (审计/通知)
         List<Violation> warns = policyRegistry.check(
                 new PolicyContext<>("access_relation", "AFTER_GRANT", saved));
@@ -187,6 +196,13 @@ public class AccessRelationApplicationService {
 
         accessRelationRepository.deleteById(id);
 
+        if (existing != null) {
+            eventPublisher.publishEvent(new AccessRelationService.RelationRevokedEvent(
+                    id, existing.getResourceType(), existing.getResourceId(),
+                    existing.getRelation(), existing.getSubjectType(), existing.getSubjectId(),
+                    "AccessRelationApplicationService.delete", UserContextHolder.getUserId()));
+        }
+
         // Policy hook — AFTER_REVOKE WARN/INFO 仅记日志
         List<Violation> warns = policyRegistry.check(
                 new PolicyContext<>("access_relation", "AFTER_REVOKE", existing));
@@ -209,12 +225,28 @@ public class AccessRelationApplicationService {
                 .remark(cmd.getRemark())
                 .createdBy(UserContextHolder.getUserId())
                 .build()).toList();
-        return accessRelationRepository.batchSave(relations);
+        int n = accessRelationRepository.batchSave(relations);
+        relations.forEach(r -> eventPublisher.publishEvent(
+                new AccessRelationService.RelationAssignedEvent(
+                        r.getId(), r.getResourceType(), r.getResourceId(),
+                        r.getRelation(), r.getSubjectType(), r.getSubjectId(), r.getCreatedBy())));
+        return n;
     }
 
     @Transactional
     public int batchDelete(List<Long> ids) {
-        return accessRelationRepository.batchDeleteByIds(ids);
+        // 删除前读出, 以便发布撤销事实事件 (下游投影/审计依赖)
+        List<AccessRelation> existing = ids.stream()
+                .map(id -> accessRelationRepository.findById(id).orElse(null))
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        int n = accessRelationRepository.batchDeleteByIds(ids);
+        existing.forEach(r -> eventPublisher.publishEvent(
+                new AccessRelationService.RelationRevokedEvent(
+                        r.getId(), r.getResourceType(), r.getResourceId(),
+                        r.getRelation(), r.getSubjectType(), r.getSubjectId(),
+                        "AccessRelationApplicationService.batchDelete", UserContextHolder.getUserId())));
+        return n;
     }
 
     // ---------- Command DTOs ----------

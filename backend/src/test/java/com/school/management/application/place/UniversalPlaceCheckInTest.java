@@ -7,7 +7,9 @@ import com.school.management.domain.place.model.entity.UniversalPlaceOccupant;
 import com.school.management.domain.place.model.valueobject.PlaceStatus;
 import com.school.management.domain.place.repository.UniversalPlaceOccupantRepository;
 import com.school.management.domain.place.repository.UniversalPlaceRepository;
-import com.school.management.domain.place.service.PlaceInheritanceService;
+import com.school.management.application.place.PlaceOrgResolver;
+import com.school.management.application.place.PlaceOrgProjector;
+import com.school.management.domain.shared.event.DomainEventPublisher;
 import com.school.management.domain.shared.repository.EntityTypeConfigRepository;
 import com.school.management.domain.user.model.aggregate.User;
 import com.school.management.domain.user.model.valueobject.UserStatus;
@@ -58,7 +60,9 @@ class UniversalPlaceCheckInTest {
     @Mock OrgUnitRepository orgUnitRepository;
     @Mock UserRepository userRepository;
     @Mock AccessRelationRepository accessRelationRepository;
-    @Mock PlaceInheritanceService inheritanceService;
+    @Mock PlaceOrgResolver placeOrgResolver;
+    @Mock PlaceOrgProjector placeOrgProjector;
+    @Mock DomainEventPublisher domainEventPublisher;
     @Mock ActivityEventPublisher activityEventPublisher;
     @Mock PolicyRegistry policyRegistry;
 
