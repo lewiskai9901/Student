@@ -580,6 +580,25 @@ public class DataPermissionInterceptor implements Interceptor {
                     .append("SELECT id FROM org_units WHERE tenant_id = ? AND tree_path LIKE ? AND deleted = 0)");
             cond.addParam("_dp_memTenant_" + paramOffset, tenantId, Long.class, JdbcType.BIGINT);
             cond.addParam("_dp_memPath_" + paramOffset, orgPath + "%", String.class, JdbcType.VARCHAR);
+        } else if (scope == DataScope.MANAGED_ORGS) {
+            // 我管理的组织: 成员 tuple 的 resource_id ∈ { 我持 admin 关系的组织 }
+            orgPredicate.append("ar.resource_id IN (")
+                    .append("SELECT mar.resource_id FROM access_relations mar ")
+                    .append("WHERE mar.deleted = 0 AND mar.subject_type = 'user' AND mar.subject_id = ? ")
+                    .append("AND mar.resource_type = 'org_unit' AND mar.relation = 'admin' ")
+                    .append("AND (mar.valid_to IS NULL OR mar.valid_to > NOW()))");
+            cond.addParam("_dp_memMgr_" + paramOffset, userContext.getUserId(), Long.class, JdbcType.BIGINT);
+        } else if (scope == DataScope.MANAGED_ORGS_AND_BELOW) {
+            // 我管理的组织 + 子树
+            orgPredicate.append("ar.resource_id IN (")
+                    .append("SELECT o.id FROM org_units o ")
+                    .append("JOIN org_units mo ON o.tree_path LIKE CONCAT(mo.tree_path, '%') ")
+                    .append("JOIN access_relations mar ON mar.resource_id = mo.id ")
+                    .append("WHERE o.tenant_id = ? AND mar.deleted = 0 AND mar.subject_type = 'user' ")
+                    .append("AND mar.subject_id = ? AND mar.resource_type = 'org_unit' AND mar.relation = 'admin' ")
+                    .append("AND (mar.valid_to IS NULL OR mar.valid_to > NOW()))");
+            cond.addParam("_dp_memMgrTenant_" + paramOffset, tenantId, Long.class, JdbcType.BIGINT);
+            cond.addParam("_dp_memMgr_" + paramOffset, userContext.getUserId(), Long.class, JdbcType.BIGINT);
         } else if (orgId != null) {
             // DEPARTMENT, or DEPARTMENT_AND_BELOW without a known path → single org
             orgPredicate.append("ar.resource_id = ?");
