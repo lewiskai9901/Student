@@ -65,14 +65,6 @@ describe('access API', () => {
       await accessApi.deletePermission('7')
       expect(http.delete).toHaveBeenCalledWith('/permissions/7')
     })
-
-    it('enable / disable POST', async () => {
-      vi.mocked(http.post).mockResolvedValue(undefined)
-      await accessApi.enablePermission('1')
-      expect(http.post).toHaveBeenLastCalledWith('/permissions/1/enable')
-      await accessApi.disablePermission('2')
-      expect(http.post).toHaveBeenLastCalledWith('/permissions/2/disable')
-    })
   })
 
   describe('角色 API', () => {

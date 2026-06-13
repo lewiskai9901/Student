@@ -69,19 +69,9 @@ export function deletePermission(id: LongId | string): Promise<void> {
   return http.delete(`${PERMISSION_URL}/${id}`)
 }
 
-/**
- * 启用权限
- */
-export function enablePermission(id: LongId | string): Promise<void> {
-  return http.post(`${PERMISSION_URL}/${id}/enable`)
-}
-
-/**
- * 禁用权限
- */
-export function disablePermission(id: LongId | string): Promise<void> {
-  return http.post(`${PERMISSION_URL}/${id}/disable`)
-}
+// 注: 权限启停经 updatePermission (PUT /permissions/{id}) 落 isEnabled, 与角色同模式。
+// 此前的 enablePermission/disablePermission 调 /permissions/{id}/enable|disable —
+// 后端无此端点 (必 404) 且无任何 UI 调用方, 已删除 (2026-06-13)。
 
 // ==================== 角色 API ====================
 
@@ -282,9 +272,7 @@ export const permissionApi = {
   getById: getPermission,
   create: createPermission,
   update: updatePermission,
-  delete: deletePermission,
-  enable: enablePermission,
-  disable: disablePermission
+  delete: deletePermission
 }
 
 /**
