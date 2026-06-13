@@ -23,6 +23,8 @@ package com.school.management.domain.access.model;
 public enum DataScope {
     ALL("ALL", "全部数据", 100, CalcType.NONE, "可访问系统中所有数据"),
     DEPARTMENT_AND_BELOW("DEPARTMENT_AND_BELOW", "本组织及下级", 80, CalcType.USER_ORG_TREE, "可访问用户所属组织及下级组织的数据"),
+    MANAGED_ORGS_AND_BELOW("MANAGED_ORGS_AND_BELOW", "我管理的组织及下级", 75, CalcType.RELATION_ORG, "用户作为管理者(admin关系)的组织及其下级组织的数据"),
+    MANAGED_ORGS("MANAGED_ORGS", "我管理的组织", 65, CalcType.RELATION_ORG, "用户作为管理者(admin关系)的所有组织的数据(不含下级)"),
     DEPARTMENT("DEPARTMENT", "仅本组织", 60, CalcType.USER_ORG, "只能访问用户所属组织的数据"),
     CUSTOM("CUSTOM", "自定义范围", 40, CalcType.CUSTOM_CONFIG, "管理员配置的指定范围"),
     SELF("SELF", "仅本人", 20, CalcType.CREATOR, "只能访问自己创建或负责的数据");
@@ -69,7 +71,8 @@ public enum DataScope {
         USER_ORG,       // 基于用户所属组织
         USER_ORG_TREE,  // 基于用户所属组织及下级
         CUSTOM_CONFIG,  // 基于自定义配置
-        CREATOR         // 基于创建者
+        CREATOR,        // 基于创建者
+        RELATION_ORG    // 基于"用户与组织的关系"(如 admin 关系=我管理的组织)
     }
 
     public static DataScope fromCode(String code) {

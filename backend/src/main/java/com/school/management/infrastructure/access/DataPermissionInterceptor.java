@@ -409,6 +409,30 @@ public class DataPermissionInterceptor implements Interceptor {
                 }
                 break;
 
+            case MANAGED_ORGS:
+                // 我管理的组织: orgField ∈ { 当前用户持 admin 关系的组织 } —— 不依赖单一主组织,
+                // 可一人管多组织 (如 a 管 B、C)。关系实时从 access_relations 解析。
+                cond.sql = alias + orgField + " IN (" +
+                        "SELECT ar.resource_id FROM access_relations ar " +
+                        "WHERE ar.deleted = 0 AND ar.subject_type = 'user' AND ar.subject_id = ? " +
+                        "  AND ar.resource_type = 'org_unit' AND ar.relation = 'admin' " +
+                        "  AND (ar.valid_to IS NULL OR ar.valid_to > NOW()))";
+                cond.addParam("_dp_mgrUser_" + paramOffset, userContext.getUserId(), Long.class, JdbcType.BIGINT);
+                break;
+
+            case MANAGED_ORGS_AND_BELOW:
+                // 我管理的组织及其子树
+                cond.sql = alias + orgField + " IN (" +
+                        "SELECT o.id FROM org_units o " +
+                        "JOIN org_units mo ON o.tree_path LIKE CONCAT(mo.tree_path, '%') " +
+                        "JOIN access_relations ar ON ar.resource_id = mo.id " +
+                        "WHERE o.tenant_id = ? AND ar.deleted = 0 AND ar.subject_type = 'user' " +
+                        "  AND ar.subject_id = ? AND ar.resource_type = 'org_unit' AND ar.relation = 'admin' " +
+                        "  AND (ar.valid_to IS NULL OR ar.valid_to > NOW()))";
+                cond.addParam("_dp_tenantId_" + paramOffset, tenantId, Long.class, JdbcType.BIGINT);
+                cond.addParam("_dp_mgrUser_" + paramOffset, userContext.getUserId(), Long.class, JdbcType.BIGINT);
+                break;
+
             case SELF:
                 cond.sql = alias + creatorField + " = ?";
                 cond.addParam("_dp_creatorId_" + paramOffset, userContext.getUserId(), Long.class, JdbcType.BIGINT);
