@@ -121,6 +121,11 @@ public class UserApplicationService {
                 command.getIdCard()
         );
 
+        // 扩展属性 (schema 驱动的用户类型扩展字段值, 落 users.attributes JSON)
+        if (command.getAttributes() != null) {
+            user.setAttributes(command.getAttributes());
+        }
+
         // 分配角色：优先使用命令中指定的角色，否则使用用户类型的默认角色
         List<Long> roleIds = command.getRoleIds();
         if ((roleIds == null || roleIds.isEmpty()) && command.getUserTypeCode() != null) {
@@ -234,6 +239,11 @@ public class UserApplicationService {
                 command.getBirthDate(),
                 command.getIdCard()
         );
+
+        // 扩展属性更新 (非 null 才覆盖, 与其它字段同语义)
+        if (command.getAttributes() != null) {
+            user.setAttributes(command.getAttributes());
+        }
 
         // 更新用户类型（先验证再更新）
         EntityTypeConfig updatedType = null;

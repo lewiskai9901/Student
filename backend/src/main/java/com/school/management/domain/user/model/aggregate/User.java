@@ -105,6 +105,12 @@ public class User extends AggregateRoot<Long> {
     private List<Long> roleIds = new ArrayList<>();
 
     /**
+     * 扩展属性 (通用 schema 驱动扩展字段值, 持久化到 users.attributes JSON 列)。
+     * 字段定义来自 entity_type_configs.metadata_schema (插件 systemFields 或管理员自定义)。
+     */
+    private java.util.Map<String, Object> attributes;
+
+    /**
      * 所属组织单元ID（查询时填充，非持久化字段）。
      * 数据源：access_relations 中 relation='member' 且 subject_type='user' 的首个活跃记录。
      * 业务代码应通过 AuthorizationService.lookup() 获取完整归属列表。
@@ -395,6 +401,8 @@ public class User extends AggregateRoot<Long> {
     public String getWechatOpenid() { return wechatOpenid; }
     public boolean isAllowMultipleDevices() { return allowMultipleDevices; }
     public List<Long> getRoleIds() { return Collections.unmodifiableList(roleIds); }
+    public java.util.Map<String, Object> getAttributes() { return attributes; }
+    public void setAttributes(java.util.Map<String, Object> attributes) { this.attributes = attributes; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 

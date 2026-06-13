@@ -6,6 +6,7 @@ import lombok.Data;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 用户领域响应 DTO
@@ -43,6 +44,7 @@ public class UserDomainResponse {
     private List<Long> roleIds;
     private String orgUnitName;
     private List<String> roleNames;
+    private Map<String, Object> attributes;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -75,6 +77,7 @@ public class UserDomainResponse {
         response.setRoleIds(user.getRoleIds());
         response.setOrgUnitName(user.getOrgUnitName());
         response.setRoleNames(user.getRoleNames());
+        response.setAttributes(user.getAttributes());
         response.setCreatedAt(user.getCreatedAt());
         response.setUpdatedAt(user.getUpdatedAt());
 

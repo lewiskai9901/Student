@@ -5,6 +5,7 @@ import lombok.Data;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 创建用户命令
@@ -72,6 +73,11 @@ public class CreateUserCommand {
      * 角色ID列表
      */
     private List<Long> roleIds;
+
+    /**
+     * 扩展属性 (schema 驱动的用户类型扩展字段值)
+     */
+    private Map<String, Object> attributes;
 
     /**
      * 创建人ID

@@ -24,6 +24,8 @@ public class UserPO {
     @TableField("identity_card")
     private String idCard;
     private String userTypeCode;
+    /** 扩展属性 (users.attributes JSON 列, 通用 schema 驱动扩展字段值) */
+    private String attributes;
     private Integer status;
     private LocalDateTime lastLoginTime;
     private String lastLoginIp;
@@ -56,6 +58,7 @@ public class UserPO {
     public LocalDate getBirthDate() { return birthDate; }
     public String getIdCard() { return idCard; }
     public String getUserTypeCode() { return userTypeCode; }
+    public String getAttributes() { return attributes; }
     public Integer getStatus() { return status; }
     public LocalDateTime getLastLoginTime() { return lastLoginTime; }
     public String getLastLoginIp() { return lastLoginIp; }
@@ -83,6 +86,7 @@ public class UserPO {
     public void setBirthDate(LocalDate birthDate) { this.birthDate = birthDate; }
     public void setIdCard(String idCard) { this.idCard = idCard; }
     public void setUserTypeCode(String userTypeCode) { this.userTypeCode = userTypeCode; }
+    public void setAttributes(String attributes) { this.attributes = attributes; }
     public void setStatus(Integer status) { this.status = status; }
     public void setLastLoginTime(LocalDateTime lastLoginTime) { this.lastLoginTime = lastLoginTime; }
     public void setLastLoginIp(String lastLoginIp) { this.lastLoginIp = lastLoginIp; }

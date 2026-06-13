@@ -7,6 +7,7 @@ import lombok.Data;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 更新用户请求 DTO
@@ -34,4 +35,7 @@ public class UpdateUserRequest {
     private String userTypeCode;
 
     private List<Long> roleIds;
+
+    /** 扩展属性 (用户类型 metadata_schema 声明的扩展字段值) */
+    private Map<String, Object> attributes;
 }

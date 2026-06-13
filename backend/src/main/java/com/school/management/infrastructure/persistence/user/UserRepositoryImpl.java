@@ -1,5 +1,7 @@
 package com.school.management.infrastructure.persistence.user;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.domain.user.model.aggregate.User;
 import com.school.management.domain.user.model.valueobject.UserStatus;
 import com.school.management.domain.user.repository.UserRepository;
@@ -19,9 +21,11 @@ import java.util.stream.Collectors;
 public class UserRepositoryImpl implements UserRepository {
 
     private final UserDomainMapper userMapper;
+    private final ObjectMapper objectMapper;
 
-    public UserRepositoryImpl(UserDomainMapper userMapper) {
+    public UserRepositoryImpl(UserDomainMapper userMapper, ObjectMapper objectMapper) {
         this.userMapper = userMapper;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -285,6 +289,7 @@ public class UserRepositoryImpl implements UserRepository {
         po.setBirthDate(domain.getBirthDate());
         po.setIdCard(domain.getIdCard());
         po.setUserTypeCode(domain.getUserTypeCode());
+        po.setAttributes(attributesToJson(domain.getAttributes()));
         po.setStatus(domain.getStatus() != null ? domain.getStatus().getCode() : null);
         po.setLastLoginTime(domain.getLastLoginTime());
         po.setLastLoginIp(domain.getLastLoginIp());
@@ -297,7 +302,7 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     private User toDomain(UserPO po) {
-        return User.reconstruct(
+        User user = User.reconstruct(
                 po.getId(),
                 po.getUsername(),
                 po.getPassword(),
@@ -319,6 +324,28 @@ public class UserRepositoryImpl implements UserRepository {
                 po.getCreatedAt(),
                 po.getUpdatedAt()
         );
+        user.setAttributes(attributesFromJson(po.getAttributes()));
+        return user;
+    }
+
+    /** 扩展属性 Map → JSON 字符串 (写库); null/空 → null */
+    private String attributesToJson(Map<String, Object> attributes) {
+        if (attributes == null || attributes.isEmpty()) return null;
+        try {
+            return objectMapper.writeValueAsString(attributes);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** JSON 字符串 → 扩展属性 Map (读库); null/解析失败 → null */
+    private Map<String, Object> attributesFromJson(String json) {
+        if (json == null || json.isBlank()) return null;
+        try {
+            return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private User toDomainWithOrgUnit(UserPO po) {

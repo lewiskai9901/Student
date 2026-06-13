@@ -687,20 +687,29 @@ const formData = reactive<UserFormData & { placeId?: LongId; attributes: Record<
 
 // Dynamic schema for user type (loaded from entity_type_configs)
 const userTypeSchema = ref<{ fields: any[] } | null>(null)
+// 编辑/新增时临时关闭 userTypeCode watch — 由 handleAdd/handleEdit 自己控制 schema 加载与
+// attributes 回填, 避免 watch 把已回填的扩展字段值重置成 {} (以及"连续编辑同类型不触发"的漏洞)。
+const suppressTypeWatch = ref(false)
 
-// Watch userTypeCode changes to load schema
-watch(() => formData.userTypeCode, async (newCode) => {
+/** 仅加载用户类型的扩展字段 schema, 不动 formData.attributes */
+async function loadSchemaFor(code?: string) {
   userTypeSchema.value = null
-  formData.attributes = {}
-  if (!newCode) return
+  if (!code) return
   try {
-    const res = await entityTypeApi.get('USER', newCode)
+    const res = await entityTypeApi.get('USER', code)
     const data = (res as any).data || res
     if (data?.metadataSchema) {
       const schema = typeof data.metadataSchema === 'string' ? JSON.parse(data.metadataSchema) : data.metadataSchema
       if (schema?.fields?.length > 0) userTypeSchema.value = schema
     }
   } catch { /* no plugin for this user type */ }
+}
+
+// 用户在表单里手动切换类型: 重置扩展字段值 + 重新加载 schema
+watch(() => formData.userTypeCode, async (newCode) => {
+  if (suppressTypeWatch.value) return
+  formData.attributes = {}
+  await loadSchemaFor(newCode)
 })
 
 const validateUsername = () => {
@@ -851,6 +860,7 @@ const handleAdd = () => {
   isEdit.value = false
   usernameError.value = ''
   phoneError.value = ''
+  suppressTypeWatch.value = true
   Object.assign(formData, {
     username: '',
     realName: '',
@@ -863,8 +873,11 @@ const handleAdd = () => {
     userTypeCode: '',
     orgUnitId: undefined,
     placeId: undefined,
-    status: 1
+    status: 1,
+    attributes: {}
   })
+  userTypeSchema.value = null
+  suppressTypeWatch.value = false
   dialogVisible.value = true
 }
 
@@ -876,6 +889,8 @@ const handleEdit = async (row: UserListItem) => {
   isEdit.value = true
   usernameError.value = ''
   phoneError.value = ''
+  // 关闭 watch 自己控制: 回填扩展字段值 + 加载 schema, 不被 watch 重置
+  suppressTypeWatch.value = true
   Object.assign(formData, {
     username: row.username,
     realName: row.realName,
@@ -888,10 +903,14 @@ const handleEdit = async (row: UserListItem) => {
     orgUnitId: row.orgUnitId || undefined,
     // 重置 placeId, 避免残留上一次编辑/新增的场所 (后端 update 不消费 placeId, 仅修正选择器显示)
     placeId: (row as any).placeId ?? undefined,
-    status: normalizeStatus(row.status)
+    status: normalizeStatus(row.status),
+    attributes: (row as any).attributes ? { ...(row as any).attributes } : {}
   })
   currentUserId.value = row.id
   dialogVisible.value = true
+  // 加载该类型扩展字段 schema (DynamicForm 渲染用), 不动已回填的 attributes
+  await loadSchemaFor(formData.userTypeCode)
+  suppressTypeWatch.value = false
 }
 
 const handleSubmit = async () => {

@@ -63,6 +63,7 @@ public class UserController {
                 .placeId(request.getPlaceId())
                 .userTypeCode(request.getUserTypeCode())
                 .roleIds(request.getRoleIds())
+                .attributes(request.getAttributes())
                 .createdBy(SecurityUtils.requireCurrentUserId())
                 .build();
 
@@ -89,6 +90,7 @@ public class UserController {
                 .orgUnitId(request.getOrgUnitId())
                 .userTypeCode(request.getUserTypeCode())
                 .roleIds(request.getRoleIds())
+                .attributes(request.getAttributes())
                 .updatedBy(SecurityUtils.requireCurrentUserId())
                 .build();
 
