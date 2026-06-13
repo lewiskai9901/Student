@@ -28,12 +28,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MenuRegistrar implements ApplicationRunner {
 
-    private final List<MenuContributionPlugin> plugins;
+    private final List<PluginPackage> packages;
     private final PluginPackageRegistrar packageRegistrar;
 
     /** 所有插件贡献的顶级菜单(已合并 + 排序) */
     @Getter
-    private volatile List<MenuContributionPlugin.MenuItemDef> allMenus = List.of();
+    private volatile List<MenuItemDef> allMenus = List.of();
 
     /** 菜单项 → 来源插件(industry) 映射,用于 UI 展示"此菜单由哪个行业提供" */
     @Getter
@@ -41,27 +41,31 @@ public class MenuRegistrar implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        if (plugins.isEmpty()) {
-            log.info("[MenuRegistrar] 无菜单贡献插件");
+        if (packages.isEmpty()) {
+            log.info("[MenuRegistrar] 无插件包");
             return;
         }
 
-        List<MenuContributionPlugin.MenuItemDef> merged = new ArrayList<>();
+        // 双轨收敛: 输入源从扫 MenuContributionPlugin bean 改为过滤 PluginPackage.contribute()
+        List<MenuItemDef> merged = new ArrayList<>();
         java.util.Map<String, String> industryMap = new java.util.HashMap<>();
-        for (MenuContributionPlugin p : plugins) {
-            String industry = packageRegistrar.resolveIndustry(p.getClass());
-            for (var menu : p.getMenus()) {
-                merged.add(menu);
-                industryMap.put(menu.path(), industry == null ? "CORE" : industry);
-            }
+        for (PluginPackage pkg : packages) {
+            String industry = packageRegistrar.resolveIndustry(pkg.getClass());
+            pkg.contribute()
+                .filter(c -> c instanceof Contribution.MenuContribution)
+                .map(c -> ((Contribution.MenuContribution) c).item())
+                .forEach(menu -> {
+                    merged.add(menu);
+                    industryMap.put(menu.path(), industry == null ? "CORE" : industry);
+                });
         }
 
         // 按 order 排序顶级菜单
-        merged.sort(Comparator.comparingInt(MenuContributionPlugin.MenuItemDef::order));
+        merged.sort(Comparator.comparingInt(MenuItemDef::order));
         this.allMenus = List.copyOf(merged);
         this.menuIndustryMap = java.util.Map.copyOf(industryMap);
 
-        log.info("[MenuRegistrar] 加载 {} 个插件,{} 个顶级菜单",
-            plugins.size(), allMenus.size());
+        log.info("[MenuRegistrar] 加载 {} 个插件包,{} 个顶级菜单",
+            packages.size(), allMenus.size());
     }
 }

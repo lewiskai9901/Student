@@ -35,7 +35,7 @@ public class PluginPlatformController {
     private final PolicyRegistry policyRegistry;
     private final List<TargetModeResolver> targetModeResolvers;
     private final TriggerPipelineHealthCheck triggerPipelineHealthCheck;
-    private final org.springframework.beans.factory.ObjectProvider<List<com.school.management.infrastructure.extension.MenuContributionPlugin>> menuPluginsProvider;
+    private final org.springframework.beans.factory.ObjectProvider<com.school.management.infrastructure.extension.MenuRegistrar> menuRegistrarProvider;
     private final PluginLifecycleService pluginLifecycleService;
 
     /**
@@ -368,22 +368,14 @@ public class PluginPlatformController {
         return Result.success(health);
     }
 
-    /** 根据 MenuContributionPlugin bean 的类路径推断所属插件, 累加其顶级菜单数. */
+    /** 从 MenuRegistrar 的 path→industry 映射累加某行业的顶级菜单数 (双轨收敛: 菜单已走 contribute()). */
     private long countMenusOfPlugin(String code) {
         try {
-            List<com.school.management.infrastructure.extension.MenuContributionPlugin> menuPlugins =
-                menuPluginsProvider.getIfAvailable();
-            if (menuPlugins == null) return 0L;
-            long sum = 0;
-            for (var mp : menuPlugins) {
-                if (code.equalsIgnoreCase(inferPluginFromClass(mp.getClass().getName()))) {
-                    try {
-                        var menus = mp.getMenus();
-                        if (menus != null) sum += menus.size();
-                    } catch (Exception ignored) {}
-                }
-            }
-            return sum;
+            var reg = menuRegistrarProvider.getIfAvailable();
+            if (reg == null) return 0L;
+            return reg.getMenuIndustryMap().values().stream()
+                .filter(ind -> code.equalsIgnoreCase(ind))
+                .count();
         } catch (Exception e) {
             return 0L;
         }

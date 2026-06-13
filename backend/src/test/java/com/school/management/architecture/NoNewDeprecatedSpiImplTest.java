@@ -36,15 +36,13 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class NoNewDeprecatedSpiImplTest {
 
-    // Phase 2 W2.2: RelationTypePlugin 已彻底删除并迁移到 PluginPackage.contribute().
-    // 剩余 6 个仍向下兼容, 待后续 phase 继续迁移.
+    // 双轨收敛进展: RelationTypePlugin(W2.2) / DataScopePlugin / RolePresetPlugin / MenuContributionPlugin
+    // 已删除并迁移到 PluginPackage.contribute()。剩余 3 个: EntityTypePlugin(携带行为, 保留),
+    // MessagingDomainPlugin / PermissionProvider(待迁)。
     private static final String[] DEPRECATED_SPIS = {
         "EntityTypePlugin",
-        "MenuContributionPlugin",
         "MessagingDomainPlugin",
-        "DataScopePlugin",
-        "PermissionProvider",
-        "RolePresetPlugin"
+        "PermissionProvider"
     };
 
     /**
@@ -82,18 +80,11 @@ class NoNewDeprecatedSpiImplTest {
         "plugins/education/messaging/EnrollmentMessagingPlugin.java",
         "plugins/education/messaging/GradeMessagingPlugin.java",
         "plugins/education/messaging/TeachingMessagingPlugin.java",
-        // MenuContributionPlugin (2)
-        "plugins/core/CoreMenuPlugin.java",
-        "plugins/education/EducationMenuPlugin.java",
-        // DataScopePlugin (1)
-        "plugins/education/EducationDataScopePlugin.java",
         // PermissionProvider (2)
         "plugins/core/CorePermissionProvider.java",
-        "plugins/education/EducationPermissionProvider.java",
-        // RelationTypePlugin: 已在 W2.2 全部删除 — 无 baseline 条目.
-        // RolePresetPlugin (2)
-        "plugins/core/CoreRolePresetPlugin.java",
-        "plugins/education/EducationRolePresetPlugin.java"
+        "plugins/education/EducationPermissionProvider.java"
+        // 已删除并迁移 (无 baseline 条目): RelationTypePlugin / DataScopePlugin /
+        // RolePresetPlugin / MenuContributionPlugin
     );
 
     /** 匹配 {@code class Xxx ... implements ... <SpiName>} (允许多接口列表 + 跨行) */

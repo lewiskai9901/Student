@@ -87,8 +87,7 @@ class UnifiedPluginPackageTest {
         List<Class<?>> oldSpis = List.of(
             EntityTypePlugin.class,
             MessagingDomainPlugin.class,
-            PermissionProvider.class,
-            MenuContributionPlugin.class
+            PermissionProvider.class
         );
         for (Class<?> c : oldSpis) {
             assertTrue(c.isAnnotationPresent(Deprecated.class),
@@ -142,10 +141,11 @@ class UnifiedPluginPackageTest {
         // Casbin 缺口修复 (2026-06-12): 加 TENANT_ADMIN RolePermissionBindingContribution
         // (23 + 菜单对齐补 3 个 workflow 查看码 = 26) → 18+26=44.
         // Phase1 双轨收敛: 加 19 个 DataResourceContribution → 44+19=63.
-        // Role 双轨收敛: 加 3 个 RoleContribution (SUPER_ADMIN/TENANT_ADMIN/GUEST, 取代 CoreRolePresetPlugin) → 63+3=66.
+        // Role 双轨收敛: 加 3 个 RoleContribution → 63+3=66.
+        // Menu 双轨收敛: 加 8 个 MenuContribution (顶级菜单, 取代 CoreMenuPlugin) → 66+8=74.
         // 旧测试期望"默认空流"已不再适用; 改为校验内容契约.
         long count = core.contribute().count();
-        assertEquals(66, count, "CoreManifest 应贡献 66 个 contribution (15 关系 + 3 workflow + 26 TENANT_ADMIN 授权 + 19 data-resource + 3 role)");
+        assertEquals(74, count, "CoreManifest 应贡献 74 个 contribution (15 关系 + 3 workflow + 26 TENANT_ADMIN + 19 data-resource + 3 role + 8 menu)");
         long rolePermCount = new CoreManifest().contribute()
             .filter(c -> c instanceof Contribution.RolePermissionBindingContribution)
             .count();

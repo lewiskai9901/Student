@@ -3,7 +3,7 @@ package com.school.management.interfaces.rest.system;
 import com.school.management.application.system.MenuQueryApplicationService;
 import com.school.management.common.result.Result;
 import com.school.management.common.util.SecurityUtils;
-import com.school.management.infrastructure.extension.MenuContributionPlugin;
+import com.school.management.infrastructure.extension.MenuItemDef;
 import com.school.management.infrastructure.extension.MenuRegistrar;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -58,7 +58,7 @@ public class MenuController {
      *  - requiredPermissions 不满足 → 整个菜单项隐藏
      *  - 有子项时,子项若全被过滤则父项也隐藏
      */
-    private Map<String, Object> filterAndSerialize(MenuContributionPlugin.MenuItemDef item,
+    private Map<String, Object> filterAndSerialize(MenuItemDef item,
                                                     Set<String> userPerms) {
         // 检查权限
         if (item.requiredPermissions() != null && !item.requiredPermissions().isEmpty()) {
@@ -79,13 +79,13 @@ public class MenuController {
         return serialize(item, visibleChildren);
     }
 
-    private Map<String, Object> serialize(MenuContributionPlugin.MenuItemDef item) {
+    private Map<String, Object> serialize(MenuItemDef item) {
         List<Map<String, Object>> children = item.children() == null ? List.of()
             : item.children().stream().map(this::serialize).collect(Collectors.toList());
         return serialize(item, children);
     }
 
-    private Map<String, Object> serialize(MenuContributionPlugin.MenuItemDef item,
+    private Map<String, Object> serialize(MenuItemDef item,
                                             List<Map<String, Object>> children) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("path", item.path());

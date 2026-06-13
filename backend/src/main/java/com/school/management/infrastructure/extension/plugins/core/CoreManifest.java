@@ -2,6 +2,7 @@ package com.school.management.infrastructure.extension.plugins.core;
 
 import com.school.management.infrastructure.extension.Contribution;
 import com.school.management.infrastructure.extension.DataResourceDef;
+import com.school.management.infrastructure.extension.MenuItemDef;
 import com.school.management.infrastructure.extension.RolePresetDef;
 import com.school.management.infrastructure.extension.PluginPackage;
 import com.school.management.infrastructure.extension.RelationTypeDef;
@@ -10,6 +11,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.stream.Stream;
+
+import static com.school.management.infrastructure.extension.MenuItemDef.of;
 
 /**
  * 通用核心插件包 — 任何部署都需要,不可卸载.
@@ -128,8 +131,128 @@ public class CoreManifest implements PluginPackage {
                 "关系授权审批流程")
         );
         return Stream.concat(
-            Stream.concat(Stream.concat(base, tenantAdminPermissionBindings()), coreDataResources()),
-            coreRoles());
+            Stream.concat(
+                Stream.concat(Stream.concat(base, tenantAdminPermissionBindings()), coreDataResources()),
+                coreRoles()),
+            coreMenus());
+    }
+
+    /** 包装为 CORE 域菜单贡献 */
+    private static Contribution.MenuContribution m(MenuItemDef item) {
+        return new Contribution.MenuContribution("core", item);
+    }
+
+    /**
+     * 通用核心菜单 (双轨收敛: 从已删的 CoreMenuPlugin 迁入)。
+     * 首页 / 消息与事件 / 访问控制 / 组织 / 场所 / 检查平台 / 资产 / 系统设置。
+     */
+    private Stream<Contribution> coreMenus() {
+        return Stream.of(
+            m(of("/dashboard", "首页", "home", 1)),
+
+            m(of("/message", "消息与事件", "bell", 2).children(List.of(
+                of("/message/list", "消息通知", "inbox", 1),
+                of("/message/event-types", "事件类型", "settings-2", 2)
+                    .requiredPermissions(List.of("system:config:view")),
+                of("/message/triggers", "事件触发器", "zap", 3)
+                    .requiredPermissions(List.of("system:config:view")),
+                of("/message/subscriptions", "订阅与模板", "list-checks", 4)
+                    .requiredPermissions(List.of("system:config:view")),
+                of("/message/preferences", "消息偏好", "sliders", 5)
+            ))),
+
+            m(of("/access", "访问控制", "shield", 6).children(List.of(
+                of("/system/users", "用户管理", "users", 1)
+                    .requiredPermissions(List.of("system:user:view")),
+                of("/system/roles", "角色管理", "user-cog", 2)
+                    .requiredPermissions(List.of("system:role:view")),
+                of("/system/permissions", "权限管理", "lock", 3)
+                    .requiredPermissions(List.of("system:permission:view")),
+                of("/access/relations", "关系绑定", "link-2", 4)
+                    .requiredPermissions(List.of("access:relation:view")),
+                of("/access/relation-types", "关系字典", "book", 5)
+                    .requiredPermissions(List.of("access:relation:view")),
+                of("/access/data-permissions", "数据权限", "shield-check", 6)
+                    .requiredPermissions(List.of("access:data-permission:view"))
+            ))),
+
+            m(of("/organization", "组织管理", "building-2", 3).children(List.of(
+                of("/organization/units", "组织架构", "network", 1)
+            ))),
+
+            m(of("/place", "场所管理", "map-pin", 4).children(List.of(
+                of("/place/management", "场所管理", "map", 1)
+            ))),
+
+            m(of("/inspection", "检查平台", "clipboard-check", 12).children(List.of(
+                of("/inspection/dashboard",        "检查平台总览", "layout-dashboard",  0)
+                    .requiredPermissions(List.of("insp:platform:view")),
+                of("/inspection/governance",       "治理工作台",   "shield-check",      1)
+                    .requiredPermissions(List.of("insp:platform:view")),
+                of("/inspection/tasks",            "我的任务",     "list-todo",         5),
+                of("/inspection/my-record",        "我的成绩单",   "badge-check",       6),
+                of("/inspection/my-corrective",    "我的整改",     "wrench",            7),
+                of("/inspection/appeals/my",       "我的申诉",     "scale",             8),
+                of("/inspection/received",             "我的受检中心",   "building-2",     10),
+                of("/inspection/received/inspections", "我被检查的记录", "clipboard-list", 11),
+                of("/inspection/received/trends",      "检查趋势",       "trending-up",    12),
+                of("/inspection/received/recurring",   "高频问题",       "alert-triangle", 13),
+                of("/inspection/tasks/review-risk","待审风险池",   "list-checks",       9)
+                    .requiredPermissions(List.of("insp:task:review")),
+                of("/inspection/appeals/review",   "申诉审核",     "gavel",            10)
+                    .requiredPermissions(List.of("inspection_appeal:review")),
+                of("/inspection/projects",         "检查项目",     "folder-search",    20)
+                    .requiredPermissions(List.of("insp:project:view")),
+                of("/inspection/config",           "检查配置",     "settings",         21)
+                    .requiredPermissions(List.of("insp:platform:manage")),
+                of("/inspection/grade-schemes",    "等级方案",     "award",            23)
+                    .requiredPermissions(List.of("insp:scoring-profile:view")),
+                of("/inspection/issue-categories", "问题分类",     "tags",             24)
+                    .requiredPermissions(List.of("insp:platform:manage")),
+                of("/inspection/analytics",        "分析报表",     "bar-chart-3",      30)
+                    .requiredPermissions(List.of("insp:analytics:view")),
+                of("/inspection/corrective",       "整改管理",     "hammer",           31)
+                    .requiredPermissions(List.of("insp:corrective:manage")),
+                of("/inspection/alerts",           "预警看板",     "bell",             32)
+                    .requiredPermissions(List.of("insp:alert:view")),
+                of("/inspection/export",           "导出中心",     "download",         33)
+                    .requiredPermissions(List.of("insp:analytics:view")),
+                of("/inspection/audit-trail",      "审计日志",     "file-search",      40)
+                    .requiredPermissions(List.of("insp:audit:view")),
+                of("/inspection/admin/reassign-departed", "离职重派", "user-x",        99)
+                    .requiredPermissions(List.of("insp:platform:manage"))
+            ))),
+
+            m(of("/asset", "资产管理", "package", 22).children(List.of(
+                of("/asset/center",       "资产总览",   "layout-dashboard", 1).requiredPermissions(List.of("asset:manage:view")),
+                of("/asset/categories",   "资产类别",   "tags",             2).requiredPermissions(List.of("asset:manage:view")),
+                of("/asset/inventory",    "资产清册",   "clipboard-list",   3).requiredPermissions(List.of("asset:manage:view")),
+                of("/asset/borrows",      "借用归还",   "hand",             4).requiredPermissions(List.of("asset:manage:view")),
+                of("/asset/maintenance",  "维保工单",   "wrench",           5).requiredPermissions(List.of("asset:manage:view")),
+                of("/asset/approvals",    "审批流",     "file-check",       6).requiredPermissions(List.of("asset:approval:view")),
+                of("/asset/alerts",       "告警中心",   "bell-ring",        7).requiredPermissions(List.of("asset:manage:view")),
+                of("/asset/depreciation", "折旧核算",   "trending-down",    8).requiredPermissions(List.of("asset:manage:view"))
+            ))),
+
+            m(of("/system", "系统管理", "settings", 90).children(List.of(
+                of("/system/entity-types", "类型配置", "layout-grid", 4)
+                    .requiredPermissions(List.of("system:config:view")),
+                of("/system/plugins", "插件平台", "package", 5)
+                    .requiredPermissions(List.of("system:config:view")),
+                of("/system/configs", "系统配置", "sliders", 6)
+                    .requiredPermissions(List.of("system:config:view")),
+                of("/system/tenants", "租户管理", "building", 9)
+                    .requiredPermissions(List.of("tenant:view")),
+                of("/system/login-customization", "登录定制", "palette", 10)
+                    .requiredPermissions(List.of("system:admin")),
+                of("/system/audit", "系统审计", "history", 11)
+                    .requiredPermissions(List.of("system:audit:view")),
+                of("/system/operation-logs", "操作日志", "scroll-text", 12)
+                    .requiredPermissions(List.of("system:audit:view")),
+                of("/system/announcements", "系统公告", "megaphone", 13)
+                    .requiredPermissions(List.of("system:message:manage"))
+            )))
+        );
     }
 
     /**

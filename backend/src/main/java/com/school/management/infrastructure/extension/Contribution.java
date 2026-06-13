@@ -181,7 +181,7 @@ public sealed interface Contribution permits
 
     /** 菜单贡献 */
     record MenuContribution(String domainCode,
-                             MenuContributionPlugin.MenuItemDef item) implements Contribution {
+                             MenuItemDef item) implements Contribution {
         @Override public String uniqueKey() { return "menu:" + item.path(); }
     }
 

@@ -3,6 +3,7 @@ package com.school.management.infrastructure.extension.plugins.education;
 import com.school.management.infrastructure.extension.Contribution;
 import com.school.management.infrastructure.extension.DataResourceDef;
 import com.school.management.infrastructure.extension.DataScopeDimensionDef;
+import com.school.management.infrastructure.extension.MenuItemDef;
 import com.school.management.infrastructure.extension.RolePresetDef;
 import com.school.management.infrastructure.extension.PluginPackage;
 import com.school.management.infrastructure.extension.RelationTypeDef;
@@ -11,6 +12,9 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
+
+import static com.school.management.infrastructure.extension.MenuItemDef.of;
+import static com.school.management.infrastructure.extension.plugins.education.constants.EducationPermissions.*;
 
 /**
  * 教育行业插件包.
@@ -62,7 +66,57 @@ public class EducationManifest implements PluginPackage {
                Stream.concat(roleScopeBindings(),
                Stream.concat(rolePermissionBindings(),
                Stream.concat(dataResources(),
-               Stream.concat(dataScopeDims(), eduRoles())))));
+               Stream.concat(dataScopeDims(),
+               Stream.concat(eduRoles(), eduMenus()))))));
+    }
+
+    /** 包装为 EDU 域菜单贡献 */
+    private static Contribution.MenuContribution m(MenuItemDef item) {
+        return new Contribution.MenuContribution("education", item);
+    }
+
+    /**
+     * 教育行业菜单 (双轨收敛: 从已删的 EducationMenuPlugin 迁入)。
+     * 学术 / 学生 / 宿舍 / 教务。组织/场所/检查是核心菜单, 不在此。
+     */
+    private Stream<Contribution> eduMenus() {
+        return Stream.of(
+            m(of("/academic", "学术管理", "graduation-cap", 3).children(List.of(
+                of("/academic/majors",   "专业",     "book-open",   1)
+                    .requiredPermissions(List.of(ACADEMIC_MAJOR_VIEW)),
+                of("/academic/courses",  "课程",     "book",        2)
+                    .requiredPermissions(List.of(ACADEMIC_COURSE_VIEW)),
+                of("/academic/curriculum","培养方案","list-tree",   3)
+                    .requiredPermissions(List.of(ACADEMIC_CURRICULUM_VIEW)),
+                of("/system/semesters", "学期管理", "calendar", 4)
+                    .requiredPermissions(List.of("system:config:view"))
+            ))),
+
+            m(of("/student", "学生管理", "users", 4).children(List.of(
+                of("/student/list",  "学生花名册",  "user-check", 1)
+                    .requiredPermissions(List.of(STUDENT_INFO_VIEW)),
+                of("/student/class", "班级管理",    "users-round",2)
+                    .requiredPermissions(List.of(STUDENT_CLASS_VIEW)),
+                of("/student/grade", "成绩管理",    "award",      3)
+                    .requiredPermissions(List.of("teaching:grade:view"))
+            ))),
+
+            m(of("/dormitory", "宿舍管理", "bed-double", 5).children(List.of(
+                of("/dormitory/overview",   "宿舍总览", "layout-grid", 1)
+                    .requiredPermissions(List.of(STUDENT_DORMITORY_VIEW)),
+                of("/dormitory/occupants",  "住宿管理", "user-check",  2)
+                    .requiredPermissions(List.of(DORMITORY_STUDENT_ASSIGN))
+            ))),
+
+            m(of("/teaching", "教务管理", "school", 20).children(List.of(
+                of("/teaching/schedule", "课程表", "calendar-days", 1),
+                of("/teaching/exam",     "考试",   "calendar-clock",2),
+                of("/teaching/offering", "开课",   "book-copy",     3)
+                    .requiredPermissions(List.of("teaching:offering:view")),
+                of("/system/teachers", "教师档案", "users-round", 4)
+                    .requiredPermissions(List.of("teacher:profile:view"))
+            )))
+        );
     }
 
     /**
