@@ -1,29 +1,22 @@
 package com.school.management.infrastructure.extension.plugins.education;
 
-import com.school.management.infrastructure.extension.PermissionProvider;
-import org.springframework.stereotype.Component;
+import com.school.management.infrastructure.extension.PermissionDef;
 
 import java.util.List;
 
-import static com.school.management.infrastructure.extension.PermissionProvider.PermissionDef.of;
+import static com.school.management.infrastructure.extension.PermissionDef.of;
 
 /**
  * 教育行业权限 — 学术/学生/教学/宿舍相关.
  *
- * 原 {@code PermissionConstants} 里的学术/学生/教学权限迁移到此,
- * 业务代码可以继续 import 老常量(将来逐步迁移到 EducationPermissions 常量类).
+ * <p>双轨收敛: 纯数据 holder, 由 EducationManifest.contribute() 调 {@link #permissions()} 聚合。
  */
-@Component
-public class EducationPermissionProvider implements PermissionProvider {
+public class EducationPermissionProvider {
 
-    @Override
-    public String getModuleCode() { return "education"; }
+    public static final String MODULE_CODE = "education";
+    public static final String MODULE_NAME = "教育行业";
 
-    @Override
-    public String getModuleName() { return "教育行业"; }
-
-    @Override
-    public List<PermissionDef> getPermissions() {
+    public static List<PermissionDef> permissions() {
         return List.of(
             // ─── academic 学术 ───
             of("academic:major:view", "查看专业", ""),

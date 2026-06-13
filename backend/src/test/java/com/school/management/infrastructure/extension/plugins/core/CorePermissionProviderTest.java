@@ -1,6 +1,6 @@
 package com.school.management.infrastructure.extension.plugins.core;
 
-import com.school.management.infrastructure.extension.PermissionProvider.PermissionDef;
+import com.school.management.infrastructure.extension.PermissionDef;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -11,22 +11,20 @@ import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@DisplayName("CorePermissionProvider 单元测试")
+@DisplayName("CorePermissionProvider 单元测试 (双轨收敛: 纯 holder static API)")
 class CorePermissionProviderTest {
-
-    private final CorePermissionProvider provider = new CorePermissionProvider();
 
     @Test
     @DisplayName("模块码与模块名固定为 core / 通用核心")
     void moduleMetadata() {
-        assertThat(provider.getModuleCode()).isEqualTo("core");
-        assertThat(provider.getModuleName()).isEqualTo("通用核心");
+        assertThat(CorePermissionProvider.MODULE_CODE).isEqualTo("core");
+        assertThat(CorePermissionProvider.MODULE_NAME).isEqualTo("通用核心");
     }
 
     @Test
     @DisplayName("权限列表非空且每条 code/name 均非空白")
     void permissionsNonBlank() {
-        List<PermissionDef> perms = provider.getPermissions();
+        List<PermissionDef> perms = CorePermissionProvider.permissions();
 
         assertThat(perms).isNotEmpty();
         assertThat(perms).allSatisfy(p -> {
@@ -39,7 +37,7 @@ class CorePermissionProviderTest {
     @Test
     @DisplayName("权限码无重复 (重复声明属真实 bug)")
     void noDuplicateCodes() {
-        List<PermissionDef> perms = provider.getPermissions();
+        List<PermissionDef> perms = CorePermissionProvider.permissions();
         Set<String> codes = perms.stream()
                 .map(PermissionDef::code)
                 .collect(Collectors.toCollection(HashSet::new));
@@ -52,7 +50,7 @@ class CorePermissionProviderTest {
     @Test
     @DisplayName("包含已知核心权限码")
     void containsKnownCodes() {
-        Set<String> codes = provider.getPermissions().stream()
+        Set<String> codes = CorePermissionProvider.permissions().stream()
                 .map(PermissionDef::code)
                 .collect(Collectors.toSet());
 

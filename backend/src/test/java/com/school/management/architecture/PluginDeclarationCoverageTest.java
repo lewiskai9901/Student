@@ -75,7 +75,7 @@ class PluginDeclarationCoverageTest {
             "(?:PermissionDef\\.)?of\\s*\\(\\s*\"([a-z_][a-zA-Z0-9:_\\.-]*)\"");
         Set<String> declared = new TreeSet<>();
         for (String src : allJavaSource) {
-            if (!src.contains("implements PermissionProvider")) continue;
+            if (!src.contains("List<PermissionDef>")) continue;
             Matcher m = declPattern.matcher(src);
             while (m.find()) declared.add(m.group(1));
         }
@@ -194,7 +194,7 @@ class PluginDeclarationCoverageTest {
             "(?:PermissionDef\\.)?of\\s*\\(\\s*\"([a-z_][a-zA-Z0-9:_\\.-]*)\"");
         Set<String> declaredPerms = new TreeSet<>();
         for (String src : allJavaSource) {
-            if (!src.contains("implements PermissionProvider")) continue;
+            if (!src.contains("List<PermissionDef>")) continue;
             Matcher m = permDeclPattern.matcher(src);
             while (m.find()) declaredPerms.add(m.group(1));
         }

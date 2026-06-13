@@ -97,7 +97,7 @@ public sealed interface Contribution permits
 
     /** 权限贡献 (对应旧 PermissionDef) */
     record PermissionContribution(String moduleCode, String moduleName,
-                                   PermissionProvider.PermissionDef def) implements Contribution {
+                                   PermissionDef def) implements Contribution {
         @Override public String uniqueKey() { return "perm:" + def.code(); }
     }
 

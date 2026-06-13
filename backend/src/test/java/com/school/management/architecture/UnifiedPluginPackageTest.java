@@ -80,14 +80,13 @@ class UnifiedPluginPackageTest {
     }
 
     @Test
-    @DisplayName("剩余 4 个旧 SPI 必须打 @Deprecated (迁移提示) — RelationType/DataScope/RolePreset 已删除")
+    @DisplayName("剩余 2 个旧 SPI 必须打 @Deprecated — RelationType/DataScope/RolePreset/Menu/Permission 已删除")
     void oldSpisAreDeprecated() {
-        // RelationTypePlugin/DataScopePlugin/RolePresetPlugin 已删除并完成迁移。
-        // 剩余 4 个 SPI 仍向下兼容, 需保持 @Deprecated 标注。
+        // 已删除并迁移: RelationType/DataScope/RolePreset/Menu/Permission。
+        // 剩余 2 个: EntityTypePlugin(携带行为, 保留) + MessagingDomainPlugin(待迁), 需保持 @Deprecated。
         List<Class<?>> oldSpis = List.of(
             EntityTypePlugin.class,
-            MessagingDomainPlugin.class,
-            PermissionProvider.class
+            MessagingDomainPlugin.class
         );
         for (Class<?> c : oldSpis) {
             assertTrue(c.isAnnotationPresent(Deprecated.class),
@@ -142,10 +141,11 @@ class UnifiedPluginPackageTest {
         // (23 + 菜单对齐补 3 个 workflow 查看码 = 26) → 18+26=44.
         // Phase1 双轨收敛: 加 19 个 DataResourceContribution → 44+19=63.
         // Role 双轨收敛: 加 3 个 RoleContribution → 63+3=66.
-        // Menu 双轨收敛: 加 8 个 MenuContribution (顶级菜单, 取代 CoreMenuPlugin) → 66+8=74.
+        // Menu 双轨收敛: 加 8 个 MenuContribution → 66+8=74.
+        // Permission 双轨收敛: 加 223 个 PermissionContribution (取代 CorePermissionProvider) → 74+223=297.
         // 旧测试期望"默认空流"已不再适用; 改为校验内容契约.
         long count = core.contribute().count();
-        assertEquals(74, count, "CoreManifest 应贡献 74 个 contribution (15 关系 + 3 workflow + 26 TENANT_ADMIN + 19 data-resource + 3 role + 8 menu)");
+        assertEquals(297, count, "CoreManifest 应贡献 297 个 contribution (15 关系 + 3 workflow + 26 TENANT_ADMIN + 19 data-resource + 3 role + 8 menu + 223 permission)");
         long rolePermCount = new CoreManifest().contribute()
             .filter(c -> c instanceof Contribution.RolePermissionBindingContribution)
             .count();

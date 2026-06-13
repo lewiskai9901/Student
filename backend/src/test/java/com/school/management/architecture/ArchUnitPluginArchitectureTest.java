@@ -2,7 +2,6 @@ package com.school.management.architecture;
 
 import com.school.management.infrastructure.extension.EntityTypePlugin;
 import com.school.management.infrastructure.extension.MessagingDomainPlugin;
-import com.school.management.infrastructure.extension.PermissionProvider;
 import com.school.management.infrastructure.extension.PluginManifest;
 import com.school.management.infrastructure.extension.PluginPackage;
 import com.tngtech.archunit.core.domain.JavaClasses;
@@ -116,13 +115,8 @@ class ArchUnitPluginArchitectureTest {
         rule.check(classes);
     }
 
-    @Test
-    void all_PermissionProvider_implementations_must_be_components() {
-        ArchRule rule = classes()
-                .that().implement(PermissionProvider.class)
-                .should().beAnnotatedWith(Component.class);
-        rule.check(classes);
-    }
+    // PermissionProvider 已删 (双轨收敛): 权限经 contribute() 的 PermissionContribution 声明,
+    // CorePermissionProvider/EducationPermissionProvider 已降级为纯数据 holder, 不再 @Component。
 
     // RolePresetPlugin 已删 (双轨收敛): 角色经 PluginPackage.contribute() 的 RoleContribution 声明,
     // 不再有 @Component 实现, 故移除"impl 必须是 @Component"守护。

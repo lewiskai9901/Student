@@ -41,8 +41,7 @@ class NoNewDeprecatedSpiImplTest {
     // MessagingDomainPlugin / PermissionProvider(待迁)。
     private static final String[] DEPRECATED_SPIS = {
         "EntityTypePlugin",
-        "MessagingDomainPlugin",
-        "PermissionProvider"
+        "MessagingDomainPlugin"
     };
 
     /**
@@ -79,12 +78,9 @@ class NoNewDeprecatedSpiImplTest {
         // DormitoryMessagingPlugin 已迁移到 PluginPackage (Track M3 reference) — 不在 baseline
         "plugins/education/messaging/EnrollmentMessagingPlugin.java",
         "plugins/education/messaging/GradeMessagingPlugin.java",
-        "plugins/education/messaging/TeachingMessagingPlugin.java",
-        // PermissionProvider (2)
-        "plugins/core/CorePermissionProvider.java",
-        "plugins/education/EducationPermissionProvider.java"
+        "plugins/education/messaging/TeachingMessagingPlugin.java"
         // 已删除并迁移 (无 baseline 条目): RelationTypePlugin / DataScopePlugin /
-        // RolePresetPlugin / MenuContributionPlugin
+        // RolePresetPlugin / MenuContributionPlugin / PermissionProvider
     );
 
     /** 匹配 {@code class Xxx ... implements ... <SpiName>} (允许多接口列表 + 跨行) */

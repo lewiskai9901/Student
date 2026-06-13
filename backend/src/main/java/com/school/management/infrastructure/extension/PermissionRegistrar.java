@@ -19,40 +19,44 @@ import java.util.List;
 @Slf4j
 @Component
 @Order(400)
-public class PermissionRegistrar extends AbstractPluginRegistrar<PermissionProvider, PermissionProvider.PermissionDef> {
+public class PermissionRegistrar extends AbstractPluginRegistrar<PluginPackage, Contribution.PermissionContribution> {
 
-    private final List<PermissionProvider> providers;
+    private final List<PluginPackage> packages;
     private final ApplicationEventPublisher eventPublisher;
 
-    public PermissionRegistrar(List<PermissionProvider> providers,
+    public PermissionRegistrar(List<PluginPackage> packages,
                                 JdbcTemplate jdbc,
                                 PluginPackageRegistrar packageRegistrar,
                                 ApplicationEventPublisher eventPublisher) {
         super(jdbc, packageRegistrar);
-        this.providers = providers;
+        this.packages = packages;
         this.eventPublisher = eventPublisher;
     }
 
-    @Override protected List<PermissionProvider> getPluginList() { return providers; }
+    @Override protected List<PluginPackage> getPluginList() { return packages; }
 
-    @Override protected List<PermissionProvider.PermissionDef> extractDefs(PermissionProvider p) {
-        return p.getPermissions();
+    @Override protected List<Contribution.PermissionContribution> extractDefs(PluginPackage p) {
+        return p.contribute()
+            .filter(c -> c instanceof Contribution.PermissionContribution)
+            .map(c -> (Contribution.PermissionContribution) c)
+            .toList();
     }
 
-    @Override protected String describeDef(PermissionProvider.PermissionDef def) {
-        return def.code();
+    @Override protected String describeDef(Contribution.PermissionContribution pc) {
+        return pc.def().code();
     }
 
     /** 声明完成后发事件, Casbin / 缓存自动 reload */
     @Override
-    protected void afterSync(List<PermissionProvider> plugins) {
+    protected void afterSync(List<PluginPackage> plugins) {
         eventPublisher.publishEvent(new PermissionsRefreshedEvent(this, "PermissionRegistrar"));
     }
 
     @Override
-    protected UpsertResult upsertOne(PermissionProvider provider,
-                                      PermissionProvider.PermissionDef def,
+    protected UpsertResult upsertOne(PluginPackage provider,
+                                      Contribution.PermissionContribution pc,
                                       String industry, String pluginClass) {
+        PermissionDef def = pc.def();
         if (isCustomProtected(
                 "SELECT industry FROM permissions WHERE permission_code=?",
                 def.code())) {

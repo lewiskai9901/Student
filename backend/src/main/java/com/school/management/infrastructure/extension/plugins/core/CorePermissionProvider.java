@@ -1,28 +1,25 @@
 package com.school.management.infrastructure.extension.plugins.core;
 
-import com.school.management.infrastructure.extension.PermissionProvider;
-import org.springframework.stereotype.Component;
+import com.school.management.infrastructure.extension.PermissionDef;
 
 import java.util.List;
 
-import static com.school.management.infrastructure.extension.PermissionProvider.PermissionDef.of;
+import static com.school.management.infrastructure.extension.PermissionDef.of;
 
 /**
  * 通用核心权限 — 平台级,任何部署都需要.
  *
  * 覆盖: system (用户/角色/权限/配置/公告/日志), task, workflow, wechat 等通用模块.
+ *
+ * <p>双轨收敛: 不再是 @Component PermissionProvider SPI, 改为纯数据 holder —
+ * 由 CoreManifest.contribute() 调 {@link #permissions()} 聚合为 PermissionContribution。
  */
-@Component
-public class CorePermissionProvider implements PermissionProvider {
+public class CorePermissionProvider {
 
-    @Override
-    public String getModuleCode() { return "core"; }
+    public static final String MODULE_CODE = "core";
+    public static final String MODULE_NAME = "通用核心";
 
-    @Override
-    public String getModuleName() { return "通用核心"; }
-
-    @Override
-    public List<PermissionDef> getPermissions() {
+    public static List<PermissionDef> permissions() {
         return List.of(
             // ─── system:admin 超级权限 ───
             of("system:admin", "系统管理员", "顶级权限,拥有所有操作"),

@@ -130,11 +130,21 @@ public class CoreManifest implements PluginPackage {
                 "processes/access-relation-approval.bpmn20.xml",
                 "关系授权审批流程")
         );
-        return Stream.concat(
-            Stream.concat(
-                Stream.concat(Stream.concat(base, tenantAdminPermissionBindings()), coreDataResources()),
-                coreRoles()),
-            coreMenus());
+        return Stream.of(
+                base,
+                tenantAdminPermissionBindings(),
+                coreDataResources(),
+                coreRoles(),
+                coreMenus(),
+                corePermissions()
+            ).flatMap(s -> s);
+    }
+
+    /** 通用核心功能权限 (双轨收敛: 从 CorePermissionProvider holder 聚合)。 */
+    private Stream<Contribution> corePermissions() {
+        return CorePermissionProvider.permissions().stream()
+            .map(d -> new Contribution.PermissionContribution(
+                CorePermissionProvider.MODULE_CODE, CorePermissionProvider.MODULE_NAME, d));
     }
 
     /** 包装为 CORE 域菜单贡献 */
