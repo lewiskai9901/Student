@@ -131,10 +131,10 @@ const isSelected = computed(() => {
 const genderIndicator = computed(() => {
   const g = props.node.effectiveGender || props.node.gender
   if (!g) return null
+  // 仅对受限场所 (男/女) 显示性别标记; MIXED(不限) 不显, 避免噪音
   const map: Record<string, { icon: string; color: string }> = {
-    'MALE': { icon: '', color: '#3b82f6' },
-    'FEMALE': { icon: '', color: '#ec4899' },
-    'MIXED': { icon: '', color: '#8b5cf6' }
+    'MALE': { icon: '♂', color: '#3b82f6' },
+    'FEMALE': { icon: '♀', color: '#ec4899' }
   }
   return map[g] || null
 })
