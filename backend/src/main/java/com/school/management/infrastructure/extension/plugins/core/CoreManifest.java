@@ -1,6 +1,7 @@
 package com.school.management.infrastructure.extension.plugins.core;
 
 import com.school.management.infrastructure.extension.Contribution;
+import com.school.management.infrastructure.extension.DataResourceDef;
 import com.school.management.infrastructure.extension.PluginPackage;
 import com.school.management.infrastructure.extension.RelationTypeDef;
 import com.school.management.infrastructure.extension.RelationTypeDef.Implied;
@@ -125,7 +126,42 @@ public class CoreManifest implements PluginPackage {
                 "processes/access-relation-approval.bpmn20.xml",
                 "关系授权审批流程")
         );
-        return Stream.concat(base, tenantAdminPermissionBindings());
+        return Stream.concat(Stream.concat(base, tenantAdminPermissionBindings()), coreDataResources());
+    }
+
+    /**
+     * 通用核心数据资源 scope 声明 (Phase 1 双轨收敛: 从已删的 CoreDataResourceProvider 迁入)。
+     * 组织向走 5 种常规 scope; 个人向只能 SELF。启动期 UPDATE data_resources.allowed_scopes。
+     */
+    private Stream<Contribution> coreDataResources() {
+        return Stream.of(
+            // 组织向: 5 种常规 scope
+            dr("user",        "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "SELF", "CUSTOM"),
+            dr("org_unit",    "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "SELF", "CUSTOM"),
+            dr("role",        "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "SELF", "CUSTOM"),
+            dr("place",       "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "SELF", "CUSTOM"),
+            dr("system_role", "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "SELF", "CUSTOM"),
+            dr("system_user", "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "SELF", "CUSTOM"),
+            // 个人向: 只能 SELF
+            dr("notification", "SELF"),
+            dr("dashboard",    "SELF"),
+            // 检查平台 (通用核心)
+            dr("inspection_project",     "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "SELF", "CUSTOM"),
+            dr("inspection_task",        "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "SELF", "CUSTOM"),
+            dr("inspection_record",      "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "SELF", "CUSTOM"),
+            dr("inspection_corrective",  "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "SELF", "CUSTOM"),
+            dr("inspection_alert",       "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "SELF", "CUSTOM"),
+            dr("inspection_observation", "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "SELF", "CUSTOM"),
+            dr("inspection_violation",   "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "SELF", "CUSTOM"),
+            dr("inspection_summary",     "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "CUSTOM"),
+            dr("inspection_template",    "ALL", "SELF"),
+            dr("inspection_appeal",      "SELF"),
+            dr("inspection_personal",    "SELF")
+        );
+    }
+
+    private static Contribution.DataResourceContribution dr(String code, String... scopes) {
+        return new Contribution.DataResourceContribution(DataResourceDef.of(code, scopes));
     }
 
     /**

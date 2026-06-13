@@ -41,6 +41,7 @@ public class ContributionDispatcher implements ApplicationRunner {
     private final MessagingRegistrar messagingRegistrar;
     private final RelationTypeUpserter relationTypeUpserter;
     private final RoleScopeBindingRegistrar roleScopeBindingRegistrar;
+    private final DataResourceUpserter dataResourceUpserter;
 
     @Override
     public void run(ApplicationArguments args) {
@@ -64,6 +65,7 @@ public class ContributionDispatcher implements ApplicationRunner {
         AtomicInteger targetModes = new AtomicInteger();
         AtomicInteger domains = new AtomicInteger();
         AtomicInteger workflows = new AtomicInteger();
+        AtomicInteger dataResources = new AtomicInteger();
         AtomicInteger roleScopes = new AtomicInteger();
         AtomicInteger rolePerms = new AtomicInteger();
 
@@ -141,6 +143,16 @@ public class ContributionDispatcher implements ApplicationRunner {
                 }
                 else if (c instanceof Contribution.MenuContribution)         menus.incrementAndGet();
                 else if (c instanceof Contribution.DataScopeContribution)    scopes.incrementAndGet();
+                else if (c instanceof Contribution.DataResourceContribution drc) {
+                    // 无依赖类型: dispatcher @Order(60) 直接 UPSERT (data_resources 行由 migration 落库)
+                    dataResources.incrementAndGet();
+                    try {
+                        dataResourceUpserter.upsert(drc.def());
+                    } catch (Exception e) {
+                        log.error("[ContributionDispatcher] 数据资源写入失败 {}: {}",
+                            drc.def().resourceCode(), e.getMessage());
+                    }
+                }
                 else if (c instanceof Contribution.RouteContribution)        routes.incrementAndGet();
                 else if (c instanceof Contribution.PolicyContribution pc) {
                     policies.incrementAndGet();
@@ -164,11 +176,11 @@ public class ContributionDispatcher implements ApplicationRunner {
         }
 
         log.info("[ContributionDispatcher] 扫描 {} 个包, 收到 {} 条 Contribution " +
-                "(entity {}, relation {}, event-domain {}, trigger-point {}, event-type {}, perm {}, role {}, role-scope {}, role-perm {}, menu {}, scope {}, route {}, policy {}, target-mode {}, domain {}, workflow {})",
+                "(entity {}, relation {}, event-domain {}, trigger-point {}, event-type {}, perm {}, role {}, role-scope {}, role-perm {}, menu {}, scope {}, data-resource {}, route {}, policy {}, target-mode {}, domain {}, workflow {})",
             packages.size(), total.get(),
             entities.get(), relations.get(), events.get(),
             triggerPoints.get(), eventTypes.get(),
-            perms.get(), roles.get(), roleScopes.get(), rolePerms.get(), menus.get(), scopes.get(), routes.get(),
+            perms.get(), roles.get(), roleScopes.get(), rolePerms.get(), menus.get(), scopes.get(), dataResources.get(), routes.get(),
             policies.get(), targetModes.get(), domains.get(), workflows.get());
     }
 }

@@ -55,14 +55,14 @@ class UnifiedPluginPackageTest {
     }
 
     @Test
-    @DisplayName("Contribution 恰好有 16 个 permitted 子类型 (+role-permission-binding)")
-    void contributionPermitsExactly16Subtypes() {
+    @DisplayName("Contribution 恰好有 17 个 permitted 子类型 (+data-resource)")
+    void contributionPermitsExactly17Subtypes() {
         Class<?>[] permitted = Contribution.class.getPermittedSubclasses();
-        assertEquals(16, permitted.length,
-            "P5-1 加 RoleScopeBindingContribution (数据权限默认 wiring); Casbin 缺口修复加 " +
-            "RolePermissionBindingContribution (功能权限默认 wiring, 落 role_permissions). 共 16 种: " +
+        assertEquals(17, permitted.length,
+            "P5-1 加 RoleScopeBindingContribution; Casbin 缺口修复加 RolePermissionBindingContribution; " +
+            "Phase1 双轨收敛加 DataResourceContribution (取代 DataResourceProvider SPI). 共 17 种: " +
             "entity/relation/event-domain/trigger-point/event-type/perm/role/role-scope/role-perm/" +
-            "menu/data-scope/route/policy/target-mode/domain/workflow. " +
+            "menu/data-scope/data-resource/route/policy/target-mode/domain/workflow. " +
             "实际=" + permitted.length);
     }
 
@@ -134,7 +134,7 @@ class UnifiedPluginPackageTest {
     }
 
     @Test
-    @DisplayName("PluginPackage 默认 metadata() 非 null; CoreManifest.contribute() 含 41 个 contribution (Casbin 缺口: +23 TENANT_ADMIN 默认授权)")
+    @DisplayName("PluginPackage 默认 metadata() 非 null; CoreManifest.contribute() 含 63 个 contribution (Phase1: +19 data-resource)")
     void pluginPackageDefaultMethods() {
         PluginPackage core = new CoreManifest();
         // Phase 2 W2.2: CoreManifest 已覆盖 contribute() 声明 9 个核心关系 (CoreRelationsPlugin 已删).
@@ -143,9 +143,10 @@ class UnifiedPluginPackageTest {
         // Phase 6 (workflow-engine): 加 access-relation-approval workflow → 17+1=18.
         // Casbin 缺口修复 (2026-06-12): 加 TENANT_ADMIN RolePermissionBindingContribution
         // (23 + 菜单对齐补 3 个 workflow 查看码 = 26) → 18+26=44.
+        // Phase1 双轨收敛 (2026-06-13): 加 19 个 DataResourceContribution (取代 CoreDataResourceProvider) → 44+19=63.
         // 旧测试期望"默认空流"已不再适用; 改为校验内容契约.
         long count = core.contribute().count();
-        assertEquals(44, count, "CoreManifest 应贡献 44 个 contribution (15 关系类型 + 3 workflow + 26 TENANT_ADMIN 默认授权)");
+        assertEquals(63, count, "CoreManifest 应贡献 63 个 contribution (15 关系 + 3 workflow + 26 TENANT_ADMIN 授权 + 19 data-resource)");
         long rolePermCount = new CoreManifest().contribute()
             .filter(c -> c instanceof Contribution.RolePermissionBindingContribution)
             .count();

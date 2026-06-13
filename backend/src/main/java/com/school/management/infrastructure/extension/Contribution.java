@@ -30,6 +30,7 @@ public sealed interface Contribution permits
     Contribution.RolePermissionBindingContribution,
     Contribution.MenuContribution,
     Contribution.DataScopeContribution,
+    Contribution.DataResourceContribution,
     Contribution.RouteContribution,
     Contribution.PolicyContribution,
     Contribution.TargetModeResolverContribution,
@@ -188,6 +189,15 @@ public sealed interface Contribution permits
     record DataScopeContribution(String domainCode,
                                   DataScopePlugin.DimensionDef def) implements Contribution {
         @Override public String uniqueKey() { return "data-scope:" + def.code(); }
+    }
+
+    /**
+     * 数据资源贡献 (Phase 1 双轨收敛: 取代 DataResourceProvider SPI)。
+     * 声明 data_resources 某行支持的 scope 集合, 启动期 {@link DataResourceUpserter}
+     * UPDATE 该行 allowed_scopes; 行不存在则跳过。
+     */
+    record DataResourceContribution(DataResourceDef def) implements Contribution {
+        @Override public String uniqueKey() { return "data-resource:" + def.resourceCode(); }
     }
 
     /**

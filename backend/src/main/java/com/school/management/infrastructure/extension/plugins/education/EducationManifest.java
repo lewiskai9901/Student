@@ -1,6 +1,7 @@
 package com.school.management.infrastructure.extension.plugins.education;
 
 import com.school.management.infrastructure.extension.Contribution;
+import com.school.management.infrastructure.extension.DataResourceDef;
 import com.school.management.infrastructure.extension.PluginPackage;
 import com.school.management.infrastructure.extension.RelationTypeDef;
 import org.springframework.stereotype.Component;
@@ -56,7 +57,31 @@ public class EducationManifest implements PluginPackage {
     @Override
     public Stream<Contribution> contribute() {
         return Stream.concat(relationTypes(),
-               Stream.concat(roleScopeBindings(), rolePermissionBindings()));
+               Stream.concat(roleScopeBindings(),
+               Stream.concat(rolePermissionBindings(), dataResources())));
+    }
+
+    /**
+     * 教育行业数据资源 scope 声明 (Phase 1 双轨收敛: 从已删的 EducationDataResourceProvider 迁入)。
+     * 学生类加年级/班级/专业维度; 成绩/考试跨年级不给 BY_GRADE; 宿舍/招生组织向。
+     */
+    private Stream<Contribution> dataResources() {
+        return Stream.of(
+            dr("student",    "ALL", "BY_GRADE", "BY_CLASS", "BY_MAJOR", "SELF", "CUSTOM"),
+            dr("attendance", "ALL", "BY_GRADE", "BY_CLASS", "BY_MAJOR", "SELF", "CUSTOM"),
+            dr("grade_batch",   "ALL", "BY_CLASS", "SELF", "CUSTOM"),
+            dr("student_grade", "ALL", "BY_CLASS", "SELF", "CUSTOM"),
+            dr("exam",          "ALL", "BY_CLASS", "SELF", "CUSTOM"),
+            dr("exam_batch",    "ALL", "BY_CLASS", "SELF", "CUSTOM"),
+            dr("teaching_task", "ALL", "BY_CLASS", "BY_MAJOR", "SELF", "CUSTOM"),
+            dr("school_class",  "ALL", "BY_CLASS", "BY_MAJOR", "SELF", "CUSTOM"),
+            dr("dormitory",  "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "SELF", "CUSTOM"),
+            dr("enrollment", "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "SELF", "CUSTOM")
+        );
+    }
+
+    private static Contribution.DataResourceContribution dr(String code, String... scopes) {
+        return new Contribution.DataResourceContribution(DataResourceDef.of(code, scopes));
     }
 
     private Stream<Contribution> relationTypes() {
