@@ -105,7 +105,7 @@
     </div>
 
     <!-- ═══════════ 权限目录模式 (只读全局字典) ═══════════ -->
-    <div v-else class="flex-1 overflow-hidden">
+    <div v-else class="min-h-0 flex-1 overflow-y-auto">
       <PermissionCatalog />
     </div>
 

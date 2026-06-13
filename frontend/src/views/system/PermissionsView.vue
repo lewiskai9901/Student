@@ -6,13 +6,6 @@
         <h1 class="ph-title">权限目录</h1>
         <p class="ph-subtitle">按行业插件分组展示所有权限点 (代码注解自动声明, 管理员只读)</p>
       </div>
-      <div class="ph-actions">
-        <button class="ph-btn" @click="runSyncCheck" :disabled="syncing">
-          <Loader2 v-if="syncing" class="spinning" :size="14" />
-          <RefreshCw v-else :size="14" />
-          {{ syncing ? '检查中...' : '同步检查' }}
-        </button>
-      </div>
     </header>
 
     <!-- Stats bar -->
@@ -79,8 +72,6 @@
             <div class="ig-head-text">
               <h2 class="ig-title">{{ ig.industryLabel }}</h2>
               <p class="ig-subtitle">
-                <code class="ig-code">{{ ig.industryCode }}</code>
-                <span class="ig-dot">·</span>
                 <b>{{ ig.total }}</b> 个权限
                 <span class="ig-dot">·</span>
                 <b>{{ ig.modules.length }}</b> 模块
@@ -127,7 +118,6 @@
                 :class="{ 'mg-chevron-open': expanded[ig.industryCode + ':' + mg.moduleCode] }"
               />
               <span class="mg-name">{{ mg.moduleLabel }}</span>
-              <code class="mg-modcode">{{ mg.moduleCode }}</code>
               <span class="mg-count">{{ mg.permissions.length }}</span>
             </div>
             <div
@@ -160,60 +150,6 @@
         <p>{{ hasFilter ? '无匹配权限' : '暂无权限数据' }}</p>
       </div>
     </div>
-
-    <!-- Sync check dialog (retained from original) -->
-    <Teleport to="body">
-      <Transition name="modal">
-        <div v-if="syncDialogVisible" class="sync-modal">
-          <div class="sync-backdrop" @click="syncDialogVisible = false"></div>
-          <div class="sync-dialog">
-            <div class="sync-head">
-              <h3>权限同步检查结果</h3>
-              <button class="sync-close" @click="syncDialogVisible = false">
-                <X :size="16" />
-              </button>
-            </div>
-            <div v-if="syncResult" class="sync-body">
-              <div class="sync-summary">
-                <div class="sync-line">
-                  <CheckCircle :size="14" class="sync-ok" />
-                  <span>代码中的权限注解: <b>{{ syncResult.codeAnnotationCount }}</b> 个</span>
-                </div>
-                <div class="sync-line">
-                  <CheckCircle :size="14" class="sync-ok" />
-                  <span>数据库权限: <b>{{ syncResult.dbPermissionCount }}</b> 条</span>
-                </div>
-              </div>
-              <div v-if="syncResult.missingInDbCount > 0" class="sync-section">
-                <div class="sync-section-title sync-warn">
-                  <AlertTriangle :size="14" />
-                  代码中有但数据库缺失: {{ syncResult.missingInDbCount }} 条
-                </div>
-                <div class="sync-codes sync-codes-warn">
-                  <div v-for="code in syncResult.missingInDb" :key="code">{{ code }}</div>
-                </div>
-              </div>
-              <div v-else class="sync-line sync-ok" style="margin-top: 16px">
-                <CheckCircle :size="14" />
-                代码权限与数据库完全同步
-              </div>
-              <div v-if="syncResult.potentiallyObsoleteCount > 0" class="sync-section">
-                <div class="sync-section-title sync-info">
-                  <Info :size="14" />
-                  数据库中可能过时的权限: {{ syncResult.potentiallyObsoleteCount }} 条
-                </div>
-                <div class="sync-codes sync-codes-info">
-                  <div v-for="code in syncResult.potentiallyObsoleteInDb" :key="code">{{ code }}</div>
-                </div>
-              </div>
-            </div>
-            <div class="sync-foot">
-              <button class="ph-btn" @click="syncDialogVisible = false">关闭</button>
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
   </div>
 </template>
 
@@ -225,18 +161,15 @@ import {
   Lock,
   Loader2,
   ChevronDown,
-  RefreshCw,
-  X,
   AlertTriangle,
   CheckCircle,
-  Info,
   Shield,
   GraduationCap,
   HeartPulse,
   Users,
   Settings,
 } from 'lucide-vue-next'
-import { getPermissions, checkPermissionSync } from '@/api/access'
+import { getPermissions } from '@/api/access'
 import { pluginPlatformApi } from '@/api/pluginPlatform'
 import type { Permission } from '@/types'
 
@@ -338,18 +271,6 @@ const showOnlyDisabled = ref(false)
 const allPermissions = ref<Permission[]>([])
 const expanded = reactive<Record<string, boolean>>({})
 const enabling = ref<string>('')
-
-// ---- Sync check state ----
-const syncing = ref(false)
-const syncDialogVisible = ref(false)
-const syncResult = ref<{
-  codeAnnotationCount: number
-  dbPermissionCount: number
-  missingInDb: string[]
-  missingInDbCount: number
-  potentiallyObsoleteInDb: string[]
-  potentiallyObsoleteCount: number
-} | null>(null)
 
 // ---- Grouping types ----
 interface ModuleGroup {
@@ -490,19 +411,6 @@ async function loadPermissions() {
   }
 }
 
-async function runSyncCheck() {
-  syncing.value = true
-  try {
-    const data = await checkPermissionSync()
-    syncResult.value = data
-    syncDialogVisible.value = true
-  } catch (error) {
-    ElMessage.error('同步检查失败，请确认后端服务正常运行')
-  } finally {
-    syncing.value = false
-  }
-}
-
 async function onEnablePlugin(industryCode: string) {
   try {
     await ElMessageBox.confirm(
@@ -532,9 +440,8 @@ onMounted(() => {
 .permissions-redesign {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  min-height: 100%;
   background: #f9fafb;
-  overflow: hidden;
 }
 
 /* ========== Header ========== */
@@ -557,32 +464,6 @@ onMounted(() => {
   margin: 2px 0 0;
   font-size: 13px;
   color: #6b7280;
-}
-.ph-actions {
-  display: flex;
-  gap: 8px;
-}
-.ph-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 34px;
-  padding: 0 14px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  background: #fff;
-  color: #374151;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.ph-btn:hover:not(:disabled) {
-  background: #f3f4f6;
-}
-.ph-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 .spinning {
   animation: spin 1s linear infinite;
@@ -698,7 +579,6 @@ onMounted(() => {
 /* ========== Body ========== */
 .ph-body {
   flex: 1;
-  overflow-y: auto;
   padding: 16px 24px 32px;
   display: flex;
   flex-direction: column;
@@ -767,14 +647,6 @@ onMounted(() => {
   flex-wrap: wrap;
 }
 .ig-subtitle b { color: #111827; font-weight: 600; }
-.ig-code {
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  background: #f3f4f6;
-  padding: 1px 6px;
-  border-radius: 4px;
-  font-size: 11px;
-  color: #374151;
-}
 .ig-dot { color: #d1d5db; }
 
 .ig-head-status {
@@ -880,11 +752,6 @@ onMounted(() => {
   font-weight: 500;
   color: #111827;
 }
-.mg-modcode {
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: 11px;
-  color: #9ca3af;
-}
 .mg-count {
   margin-left: auto;
   padding: 1px 8px;
@@ -969,111 +836,4 @@ onMounted(() => {
   font-size: 13px;
 }
 
-/* ========== Sync dialog ========== */
-.sync-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.sync-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-}
-.sync-dialog {
-  position: relative;
-  width: 100%;
-  max-width: 520px;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.2);
-}
-.sync-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 20px;
-  border-bottom: 1px solid #e5e7eb;
-}
-.sync-head h3 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-  color: #111827;
-}
-.sync-close {
-  border: none;
-  background: transparent;
-  padding: 4px;
-  border-radius: 6px;
-  cursor: pointer;
-  color: #6b7280;
-}
-.sync-close:hover {
-  background: #f3f4f6;
-}
-.sync-body {
-  max-height: 60vh;
-  overflow-y: auto;
-  padding: 16px 20px;
-}
-.sync-summary {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.sync-line {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #374151;
-}
-.sync-line b { color: #111827; font-weight: 600; }
-.sync-ok { color: #10b981; }
-.sync-warn { color: #d97706; }
-.sync-info { color: #6b7280; }
-.sync-section { margin-top: 16px; }
-.sync-section-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 500;
-}
-.sync-codes {
-  margin-top: 8px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  max-height: 160px;
-  overflow-y: auto;
-}
-.sync-codes-warn { background: #fef3c7; }
-.sync-codes-warn div { color: #92400e; }
-.sync-codes-info { background: #f3f4f6; }
-.sync-codes-info div { color: #4b5563; }
-.sync-codes div {
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: 11px;
-  padding: 2px 0;
-}
-.sync-foot {
-  display: flex;
-  justify-content: flex-end;
-  padding: 12px 20px;
-  border-top: 1px solid #e5e7eb;
-}
-
-/* Modal transition */
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 0.2s ease;
-}
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-}
 </style>
