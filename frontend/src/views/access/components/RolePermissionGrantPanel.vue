@@ -63,19 +63,11 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { ChevronRight, FolderOpen, Folder, CheckSquare, Square, Loader2 } from 'lucide-vue-next'
 import { getPermissions, getRolePermissionIds, setRolePermissions } from '@/api/access'
+import { getModuleLabel } from '@/views/access/permissionModuleLabels'
 import type { LongId } from '@/types/common'
 
 const props = defineProps<{ roleId: LongId; readonly?: boolean }>()
 const emit = defineEmits<{ saved: [] }>()
-
-const MODULE_LABELS: Record<string, string> = {
-  academic: '学术管理', analytics: '数据分析', asset: '资产管理', calendar: '校历管理',
-  dormitory: '宿舍管理', enrollment: '招生管理', insp: '检查平台', inspection: '检查通用',
-  patient: '患者管理', place: '场所管理', plugin: '插件管理', 'plugin-platform': '插件平台',
-  role: '角色管理', schedule: '排班管理', student: '学生管理', system: '系统管理',
-  task: '任务管理', teacher: '教师档案', teaching: '教学管理', tenant: '租户管理',
-  user: '用户管理', ward: '病房管理', workflow: '工作流', my: '我的',
-}
 
 const loading = ref(false)
 const saving = ref(false)
@@ -105,7 +97,7 @@ const modules = computed<Mod[]>(() => {
     const ids = allIdsOf(perms)
     out.push({
       code,
-      name: MODULE_LABELS[code] || code,
+      name: getModuleLabel(code),
       count: ids.length,
       permissions: perms,
       checked: ids.length > 0 && ids.every((id) => selStr.includes(String(id))),
