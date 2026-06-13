@@ -56,6 +56,28 @@ public class AccessEventHandler {
     }
 
     /**
+     * 处理角色生效状态变更事件 (启用/禁用/删除)。
+     * 与权限变更对称地重建 Casbin enforcer 内存策略 —— 否则被禁/删角色的
+     * {@code @CasbinAccess} 授权会一直放行到下次重启。
+     */
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void handle(RoleStatusChangedEvent event) {
+        log.info("Handling RoleStatusChangedEvent: roleId={}, changeType={}",
+                 event.getRoleId(), event.getChangeType());
+        try {
+            policyEnforcementService.syncFromDatabase();
+            log.debug("[Casbin] in-memory policy reloaded after role {} status change ({})",
+                event.getRoleId(), event.getChangeType());
+        } catch (Exception e) {
+            log.error("[Casbin] failed to reload policy after role status change: {}",
+                e.getMessage(), e);
+        }
+        saveOperationLog("UPDATE", "ROLE_STATUS", event.getRoleId(),
+            "角色生效状态变更: " + event.getChangeType());
+    }
+
+    /**
      * 处理角色权限变更事件
      */
     @Async

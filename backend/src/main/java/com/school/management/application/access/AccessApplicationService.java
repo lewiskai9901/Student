@@ -1,5 +1,6 @@
 package com.school.management.application.access;
 
+import com.school.management.domain.access.event.RoleStatusChangedEvent;
 import com.school.management.domain.access.event.UserRoleAssignedEvent;
 import com.school.management.domain.access.model.*;
 import com.school.management.domain.access.repository.PermissionRepository;
@@ -230,6 +231,10 @@ public class AccessApplicationService {
         role = roleRepository.save(role);
         if (enabledChanged) {
             refreshCacheForRole(role.getId());
+            // 重建 Casbin enforcer 内存策略 (@CasbinAccess 走 enforcer, refreshCacheForRole
+            // 只刷 authorizationService @Cacheable, 不联动 enforcer)
+            eventPublisher.publish(new RoleStatusChangedEvent(
+                    role, role.getIsEnabled() ? "ENABLED" : "DISABLED"));
         }
         return role;
     }
@@ -294,6 +299,8 @@ public class AccessApplicationService {
         for (Long userId : affectedUserIds) {
             authorizationService.refreshCache(userId);
         }
+        // 重建 Casbin enforcer 内存策略 — 否则被删角色的 @CasbinAccess 授权放行到重启
+        eventPublisher.publish(new RoleStatusChangedEvent(role, "DELETED"));
     }
 
     /**

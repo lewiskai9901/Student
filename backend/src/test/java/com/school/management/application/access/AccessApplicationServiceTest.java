@@ -1,11 +1,14 @@
 package com.school.management.application.access;
 
+import com.school.management.domain.access.event.RoleStatusChangedEvent;
 import com.school.management.domain.access.model.*;
 import com.school.management.domain.access.repository.PermissionRepository;
 import com.school.management.domain.access.repository.RoleRepository;
 import com.school.management.domain.access.repository.UserRoleRepository;
 import com.school.management.domain.access.service.AuthorizationService;
+import com.school.management.domain.shared.event.DomainEvent;
 import com.school.management.domain.shared.event.DomainEventPublisher;
+import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -113,6 +116,53 @@ class AccessApplicationServiceTest {
             assertThat(result.getRoleCode()).isEqualTo("ADMIN_CUSTOM");
             assertThat(result.getRoleName()).isEqualTo("管理员");
             verify(roleRepository).save(any(Role.class));
+        }
+
+        @Test
+        @DisplayName("禁用角色应发 RoleStatusChangedEvent(DISABLED) 以重建 enforcer")
+        void disableRolePublishesStatusEvent() {
+            Role role = Role.builder().id(7L).roleCode("CUSTOM_X").roleName("自定义")
+                    .isEnabled(true).isSystem(false).build();
+            when(roleRepository.findById(7L)).thenReturn(Optional.of(role));
+            when(roleRepository.save(any(Role.class))).thenAnswer(i -> i.getArgument(0));
+            when(userRoleRepository.findByRoleId(7L)).thenReturn(List.of());
+
+            service.updateRole(7L, UpdateRoleCommand.builder().isEnabled(false).build());
+
+            ArgumentCaptor<DomainEvent> cap = ArgumentCaptor.forClass(DomainEvent.class);
+            verify(eventPublisher).publish(cap.capture());
+            assertThat(cap.getValue()).isInstanceOf(RoleStatusChangedEvent.class);
+            assertThat(((RoleStatusChangedEvent) cap.getValue()).getChangeType()).isEqualTo("DISABLED");
+        }
+
+        @Test
+        @DisplayName("isEnabled 未变更时不发状态事件")
+        void noEventWhenEnabledUnchanged() {
+            Role role = Role.builder().id(7L).roleCode("CUSTOM_X").roleName("自定义")
+                    .isEnabled(true).isSystem(false).build();
+            when(roleRepository.findById(7L)).thenReturn(Optional.of(role));
+            when(roleRepository.save(any(Role.class))).thenAnswer(i -> i.getArgument(0));
+
+            service.updateRole(7L, UpdateRoleCommand.builder().roleName("改名").build());
+
+            verify(eventPublisher, never()).publish(any(RoleStatusChangedEvent.class));
+        }
+
+        @Test
+        @DisplayName("删除角色应发 RoleStatusChangedEvent(DELETED) 以重建 enforcer")
+        void deleteRolePublishesStatusEvent() {
+            Role role = Role.builder().id(8L).roleCode("CUSTOM_Y").roleName("自定义")
+                    .isEnabled(true).isSystem(false).build();
+            when(roleRepository.findById(8L)).thenReturn(Optional.of(role));
+            when(userRoleRepository.findByRoleId(8L)).thenReturn(List.of());
+
+            service.deleteRole(8L);
+
+            verify(roleRepository).deleteById(8L);
+            ArgumentCaptor<DomainEvent> cap = ArgumentCaptor.forClass(DomainEvent.class);
+            verify(eventPublisher).publish(cap.capture());
+            assertThat(cap.getValue()).isInstanceOf(RoleStatusChangedEvent.class);
+            assertThat(((RoleStatusChangedEvent) cap.getValue()).getChangeType()).isEqualTo("DELETED");
         }
     }
 
