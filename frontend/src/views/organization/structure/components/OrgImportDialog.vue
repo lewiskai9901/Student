@@ -1,21 +1,12 @@
 <template>
   <el-dialog
     :model-value="visible"
-    title="批量导入"
+    title="批量添加成员"
     width="720px"
     :close-on-click-modal="false"
     @update:model-value="$emit('update:visible', $event)"
     @closed="handleClosed"
   >
-    <!-- 导入模式选择 -->
-    <div class="mb-4">
-      <span class="mr-3 text-sm text-gray-600">导入类型：</span>
-      <el-radio-group v-model="importMode" :disabled="step !== 'upload'" size="small">
-        <el-radio value="member">批量添加成员</el-radio>
-        <el-radio value="appoint">批量任命到岗位</el-radio>
-      </el-radio-group>
-    </div>
-
     <!-- Step 1: Upload -->
     <div v-if="step === 'upload'" class="space-y-4">
       <el-upload
@@ -35,9 +26,7 @@
       </el-upload>
 
       <div class="flex items-center justify-between rounded bg-gray-50 px-4 py-2.5">
-        <span class="text-sm text-gray-600">
-          {{ importMode === 'member' ? '模板列: 用户名/工号, 目标组织编码' : '模板列: 用户名/工号, 岗位编码, 任命类型' }}
-        </span>
+        <span class="text-sm text-gray-600">模板列: 用户名/工号, 目标组织编码</span>
         <el-button type="primary" link @click="handleDownloadTemplate">
           <el-icon class="mr-1"><Download /></el-icon>下载模板
         </el-button>
@@ -63,9 +52,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="username" label="用户名/工号" min-width="120" />
-        <el-table-column v-if="importMode === 'member'" prop="orgCode" label="目标组织编码" min-width="140" />
-        <el-table-column v-if="importMode === 'appoint'" prop="positionCode" label="岗位编码" min-width="130" />
-        <el-table-column v-if="importMode === 'appoint'" prop="appointmentType" label="任命类型" width="100" />
+        <el-table-column prop="orgCode" label="目标组织编码" min-width="140" />
         <el-table-column prop="_matchInfo" label="匹配信息" min-width="160" show-overflow-tooltip />
         <el-table-column prop="_error" label="错误" min-width="160" show-overflow-tooltip>
           <template #default="{ row }">
@@ -127,7 +114,9 @@ import { getOrgUnits } from '@/api/organization'
 import { addMember as addOrgMember } from '@/api-generated/sdk.gen'
 import type { OrgUnit } from '@/types'
 import type { SimpleUser } from '@/types/user'
-import type { Position } from '@/types/position'
+
+// 仅"批量添加成员"模式。原"批量任命到岗位"模式随岗位体系下线移除
+// (positionCache 恒空导致每行恒判岗位不存在, 是永远拿不到有效行的死选项)。
 
 const props = defineProps<{
   visible: boolean
@@ -139,24 +128,19 @@ const emit = defineEmits<{
   'imported': []
 }>()
 
-type ImportMode = 'member' | 'appoint'
 type Step = 'upload' | 'preview' | 'result'
 
 interface ParsedRow {
   username: string
   orgCode?: string
-  positionCode?: string
-  appointmentType?: string
   // resolved
   _userId?: LongId | string
   _orgUnitId?: LongId | string
-  _positionId?: LongId | string
   _valid: boolean
   _error: string
   _matchInfo: string
 }
 
-const importMode = ref<ImportMode>('member')
 const step = ref<Step>('upload')
 const rows = ref<ParsedRow[]>([])
 const importing = ref(false)
@@ -170,18 +154,9 @@ const failDetails = ref<{ username: string; reason: string }[]>([])
 // Caches
 let userCache: SimpleUser[] = []
 let orgCache: OrgUnit[] = []
-let positionCache: Position[] = []
 
 const validRows = computed(() => rows.value.filter(r => r._valid))
 const errorRows = computed(() => rows.value.filter(r => !r._valid))
-
-const validAppointmentTypes = ['FORMAL', 'ACTING', 'CONCURRENT', 'PROBATION']
-const appointmentTypeLabels: Record<string, string> = {
-  FORMAL: '正式任命',
-  ACTING: '代理',
-  CONCURRENT: '兼任',
-  PROBATION: '试用',
-}
 
 watch(() => props.visible, (v) => {
   if (v) handleReset()
@@ -190,38 +165,12 @@ watch(() => props.visible, (v) => {
 // Download template
 function handleDownloadTemplate() {
   const wb = XLSX.utils.book_new()
-  let headers: string[]
-  let example: (string | undefined)[]
-
-  if (importMode.value === 'member') {
-    headers = ['用户名/工号', '目标组织编码']
-    example = ['zhangsan', 'ORG001']
-  } else {
-    headers = ['用户名/工号', '岗位编码', '任命类型']
-    example = ['zhangsan', 'POS001', 'FORMAL']
-  }
-
+  const headers = ['用户名/工号', '目标组织编码']
+  const example = ['zhangsan', 'ORG001']
   const ws = XLSX.utils.aoa_to_sheet([headers, example])
-  // Set column widths
   ws['!cols'] = headers.map(() => ({ wch: 20 }))
   XLSX.utils.book_append_sheet(wb, ws, '导入数据')
-
-  // If appoint mode, add a reference sheet for appointment types
-  if (importMode.value === 'appoint') {
-    const refData = [
-      ['任命类型编码', '说明'],
-      ['FORMAL', '正式任命'],
-      ['ACTING', '代理'],
-      ['CONCURRENT', '兼任'],
-      ['PROBATION', '试用'],
-    ]
-    const refWs = XLSX.utils.aoa_to_sheet(refData)
-    refWs['!cols'] = [{ wch: 18 }, { wch: 18 }]
-    XLSX.utils.book_append_sheet(wb, refWs, '任命类型说明')
-  }
-
-  const fileName = importMode.value === 'member' ? '批量添加成员模板.xlsx' : '批量任命岗位模板.xlsx'
-  XLSX.writeFile(wb, fileName)
+  XLSX.writeFile(wb, '批量添加成员模板.xlsx')
   ElMessage.success('模板已下载')
 }
 
@@ -251,26 +200,13 @@ async function handleFileChange(uploadFile: any) {
     // Parse rows (skip header)
     const dataRows = json.slice(1).filter(r => r.some((c: any) => c !== undefined && c !== null && String(c).trim()))
 
-    const parsed: ParsedRow[] = dataRows.map(r => {
-      if (importMode.value === 'member') {
-        return {
-          username: String(r[0] ?? '').trim(),
-          orgCode: String(r[1] ?? '').trim(),
-          _valid: false,
-          _error: '',
-          _matchInfo: '',
-        }
-      } else {
-        return {
-          username: String(r[0] ?? '').trim(),
-          positionCode: String(r[1] ?? '').trim(),
-          appointmentType: String(r[2] ?? '').trim().toUpperCase(),
-          _valid: false,
-          _error: '',
-          _matchInfo: '',
-        }
-      }
-    })
+    const parsed: ParsedRow[] = dataRows.map(r => ({
+      username: String(r[0] ?? '').trim(),
+      orgCode: String(r[1] ?? '').trim(),
+      _valid: false,
+      _error: '',
+      _matchInfo: '',
+    }))
 
     // Load reference data & validate
     await loadCaches()
@@ -290,17 +226,6 @@ async function loadCaches() {
   ])
   userCache = users
   orgCache = orgs
-
-  // For appoint mode, load all positions visible to current org
-  if (importMode.value === 'appoint') {
-    // Collect unique position codes from parsed rows to preload
-    // We load positions from orgUnitId as a starting point
-    try {
-      positionCache = [] // positions removed
-    } catch {
-      positionCache = []
-    }
-  }
 }
 
 function validateRows(parsed: ParsedRow[]) {
@@ -313,10 +238,6 @@ function validateRows(parsed: ParsedRow[]) {
   for (const o of orgCache) {
     orgByCode.set(o.unitCode.toLowerCase(), o)
   }
-  const posByCode = new Map<string, Position>()
-  for (const p of positionCache) {
-    posByCode.set(p.positionCode.toLowerCase(), p)
-  }
 
   for (const row of parsed) {
     const errors: string[] = []
@@ -326,8 +247,7 @@ function validateRows(parsed: ParsedRow[]) {
     if (!row.username) {
       errors.push('用户名/工号为空')
     } else {
-      const key = row.username.toLowerCase()
-      const user = userByUsername.get(key)
+      const user = userByUsername.get(row.username.toLowerCase())
       if (user) {
         row._userId = user.id
         infos.push(`用户: ${user.realName}`)
@@ -336,36 +256,16 @@ function validateRows(parsed: ParsedRow[]) {
       }
     }
 
-    if (importMode.value === 'member') {
-      if (!row.orgCode) {
-        errors.push('目标组织编码为空')
-      } else {
-        const org = orgByCode.get(row.orgCode.toLowerCase())
-        if (org) {
-          row._orgUnitId = org.id
-          infos.push(`组织: ${org.unitName}`)
-        } else {
-          errors.push(`组织编码 "${row.orgCode}" 不存在`)
-        }
-      }
+    // Validate target org
+    if (!row.orgCode) {
+      errors.push('目标组织编码为空')
     } else {
-      if (!row.positionCode) {
-        errors.push('岗位编码为空')
+      const org = orgByCode.get(row.orgCode.toLowerCase())
+      if (org) {
+        row._orgUnitId = org.id
+        infos.push(`组织: ${org.unitName}`)
       } else {
-        const pos = posByCode.get(row.positionCode.toLowerCase())
-        if (pos) {
-          row._positionId = pos.id
-          infos.push(`岗位: ${pos.positionName}`)
-        } else {
-          errors.push(`岗位编码 "${row.positionCode}" 不存在`)
-        }
-      }
-      if (!row.appointmentType) {
-        errors.push('任命类型为空')
-      } else if (!validAppointmentTypes.includes(row.appointmentType)) {
-        errors.push(`任命类型 "${row.appointmentType}" 无效 (可选: ${validAppointmentTypes.join('/')})`)
-      } else {
-        infos.push(`类型: ${appointmentTypeLabels[row.appointmentType] || row.appointmentType}`)
+        errors.push(`组织编码 "${row.orgCode}" 不存在`)
       }
     }
 
@@ -384,8 +284,6 @@ async function handleImport() {
   successCount.value = 0
   failCount.value = 0
   failDetails.value = []
-
-  const today = new Date().toISOString().slice(0, 10)
 
   for (const row of toImport) {
     try {

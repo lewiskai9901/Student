@@ -50,62 +50,6 @@
         </div>
       </div>
 
-      <!-- 岗位任命 -->
-      <div class="rounded-lg border border-gray-200 bg-white">
-        <div class="flex items-center justify-between border-b border-gray-100 px-4 py-2.5">
-          <span class="text-xs font-semibold text-gray-700">
-            岗位任命 ({{ currentPositions.length }})
-          </span>
-          <button
-            class="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
-            @click="emit('update:visible', false)"
-          >
-            到岗位编制 Tab 任命
-          </button>
-        </div>
-
-        <div v-if="positions.length === 0" class="px-4 py-6 text-center text-sm text-gray-400">
-          暂无岗位任命记录
-        </div>
-        <div v-else class="divide-y divide-gray-50">
-          <div
-            v-for="pos in positions"
-            :key="pos.id"
-            class="px-4 py-3"
-            :class="{ 'opacity-50': !pos.isCurrent }"
-          >
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <span class="text-sm font-medium text-gray-900">{{ pos.positionName }}</span>
-                <span
-                  class="rounded-full px-1.5 py-0.5 text-[10px] font-medium"
-                  :class="appointmentTagClass(pos.appointmentType || '')"
-                >
-                  {{ AppointmentTypeLabels[pos.appointmentType || ''] || pos.appointmentType }}
-                </span>
-                <span
-                  v-if="pos.isPrimary"
-                  class="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-600"
-                >主岗</span>
-              </div>
-              <button
-                v-if="pos.isCurrent"
-                class="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-500"
-                title="离任"
-                @click="handleEndAppointment(pos)"
-              >
-                <X class="h-3.5 w-3.5" />
-              </button>
-              <span v-else class="text-[10px] text-gray-400">已离任</span>
-            </div>
-            <div class="mt-1 flex items-center gap-2 text-xs text-gray-500">
-              <span v-if="pos.orgUnitName" class="text-gray-400">{{ pos.orgUnitName }}</span>
-              <span class="text-gray-300">|</span>
-              <span>{{ pos.startDate || '-' }} ~ {{ pos.endDate || '至今' }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- 变更组织弹窗 -->
@@ -146,12 +90,10 @@
 <script setup lang="ts">
 import type { LongId } from '@/types/common'
 import { ref, watch, computed } from 'vue'
-import { UserCircle, Loader2, X, ArrowRightLeft } from 'lucide-vue-next'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { UserCircle, Loader2, ArrowRightLeft } from 'lucide-vue-next'
+import { ElMessage } from 'element-plus'
 import { addMember as addOrgMember } from '@/api-generated/sdk.gen'
 import { getSimpleUserList } from '@/api/user'
-import type { UserPosition } from '@/types/position'
-import { AppointmentTypeLabels } from '@/types/position'
 import type { SimpleUser } from '@/types/user'
 import type { DepartmentResponse } from '@/api/organization'
 
@@ -171,9 +113,6 @@ const emit = defineEmits<{
 
 const loading = ref(false)
 const userInfo = ref<SimpleUser | null>(null)
-const positions = ref<UserPosition[]>([])
-
-const currentPositions = computed(() => positions.value.filter(p => p.isCurrent))
 
 const loadData = async () => {
   if (!props.userId) return
@@ -181,7 +120,6 @@ const loadData = async () => {
   try {
     const allUsers = await getSimpleUserList()
     userInfo.value = allUsers.find(u => String(u.id) === String(props.userId)) || null
-    positions.value = []
   } catch (e: any) {
     console.error('Failed to load user relation data', e)
   } finally {
@@ -196,32 +134,6 @@ watch(
   },
   { immediate: true }
 )
-
-const appointmentTagClass = (type: string) => {
-  switch (type) {
-    case 'FORMAL': return 'bg-blue-50 text-blue-700'
-    case 'ACTING': return 'bg-amber-50 text-amber-700'
-    case 'CONCURRENT': return 'bg-purple-50 text-purple-700'
-    case 'PROBATION': return 'bg-gray-100 text-gray-600'
-    default: return 'bg-gray-100 text-gray-600'
-  }
-}
-
-const handleEndAppointment = async (pos: UserPosition) => {
-  try {
-    await ElMessageBox.confirm(
-      `确定要将「${props.userName}」从岗位「${pos.positionName}」离任吗？`,
-      '确认离任',
-      { type: 'warning' }
-    )
-    // Position appointments removed
-    ElMessage.success('已离任')
-    emit('changed')
-    await loadData()
-  } catch {
-    // cancelled
-  }
-}
 
 // ==================== Change Org ====================
 const showChangeOrg = ref(false)
