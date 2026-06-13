@@ -113,6 +113,9 @@ public class UserController {
     @AuditEvent(module = "user", action = "DELETE", resourceType = "USER", label = "批量删除用户")
     public Result<Void> deleteUsers(@RequestBody List<Long> ids) {
         log.info("V2 批量删除用户: {}", ids);
+        if (ids == null || ids.isEmpty()) {
+            throw new BusinessException("批量删除的用户ID列表不能为空");
+        }
         userApplicationService.deleteUsers(ids);
         return Result.success();
     }
@@ -193,6 +196,10 @@ public class UserController {
             @Parameter(description = "用户ID") @PathVariable Long id,
             @Parameter(description = "状态: 1启用 0禁用") @RequestParam Integer status) {
         log.info("V2 更新用户状态: {} -> {}", id, status);
+        // 仅接受合法状态码 (1=启用 / 0=禁用); 其余 (null / 非法值) 拒绝, 不静默当禁用
+        if (status == null || (status != 0 && status != 1)) {
+            throw new BusinessException("非法的状态值: " + status + " (仅支持 0=禁用, 1=启用)");
+        }
         if (status == 1) {
             userApplicationService.enableUser(id);
         } else {
@@ -210,23 +217,8 @@ public class UserController {
     public Result<String> resetPassword(
             @Parameter(description = "用户ID") @PathVariable Long id) {
         log.info("V2 重置用户密码: {}", id);
-        userApplicationService.resetPassword(id);
-        return Result.success("密码已重置成功");
-    }
 
-    // 角色操作已迁移到 UserRoleController（支持 scope）
-
-    // ==================== 密码操作（增强版） ====================
-
-    @Operation(summary = "重置用户密码（含管理员保护）")
-    @PostMapping("/{id}/reset-password-safe")
-    @CasbinAccess(resource = "system:user", action = "edit")
-    @AuditEvent(module = "user", action = "UPDATE", resourceType = "USER", resourceId = "#id", label = "重置用户密码")
-    public Result<String> resetPasswordSafe(
-            @Parameter(description = "用户ID") @PathVariable Long id) {
-        log.info("重置用户密码(safe): {}", id);
-
-        // 检查目标用户是否拥有管理员角色，若有则仅超级管理员可重置
+        // 管理员保护: 目标用户是管理员时, 仅超级管理员可重置 (防普通管理员重置超管密码)
         List<Role> targetRoles = accessApplicationService.getUserRoles(id);
         boolean targetIsAdmin = targetRoles.stream()
                 .anyMatch(r -> "ADMIN".equalsIgnoreCase(r.getRoleType())
@@ -242,9 +234,13 @@ public class UserController {
             }
         }
 
-        userApplicationService.resetPassword(id);
-        return Result.success("密码已重置成功");
+        // 返回真实新密码 (service 生成: 配置默认密码或随机), 供管理员转告用户;
+        // 之前丢弃返回值硬编码文案串, 导致前端弹窗显示"新密码为: 密码已重置成功"。
+        String newPassword = userApplicationService.resetPassword(id);
+        return Result.success(newPassword);
     }
+
+    // 角色操作已迁移到 UserRoleController（支持 scope）
 
     // ==================== 查询操作 ====================
 
@@ -279,8 +275,8 @@ public class UserController {
             @Parameter(description = "搜索关键词") @RequestParam(required = false) String keyword) {
         log.info("V2 按组织单元获取用户: orgUnitId={}, includeChildren={}, keyword={}",
                 orgUnitId, includeChildren, keyword);
-        // TODO: includeChildren和keyword过滤待UserApplicationService扩展支持
-        List<User> users = userApplicationService.getUsersByOrgUnit(orgUnitId);
+        List<User> users = userApplicationService.getUsersByOrgUnit(
+                orgUnitId, Boolean.TRUE.equals(includeChildren), keyword);
         Long viewerId = SecurityUtils.getCurrentUserId();
         // 简化策略 (W5.1 骨架): 同 org_unit 视为 PEER 关系 → 脱敏 phone/email; 自己看自己 → 全显.
         // 真细粒度的 viewer-target 关系判定留 W5.2 / Phase 6 接 AccessRelation 查询时处理.

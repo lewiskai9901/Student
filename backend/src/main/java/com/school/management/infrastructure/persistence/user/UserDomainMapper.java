@@ -65,6 +65,42 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
     List<UserPO> findByOrgUnitId(@Param("orgUnitId") Long orgUnitId);
 
     /**
+     * 根据组织单元查找用户, 支持子树展开 + 关键字过滤 (member 派生归属)。
+     * <ul>
+     *   <li>includeChildren=false → 仅该 org 直接 member</li>
+     *   <li>includeChildren=true  → 该 org 及其 tree_path 后代所有 org 的 member (去重)</li>
+     *   <li>keyword 非空 → 同时匹配 username / real_name / phone</li>
+     * </ul>
+     */
+    @DataPermission(module = "user", tableAlias = "u", viaMembership = true)
+    @Select("<script>" +
+            "SELECT DISTINCT u.* FROM users u " +
+            "JOIN access_relations ar ON ar.subject_id = u.id " +
+            "AND ar.relation = 'member' AND ar.resource_type = 'org_unit' " +
+            "AND ar.subject_type = 'user' AND ar.deleted = 0 " +
+            "WHERE u.deleted = 0 " +
+            "<choose>" +
+            "<when test='includeChildren'>" +
+            "AND ar.resource_id IN (SELECT o.id FROM org_units o " +
+            "JOIN org_units p ON p.id = #{orgUnitId} " +
+            "WHERE o.deleted = 0 AND o.tree_path LIKE CONCAT(p.tree_path, '%')) " +
+            "</when>" +
+            "<otherwise>" +
+            "AND ar.resource_id = #{orgUnitId} " +
+            "</otherwise>" +
+            "</choose>" +
+            "<if test='keyword != null and keyword != \"\"'>" +
+            "AND (u.username LIKE CONCAT('%', #{keyword}, '%') " +
+            "OR u.real_name LIKE CONCAT('%', #{keyword}, '%') " +
+            "OR u.phone LIKE CONCAT('%', #{keyword}, '%')) " +
+            "</if>" +
+            "ORDER BY u.created_at DESC" +
+            "</script>")
+    List<UserPO> findByOrgUnitSubtree(@Param("orgUnitId") Long orgUnitId,
+                                      @Param("includeChildren") boolean includeChildren,
+                                      @Param("keyword") String keyword);
+
+    /**
      * 根据组织单元ID列表查找用户（通过 access_relations member 派生归属）
      */
     @DataPermission(module = "user", tableAlias = "u", viaMembership = true)
@@ -95,32 +131,8 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
     @Select("SELECT u.* FROM users u WHERE u.deleted = 0 ORDER BY u.created_at DESC LIMIT #{offset}, #{size}")
     List<UserPO> findAllPaged(@Param("offset") int offset, @Param("size") int size);
 
-    /**
-     * 统计用户总数
-     */
-    @Select("SELECT COUNT(1) FROM users WHERE deleted = 0")
-    long countAll();
-
-    /**
-     * 统计某组织的归属成员数（access_relations member 派生归属）
-     */
-    @Select("SELECT COUNT(1) FROM access_relations ar " +
-            "JOIN users u ON u.id = ar.subject_id AND u.deleted = 0 " +
-            "WHERE ar.relation = 'member' AND ar.resource_type = 'org_unit' " +
-            "AND ar.subject_type = 'user' AND ar.deleted = 0 " +
-            "AND ar.resource_id = #{orgUnitId}")
-    long countByPrimaryOrgUnitId(@Param("orgUnitId") Long orgUnitId);
-
-    /**
-     * 按用户类型统计某组织的归属成员数（access_relations member 派生归属）
-     */
-    @Select("SELECT u.user_type_code, COUNT(1) AS cnt FROM access_relations ar " +
-            "JOIN users u ON u.id = ar.subject_id AND u.deleted = 0 " +
-            "WHERE ar.relation = 'member' AND ar.resource_type = 'org_unit' " +
-            "AND ar.subject_type = 'user' AND ar.deleted = 0 " +
-            "AND ar.resource_id = #{orgUnitId} " +
-            "GROUP BY u.user_type_code")
-    List<java.util.Map<String, Object>> countByPrimaryOrgUnitIdGroupByType(@Param("orgUnitId") Long orgUnitId);
+    // countAll / countByPrimaryOrgUnitId / countByPrimaryOrgUnitIdGroupByType 已删 (2026-06-12):
+    // 三者零调用方 (页面 total 走 countWithConditions, 已带 @DataPermission), 是无 scope 过滤的死代码。
 
     /**
      * 单个逻辑删除用户（deleted 存 id，避免唯一键冲突）

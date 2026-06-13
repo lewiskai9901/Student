@@ -57,6 +57,13 @@ public interface UserRepository extends Repository<User, Long> {
     List<User> findByOrgUnitId(Long orgUnitId);
 
     /**
+     * 根据组织单元查找用户, 支持子树展开 + 关键字过滤。
+     * @param includeChildren true=含 tree_path 后代组织成员
+     * @param keyword 非空时匹配 username/real_name/phone
+     */
+    List<User> findByOrgUnit(Long orgUnitId, boolean includeChildren, String keyword);
+
+    /**
      * 根据组织单元ID列表查找用户列表
      */
     List<User> findByOrgUnitIdIn(List<Long> orgUnitIds);
@@ -80,11 +87,6 @@ public interface UserRepository extends Repository<User, Long> {
      * 分页查询用户
      */
     List<User> findAll(int page, int size);
-
-    /**
-     * 查询用户总数
-     */
-    long count();
 
     /**
      * 条件分页查询用户

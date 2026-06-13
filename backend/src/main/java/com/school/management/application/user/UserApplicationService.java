@@ -485,6 +485,16 @@ public class UserApplicationService {
     }
 
     /**
+     * 根据组织单元获取用户列表, 支持子树展开 + 关键字过滤。
+     * @param includeChildren true=含该组织 tree_path 下后代组织的成员
+     * @param keyword 非空时匹配 username/real_name/phone
+     */
+    @Transactional(readOnly = true)
+    public List<User> getUsersByOrgUnit(Long orgUnitId, boolean includeChildren, String keyword) {
+        return userRepository.findByOrgUnit(orgUnitId, includeChildren, keyword);
+    }
+
+    /**
      * 检查用户名是否存在
      */
     @Transactional(readOnly = true)

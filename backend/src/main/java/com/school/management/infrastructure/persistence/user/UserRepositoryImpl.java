@@ -145,6 +145,16 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     @Override
+    public List<User> findByOrgUnit(Long orgUnitId, boolean includeChildren, String keyword) {
+        if (orgUnitId == null) {
+            return new ArrayList<>();
+        }
+        return userMapper.findByOrgUnitSubtree(orgUnitId, includeChildren, keyword).stream()
+                .map(this::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public List<User> findByOrgUnitIdIn(List<Long> orgUnitIds) {
         if (orgUnitIds == null || orgUnitIds.isEmpty()) {
             return new ArrayList<>();
@@ -191,10 +201,6 @@ public class UserRepositoryImpl implements UserRepository {
                 .collect(Collectors.toList());
     }
 
-    @Override
-    public long count() {
-        return userMapper.countAll();
-    }
 
     @Override
     public List<User> findPagedWithConditions(int page, int size, String username, String realName,
@@ -313,17 +319,6 @@ public class UserRepositoryImpl implements UserRepository {
                 po.getCreatedAt(),
                 po.getUpdatedAt()
         );
-    }
-
-    private User toDomainWithOrgUnitAndRoles(UserPO po) {
-        User user = toDomainWithOrgUnit(po);
-        if (po.getId() != null) {
-            List<Long> roleIds = userMapper.findRoleIdsByUserId(po.getId());
-            List<String> roleNames = userMapper.findRoleNamesByUserId(po.getId());
-            user.assignRoles(roleIds);
-            user.setRoleNames(roleNames);
-        }
-        return user;
     }
 
     private User toDomainWithOrgUnit(UserPO po) {
