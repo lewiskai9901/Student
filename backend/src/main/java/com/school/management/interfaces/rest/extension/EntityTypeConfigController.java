@@ -45,6 +45,12 @@ public class EntityTypeConfigController {
         return Result.success(service.detail(entityType, typeCode));
     }
 
+    @GetMapping("/{id}/usage-count")
+    @CasbinAccess(resource = "entity-type-config", action = "view")
+    public Result<Long> usageCount(@PathVariable Long id) {
+        return Result.success(service.usageCount(id));
+    }
+
     @GetMapping("/categories")
     @CasbinAccess(resource = "entity-type-config", action = "view")
     public Result<List<Map<String, Object>>> categories(@RequestParam String entityType) {

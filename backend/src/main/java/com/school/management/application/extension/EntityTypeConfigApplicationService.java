@@ -34,6 +34,14 @@ public class EntityTypeConfigApplicationService {
     private final JdbcTemplate jdbc;
     private final ApplicationContext appCtx;
 
+    /**
+     * 内部 JSON 编解码用。刻意用 vanilla ObjectMapper 而非 Spring 注入的全局 bean —
+     * 全局 JacksonConfig 把所有 Long 序列化为 string (前端 53-bit 精度防丢), 那套 web 序列化策略
+     * 不应渗进这里的配置 blob (features/allowed_child_type_codes/overridden_fields 等) 读写。
+     * ObjectMapper 配置完成后线程安全, 单例复用即可, 不必每个方法 new 一个。
+     */
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
     private static final String SELECT_COLS =
         "id, entity_type AS entityType, type_code AS typeCode, type_name AS typeName, " +
         "category, parent_type_code AS parentTypeCode, allowed_child_type_codes AS allowedChildTypeCodes, " +
@@ -99,7 +107,7 @@ public class EntityTypeConfigApplicationService {
         }
 
         try {
-            ObjectMapper om = new ObjectMapper();
+            ObjectMapper om = MAPPER;
             @SuppressWarnings("unchecked")
             List<String> childCodes = om.readValue(childCodesJson, List.class);
             if (childCodes.isEmpty()) return List.of();
@@ -118,10 +126,31 @@ public class EntityTypeConfigApplicationService {
         }
     }
 
-    /** 创建自定义类型配置。 */
+    /** 允许的实体类型 (USER/ORG_UNIT/PLACE)。 */
+    private static final Set<String> VALID_ENTITY_TYPES = Set.of("USER", "ORG_UNIT", "PLACE");
+
+    /** 创建自定义类型配置。入参校验 + typeCode 唯一性预检 (避免裸抛唯一键 SQLException)。 */
     @Transactional
     public void create(Map<String, Object> data) throws Exception {
-        ObjectMapper om = new ObjectMapper();
+        String entityType = str(data.get("entityType"));
+        String typeCode = str(data.get("typeCode"));
+        String typeName = str(data.get("typeName"));
+        if (entityType == null || !VALID_ENTITY_TYPES.contains(entityType)) {
+            throw new IllegalArgumentException("entityType 必须是 USER / ORG_UNIT / PLACE 之一");
+        }
+        if (typeCode == null || typeCode.isBlank()) {
+            throw new IllegalArgumentException("typeCode 不能为空");
+        }
+        if (typeName == null || typeName.isBlank()) {
+            throw new IllegalArgumentException("typeName 不能为空");
+        }
+        Integer exists = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM entity_type_configs WHERE entity_type = ? AND type_code = ? AND deleted = 0",
+            Integer.class, entityType, typeCode);
+        if (exists != null && exists > 0) {
+            throw new IllegalArgumentException("类型编码已存在: " + typeCode);
+        }
+        ObjectMapper om = MAPPER;
         jdbc.update(
             "INSERT INTO entity_type_configs (entity_type, type_code, type_name, category, " +
             "parent_type_code, allowed_child_type_codes, metadata_schema, features, " +
@@ -141,7 +170,7 @@ public class EntityTypeConfigApplicationService {
      */
     @Transactional
     public void update(Long id, Map<String, Object> data) throws Exception {
-        ObjectMapper om = new ObjectMapper();
+        ObjectMapper om = MAPPER;
 
         // 读当前行: 判断是否插件类型 + 当前值 + 已有覆写集合
         Map<String, Object> current = jdbc.queryForMap(
@@ -151,12 +180,14 @@ public class EntityTypeConfigApplicationService {
         boolean isPlugin = toBool(current.get("is_plugin_registered"));
         Set<String> overridden = parseOverriddenFields(current.get("overridden_fields"), om);
 
-        // features 子集校验: 不允许启用不在 category 默认集内的 feature
+        // features 子集校验: 不允许启用不在 category 默认集内的 feature。
+        // category 缺省 (只改 features 的 partial-update) 时回退当前行 category, 否则校验被绕过。
         String newCategory = str(data.get("category"));
+        String effectiveCategory = (newCategory != null && !newCategory.isBlank())
+                ? newCategory : str(current.get("category"));
         Object featuresObj = data.get("features");
-        if (featuresObj != null && newCategory != null && !newCategory.isBlank()) {
-            validateFeaturesSubset(featuresObj, newCategory, str(current.get("is_plugin_registered")) != null
-                    ? existingEntityType(id) : null);
+        if (featuresObj != null && effectiveCategory != null && !effectiveCategory.isBlank()) {
+            validateFeaturesSubset(featuresObj, effectiveCategory, existingEntityType(id));
         }
 
         if (isPlugin) {
@@ -239,7 +270,7 @@ public class EntityTypeConfigApplicationService {
      */
     @Transactional
     public String resetField(Long id, String field) throws Exception {
-        ObjectMapper om = new ObjectMapper();
+        ObjectMapper om = MAPPER;
         Map<String, Object> row = jdbc.queryForMap(
             "SELECT is_plugin_registered, plugin_class, overridden_fields " +
             "FROM entity_type_configs WHERE id=? AND deleted=0", id);
@@ -257,6 +288,11 @@ public class EntityTypeConfigApplicationService {
         }
         Set<String> overridden = parseOverriddenFields(row.get("overridden_fields"), om);
         overridden.remove(field);
+        // category 恢复会连带把 features 也写回插件默认 (见下方 switch), 故 features 的覆写标记
+        // 也必须一并清除, 否则 overridden 残留 "features" 会让下次 PluginRegistrar 合并保留已被冲掉的值。
+        if ("category".equals(field)) {
+            overridden.remove("features");
+        }
         String overriddenJson = om.writeValueAsString(new ArrayList<>(overridden));
 
         switch (field) {
@@ -294,17 +330,51 @@ public class EntityTypeConfigApplicationService {
     }
 
     /**
-     * 逻辑删除类型配置。
+     * 统计某实体类型(typeCode)当前被多少存量实体在用 (deleted=0)。
+     *
+     * <p>实体类型→宿主表: USER→users.user_type_code / ORG_UNIT→org_units.type_code /
+     * PLACE→places.type_code。未知 entityType 返回 0。用于删除保护与前端"实例数"展示。
+     */
+    @Transactional(readOnly = true)
+    public long countEntitiesUsingType(String entityType, String typeCode) {
+        if (entityType == null || typeCode == null || typeCode.isBlank()) return 0;
+        String sql;
+        switch (entityType) {
+            case "USER":     sql = "SELECT COUNT(*) FROM users WHERE user_type_code = ? AND deleted = 0"; break;
+            case "ORG_UNIT": sql = "SELECT COUNT(*) FROM org_units WHERE type_code = ? AND deleted = 0"; break;
+            case "PLACE":    sql = "SELECT COUNT(*) FROM places WHERE type_code = ? AND deleted = 0"; break;
+            default: return 0;
+        }
+        Long n = jdbc.queryForObject(sql, Long.class, typeCode);
+        return n == null ? 0 : n;
+    }
+
+    /**
+     * 按类型配置 id 统计其被多少存量实体在用 (前端 usage-count 端点用)。
+     */
+    @Transactional(readOnly = true)
+    public long usageCount(Long id) {
+        Map<String, Object> row = jdbc.queryForMap(
+            "SELECT entity_type, type_code FROM entity_type_configs WHERE id=? AND deleted=0", id);
+        return countEntitiesUsingType(str(row.get("entity_type")), str(row.get("type_code")));
+    }
+
+    /**
+     * 逻辑删除类型配置。插件类型不可删; 仍有实体在用的类型不可删 (防孤儿化)。
      *
      * @return null=成功; 非 null=错误消息
      */
     @Transactional
     public String delete(Long id) {
-        Integer isPlugin = jdbc.queryForObject(
-            "SELECT is_plugin_registered FROM entity_type_configs WHERE id=? AND deleted=0",
-            Integer.class, id);
-        if (isPlugin != null && isPlugin == 1) {
+        Map<String, Object> row = jdbc.queryForMap(
+            "SELECT is_plugin_registered, entity_type, type_code FROM entity_type_configs WHERE id=? AND deleted=0", id);
+        if (toBool(row.get("is_plugin_registered"))) {
             return "插件注册的类型不能删除";
+        }
+        // 删除保护: 仍有实体引用该 type_code 时拒绝, 否则存量实体类型指针孤儿化
+        long inUse = countEntitiesUsingType(str(row.get("entity_type")), str(row.get("type_code")));
+        if (inUse > 0) {
+            return "该类型正在被 " + inUse + " 个实体使用，不能删除";
         }
         jdbc.update("UPDATE entity_type_configs SET deleted=1 WHERE id=?", id);
         return null;
@@ -319,7 +389,7 @@ public class EntityTypeConfigApplicationService {
     public String addCustomField(Long id, Map<String, Object> field, String key) throws Exception {
         String schemaStr = jdbc.queryForObject(
             "SELECT metadata_schema FROM entity_type_configs WHERE id = ? AND deleted = 0", String.class, id);
-        ObjectMapper om = new ObjectMapper();
+        ObjectMapper om = MAPPER;
         Map<String, Object> schema = om.readValue(schemaStr, Map.class);
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> fields = (List<Map<String, Object>>) schema.getOrDefault("fields", new ArrayList<>());
@@ -347,7 +417,7 @@ public class EntityTypeConfigApplicationService {
     public void removeCustomField(Long id, String fieldKey) throws Exception {
         String schemaStr = jdbc.queryForObject(
             "SELECT metadata_schema FROM entity_type_configs WHERE id = ? AND deleted = 0", String.class, id);
-        ObjectMapper om = new ObjectMapper();
+        ObjectMapper om = MAPPER;
         Map<String, Object> schema = om.readValue(schemaStr, Map.class);
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> fields = (List<Map<String, Object>>) schema.getOrDefault("fields", new ArrayList<>());
@@ -410,7 +480,7 @@ public class EntityTypeConfigApplicationService {
      */
     private void validateFeaturesSubset(Object featuresObj, String categoryCode, String entityType) {
         try {
-            ObjectMapper om = new ObjectMapper();
+            ObjectMapper om = MAPPER;
             Map<String, Boolean> features = featuresObj instanceof String
                     ? om.readValue((String) featuresObj, new TypeReference<Map<String, Boolean>>() {})
                     : om.convertValue(featuresObj, new TypeReference<Map<String, Boolean>>() {});

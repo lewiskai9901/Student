@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -211,6 +212,69 @@ class EntityTypeConfigApplicationServiceTest {
             assertThat(p[6]).isEqualTo("{\"fields\":[]}");
             assertThat(p[7]).isEqualTo("{}");
         }
+
+        @Test
+        @DisplayName("非法 entityType 抛 IllegalArgumentException, 不落库")
+        void invalidEntityTypeThrows() {
+            Map<String, Object> data = new HashMap<>();
+            data.put("entityType", "GARBAGE");
+            data.put("typeCode", "X");
+            data.put("typeName", "X类型");
+
+            assertThatThrownBy(() -> service.create(data))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("USER / ORG_UNIT / PLACE");
+            verifyNoLandingInsert();
+        }
+
+        @Test
+        @DisplayName("空 typeCode 抛 IllegalArgumentException")
+        void blankTypeCodeThrows() {
+            Map<String, Object> data = new HashMap<>();
+            data.put("entityType", "USER");
+            data.put("typeCode", "  ");
+            data.put("typeName", "X类型");
+
+            assertThatThrownBy(() -> service.create(data))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("typeCode 不能为空");
+            verifyNoLandingInsert();
+        }
+
+        @Test
+        @DisplayName("空 typeName 抛 IllegalArgumentException")
+        void blankTypeNameThrows() {
+            Map<String, Object> data = new HashMap<>();
+            data.put("entityType", "USER");
+            data.put("typeCode", "X");
+            data.put("typeName", "");
+
+            assertThatThrownBy(() -> service.create(data))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("typeName 不能为空");
+            verifyNoLandingInsert();
+        }
+
+        @Test
+        @DisplayName("typeCode 已存在抛 IllegalArgumentException (唯一性预检, 不裸抛 SQLException)")
+        void duplicateTypeCodeThrows() {
+            when(jdbc.queryForObject(anyString(), eq(Integer.class), eq("USER"), eq("DUP")))
+                    .thenReturn(1);
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("entityType", "USER");
+            data.put("typeCode", "DUP");
+            data.put("typeName", "重复类型");
+
+            assertThatThrownBy(() -> service.create(data))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("类型编码已存在: DUP");
+            verifyNoLandingInsert();
+        }
+
+        private void verifyNoLandingInsert() {
+            verify(jdbc, never()).update(anyString(), any(Object[].class));
+        }
     }
 
     // ==================== update ====================
@@ -301,6 +365,50 @@ class EntityTypeConfigApplicationServiceTest {
             Object[] p = params.getValue();
             assertThat(p[p.length - 2]).isEqualTo("[]");
         }
+
+        @Test
+        @DisplayName("features 子集校验: 翻开 category 默认关闭的能力被拒 (payload 省略 category 时回退当前行 category)")
+        void featuresSubsetUsesCurrentCategoryFallback() {
+            // current.category = ADMIN (requiresOrg 默认 false); payload 只带 features 不带 category。
+            // 校验须回退当前行 category, 否则 effectiveCategory 为空被绕过 → 翻开 requiresOrg 会漏判。
+            Map<String, Object> current = new HashMap<>();
+            current.put("is_plugin_registered", 0);
+            current.put("type_name", "管理员");
+            current.put("category", "ADMIN");
+            current.put("ui_config", null);
+            current.put("overridden_fields", null);
+            when(jdbc.queryForMap(anyString(), eq(9L))).thenReturn(current);
+            when(jdbc.queryForObject(anyString(), eq(String.class), eq(9L))).thenReturn("USER");
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("features", Map.of("requiresOrg", true)); // ADMIN 默认 false
+
+            assertThatThrownBy(() -> service.update(9L, data))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("requiresOrg");
+            verify(jdbc, never()).update(anyString(), any(Object[].class));
+        }
+
+        @Test
+        @DisplayName("features 子集校验: category 默认开启的能力可保持开启")
+        void featuresSubsetAllowsCategoryEnabled() throws Exception {
+            // current.category = STAFF (requiresOrg 默认 true); 保持 requiresOrg=true 合法。
+            Map<String, Object> current = new HashMap<>();
+            current.put("is_plugin_registered", 0);
+            current.put("type_name", "职工");
+            current.put("category", "STAFF");
+            current.put("ui_config", null);
+            current.put("overridden_fields", null);
+            when(jdbc.queryForMap(anyString(), eq(10L))).thenReturn(current);
+            when(jdbc.queryForObject(anyString(), eq(String.class), eq(10L))).thenReturn("USER");
+            when(jdbc.update(anyString(), any(Object[].class))).thenReturn(1);
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("features", Map.of("requiresOrg", true));
+
+            service.update(10L, data); // 不抛
+            verify(jdbc).update(anyString(), any(Object[].class));
+        }
     }
 
     // ==================== resetField ====================
@@ -357,13 +465,21 @@ class EntityTypeConfigApplicationServiceTest {
     // ==================== delete ====================
 
     @Nested
-    @DisplayName("delete 删除类型配置")
+    @DisplayName("delete 删除类型配置 (插件保护 + 在用保护)")
     class DeleteTests {
+
+        private Map<String, Object> row(int isPlugin, String entityType, String typeCode) {
+            Map<String, Object> r = new HashMap<>();
+            r.put("is_plugin_registered", isPlugin);
+            r.put("entity_type", entityType);
+            r.put("type_code", typeCode);
+            return r;
+        }
 
         @Test
         @DisplayName("插件注册类型不能删除")
         void pluginCannotDelete() {
-            when(jdbc.queryForObject(anyString(), eq(Integer.class), eq(1L))).thenReturn(1);
+            when(jdbc.queryForMap(anyString(), eq(1L))).thenReturn(row(1, "USER", "STUDENT"));
 
             String msg = service.delete(1L);
 
@@ -372,26 +488,54 @@ class EntityTypeConfigApplicationServiceTest {
         }
 
         @Test
-        @DisplayName("自定义类型逻辑删除成功返回 null")
-        void customTypeDeleteSucceeds() {
-            when(jdbc.queryForObject(anyString(), eq(Integer.class), eq(2L))).thenReturn(0);
-            when(jdbc.update(anyString(), eq(2L))).thenReturn(1);
+        @DisplayName("自定义类型仍有实体在用时拒绝删除 (防孤儿化)")
+        void customTypeInUseBlocked() {
+            when(jdbc.queryForMap(anyString(), eq(2L))).thenReturn(row(0, "PLACE", "MY_ROOM"));
+            when(jdbc.queryForObject(anyString(), eq(Long.class), eq("MY_ROOM"))).thenReturn(3L);
 
             String msg = service.delete(2L);
 
-            assertThat(msg).isNull();
-            ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
-            verify(jdbc).update(sql.capture(), eq(2L));
-            assertThat(sql.getValue()).contains("SET deleted=1");
+            assertThat(msg).contains("正在被 3 个实体使用");
+            verify(jdbc, never()).update(anyString(), any(Object[].class));
         }
 
         @Test
-        @DisplayName("is_plugin_registered 查询返回 null 时按非插件处理")
-        void nullPluginFlagAllowsDelete() {
-            when(jdbc.queryForObject(anyString(), eq(Integer.class), eq(3L))).thenReturn(null);
+        @DisplayName("自定义类型无实体在用时逻辑删除成功返回 null")
+        void customTypeNotInUseDeleted() {
+            when(jdbc.queryForMap(anyString(), eq(3L))).thenReturn(row(0, "USER", "MY_ROLE"));
+            when(jdbc.queryForObject(anyString(), eq(Long.class), eq("MY_ROLE"))).thenReturn(0L);
             when(jdbc.update(anyString(), eq(3L))).thenReturn(1);
 
-            assertThat(service.delete(3L)).isNull();
+            String msg = service.delete(3L);
+
+            assertThat(msg).isNull();
+            ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+            verify(jdbc).update(sql.capture(), eq(3L));
+            assertThat(sql.getValue()).contains("deleted=1");
+        }
+
+        @Test
+        @DisplayName("countEntitiesUsingType 按 entityType 路由到正确宿主表")
+        void countRoutesToCorrectTable() {
+            when(jdbc.queryForObject(anyString(), eq(Long.class), eq("X"))).thenReturn(5L);
+
+            assertThat(service.countEntitiesUsingType("USER", "X")).isEqualTo(5L);
+            assertThat(service.countEntitiesUsingType("ORG_UNIT", "X")).isEqualTo(5L);
+            assertThat(service.countEntitiesUsingType("PLACE", "X")).isEqualTo(5L);
+            ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
+            verify(jdbc, org.mockito.Mockito.times(3)).queryForObject(sql.capture(), eq(Long.class), eq("X"));
+            assertThat(sql.getAllValues().get(0)).contains("FROM users").contains("user_type_code");
+            assertThat(sql.getAllValues().get(1)).contains("FROM org_units").contains("type_code");
+            assertThat(sql.getAllValues().get(2)).contains("FROM places").contains("type_code");
+        }
+
+        @Test
+        @DisplayName("countEntitiesUsingType 未知 entityType / 空 typeCode → 0, 不查表")
+        void countUnknownReturnsZero() {
+            assertThat(service.countEntitiesUsingType("GARBAGE", "X")).isZero();
+            assertThat(service.countEntitiesUsingType("USER", null)).isZero();
+            assertThat(service.countEntitiesUsingType(null, "X")).isZero();
+            verify(jdbc, never()).queryForObject(anyString(), eq(Long.class), any(Object[].class));
         }
     }
 
