@@ -4,8 +4,12 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CachingConfigurer;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.cache.interceptor.CacheErrorHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
@@ -23,9 +27,48 @@ import java.util.Map;
 /**
  * Redis配置类
  */
+@Slf4j
 @Configuration
 @EnableCaching
-public class RedisConfig {
+public class RedisConfig implements CachingConfigurer {
+
+    /**
+     * 缓存错误处理器 — 让缓存成为"尽力而为"而非硬依赖。
+     *
+     * <p>背景: Redis 偶发命令超时 (冷连接首命令 / 网络抖动) 时, 默认行为是把异常
+     * 抛到业务层 → 整个请求 500。但缓存只是加速层, Redis 不可用应优雅降级到数据源
+     * (DB), 而不是让接口挂掉。
+     *
+     * <p>本处理器吞掉 get/put/evict/clear 的异常并记 WARN:
+     * <ul>
+     *   <li>get 失败 → Spring 视为缓存未命中 → 执行原方法 (查 DB), 请求正常返回;</li>
+     *   <li>put/evict/clear 失败 → 数据已由原方法写入 DB, 缓存写失败仅影响下次命中, 无害。</li>
+     * </ul>
+     */
+    @Override
+    public CacheErrorHandler errorHandler() {
+        return new CacheErrorHandler() {
+            @Override
+            public void handleCacheGetError(RuntimeException e, Cache cache, Object key) {
+                log.warn("[cache] GET 失败, 降级查数据源 cache={} key={}: {}",
+                        cache.getName(), key, e.getMessage());
+            }
+            @Override
+            public void handleCachePutError(RuntimeException e, Cache cache, Object key, Object value) {
+                log.warn("[cache] PUT 失败 (不影响本次结果) cache={} key={}: {}",
+                        cache.getName(), key, e.getMessage());
+            }
+            @Override
+            public void handleCacheEvictError(RuntimeException e, Cache cache, Object key) {
+                log.warn("[cache] EVICT 失败 cache={} key={}: {}",
+                        cache.getName(), key, e.getMessage());
+            }
+            @Override
+            public void handleCacheClearError(RuntimeException e, Cache cache) {
+                log.warn("[cache] CLEAR 失败 cache={}: {}", cache.getName(), e.getMessage());
+            }
+        };
+    }
 
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {

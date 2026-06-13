@@ -76,12 +76,12 @@ spring:
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
       database: 0
-      timeout: 1000ms
+      timeout: 3000ms                                 # 命令超时 (1s 对冷连接首命令偏激进, 升到 3s; 配合 CacheErrorHandler 降级查 DB)
       lettuce:
         pool:
           max-active: 8
           max-idle: 8
-          min-idle: 0
+          min-idle: 1                                 # 保持 1 个温连接, 减少冷连接首命令超时
           max-wait: -1ms
         shutdown-timeout: 100ms
 
