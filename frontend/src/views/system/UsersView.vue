@@ -1,21 +1,20 @@
 <template>
   <div class="tm-page">
     <!-- Header -->
-    <div class="tm-header">
-      <div>
-        <h1 class="tm-title">用户管理</h1>
-        <div class="tm-stats">
-          <span>总数 <b>{{ total }}</b></span>
-          <span class="sep" />
-          <span><span class="dot dot-green" />启用 <b>{{ enabledCount }}</b></span>
-          <span class="sep" />
-          <span><span class="dot dot-gray" />禁用 <b>{{ disabledCount }}</b></span>
-          <span class="sep" />
-          <span>今日登录 <b>{{ todayLoginCount }}</b></span>
-        </div>
-      </div>
-      <button v-if="can('system:user:add')" class="tm-btn tm-btn-primary" @click="handleAdd">新增用户</button>
-    </div>
+    <PageHeader title="用户管理">
+      <template #actions>
+        <button v-if="can('system:user:add')" class="tm-btn tm-btn-primary" @click="handleAdd">新增用户</button>
+      </template>
+    </PageHeader>
+    <StatBar
+      class="mb-4"
+      :items="[
+        { label: '总数', value: total },
+        { label: '启用', value: enabledCount },
+        { label: '禁用', value: disabledCount },
+        { label: '今日登录', value: todayLoginCount },
+      ]"
+    />
 
     <!-- Filter Bar -->
     <div class="tm-filters">
@@ -526,6 +525,8 @@ import type { LongId } from '@/types/common'
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import RelationsPanel from '@/components/access/RelationsPanel.vue'
+import PageHeader from '@/components/common/PageHeader.vue'
+import StatBar from '@/components/common/StatBar.vue'
 
 const relationsDialogVisible = ref(false)
 const relationsUser = ref<any>(null)

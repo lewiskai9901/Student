@@ -1,44 +1,45 @@
 <template>
-  <el-dialog
-    :model-value="visible"
-    @update:model-value="handleClose"
-    :title="dialogTitle"
-    :width="dialogWidth"
-    :close-on-click-modal="false"
-    class="pf-dlg"
-    destroy-on-close
-    align-center
-  >
-    <!-- Type Selection Stage -->
-    <div v-if="mode === 'create' && !selectedTypeCode" class="px-5 py-4">
-      <div class="grid gap-2" :class="allowedTypes && allowedTypes.length > 3 ? 'grid-cols-3' : 'grid-cols-' + (allowedTypes?.length || 1)">
-        <button v-for="type in allowedTypes" :key="type.typeCode" class="pf-type-card" @click="selectType(type)">
-          <span class="font-medium text-gray-800 text-[13px]">{{ type.typeName }}</span>
-          <span class="text-[10px] text-gray-400">
-            <template v-if="type.features?.hasCapacity">容量</template>
-            <template v-if="type.features?.bookable"> 预订</template>
-            <template v-if="type.features?.occupiable"> 入住</template>
-          </span>
-        </button>
-      </div>
-    </div>
+  <Teleport to="body">
+    <Transition name="tm-drawer">
+      <div v-if="visible" class="tm-drawer-overlay" @click.self="handleClose">
+        <div class="tm-drawer" style="width: 600px;">
+          <div class="tm-drawer-header">
+            <h2 class="tm-drawer-title">{{ dialogTitle }}</h2>
+            <button class="tm-drawer-close" @click="handleClose">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+          <div class="tm-drawer-body">
+            <!-- Type Selection Stage -->
+            <div v-if="mode === 'create' && !selectedTypeCode">
+              <div class="pf-type-grid">
+                <button v-for="type in allowedTypes" :key="type.typeCode" class="pf-type-card" @click="selectType(type)">
+                  <span class="font-medium text-gray-800 text-[13px]">{{ type.typeName }}</span>
+                  <span class="text-[10px] text-gray-400">
+                    <template v-if="type.features?.hasCapacity">容量</template>
+                    <template v-if="type.features?.bookable"> 预订</template>
+                    <template v-if="type.features?.occupiable"> 入住</template>
+                  </span>
+                </button>
+              </div>
+            </div>
 
-    <!-- Form -->
-    <div v-else class="px-5 py-3">
-      <!-- Context bar -->
-      <div class="mb-3 flex items-center gap-2 text-xs text-gray-400">
-        <span class="rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-600">{{ selectedType?.typeName }}</span>
-        <template v-if="mode === 'create' && parentPlace">
-          <span>上级: {{ parentPlace.placeName }}</span>
-        </template>
-        <template v-if="mode === 'edit' && editData">
-          <span>{{ getStatusLabel(editData.status) }}</span>
-          <span v-if="editData.parentName">上级: {{ editData.parentName }}</span>
-        </template>
-        <button v-if="mode === 'create' && allowedTypes && allowedTypes.length > 1" class="ml-auto text-blue-500 hover:text-blue-600" @click="selectedTypeCode = ''">换类型</button>
-      </div>
+            <!-- Form -->
+            <div v-else>
+              <!-- Context bar -->
+              <div class="pf-context">
+                <span class="pf-context-type">{{ selectedType?.typeName }}</span>
+                <template v-if="mode === 'create' && parentPlace">
+                  <span>上级: {{ parentPlace.placeName }}</span>
+                </template>
+                <template v-if="mode === 'edit' && editData">
+                  <span>{{ getStatusLabel(editData.status) }}</span>
+                  <span v-if="editData.parentName">上级: {{ editData.parentName }}</span>
+                </template>
+                <button v-if="mode === 'create' && allowedTypes && allowedTypes.length > 1" class="ml-auto text-blue-500 hover:text-blue-600" @click="selectedTypeCode = ''">换类型</button>
+              </div>
 
-      <el-form ref="formRef" :model="formData" :rules="formRules" label-position="left" label-width="72px" class="pf-form">
+              <el-form ref="formRef" :model="formData" :rules="formRules" label-position="left" label-width="72px" class="pf-form">
         <!-- Row 1: Code + Name -->
         <div class="pf-row">
           <el-form-item label="编号" prop="placeCode" class="pf-col">
@@ -142,18 +143,24 @@
         <el-form-item v-if="mode === 'edit'" label="变更原因">
           <el-input v-model="formData.reason" placeholder="选填，用于审计" maxlength="200" />
         </el-form-item>
-      </el-form>
-    </div>
-
-    <template #footer>
-      <div class="flex justify-end gap-2">
-        <el-button @click="handleClose">取消</el-button>
-        <el-button type="primary" :loading="submitting" :disabled="mode === 'create' && !selectedTypeCode" @click="handleSubmit">
-          {{ mode === 'create' ? '创建' : '保存' }}
-        </el-button>
+              </el-form>
+            </div>
+          </div>
+          <div class="tm-drawer-footer">
+            <button class="tm-btn tm-btn-secondary" @click="handleClose">取消</button>
+            <button
+              class="tm-btn tm-btn-primary"
+              :disabled="submitting || (mode === 'create' && !selectedTypeCode)"
+              @click="handleSubmit"
+            >
+              <span v-if="submitting" class="tm-spin" style="display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;" />
+              {{ mode === 'create' ? '创建' : '保存' }}
+            </button>
+          </div>
+        </div>
       </div>
-    </template>
-  </el-dialog>
+    </Transition>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -213,7 +220,6 @@ const userOptions = ref<any[]>([])
 
 const mode = computed(() => props.mode)
 const dialogTitle = computed(() => props.mode === 'create' && !selectedTypeCode.value ? '选择场所类型' : props.mode === 'create' ? '新建场所' : '编辑场所')
-const dialogWidth = computed(() => props.mode === 'create' && !selectedTypeCode.value ? '420px' : '640px')
 
 const selectedType = computed(() => {
   if (props.mode === 'edit' && props.editData) {
@@ -421,13 +427,23 @@ watch(() => props.allowedTypes, (t) => {
 }, { deep: true })
 </script>
 
+<style>
+@import '@/styles/teaching-ui.css';
+</style>
+
 <style scoped>
-/* Dialog */
-.pf-dlg :deep(.el-dialog) { border-radius: 10px; }
-.pf-dlg :deep(.el-dialog__header) { padding: 12px 20px 0; }
-.pf-dlg :deep(.el-dialog__title) { font-size: 14px; font-weight: 600; color: #1f2937; }
-.pf-dlg :deep(.el-dialog__body) { padding: 0; }
-.pf-dlg :deep(.el-dialog__footer) { padding: 10px 20px; border-top: 1px solid #f3f4f6; }
+/* Type selection grid */
+.pf-type-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+
+/* Context bar */
+.pf-context {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 12px; font-size: 12px; color: #9ca3af;
+}
+.pf-context-type {
+  border-radius: 5px; background: #f3f4f6; padding: 2px 6px;
+  font-size: 11px; font-weight: 500; color: #4b5563;
+}
 
 /* Type card */
 .pf-type-card {

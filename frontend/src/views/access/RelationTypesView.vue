@@ -1,20 +1,12 @@
 <template>
   <div class="p-4">
-    <div class="mb-4">
-      <h2 class="text-lg font-semibold">关系字典</h2>
-      <p class="text-xs text-gray-500 mt-1">
-        所有可用关系由 Java 插件代码注册,非管理员运行时配置。共 {{ types.length }} 条
-        · 核心 {{ stats.core }} · 行业 {{ stats.domain }}
-      </p>
-    </div>
+    <PageHeader
+      title="关系字典"
+      :subtitle="`所有可用关系由插件代码注册,非运行时配置 · 共 ${types.length} 条 (核心 ${stats.core} · 行业 ${stats.domain})`"
+    />
 
     <!-- 分类统计条 -->
-    <div class="tm-stat-bar mb-4">
-      <span v-for="cat in categories" :key="cat.code">
-        <em>{{ cat.label }}</em>
-        <strong>{{ byCategory(cat.code).length }}</strong>
-      </span>
-    </div>
+    <StatBar class="mb-4" :items="categoryStats" />
 
     <!-- 按"来源插件"分组 (registered_by) -->
     <div v-for="src in sourcesSorted" :key="src" class="mb-5">
@@ -70,6 +62,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { relationTypeApi, type RelationTypeDef } from '@/api/relationType'
 import { ElMessage } from 'element-plus'
+import PageHeader from '@/components/common/PageHeader.vue'
+import StatBar from '@/components/common/StatBar.vue'
 
 const types = ref<RelationTypeDef[]>([])
 const loading = ref(false)
@@ -90,6 +84,9 @@ function byCategory(code: string) { return types.value.filter(t => t.category ==
 function categoryLabel(code: string): string {
   return categories.find(c => c.code === code)?.label || code
 }
+const categoryStats = computed(() =>
+  categories.map(c => ({ label: c.label, value: byCategory(c.code).length }))
+)
 
 // 来源(registered_by)分组 — CORE 置顶,其他按字母序
 const sourcesSorted = computed(() => {
@@ -148,17 +145,6 @@ onMounted(load)
 </script>
 
 <style scoped>
-.tm-stat-bar {
-  display: flex;
-  gap: 16px;
-  padding: 8px 14px;
-  background: #f9fafb;
-  border-radius: 6px;
-  font-size: 12px;
-  color: #6b7280;
-}
-.tm-stat-bar em { font-style: normal; margin-right: 4px; }
-.tm-stat-bar strong { color: #111827; font-weight: 600; }
 .relation-code {
   font-family: 'JetBrains Mono', Menlo, monospace;
   font-size: 12px;
