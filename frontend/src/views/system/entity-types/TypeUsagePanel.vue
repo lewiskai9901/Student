@@ -221,17 +221,15 @@ watch(() => props.type?.typeCode, async () => {
     // L1 (2026-05-19): 走 service axios — JWT 注入 + Safari 隐私模式兼容 + 401 自动刷新.
     // 之前直 fetch + 手撸 Bearer 绕过这些机制 + 硬编码 access_token 字符串.
     // service interceptor 已解开 envelope, data 是 backend 实际 payload.
-    // 兼容 backend 返回 `5` / `{data: 5}` / `{count: 5}` 三种形态.
-    const data = await service.get<unknown, number | { data?: number; count?: number }>(
+    // 兼容 backend 返回 number `5` / string `"5"` (Long 经全局 Jackson 序列化为 string) /
+    // {data:5} / {count:5} 多种形态。
+    const data = await service.get<unknown, number | string | { data?: number; count?: number }>(
       `/entity-type-configs/${t.id}/usage-count`,
     )
-    if (typeof data === 'number') {
-      usageCount.value = data
-    } else {
-      usageCount.value = Number(data?.data ?? data?.count ?? 0)
-    }
+    const raw = (data && typeof data === 'object') ? (data.data ?? data.count ?? 0) : data
+    usageCount.value = Number(raw) || 0
   } catch {
-    // endpoint may not exist yet — fallback to 0
+    // 容错: 端点异常时回退 0 (不阻断面板其余信息)
     usageCount.value = 0
   } finally {
     usageLoading.value = false

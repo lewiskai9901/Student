@@ -327,7 +327,7 @@ function emptyForm(): FormState {
   }
 }
 
-watch(() => props.type, (t) => {
+function loadFromType(t: EntityTypeConfig | null) {
   if (!t) { form.value = emptyForm(); return }
   const schema = typeof t.metadataSchema === 'string'
     ? JSON.parse(t.metadataSchema || '{"fields":[]}')
@@ -349,7 +349,9 @@ watch(() => props.type, (t) => {
     features,
   }
   activeTab.value = 'basic'
-}, { immediate: true })
+}
+
+watch(() => props.type, (t) => loadFromType(t), { immediate: true })
 
 watch(() => props.isNew, (isNew) => {
   if (isNew) {
@@ -551,13 +553,9 @@ async function handleSave() {
 }
 
 function handleCancel() {
-  // Re-trigger watch to reset form from prop
-  const t = props.type
-  if (t) {
-    const tmp = t; // trigger watcher via reassign
-    (props as any).type = null
-    setTimeout(() => ((props as any).type = tmp), 0)
-  }
+  // 本地把表单重置回当前 prop 值即可 —— 不写 readonly prop。
+  // (此前用 setTimeout 把 props.type 置 null 再还原来"重触发 watch", 既改了只读 prop 又有时序竞态。)
+  loadFromType(props.type)
 }
 </script>
 
