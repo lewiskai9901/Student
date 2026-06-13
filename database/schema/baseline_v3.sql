@@ -3465,39 +3465,6 @@ LOCK TABLES `audit_trail` WRITE;
 /*!40000 ALTER TABLE `audit_trail` ENABLE KEYS */;
 UNLOCK TABLES;
 
---
--- Table structure for table `booking_seat_assignments`
---
-
-DROP TABLE IF EXISTS `booking_seat_assignments`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `booking_seat_assignments` (
-  `id` bigint NOT NULL AUTO_INCREMENT,
-  `booking_id` bigint NOT NULL,
-  `position_no` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `user_id` bigint NOT NULL,
-  `user_name` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `deleted` int DEFAULT '0',
-  `tenant_id` bigint NOT NULL DEFAULT '1' COMMENT '租户ID',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_booking_position` (`booking_id`,`position_no`),
-  KEY `idx_booking` (`booking_id`),
-  KEY `idx_user` (`user_id`),
-  KEY `idx_tenant` (`tenant_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `booking_seat_assignments`
---
-
-LOCK TABLES `booking_seat_assignments` WRITE;
-/*!40000 ALTER TABLE `booking_seat_assignments` DISABLE KEYS */;
-/*!40000 ALTER TABLE `booking_seat_assignments` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `buildings`
@@ -9141,48 +9108,6 @@ INSERT INTO `place_batch_jobs` (`job_id`, `job_type`, `job_name`, `job_status`, 
 /*!40000 ALTER TABLE `place_batch_jobs` ENABLE KEYS */;
 UNLOCK TABLES;
 
---
--- Table structure for table `place_bookings`
---
-
-DROP TABLE IF EXISTS `place_bookings`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `place_bookings` (
-  `id` bigint NOT NULL AUTO_INCREMENT,
-  `place_id` bigint NOT NULL COMMENT '场所ID',
-  `booker_id` bigint NOT NULL COMMENT '预订人ID',
-  `booker_name` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '预订人名称(冗余)',
-  `title` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '预订标题',
-  `start_time` datetime NOT NULL COMMENT '开始时间',
-  `end_time` datetime NOT NULL COMMENT '结束时间',
-  `attendees` json DEFAULT NULL COMMENT '参与人列表',
-  `status` tinyint DEFAULT '1' COMMENT '状态: 0-已取消 1-待使用 2-使用中 3-已完成',
-  `remark` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '备注',
-  `created_by` bigint DEFAULT NULL,
-  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updated_by` bigint DEFAULT NULL,
-  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `deleted` int DEFAULT '0',
-  `tenant_id` bigint NOT NULL DEFAULT '1' COMMENT '租户ID',
-  PRIMARY KEY (`id`),
-  KEY `idx_space_id` (`place_id`),
-  KEY `idx_booker` (`booker_id`),
-  KEY `idx_time_range` (`start_time`,`end_time`),
-  KEY `idx_status` (`status`),
-  KEY `idx_deleted` (`deleted`),
-  KEY `idx_tenant` (`tenant_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='场所预订记录表';
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `place_bookings`
---
-
-LOCK TABLES `place_bookings` WRITE;
-/*!40000 ALTER TABLE `place_bookings` DISABLE KEYS */;
-/*!40000 ALTER TABLE `place_bookings` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `place_capacity_stats_mv`
@@ -11017,46 +10942,6 @@ LOCK TABLES `space_assignments` WRITE;
 /*!40000 ALTER TABLE `space_assignments` ENABLE KEYS */;
 UNLOCK TABLES;
 
---
--- Table structure for table `space_bookings`
---
-
-DROP TABLE IF EXISTS `space_bookings`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `space_bookings` (
-  `id` bigint NOT NULL AUTO_INCREMENT,
-  `space_id` bigint NOT NULL COMMENT '空间ID',
-  `booker_id` bigint NOT NULL COMMENT '预订人ID',
-  `booker_name` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '预订人名称(冗余)',
-  `title` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '预订标题',
-  `start_time` datetime NOT NULL COMMENT '开始时间',
-  `end_time` datetime NOT NULL COMMENT '结束时间',
-  `attendees` json DEFAULT NULL COMMENT '参与人列表',
-  `status` tinyint DEFAULT '1' COMMENT '状态: 0-已取消 1-待使用 2-使用中 3-已完成',
-  `remark` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '备注',
-  `created_by` bigint DEFAULT NULL,
-  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
-  `updated_by` bigint DEFAULT NULL,
-  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `deleted` int DEFAULT '0',
-  PRIMARY KEY (`id`),
-  KEY `idx_space_id` (`space_id`),
-  KEY `idx_booker` (`booker_id`),
-  KEY `idx_time_range` (`start_time`,`end_time`),
-  KEY `idx_status` (`status`),
-  KEY `idx_deleted` (`deleted`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='场所预订记录表';
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `space_bookings`
---
-
-LOCK TABLES `space_bookings` WRITE;
-/*!40000 ALTER TABLE `space_bookings` DISABLE KEYS */;
-/*!40000 ALTER TABLE `space_bookings` ENABLE KEYS */;
-UNLOCK TABLES;
 
 --
 -- Table structure for table `space_categories`

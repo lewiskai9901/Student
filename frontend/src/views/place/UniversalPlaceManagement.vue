@@ -264,60 +264,6 @@
               </div>
             </div>
 
-            <!-- Tab: 预订管理 -->
-            <div v-if="activePlaceTab === 'bookings' && showBookingPanel">
-              <div class="pm-tab-toolbar" style="justify-content: flex-end; gap: 8px;">
-                <button
-                  class="pm-link-btn"
-                  :style="{ color: bookingShowAll ? '#3b82f6' : '#9ca3af' }"
-                  @click="bookingShowAll = !bookingShowAll; loadBookings(selectedNode!.id)"
-                >{{ bookingShowAll ? '仅活跃' : '全部' }}</button>
-                <button class="tm-btn tm-btn-primary" style="padding: 4px 10px; font-size: 11px;" @click="openBookingDialog">
-                  <Plus style="width: 12px; height: 12px;" /> 新建预订
-                </button>
-              </div>
-              <div class="pm-section-border">
-                <table v-if="bookings.length > 0" class="tm-table">
-                  <colgroup>
-                    <col style="width: 90px" />
-                    <col />
-                    <col style="width: 130px" />
-                    <col style="width: 130px" />
-                    <col style="width: 70px" />
-                    <col style="width: 80px" />
-                  </colgroup>
-                  <thead>
-                    <tr>
-                      <th class="text-left">预订人</th>
-                      <th class="text-left">标题</th>
-                      <th class="text-left">开始时间</th>
-                      <th class="text-left">结束时间</th>
-                      <th class="text-left">状态</th>
-                      <th class="text-right">操作</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="bk in bookings" :key="bk.id">
-                      <td class="text-left" style="font-weight: 500; color: #1f2937;">{{ bk.bookerName || '-' }}</td>
-                      <td class="text-left" style="color: #374151;">{{ bk.title || '-' }}</td>
-                      <td class="text-left" style="color: #9ca3af;">{{ formatDateTime(bk.startTime) }}</td>
-                      <td class="text-left" style="color: #9ca3af;">{{ formatDateTime(bk.endTime) }}</td>
-                      <td class="text-left">
-                        <span class="tm-chip" :class="bookingStatusClass(bk.status)">
-                          {{ bookingStatusLabel(bk.status) }}
-                        </span>
-                      </td>
-                      <td class="text-right">
-                        <button v-if="bk.status === 1 || bk.status === 2" class="tm-action" style="color: #3b82f6;" @click="openSeatArrangement(bk)">排座</button>
-                        <button v-if="bk.status === 1" class="tm-action tm-action-danger" @click="handleCancelBooking(bk)">取消</button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-                <div v-else class="pm-empty-hint">暂无预订记录</div>
-              </div>
-            </div>
-
             <!-- Tab: 关系 -->
             <div v-if="activePlaceTab === 'relations'" style="padding: 12px 16px;">
               <RelationsPanel
@@ -555,90 +501,6 @@
       </template>
     </el-dialog>
 
-    <!-- Create Booking Dialog -->
-    <el-dialog v-model="showBookingDialog" title="新建预订" width="480px" :close-on-click-modal="false" destroy-on-close align-center>
-      <el-form label-position="top">
-        <el-form-item label="标题">
-          <el-input v-model="bookingForm.title" placeholder="预订标题（选填）" maxlength="100" />
-        </el-form-item>
-        <el-form-item label="时间段" required>
-          <el-date-picker
-            v-model="bookingForm.timeRange"
-            type="datetimerange"
-            range-separator="至"
-            start-placeholder="开始时间"
-            end-placeholder="结束时间"
-            format="YYYY-MM-DD HH:mm"
-            value-format="YYYY-MM-DDTHH:mm:ss"
-            style="width: 100%"
-          />
-        </el-form-item>
-        <el-form-item label="参会人">
-          <div style="width: 100%; display: flex; flex-direction: column; gap: 8px;">
-            <div style="display: flex; gap: 8px;">
-              <el-select
-                v-model="bookingForm.attendeeIds"
-                multiple
-                filterable
-                remote
-                :remote-method="searchAttendees"
-                :loading="attendeeSearching"
-                placeholder="输入姓名搜索..."
-                style="flex: 1"
-                collapse-tags
-                collapse-tags-tooltip
-                :max-collapse-tags="3"
-              >
-                <el-option
-                  v-for="u in attendeeOptions"
-                  :key="u.id"
-                  :value="u.id"
-                  :label="u.realName || u.username"
-                >
-                  <span>{{ u.realName || u.username }}</span>
-                  <span v-if="u.orgUnitName" style="margin-left: 8px; font-size: 12px; color: #9ca3af;">{{ u.orgUnitName }}</span>
-                </el-option>
-              </el-select>
-              <el-popover trigger="click" :width="260" placement="bottom-end">
-                <template #reference>
-                  <el-button>按组织添加</el-button>
-                </template>
-                <el-tree-select
-                  v-model="batchOrgUnitId"
-                  :data="ciOrgTreeData"
-                  :props="{ label: 'unitName', value: 'id', children: 'children' }"
-                  placeholder="选择组织"
-                  filterable
-                  check-strictly
-                  style="width: 100%"
-                  @change="handleBatchAddAttendeesByOrg"
-                />
-              </el-popover>
-            </div>
-            <div v-if="bookingForm.attendeeIds.length > 0" style="font-size: 12px; color: #9ca3af;">
-              已选 {{ bookingForm.attendeeIds.length }} 人
-            </div>
-          </div>
-        </el-form-item>
-        <el-form-item label="备注">
-          <el-input v-model="bookingForm.remark" type="textarea" :rows="2" placeholder="选填" maxlength="200" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <div style="display: flex; justify-content: flex-end; gap: 8px;">
-          <el-button @click="showBookingDialog = false">取消</el-button>
-          <el-button type="primary" :loading="bookingSubmitting" :disabled="!bookingForm.timeRange || bookingForm.timeRange.length < 2" @click="handleCreateBooking">确认预订</el-button>
-        </div>
-      </template>
-    </el-dialog>
-
-    <!-- Booking Seat Arrangement Dialog -->
-    <BookingSeatDialog
-      v-model:visible="showSeatDialog"
-      :booking="seatDialogBooking"
-      :place-layout="selectedNode?.attributes?.layout || null"
-    />
-
     <!-- Floor Plan Editor Dialog (fullscreen) -->
     <el-dialog
       v-model="showFloorPlanDialog"
@@ -693,7 +555,6 @@ import PlaceOverview from './components/PlaceOverview.vue'
 import PlaceFormDrawer from './components/PlaceFormDrawer.vue'
 import SeatGrid from './components/SeatGrid.vue'
 import FloorPlanEditor from './components/FloorPlanEditor.vue'
-import BookingSeatDialog from './components/BookingSeatDialog.vue'
 import ActivityTimeline from '@/components/activity/ActivityTimeline.vue'
 import RelationsPanel from '@/components/access/RelationsPanel.vue'
 import DynamicForm from '@/components/extension/DynamicForm.vue'
@@ -703,7 +564,7 @@ import { getSimpleUserList, getUsersByOrgUnit } from '@/api/user'
 import { getOrgUnitTree } from '@/api/organization'
 import type { SimpleUser, User } from '@/types/user'
 import type { OrgUnitTreeNode } from '@/types'
-import type { PlaceTreeNode, UniversalPlace, UniversalPlaceType, PlaceOccupant, PlaceBooking } from '@/types/universalPlace'
+import type { PlaceTreeNode, UniversalPlace, UniversalPlaceType, PlaceOccupant } from '@/types/universalPlace'
 
 // ========== Data ==========
 const loading = ref(false)
@@ -916,150 +777,8 @@ async function handleBatchAddByOrg() {
 const showSwapDialog = ref(false)
 const swapSource = ref<PlaceOccupant | null>(null)
 
-// ========== Booking Management ==========
-const bookings = ref<PlaceBooking[]>([])
-const bookingShowAll = ref(false)
-const showBookingDialog = ref(false)
-const bookingSubmitting = ref(false)
-const bookingForm = ref({
-  title: '',
-  timeRange: null as string[] | null,
-  attendeeIds: [] as (number | string)[],
-  remark: ''
-})
-const attendeeOptions = ref<SimpleUser[]>([])
-const attendeeSearching = ref(false)
-const batchOrgUnitId = ref<LongId | null>(null)
-
-const showBookingPanel = computed(() => {
-  const node = selectedNode.value
-  if (!node) return false
-  return !!node.bookable
-})
-
-async function loadBookings(placeId: LongId | string) {
-  try {
-    bookings.value = await universalPlaceApi.getPlaceBookings(placeId, !bookingShowAll.value)
-  } catch {
-    bookings.value = []
-  }
-}
-
-async function openBookingDialog() {
-  bookingForm.value = { title: '', timeRange: null, attendeeIds: [], remark: '' }
-  attendeeOptions.value = []
-  batchOrgUnitId.value = null
-  showBookingDialog.value = true
-}
-
-async function searchAttendees(keyword: string) {
-  if (!keyword || keyword.trim().length < 1) {
-    attendeeOptions.value = []
-    return
-  }
-  attendeeSearching.value = true
-  try {
-    const users = await getSimpleUserList(keyword.trim())
-    // Merge with existing selected options to keep them visible
-    const existingMap = new Map(attendeeOptions.value.map(u => [String(u.id), u]))
-    for (const u of users) existingMap.set(String(u.id), u)
-    attendeeOptions.value = [...existingMap.values()]
-  } catch {
-    // keep existing
-  } finally {
-    attendeeSearching.value = false
-  }
-}
-
-async function handleBatchAddAttendeesByOrg(orgId: LongId | null) {
-  if (!orgId) return
-  try {
-    const users = await getUsersByOrgUnit(orgId)
-    // Merge into attendeeOptions + attendeeIds
-    const existingMap = new Map(attendeeOptions.value.map(u => [String(u.id), u]))
-    const existingIds = new Set(bookingForm.value.attendeeIds.map(String))
-    let added = 0
-    for (const u of users) {
-      const key = String(u.id)
-      if (!existingMap.has(key)) {
-        existingMap.set(key, { id: u.id, username: u.username, realName: u.realName, orgUnitName: u.orgUnitName })
-      }
-      if (!existingIds.has(key)) {
-        bookingForm.value.attendeeIds.push(u.id)
-        existingIds.add(key)
-        added++
-      }
-    }
-    attendeeOptions.value = [...existingMap.values()]
-    ElMessage.success(`已添加 ${added} 人（该组织共 ${users.length} 人）`)
-  } catch {
-    ElMessage.error('获取组织用户失败')
-  } finally {
-    batchOrgUnitId.value = null
-  }
-}
-
-async function handleCreateBooking() {
-  if (!selectedNode.value || !bookingForm.value.timeRange || bookingForm.value.timeRange.length < 2) return
-  bookingSubmitting.value = true
-  try {
-    await universalPlaceApi.createBooking(selectedNode.value.id, {
-      title: bookingForm.value.title || undefined,
-      startTime: bookingForm.value.timeRange[0],
-      endTime: bookingForm.value.timeRange[1],
-      attendeeIds: bookingForm.value.attendeeIds.length > 0 ? bookingForm.value.attendeeIds : undefined,
-      remark: bookingForm.value.remark || undefined
-    })
-    ElMessage.success('预订成功')
-    showBookingDialog.value = false
-    await loadBookings(selectedNode.value.id)
-  } catch {
-    /* axios interceptor handles error */
-  } finally {
-    bookingSubmitting.value = false
-  }
-}
-
-async function handleCancelBooking(bk: PlaceBooking) {
-  try {
-    await ElMessageBox.confirm(
-      `确定要取消预订"${bk.title || '无标题'}"吗？`,
-      '取消预订',
-      { type: 'warning', confirmButtonText: '取消预订', cancelButtonText: '返回' }
-    )
-    await universalPlaceApi.cancelBooking(bk.id)
-    ElMessage.success('预订已取消')
-    if (selectedNode.value) {
-      await loadBookings(selectedNode.value.id)
-    }
-  } catch (error: any) {
-    if (error !== 'cancel') { /* axios interceptor handles */ }
-  }
-}
-
-// ========== Seat Arrangement ==========
-const showSeatDialog = ref(false)
-const seatDialogBooking = ref<PlaceBooking | null>(null)
-
-function openSeatArrangement(bk: PlaceBooking) {
-  seatDialogBooking.value = bk
-  showSeatDialog.value = true
-}
-
-function bookingStatusLabel(status: number): string {
-  const map: Record<LongId, string> = { 0: '已取消', 1: '待使用', 2: '使用中', 3: '已完成' }
-  return map[status] || '未知'
-}
-
-function bookingStatusClass(status: number): string {
-  const map: Record<LongId, string> = {
-    0: 'bg-gray-100 text-gray-500',
-    1: 'bg-blue-50 text-blue-600',
-    2: 'bg-emerald-50 text-emerald-600',
-    3: 'bg-gray-100 text-gray-500'
-  }
-  return map[status] || 'bg-gray-100 text-gray-500'
-}
+// 预订子系统已移除 (2026-06-13): 前端 UI 完整但后端零端点 (7 API 全 404),
+// 且无 place 类型开启 bookable → 不可达死代码。详见删除 commit。
 
 function formatDateTime(dateStr?: string) {
   if (!dateStr) return '-'
@@ -1174,9 +893,6 @@ const placeTabs = computed(() => {
   if (showOccupantPanel.value) {
     tabs.push({ key: 'occupants', label: '入住管理', count: occupants.value.length })
   }
-  if (showBookingPanel.value) {
-    tabs.push({ key: 'bookings', label: '预订管理', count: bookings.value.filter((b: any) => b.status === 1 || b.status === 2).length })
-  }
   // 类型插件声明的扩展字段按 group 追加独立 tab
   for (const group of extensionGroups.value) {
     tabs.push({ key: group.key, label: group.label })
@@ -1235,15 +951,10 @@ function handleSelectNode(node: PlaceTreeNode) {
   showHistory.value = false
   occupants.value = []
   occupantHistory.value = []
-  bookings.value = []
   loadChildPlaces(node.id)
   // Load occupants if this node supports them
   if (node.occupiable || node.hasCapacity) {
     loadOccupants(node.id)
-  }
-  // Load bookings if bookable
-  if (node.bookable) {
-    loadBookings(node.id)
   }
 }
 
@@ -1254,13 +965,9 @@ function selectPlace(place: UniversalPlace) {
     showHistory.value = false
     occupants.value = []
     occupantHistory.value = []
-    bookings.value = []
     loadChildPlaces(place.id)
     if (node.occupiable || node.hasCapacity) {
       loadOccupants(place.id)
-    }
-    if (node.bookable) {
-      loadBookings(place.id)
     }
   }
 }

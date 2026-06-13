@@ -8,11 +8,7 @@ import type {
   UniversalPlaceType,
   PlaceOccupant,
   PlaceOccupantWithPlace,
-  CheckInRequest,
-  PlaceBooking,
-  CreateBookingRequest,
-  BookingSeatAssignment,
-  SaveSeatAssignmentRequest
+  CheckInRequest
 } from '@/types/universalPlace'
 
 const BASE_URL = '/v9/places'
@@ -221,39 +217,9 @@ export const universalPlaceApi = {
    */
   getOccupantHistoryByOccupant(occupantType: string, occupantId: LongId | string): Promise<PlaceOccupantWithPlace[]> {
     return request.get(`${BASE_URL}/occupant-history`, { params: { occupantType, occupantId } })
-  },
-
-  // ==================== 预订管理 ====================
-
-  createBooking(placeId: LongId | string, data: CreateBookingRequest): Promise<PlaceBooking> {
-    return request.post('/place-bookings', { placeId, ...data })
-  },
-
-  getPlaceBookings(placeId: LongId | string, activeOnly?: boolean): Promise<PlaceBooking[]> {
-    return request.get('/place-bookings', { params: { placeId, activeOnly } })
-  },
-
-  getMyBookings(): Promise<PlaceBooking[]> {
-    return request.get('/place-bookings/my')
-  },
-
-  cancelBooking(id: LongId | string): Promise<void> {
-    return request.put(`/place-bookings/${id}/cancel`)
-  },
-
-  // ==================== 排座管理 ====================
-
-  getBookingSeating(bookingId: LongId | string): Promise<BookingSeatAssignment[]> {
-    return request.get(`/place-bookings/${bookingId}/seating`)
-  },
-
-  saveBookingSeating(bookingId: LongId | string, data: SaveSeatAssignmentRequest[]): Promise<BookingSeatAssignment[]> {
-    return request.put(`/place-bookings/${bookingId}/seating`, data)
-  },
-
-  clearBookingSeating(bookingId: LongId | string): Promise<void> {
-    return request.delete(`/place-bookings/${bookingId}/seating`)
   }
+  // 预订/排座 API 已移除 (2026-06-13): 后端无对应端点 (7 个 /place-bookings 全 404),
+  // 预订子系统未建成且不可达, 死代码连同后端领域层一并删除。
 }
 
 export default universalPlaceApi

@@ -303,74 +303,8 @@ export interface CheckInRequest {
 
 // ==================== 预订记录 ====================
 
-/**
- * 预订状态
- */
-export enum BookingStatus {
-  CANCELLED = 0,
-  PENDING = 1,
-  IN_USE = 2,
-  COMPLETED = 3
-}
-
-/**
- * 预订状态标签
- */
-export const BookingStatusLabels: Record<BookingStatus, string> = {
-  [BookingStatus.CANCELLED]: '已取消',
-  [BookingStatus.PENDING]: '待使用',
-  [BookingStatus.IN_USE]: '使用中',
-  [BookingStatus.COMPLETED]: '已完成'
-}
-
-/**
- * 空间预订记录
- */
-export interface BookingAttendeeInfo {
-  userId: LongId | string
-  username: string
-  realName: string
-}
-
-export interface PlaceBooking {
-  id: LongId | string
-  placeId: LongId | string
-  placeName?: string
-  bookerId: LongId | string
-  bookerName?: string
-  title?: string
-  startTime: string
-  endTime: string
-  attendeeIds?: (number | string)[]
-  attendees?: BookingAttendeeInfo[]
-  status: BookingStatus
-  remark?: string
-}
-
-export interface BookingSeatAssignment {
-  id: LongId | string
-  bookingId: LongId | string
-  positionNo: string
-  userId: LongId | string
-  userName: string
-}
-
-export interface SaveSeatAssignmentRequest {
-  positionNo: string
-  userId: LongId | string
-  userName: string
-}
-
-/**
- * 创建预订请求
- */
-export interface CreateBookingRequest {
-  title?: string
-  startTime: string
-  endTime: string
-  attendeeIds?: (number | string)[]
-  remark?: string
-}
+// 预订相关类型 (BookingStatus / PlaceBooking / BookingSeatAssignment / CreateBookingRequest 等)
+// 已移除 (2026-06-13): 预订子系统未建成 (后端零端点) 且不可达, 死代码整体删除。
 
 // ==================== 平面图布局 ====================
 
@@ -435,12 +369,6 @@ export function getPlaceStatusColor(status: PlaceStatus): string {
   return PlaceStatusColors[status] || 'default'
 }
 
-/**
- * 获取预订状态标签
- */
-export function getBookingStatusLabel(status: BookingStatus): string {
-  return BookingStatusLabels[status] || '未知'
-}
 
 /**
  * 计算占用率
