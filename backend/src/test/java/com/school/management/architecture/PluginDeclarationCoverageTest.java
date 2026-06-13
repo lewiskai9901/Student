@@ -84,7 +84,7 @@ class PluginDeclarationCoverageTest {
         missing.removeAll(declared);
         assertTrue(missing.isEmpty(),
             String.format("%n以下 %d 个 @CasbinAccess 权限码在代码里被引用, 但没有任何 PermissionProvider 声明:%n  %s%n" +
-                "修复: 将它们加到 CorePermissionProvider / CoreLegacyPermissionProvider / EducationPermissionProvider / EducationLegacyPermissionProvider 中.",
+                "修复: 将它们加到 CorePermissionCatalog / EducationPermissionCatalog 中.",
                 missing.size(), String.join("%n  ", missing)));
     }
 

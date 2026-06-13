@@ -9,9 +9,9 @@ import static com.school.management.infrastructure.extension.PermissionDef.of;
 /**
  * 教育行业权限 — 学术/学生/教学/宿舍相关.
  *
- * <p>双轨收敛: 纯数据 holder, 由 EducationManifest.contribute() 调 {@link #permissions()} 聚合。
+ * <p>双轨收敛: 纯数据 catalog (权限码目录), 由 EducationManifest.contribute() 调 {@link #permissions()} 聚合。
  */
-public class EducationPermissionProvider {
+public class EducationPermissionCatalog {
 
     public static final String MODULE_CODE = "education";
     public static final String MODULE_NAME = "教育行业";
@@ -154,7 +154,7 @@ public class EducationPermissionProvider {
             of("inspection_record:view", "查看检查记录", ""),
 
             // ═══════════════════════════════════════════════════════════════
-            // 自 CorePermissionProvider 迁入 (2026-04-21) — 教育场景特有
+            // 自 CorePermissionCatalog 迁入 (2026-04-21) — 教育场景特有
             // 对应 V20260427_1 migration 的 industry=EDU 修正
             // ═══════════════════════════════════════════════════════════════
 
@@ -173,7 +173,7 @@ public class EducationPermissionProvider {
             of("quantification:config:edit", "编辑量化配置", ""),
             of("quantification:config:view", "查看量化配置", ""),
 
-            // ─── my:* 教育自我相关 (从 CorePermissionProvider 迁入 2026-06-02; 课表/代课/我的学生) ───
+            // ─── my:* 教育自我相关 (从 CorePermissionCatalog 迁入 2026-06-02; 课表/代课/我的学生) ───
             of("my:schedule:view", "查看我的课表", ""),
             of("my:substitute:view", "查看我的代课", ""),
             of("my:user_student:view", "查看我的学生", "")

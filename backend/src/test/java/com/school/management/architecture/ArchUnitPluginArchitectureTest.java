@@ -114,7 +114,7 @@ class ArchUnitPluginArchitectureTest {
     // (implements PluginPackage), 经 contribute() 的 EventDomainContribution 声明。
 
     // PermissionProvider 已删 (双轨收敛): 权限经 contribute() 的 PermissionContribution 声明,
-    // CorePermissionProvider/EducationPermissionProvider 已降级为纯数据 holder, 不再 @Component。
+    // CorePermissionCatalog/EducationPermissionCatalog 已降级为纯数据 catalog, 不再 @Component。
 
     // RolePresetPlugin 已删 (双轨收敛): 角色经 PluginPackage.contribute() 的 RoleContribution 声明,
     // 不再有 @Component 实现, 故移除"impl 必须是 @Component"守护。

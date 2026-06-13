@@ -74,11 +74,11 @@ public class EducationManifest implements PluginPackage {
             ).flatMap(s -> s);
     }
 
-    /** 教育行业功能权限 (双轨收敛: 从 EducationPermissionProvider holder 聚合)。 */
+    /** 教育行业功能权限 (双轨收敛: 从 EducationPermissionCatalog 聚合)。 */
     private Stream<Contribution> eduPermissions() {
-        return EducationPermissionProvider.permissions().stream()
+        return EducationPermissionCatalog.permissions().stream()
             .map(d -> new Contribution.PermissionContribution(
-                EducationPermissionProvider.MODULE_CODE, EducationPermissionProvider.MODULE_NAME, d));
+                EducationPermissionCatalog.MODULE_CODE, EducationPermissionCatalog.MODULE_NAME, d));
     }
 
     /** 包装为 EDU 域菜单贡献 */

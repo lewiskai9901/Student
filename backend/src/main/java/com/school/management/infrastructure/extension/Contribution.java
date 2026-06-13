@@ -6,20 +6,17 @@ import java.util.List;
  * 统一贡献契约 — 插件通过 {@link PluginPackage#contribute()} 返回 Stream&lt;Contribution&gt;
  * 声明本包向平台贡献的所有内容.
  *
- * sealed 限定 13 个 permitted subtype, 对应旧 SPI 的 7 种职责 + 6 个扩展位
- * (route/policy/target-mode/domain/trigger-point/event-type). 每种 Contribution
- * 封装一条 def 记录, 在 ContributionDispatcher 里通过 instanceof 链分发到对应
- * Registrar 的 upsert 方法.
+ * sealed 限定 15 个 permitted subtype: 声明型 (relation/permission/role/role-scope/
+ * role-perm/menu/data-scope/data-resource/event-domain/trigger-point/event-type) +
+ * DI 登记型 (policy/target-mode) + 占位 (domain/workflow). 每种 Contribution 封装一条
+ * def 记录, 在 ContributionDispatcher 里通过 instanceof 链分发到对应 Registrar 的 upsert 方法.
  *
- * Phase 2 只铺设新路径, 旧 7 SPI 的 @Component 实现仍被原 Registrar 直接扫,
- * 两条路径到同一张表 UPSERT 幂等, 不冲突.
- *
- * Track M3 (Phase 7.2 补齐): EventDomainContribution 仍保留 (整域打包语义),
- * 同时新增 TriggerPointContribution / EventTypeContribution 细粒度 permit,
- * 插件可按需选择整包或细粒度.
+ * <p>双轨收敛收官 (2026-06-13): 6 个声明型 @Component SPI 全部删除并迁到本契约;
+ * 唯一保留的旧 SPI 是 {@link EntityTypePlugin} (携带生命周期行为, 走 bean 注册而非
+ * contribute() 声明), 因此本契约不再有 EntityTypeContribution permit。前端路由不再
+ * 经后端声明 (单一真相源 = 前端 router/plugins/{code}.ts), 故 RouteContribution permit 也已删除。
  */
 public sealed interface Contribution permits
-    Contribution.EntityTypeContribution,
     Contribution.RelationTypeContribution,
     Contribution.EventDomainContribution,
     Contribution.TriggerPointContribution,
@@ -31,7 +28,6 @@ public sealed interface Contribution permits
     Contribution.MenuContribution,
     Contribution.DataScopeContribution,
     Contribution.DataResourceContribution,
-    Contribution.RouteContribution,
     Contribution.PolicyContribution,
     Contribution.TargetModeResolverContribution,
     Contribution.DomainContribution,
@@ -40,14 +36,7 @@ public sealed interface Contribution permits
     /** 跨 Contribution 唯一标识, 用于冲突检测/日志 */
     String uniqueKey();
 
-    // ═════════════════════════ 11 个 permitted 记录 ═════════════════════════
-
-    /** 实体类型贡献 (对应旧 EntityTypePlugin 一个实例) */
-    record EntityTypeContribution(EntityTypePlugin plugin) implements Contribution {
-        @Override public String uniqueKey() {
-            return "entity:" + plugin.getEntityType() + "/" + plugin.getTypeCode();
-        }
-    }
+    // ═════════════════════════ 15 个 permitted 记录 ═════════════════════════
 
     /**
      * 关系类型贡献 (Phase 2 W2.2: 直接持有顶层 {@link RelationTypeDef}, 不再依赖旧 RelationTypePlugin SPI)
@@ -198,30 +187,6 @@ public sealed interface Contribution permits
      */
     record DataResourceContribution(DataResourceDef def) implements Contribution {
         @Override public String uniqueKey() { return "data-resource:" + def.resourceCode(); }
-    }
-
-    /**
-     * 前端路由贡献 (Phase 7.1)
-     *
-     * 声明插件向前端提供的 SPA 路由元数据. 前端 bootstrap 拉 overview 时
-     * 会读这批元数据, 和 frontend/src/router/plugins/{code}.ts 里的静态 routes
-     * 互补: SPI 用于 admin 审计/UI 可视化, 静态 routes 用于懒加载组件.
-     *
-     * 当前 ContributionDispatcher 只登记不下发到前端. Phase 8 可加 endpoint
-     * /api/plugin-platform/routes 让前端动态构造.
-     *
-     * @param industryCode 所属行业 (EDU/...), 供前端 router/plugins/loader 查找
-     * @param routePath    顶级路由路径 (如 /patient, /student), 与前端一致
-     * @param title        导航显示名
-     * @param requiresAuth 是否需要登录 (默认 true)
-     */
-    record RouteContribution(String industryCode, String routePath, String title,
-                              boolean requiresAuth) implements Contribution {
-        @Override public String uniqueKey() { return "route:" + industryCode + ":" + routePath; }
-
-        public static RouteContribution of(String industry, String path, String title) {
-            return new RouteContribution(industry, path, title, true);
-        }
     }
 
     /**

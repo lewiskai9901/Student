@@ -11,10 +11,10 @@ import static com.school.management.infrastructure.extension.PermissionDef.of;
  *
  * 覆盖: system (用户/角色/权限/配置/公告/日志), task, workflow, wechat 等通用模块.
  *
- * <p>双轨收敛: 不再是 @Component PermissionProvider SPI, 改为纯数据 holder —
+ * <p>双轨收敛: 不再是 @Component PermissionProvider SPI, 改为纯数据 catalog (权限码目录) —
  * 由 CoreManifest.contribute() 调 {@link #permissions()} 聚合为 PermissionContribution。
  */
-public class CorePermissionProvider {
+public class CorePermissionCatalog {
 
     public static final String MODULE_CODE = "core";
     public static final String MODULE_NAME = "通用核心";
@@ -107,7 +107,7 @@ public class CorePermissionProvider {
             of("asset:approval:view", "查看资产审批", ""),
 
             // ─── calendar / schedule 日程 ───
-            // calendar:* / schedule:policy:* 已迁至 EducationPermissionProvider (2026-04-21)
+            // calendar:* / schedule:policy:* 已迁至 EducationPermissionCatalog (2026-04-21)
             // 原因: 校历和排班策略是教育场景特有, 不属于通用核心
 
             // ─── inspection 检查平台 ───
@@ -300,7 +300,7 @@ public class CorePermissionProvider {
             of("msg-notification:edit", "编辑通知", ""),
             of("msg-notification:view", "查看通知", "")
 
-            // ─── 已迁至 EducationPermissionProvider (教育行业特有, 不属通用核心) ───
+            // ─── 已迁至 EducationPermissionCatalog (教育行业特有, 不属通用核心) ───
             // quantification:* (2026-04-21);
             // my:schedule:view / my:substitute:view / my:user_student:view (2026-06-02, 课表/代课/我的学生)
         );

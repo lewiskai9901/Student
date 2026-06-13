@@ -46,7 +46,20 @@ public class CoreManifest implements PluginPackage {
 
     @Override
     public Stream<Contribution> contribute() {
-        Stream<Contribution> base = Stream.of(
+        return Stream.of(
+                coreRelations(),
+                coreWorkflows(),
+                tenantAdminPermissionBindings(),
+                coreDataResources(),
+                coreRoles(),
+                coreMenus(),
+                corePermissions()
+            ).flatMap(s -> s);
+    }
+
+    /** 通用核心关系类型 (membership/ownership/association/...)。 */
+    private Stream<Contribution> coreRelations() {
+        return Stream.of(
             // 成员关系 — 每用户唯一归属 (maxPerSubject=1), forceGrant 强制
             wrap(RelationTypeDef.of(CoreRelations.MEMBER, "user", "org_unit", "成员",
                 "MEMBERSHIP", "用户属于某组织").withMaxPerSubject(1)),
@@ -112,9 +125,14 @@ public class CoreManifest implements PluginPackage {
             // 一场所至多一个责任人 (对齐旧 places.responsible_user_id 单列语义);
             // 与 admin|user|place(场所管理权)职责不同: responsible_for=业务问责, 参与场所树继承解析
             wrap(RelationTypeDef.of(CoreRelations.RESPONSIBLE_FOR, "user", "place", "责任人(对场所)",
-                "OWNERSHIP", "通用责任 — 对某场所负责 (如设备责任人,场地负责人)").withMaxPerResource(1)),
+                "OWNERSHIP", "通用责任 — 对某场所负责 (如设备责任人,场地负责人)").withMaxPerResource(1))
+        );
+    }
 
-            // Phase 5 — sample workflows (BPMN 文件在 classpath:processes/)
+    /** 通用核心自带的示例/审批工作流 (BPMN 文件在 classpath:processes/)。 */
+    private Stream<Contribution> coreWorkflows() {
+        return Stream.of(
+            // Phase 5 — sample workflows
             new Contribution.WorkflowContribution(
                 getIndustryCode(),
                 "processes/leave-approval.bpmn20.xml",
@@ -130,21 +148,13 @@ public class CoreManifest implements PluginPackage {
                 "processes/access-relation-approval.bpmn20.xml",
                 "关系授权审批流程")
         );
-        return Stream.of(
-                base,
-                tenantAdminPermissionBindings(),
-                coreDataResources(),
-                coreRoles(),
-                coreMenus(),
-                corePermissions()
-            ).flatMap(s -> s);
     }
 
-    /** 通用核心功能权限 (双轨收敛: 从 CorePermissionProvider holder 聚合)。 */
+    /** 通用核心功能权限 (双轨收敛: 从 CorePermissionCatalog 聚合)。 */
     private Stream<Contribution> corePermissions() {
-        return CorePermissionProvider.permissions().stream()
+        return CorePermissionCatalog.permissions().stream()
             .map(d -> new Contribution.PermissionContribution(
-                CorePermissionProvider.MODULE_CODE, CorePermissionProvider.MODULE_NAME, d));
+                CorePermissionCatalog.MODULE_CODE, CorePermissionCatalog.MODULE_NAME, d));
     }
 
     /** 包装为 CORE 域菜单贡献 */

@@ -19,12 +19,11 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * 保证:
  *  - {@link PluginPackage} 作为顶层接口, 继承 PluginManifest
- *  - {@link Contribution} sealed, permits 恰好 11 种
+ *  - {@link Contribution} sealed, permits 恰好 15 种 (双轨收敛收官)
  *  - 每种 permitted Contribution 都实现 uniqueKey()
- *  - 7 个旧 SPI 都打了 @Deprecated (强化向下兼容承诺)
+ *  - 已无 @Deprecated 声明型 SPI; EntityTypePlugin 是合法保留的扩展 SPI
  *  - CoreManifest / EducationManifest 现在都是 PluginPackage 实例
  */
-@SuppressWarnings("deprecation")
 class UnifiedPluginPackageTest {
 
     @Test
@@ -55,14 +54,14 @@ class UnifiedPluginPackageTest {
     }
 
     @Test
-    @DisplayName("Contribution 恰好有 17 个 permitted 子类型 (+data-resource)")
-    void contributionPermitsExactly17Subtypes() {
+    @DisplayName("Contribution 恰好有 15 个 permitted 子类型")
+    void contributionPermitsExactly15Subtypes() {
         Class<?>[] permitted = Contribution.class.getPermittedSubclasses();
-        assertEquals(17, permitted.length,
-            "P5-1 加 RoleScopeBindingContribution; Casbin 缺口修复加 RolePermissionBindingContribution; " +
-            "Phase1 双轨收敛加 DataResourceContribution (取代 DataResourceProvider SPI). 共 17 种: " +
-            "entity/relation/event-domain/trigger-point/event-type/perm/role/role-scope/role-perm/" +
-            "menu/data-scope/data-resource/route/policy/target-mode/domain/workflow. " +
+        assertEquals(15, permitted.length,
+            "双轨收敛收官 (2026-06-13): 删 EntityTypeContribution (EntityTypePlugin 走 bean 注册不经 contribute()) " +
+            "+ 删 RouteContribution (前端路由单一真相源在 router/plugins/{code}.ts). 共 15 种: " +
+            "relation/event-domain/trigger-point/event-type/perm/role/role-scope/role-perm/" +
+            "menu/data-scope/data-resource/policy/target-mode/domain/workflow. " +
             "实际=" + permitted.length);
     }
 
@@ -80,20 +79,14 @@ class UnifiedPluginPackageTest {
     }
 
     @Test
-    @DisplayName("仅剩 1 个旧 SPI 必须打 @Deprecated — 其余全部迁移完毕")
-    void oldSpisAreDeprecated() {
-        // 双轨收敛收官: RelationType/DataScope/RolePreset/Menu/Permission/MessagingDomain 全删。
-        // 仅剩 EntityTypePlugin — 携带生命周期行为, 作为合法 bean SPI 保留, 仍须 @Deprecated 标注迁移意图。
-        List<Class<?>> oldSpis = List.of(
-            EntityTypePlugin.class
-        );
-        for (Class<?> c : oldSpis) {
-            assertTrue(c.isAnnotationPresent(Deprecated.class),
-                c.getSimpleName() + " 应打 @Deprecated 指向 PluginPackage.contribute()");
-            Deprecated d = c.getAnnotation(Deprecated.class);
-            assertFalse(d.forRemoval(),
-                c.getSimpleName() + " 暂不可 forRemoval=true (Phase 2 保留向下兼容)");
-        }
+    @DisplayName("双轨收敛收官: 已无 @Deprecated 声明型 SPI; EntityTypePlugin 是合法保留的扩展 SPI 不标 @Deprecated")
+    void noDeprecatedDeclarationSpiRemains() {
+        // 双轨收敛收官 (2026-06-13): 6 个声明型 SPI (RelationType/DataScope/RolePreset/Menu/
+        // Permission/MessagingDomain) 全删。EntityTypePlugin 携带生命周期行为 (beforeCreate/
+        // afterCreate/validate), 是合法的 bean SPI (同 Policy/TargetModeResolver), 不再标
+        // @Deprecated — 它不是过渡债务而是稳定设计, 无替代品可迁。
+        assertFalse(EntityTypePlugin.class.isAnnotationPresent(Deprecated.class),
+            "EntityTypePlugin 是稳定保留的扩展 SPI, 不应再标 @Deprecated");
     }
 
     @Test
@@ -141,7 +134,7 @@ class UnifiedPluginPackageTest {
         // Phase1 双轨收敛: 加 19 个 DataResourceContribution → 44+19=63.
         // Role 双轨收敛: 加 3 个 RoleContribution → 63+3=66.
         // Menu 双轨收敛: 加 8 个 MenuContribution → 66+8=74.
-        // Permission 双轨收敛: 加 223 个 PermissionContribution (取代 CorePermissionProvider) → 74+223=297.
+        // Permission 双轨收敛: 加 223 个 PermissionContribution (聚合 CorePermissionCatalog) → 74+223=297.
         // 旧测试期望"默认空流"已不再适用; 改为校验内容契约.
         long count = core.contribute().count();
         assertEquals(297, count, "CoreManifest 应贡献 297 个 contribution (15 关系 + 3 workflow + 26 TENANT_ADMIN + 19 data-resource + 3 role + 8 menu + 223 permission)");
@@ -156,25 +149,11 @@ class UnifiedPluginPackageTest {
     // ═══════════════════════ Phase 7 ═══════════════════════
 
     @Test
-    @DisplayName("Phase 7.1: RouteContribution 进入 permitted 清单")
-    void routeContributionInPermittedList() {
-        boolean found = java.util.Arrays.stream(Contribution.class.getPermittedSubclasses())
-            .anyMatch(c -> c.getSimpleName().equals("RouteContribution"));
-        assertTrue(found, "RouteContribution 必须在 sealed permits 清单里");
-    }
-
-    @Test
     @DisplayName("Phase 7.5: PluginPackage.configSchema() 默认空, 可被覆盖")
     void pluginPackageConfigSchemaDefaultEmpty() {
         PluginPackage core = new CoreManifest();
         var schema = core.configSchema();
         assertNotNull(schema, "默认 configSchema() 必须非 null");
         assertTrue(schema.isEmpty(), "CoreManifest 没覆盖时 configSchema() 应该空");
-    }
-
-    @Test
-    @DisplayName("Phase 7.4: PluginPackage.schemaVersion() 默认 0")
-    void schemaVersionDefault() {
-        assertEquals(0, new CoreManifest().schemaVersion(), "CoreManifest 未覆盖 schemaVersion() 应返回 0");
     }
 }

@@ -6,19 +6,19 @@ import java.util.stream.Stream;
  * 统一插件包 SPI — Phase 2 新增的顶层协议.
  *
  * 继承自 {@link PluginManifest} 复用 metadata 字段 (industryCode/version/dependsOn...),
- * 并新增 {@link #contribute()} 返回 {@link Contribution} 流, 把旧 7 SPI 的职责
- * (实体类型/关系/消息域/权限/角色/菜单/数据范围) 统一到一个声明点.
+ * 并新增 {@link #contribute()} 返回 {@link Contribution} 流, 把声明型贡献
+ * (关系/消息域/权限/角色/菜单/数据范围/数据资源) 统一到一个声明点.
  *
- * <h3>与旧 SPI 的关系 (Phase 2 过渡策略)</h3>
+ * <h3>与扩展 SPI 的关系 (双轨收敛收官 2026-06-13)</h3>
  *
  * <ul>
- *   <li>旧 7 SPI (EntityTypePlugin 等) 已打 {@code @Deprecated}, 其 {@code @Component} 实现仍被
- *       对应 Registrar 扫描, 原有行为不变.</li>
- *   <li>新插件可完全走 PluginPackage, 不再写一堆 {@code @Component} 小类.</li>
- *   <li>两条路径写同一张表, UPSERT 幂等, 混用无副作用.</li>
+ *   <li>6 个声明型 @Component SPI 已全部删除并迁到 {@link #contribute()}, 这里是唯一声明点.</li>
+ *   <li>唯一保留的旧 SPI 是 {@link EntityTypePlugin} — 它携带生命周期行为 (beforeCreate/
+ *       afterCreate/validate), 与 {@link Policy} / {@link TargetModeResolver} 同属
+ *       "携带行为的 bean SPI", 由 Spring 扫描 {@code @Component} 实现直接注册, 不经 contribute().</li>
  * </ul>
  *
- * <h3>迁移示例 (后续会话做, Phase 2 只铺底座)</h3>
+ * <h3>声明示例</h3>
  * <pre>
  * &#64;Component
  * public class EducationManifest implements PluginPackage {
@@ -26,7 +26,7 @@ import java.util.stream.Stream;
  *     &#64;Override
  *     public Stream&lt;Contribution&gt; contribute() {
  *         return Stream.of(
- *             new Contribution.EntityTypeContribution(studentPlugin),
+ *             new Contribution.RoleContribution(teacherRoleDef),
  *             new Contribution.PermissionContribution("teaching", "教学", permDef)
  *         );
  *     }
@@ -55,28 +55,5 @@ public interface PluginPackage extends PluginManifest {
      */
     default PluginConfigSchema configSchema() {
         return PluginConfigSchema.empty();
-    }
-
-    /**
-     * Phase 7.4 skeleton: 声明本插件期望的 DB schema 版本.
-     *
-     * 默认 0 — 无 schema. 插件声明自己 schema 版本后, 启动时可以:
-     * - 检查对应 database/plugins/{industryCode}/V*.sql migrations 是否执行
-     * - 禁用插件前写入 "disabled" 标记, 后续启用时跳过冲突 migrations
-     *
-     * 当前仅 SPI 骨架, Flyway 实际布线留 Phase 8+.
-     */
-    default int schemaVersion() {
-        return 0;
-    }
-
-    /**
-     * Phase 7.4 skeleton: 插件 schema migrations 所在 classpath 位置.
-     *
-     * 约定: {@code classpath:db/migration/plugins/{industryCode}/}.
-     * 返回 null 表示此插件无独立 migrations.
-     */
-    default String schemaMigrationLocation() {
-        return null;
     }
 }

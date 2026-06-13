@@ -52,7 +52,6 @@ public class ContributionDispatcher implements ApplicationRunner {
         }
 
         AtomicInteger total = new AtomicInteger();
-        AtomicInteger entities = new AtomicInteger();
         AtomicInteger relations = new AtomicInteger();
         AtomicInteger events = new AtomicInteger();
         AtomicInteger triggerPoints = new AtomicInteger();
@@ -61,7 +60,6 @@ public class ContributionDispatcher implements ApplicationRunner {
         AtomicInteger roles = new AtomicInteger();
         AtomicInteger menus = new AtomicInteger();
         AtomicInteger scopes = new AtomicInteger();
-        AtomicInteger routes = new AtomicInteger();
         AtomicInteger policies = new AtomicInteger();
         AtomicInteger targetModes = new AtomicInteger();
         AtomicInteger domains = new AtomicInteger();
@@ -84,8 +82,7 @@ public class ContributionDispatcher implements ApplicationRunner {
                 }
                 total.incrementAndGet();
                 // Java 17 尚未 GA pattern-switch, 用 instanceof 链 (Phase 3 升级 21 后改 switch)
-                if (c instanceof Contribution.EntityTypeContribution)      entities.incrementAndGet();
-                else if (c instanceof Contribution.RelationTypeContribution rtc) {
+                if (c instanceof Contribution.RelationTypeContribution rtc) {
                     relations.incrementAndGet();
                     try {
                         RelationTypeUpserter.Result r = relationTypeUpserter.upsert(
@@ -181,7 +178,6 @@ public class ContributionDispatcher implements ApplicationRunner {
                             drc.def().resourceCode(), e.getMessage());
                     }
                 }
-                else if (c instanceof Contribution.RouteContribution)        routes.incrementAndGet();
                 else if (c instanceof Contribution.PolicyContribution pc) {
                     policies.incrementAndGet();
                     log.info("[ContributionDispatcher] registered Policy: {} ({})",
@@ -204,11 +200,11 @@ public class ContributionDispatcher implements ApplicationRunner {
         }
 
         log.info("[ContributionDispatcher] 扫描 {} 个包, 收到 {} 条 Contribution " +
-                "(entity {}, relation {}, event-domain {}, trigger-point {}, event-type {}, perm {}, role {}, role-scope {}, role-perm {}, menu {}, scope {}, data-resource {}, route {}, policy {}, target-mode {}, domain {}, workflow {})",
+                "(relation {}, event-domain {}, trigger-point {}, event-type {}, perm {}, role {}, role-scope {}, role-perm {}, menu {}, scope {}, data-resource {}, policy {}, target-mode {}, domain {}, workflow {})",
             packages.size(), total.get(),
-            entities.get(), relations.get(), events.get(),
+            relations.get(), events.get(),
             triggerPoints.get(), eventTypes.get(),
-            perms.get(), roles.get(), roleScopes.get(), rolePerms.get(), menus.get(), scopes.get(), dataResources.get(), routes.get(),
+            perms.get(), roles.get(), roleScopes.get(), rolePerms.get(), menus.get(), scopes.get(), dataResources.get(),
             policies.get(), targetModes.get(), domains.get(), workflows.get());
     }
 }

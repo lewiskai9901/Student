@@ -1,7 +1,7 @@
 package com.school.management.infrastructure.extension.plugins.education.constants;
 
 /**
- * 教育行业权限常量 — 与 EducationPermissionProvider 对齐.
+ * 教育行业权限常量 — 与 EducationPermissionCatalog 对齐.
  *
  * 业务代码引用:
  * <pre>

@@ -15,16 +15,14 @@ import java.util.Map;
  *
  * <h3>双轨收敛收官后的定位 (2026-06-13)</h3>
  * 其余 6 个声明型 SPI (RelationType/DataScope/RolePreset/Menu/Permission/MessagingDomain)
- * 已全部收敛到 {@link PluginPackage#contribute()} 并删除。<b>本接口是唯一保留的旧 SPI</b> —
+ * 已全部收敛到 {@link PluginPackage#contribute()} 并删除。<b>本接口是唯一保留的扩展 SPI</b> —
  * 因为它不只是声明: ClassPlugin/SuperAdminPlugin/DormitoryPlugin 重写了 beforeCreate/
- * afterCreate/validate <b>生命周期钩子, 携带行为</b>, 是合法的 bean SPI (同 Policy /
- * DataScopeResolver / TargetModeResolver), 不适合退化为纯数据 contribute() 声明。
+ * afterCreate/validate <b>生命周期钩子, 携带行为</b>, 是合法的 bean SPI (同 {@link Policy} /
+ * DataScopeResolver / {@link TargetModeResolver}), 退化为纯数据 contribute() 声明会丢失行为。
  *
- * <p>仍标 {@code @Deprecated} 仅为提示"纯声明部分推荐走 contribute()"; 不计划删除
- * ({@code forRemoval=false})。{@link Contribution.EntityTypeContribution} permit 作为
- * 未来可选迁移通道保留, 当前无人 emit。
+ * <p>因此它<b>不是过渡债务, 而是稳定设计</b>: 不标 {@code @Deprecated} (无替代品可迁), 与
+ * Policy / TargetModeResolver 同列, 由 Spring 扫描 {@code @Component} 实现直接注册。
  */
-@Deprecated(since = "1.1.0", forRemoval = false)
 public interface EntityTypePlugin {
 
     // ========== 类型注册 ==========

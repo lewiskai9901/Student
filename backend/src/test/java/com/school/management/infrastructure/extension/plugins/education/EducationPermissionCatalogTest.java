@@ -11,20 +11,20 @@ import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@DisplayName("EducationPermissionProvider 单元测试 (双轨收敛: 纯 holder static API)")
-class EducationPermissionProviderTest {
+@DisplayName("EducationPermissionCatalog 单元测试 (双轨收敛: 纯 holder static API)")
+class EducationPermissionCatalogTest {
 
     @Test
     @DisplayName("模块码与模块名固定为 education / 教育行业")
     void moduleMetadata() {
-        assertThat(EducationPermissionProvider.MODULE_CODE).isEqualTo("education");
-        assertThat(EducationPermissionProvider.MODULE_NAME).isEqualTo("教育行业");
+        assertThat(EducationPermissionCatalog.MODULE_CODE).isEqualTo("education");
+        assertThat(EducationPermissionCatalog.MODULE_NAME).isEqualTo("教育行业");
     }
 
     @Test
     @DisplayName("权限列表非空且每条 code/name 均非空白")
     void permissionsNonBlank() {
-        List<PermissionDef> perms = EducationPermissionProvider.permissions();
+        List<PermissionDef> perms = EducationPermissionCatalog.permissions();
 
         assertThat(perms).isNotEmpty();
         assertThat(perms).allSatisfy(p -> {
@@ -37,7 +37,7 @@ class EducationPermissionProviderTest {
     @Test
     @DisplayName("权限码无重复 (重复声明属真实 bug)")
     void noDuplicateCodes() {
-        List<PermissionDef> perms = EducationPermissionProvider.permissions();
+        List<PermissionDef> perms = EducationPermissionCatalog.permissions();
         Set<String> codes = perms.stream()
                 .map(PermissionDef::code)
                 .collect(Collectors.toCollection(HashSet::new));
@@ -50,7 +50,7 @@ class EducationPermissionProviderTest {
     @Test
     @DisplayName("包含已知教育行业权限码")
     void containsKnownCodes() {
-        Set<String> codes = EducationPermissionProvider.permissions().stream()
+        Set<String> codes = EducationPermissionCatalog.permissions().stream()
                 .map(PermissionDef::code)
                 .collect(Collectors.toSet());
 

@@ -1,7 +1,7 @@
 package com.school.management.infrastructure.extension.plugins.core.constants;
 
 /**
- * 通用核心权限常量 — 与 CorePermissionProvider 对齐.
+ * 通用核心权限常量 — 与 CorePermissionCatalog 对齐.
  *
  * 业务代码通过常量引用权限码:
  * <pre>

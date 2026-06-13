@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * 不得出现行业类型字符串字面量.
  *
  * 这些类型码由对应行业插件 (EducationPlugin 等) 在启动时
- * 通过 EntityTypeContribution 动态注册到 entity_type_configs 表. core 代码
+ * 通过 EntityTypePlugin 实现动态注册到 entity_type_configs 表. core 代码
  * 不应感知, 也不能硬编码引用.
  *
  * 追加新行业类型, 在 FORBIDDEN_LITERALS 加条目即可.
