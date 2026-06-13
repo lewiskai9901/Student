@@ -1,6 +1,6 @@
 package com.school.management.infrastructure.extension.plugins.education.scope;
 
-import com.school.management.infrastructure.extension.DataScopePlugin.DataScopeResolver;
+import com.school.management.infrastructure.extension.DataScopeResolver;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;

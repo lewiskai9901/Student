@@ -2,6 +2,7 @@ package com.school.management.infrastructure.extension.plugins.education;
 
 import com.school.management.infrastructure.extension.Contribution;
 import com.school.management.infrastructure.extension.DataResourceDef;
+import com.school.management.infrastructure.extension.DataScopeDimensionDef;
 import com.school.management.infrastructure.extension.PluginPackage;
 import com.school.management.infrastructure.extension.RelationTypeDef;
 import org.springframework.stereotype.Component;
@@ -58,7 +59,24 @@ public class EducationManifest implements PluginPackage {
     public Stream<Contribution> contribute() {
         return Stream.concat(relationTypes(),
                Stream.concat(roleScopeBindings(),
-               Stream.concat(rolePermissionBindings(), dataResources())));
+               Stream.concat(rolePermissionBindings(),
+               Stream.concat(dataResources(), dataScopeDims()))));
+    }
+
+    /**
+     * 教育行业数据权限维度 (Phase 2 双轨收敛: 从已删的 EducationDataScopePlugin 迁入)。
+     * 声明 BY_MAJOR/BY_GRADE/BY_CLASS; resolverType 指向对应 DataScopeResolver bean。
+     */
+    private Stream<Contribution> dataScopeDims() {
+        final String P = "com.school.management.infrastructure.extension.plugins.education.scope.";
+        return Stream.of(
+            new Contribution.DataScopeContribution("education", new DataScopeDimensionDef(
+                "BY_MAJOR", "按专业", "按照用户所属专业的所有学生/课程数据", P + "MajorDataScopeResolver")),
+            new Contribution.DataScopeContribution("education", new DataScopeDimensionDef(
+                "BY_GRADE", "按年级", "按照用户所属年级的所有学生数据", P + "GradeDataScopeResolver")),
+            new Contribution.DataScopeContribution("education", new DataScopeDimensionDef(
+                "BY_CLASS", "按班级", "仅访问用户所在班级的学生/成绩数据", P + "ClassDataScopeResolver"))
+        );
     }
 
     /**

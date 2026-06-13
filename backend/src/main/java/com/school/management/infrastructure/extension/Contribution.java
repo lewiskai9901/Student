@@ -187,7 +187,7 @@ public sealed interface Contribution permits
 
     /** 数据范围贡献 */
     record DataScopeContribution(String domainCode,
-                                  DataScopePlugin.DimensionDef def) implements Contribution {
+                                  DataScopeDimensionDef def) implements Contribution {
         @Override public String uniqueKey() { return "data-scope:" + def.code(); }
     }
 

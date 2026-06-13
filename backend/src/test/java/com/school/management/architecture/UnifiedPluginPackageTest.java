@@ -80,16 +80,15 @@ class UnifiedPluginPackageTest {
     }
 
     @Test
-    @DisplayName("剩余 6 个旧 SPI 必须打 @Deprecated (迁移提示) — RelationTypePlugin 已删除 (W2.2)")
+    @DisplayName("剩余 5 个旧 SPI 必须打 @Deprecated (迁移提示) — RelationTypePlugin/DataScopePlugin 已删除")
     void oldSpisAreDeprecated() {
-        // Phase 2 W2.2: RelationTypePlugin 已删除并完成迁移 (commit refactor(access)).
-        // 剩余 6 个 SPI 仍向下兼容, 需保持 @Deprecated 标注.
+        // RelationTypePlugin (W2.2) 与 DataScopePlugin (双轨收敛 Phase2) 已删除并完成迁移。
+        // 剩余 5 个 SPI 仍向下兼容, 需保持 @Deprecated 标注。
         List<Class<?>> oldSpis = List.of(
             EntityTypePlugin.class,
             MessagingDomainPlugin.class,
             PermissionProvider.class,
             RolePresetPlugin.class,
-            DataScopePlugin.class,
             MenuContributionPlugin.class
         );
         for (Class<?> c : oldSpis) {

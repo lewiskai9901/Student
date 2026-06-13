@@ -42,6 +42,8 @@ public class ContributionDispatcher implements ApplicationRunner {
     private final RelationTypeUpserter relationTypeUpserter;
     private final RoleScopeBindingRegistrar roleScopeBindingRegistrar;
     private final DataResourceUpserter dataResourceUpserter;
+    private final DataScopeUpserter dataScopeUpserter;
+    private final PluginPackageRegistrar packageRegistrar;
 
     @Override
     public void run(ApplicationArguments args) {
@@ -142,7 +144,18 @@ public class ContributionDispatcher implements ApplicationRunner {
                     // 真正写 role_permissions 的是 RolePermissionBindingRegistrar (@Order 600).
                 }
                 else if (c instanceof Contribution.MenuContribution)         menus.incrementAndGet();
-                else if (c instanceof Contribution.DataScopeContribution)    scopes.incrementAndGet();
+                else if (c instanceof Contribution.DataScopeContribution dsc) {
+                    // 无依赖类型: data_scope_dims 行注册, dispatcher @Order(60) 直接 UPSERT
+                    scopes.incrementAndGet();
+                    try {
+                        dataScopeUpserter.upsert(dsc.domainCode(), dsc.def(),
+                            packageRegistrar.resolveIndustry(pkgClass), pkgClass.getName(),
+                            packageRegistrar.resolveOrigin(pkgClass));
+                    } catch (Exception e) {
+                        log.error("[ContributionDispatcher] 数据维度写入失败 {}: {}",
+                            dsc.def().code(), e.getMessage());
+                    }
+                }
                 else if (c instanceof Contribution.DataResourceContribution drc) {
                     // 无依赖类型: dispatcher @Order(60) 直接 UPSERT (data_resources 行由 migration 落库)
                     dataResources.incrementAndGet();

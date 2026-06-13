@@ -1,6 +1,6 @@
 package com.school.management.infrastructure.access;
 
-import com.school.management.infrastructure.extension.DataScopePlugin.DataScopeResolver;
+import com.school.management.infrastructure.extension.DataScopeResolver;
 import com.school.management.infrastructure.extension.event.PermissionsRefreshedEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;

@@ -1,6 +1,6 @@
 package com.school.management.infrastructure.access;
 
-import com.school.management.infrastructure.extension.DataScopePlugin.DataScopeResolver;
+import com.school.management.infrastructure.extension.DataScopeResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationContext;

@@ -42,7 +42,7 @@ class DataScopeDimResolverExistsTest {
     );
 
     private static final String DATA_SCOPE_RESOLVER_IFACE =
-        "com.school.management.infrastructure.extension.DataScopePlugin$DataScopeResolver";
+        "com.school.management.infrastructure.extension.DataScopeResolver";
 
     @Test
     void all_declared_resolver_fqcns_must_exist_and_implement_DataScopeResolver() {
@@ -66,7 +66,7 @@ class DataScopeDimResolverExistsTest {
             boolean implementsIface = javaClass.getAllRawInterfaces().stream()
                 .anyMatch(i -> i.getFullName().equals(DATA_SCOPE_RESOLVER_IFACE));
             assertTrue(implementsIface,
-                fqcn + " 必须 implements DataScopePlugin.DataScopeResolver");
+                fqcn + " 必须 implements DataScopeResolver");
         }
     }
 }
