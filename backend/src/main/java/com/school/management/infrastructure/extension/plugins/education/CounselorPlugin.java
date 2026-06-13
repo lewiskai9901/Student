@@ -43,9 +43,4 @@ public class CounselorPlugin implements EntityTypePlugin {
             "canCounsel", true
         );
     }
-
-    @Override
-    public String getExtensionTable() {
-        return "user_counselor";
-    }
 }

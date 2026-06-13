@@ -69,13 +69,6 @@ public interface EntityTypePlugin {
      */
     default Map<String, Boolean> getFeatures() { return Map.of(); }
 
-    /**
-     * 扩展表名 (如果此类型有独立扩展表存高频字段)。
-     * 命名规范: {entity}_{type} 小写,如 "user_student" / "place_classroom"。
-     * 返回 null 表示此类型无独立扩展表,所有字段走 entity_attribute_values (EAV)。
-     */
-    default String getExtensionTable() { return null; }
-
     /** UI 配置 */
     default Map<String, Object> getUiConfig() { return Map.of(); }
 

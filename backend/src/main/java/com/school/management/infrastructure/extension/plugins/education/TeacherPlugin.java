@@ -63,9 +63,4 @@ public class TeacherPlugin implements EntityTypePlugin {
             "canApproveGrade", true
         );
     }
-
-    @Override
-    public String getExtensionTable() {
-        return "user_teacher";
-    }
 }

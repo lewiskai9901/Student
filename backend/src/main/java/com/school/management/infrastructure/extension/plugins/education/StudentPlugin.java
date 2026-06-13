@@ -46,9 +46,4 @@ public class StudentPlugin implements EntityTypePlugin {
             "manageableByOrgAdmin", true
         );
     }
-
-    @Override
-    public String getExtensionTable() {
-        return "user_student";
-    }
 }
