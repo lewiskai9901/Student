@@ -96,7 +96,7 @@ public class OrgUnitController {
 
     @Operation(summary = "Repair all tree paths")
     @PostMapping("/repair-tree-paths")
-    @CasbinAccess(resource = "system:org", action = "edit")
+    @CasbinAccess(resource = "system:org", action = "update")
     public Result<Integer> repairTreePaths() {
         int count = orgUnitService.repairTreePaths();
         return Result.success(count);
@@ -232,8 +232,11 @@ public class OrgUnitController {
     @CasbinAccess(resource = "system:org", action = "update")
     public Result<List<OrgUnitDTO>> splitOrgUnit(
             @Parameter(description = "Source org unit ID") @PathVariable Long id,
-            @RequestBody SplitOrgRequest request) {
+            @Valid @RequestBody SplitOrgRequest request) {
         List<OrgUnitApplicationService.SplitRequest> splits = request.getSplits();
+        if (splits == null || splits.isEmpty()) {
+            throw new com.school.management.exception.BusinessException("拆分目标列表不能为空");
+        }
         List<OrgUnitDTO> result = orgUnitService.splitOrgUnit(id, splits, request.getReason(), SecurityUtils.requireCurrentUserId());
         return Result.success(result);
     }

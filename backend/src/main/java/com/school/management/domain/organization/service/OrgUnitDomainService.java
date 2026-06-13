@@ -56,17 +56,33 @@ public class OrgUnitDomainService {
             }
         }
 
-        // Create the org unit
-        OrgUnit orgUnit = OrgUnit.create(unitCode, unitName, unitType, parentId, createdBy);
+        // Create the org unit.
+        // 注意: tree_path 不在此处设置 —— 它依赖雪花 id, 而 id 由 MyBatis-Plus 在 insert
+        // 时才生成。此处 setTreePosition 会拼出字面量 "/null/" (历史 P0)。tree_path 改由
+        // 应用层在 save (id 已生成) 之后调 assignTreePosition 设置。
+        return OrgUnit.create(unitCode, unitName, unitType, parentId, createdBy);
+    }
 
-        // Set tree position
-        if (parent != null) {
-            orgUnit.setTreePosition(parent.getTreePath(), parent.getTreeLevel());
-        } else {
-            orgUnit.setTreePosition(null, 0);
+    /**
+     * 设置组织单元的 tree_path / tree_level —— <b>必须在 save 之后调用</b> (id 已生成)。
+     *
+     * <p>修复历史 P0: createOrgUnit 内 setTreePosition 跑在 id 生成前, 持久化出 "/null/"。
+     * 拆分路径 (splitOrgUnit) 本就是 save-then-setTreePosition, 此方法把创建路径对齐。
+     *
+     * @param unit     已持久化 (id 非空) 的组织单元
+     * @param parentId 父组织 id, null = 根节点
+     */
+    public void assignTreePosition(OrgUnit unit, Long parentId) {
+        if (unit.getId() == null) {
+            throw new IllegalStateException("assignTreePosition 必须在 save 之后调用 (org unit id 不能为 null)");
         }
-
-        return orgUnit;
+        if (parentId != null) {
+            OrgUnit parent = orgUnitRepository.findById(parentId)
+                .orElseThrow(() -> new IllegalArgumentException("Parent not found: " + parentId));
+            unit.setTreePosition(parent.getTreePath(), parent.getTreeLevel());
+        } else {
+            unit.setTreePosition(null, 0);
+        }
     }
 
     /**

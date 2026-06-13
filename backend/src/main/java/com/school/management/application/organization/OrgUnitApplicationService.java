@@ -50,6 +50,7 @@ public class OrgUnitApplicationService {
     private final DomainEventPublisher eventPublisher;
     private final ActivityEventPublisher activityEventPublisher;
     private final AccessRelationRepository accessRelationRepository;
+    private final MembershipResolver membershipResolver;
     private final UserDomainMapper userDomainMapper;
     private final UniversalPlaceOccupantMapper placeOccupantMapper;
     private final PolicyRegistry policyRegistry;
@@ -78,6 +79,11 @@ public class OrgUnitApplicationService {
             orgUnit.setAttributes(command.getAttributes());
         }
 
+        orgUnit = orgUnitRepository.save(orgUnit);
+
+        // tree_path 依赖雪花 id (insert 时才生成), save 之后再设置并二次持久化;
+        // 否则持久化出字面量 "/null/" (历史 P0)。
+        orgUnitDomainService.assignTreePosition(orgUnit, command.getParentId());
         orgUnit = orgUnitRepository.save(orgUnit);
 
         orgUnit.getDomainEvents().forEach(eventPublisher::publish);
@@ -339,6 +345,15 @@ public class OrgUnitApplicationService {
             .orElseThrow(() -> new IllegalArgumentException("Target not found: " + targetId));
 
         List<OrgUnit> movedChildren = orgUnitDomainService.mergeOrgUnits(sourceId, targetId, reason, updatedBy);
+
+        // 迁移源组织的直接成员到目标组织。domain.mergeOrgUnits 只迁子组织 + 标记 source DISSOLVED;
+        // 若不迁成员, 成员的 member tuple 仍指向已解散的 source → 孤儿 (在 target 查不到, orgOf 返回死组织)。
+        // setMembership 是 grant-or-replace (maxPerSubject=1), 自动撤旧建新, 已是 target 成员则幂等。
+        // 整个方法 @Transactional, 与 domain merge 同事务。
+        List<Long> sourceMembers = membershipResolver.membersOf(sourceId);
+        for (Long memberUserId : sourceMembers) {
+            membershipResolver.setMembership(memberUserId, targetId);
+        }
 
         activityEventPublisher.newEvent("organization", "ORG_UNIT", "MERGE", "合并组织单元")
             .resourceId(sourceId)

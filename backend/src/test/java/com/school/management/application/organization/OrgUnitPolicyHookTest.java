@@ -29,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -156,7 +157,9 @@ class OrgUnitPolicyHookTest {
         assertThat(afterCtx.getValue().entityType()).isEqualTo("org_unit");
         assertThat(afterCtx.getValue().phase()).isEqualTo("AFTER_CREATE");
 
-        // 业务逻辑完成: 仓储保存被调用.
-        verify(orgUnitRepository).save(any(OrgUnit.class));
+        // 业务逻辑完成: 仓储保存被调用 2 次 (第 1 次拿雪花 id, 第 2 次持久化 assignTreePosition
+        // 设置的 tree_path —— tree_path 依赖 id 故必须 post-save 二次保存, 见 P0 修复)。
+        verify(orgUnitRepository, times(2)).save(any(OrgUnit.class));
+        verify(orgUnitDomainService).assignTreePosition(any(OrgUnit.class), any());
     }
 }

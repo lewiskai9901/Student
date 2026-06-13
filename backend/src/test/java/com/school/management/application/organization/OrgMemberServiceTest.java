@@ -185,10 +185,8 @@ class OrgMemberServiceTest {
 
         assertThat(dto.getBelongingCount()).isEqualTo(5L);
         assertThat(dto.getCountByUserType()).containsEntry("STUDENT", 4L).containsEntry("TEACHER", 1L);
-
-        // 不再查 FK 口径
-        verify(userDomainMapper, never()).countByPrimaryOrgUnitId(any());
-        verify(userDomainMapper, never()).countByPrimaryOrgUnitIdGroupByType(any());
+        // 注: 旧 FK 口径 count 方法 (countByPrimaryOrgUnitId/...GroupByType) 已于用户模块清理删除
+        // (零生产调用); getOrgStatistics 走 access_relations member 聚合, 不再有 FK count 可断言。
     }
 
     @Test

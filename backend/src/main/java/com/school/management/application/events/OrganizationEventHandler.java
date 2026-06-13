@@ -59,8 +59,9 @@ public class OrganizationEventHandler {
         saveOperationLog("CREATE", "ORG_UNIT", event.getOrgUnitId(),
                 "创建组织单元: " + event.getUnitName() + " (" + event.getUnitCode() + ")");
 
-        // TODO: resolve actual admin userId(s) via role-based lookup and send notification
-        log.debug("Skipping admin notification for OrgUnitCreated (no target user resolution yet): unitName={}", event.getUnitName());
+        // 通知管理员 (站内信)
+        notifyAdmins("组织单元创建",
+                "新建组织单元: " + event.getUnitName() + " (" + event.getUnitCode() + ")");
     }
 
     /**
@@ -99,6 +100,9 @@ public class OrganizationEventHandler {
 
         saveOperationLog("DELETE", "ORG_UNIT", event.getOrgUnitId(),
             "删除组织单元: " + event.getUnitName() + " (" + event.getUnitCode() + ")");
+
+        notifyAdmins("组织单元删除",
+            "组织单元已删除: " + event.getUnitName() + " (" + event.getUnitCode() + ")");
     }
 
     /**
@@ -117,6 +121,10 @@ public class OrganizationEventHandler {
         changes.put("targetUnitCode", event.getTargetUnitCode());
         changes.put("targetOrgUnitId", event.getTargetOrgUnitId());
         writeOrgChangeLog("ORG_UNIT", event.getSourceOrgUnitId(), "MERGE", changes, event.getReason());
+
+        notifyAdmins("组织单元合并",
+            "组织合并: " + event.getSourceUnitCode() + " → " + event.getTargetUnitCode()
+                + (event.getReason() != null ? " (原因: " + event.getReason() + ")" : ""));
     }
 
     /**
@@ -134,6 +142,36 @@ public class OrganizationEventHandler {
         changes.put("sourceUnitCode", event.getSourceUnitCode());
         changes.put("newOrgUnitIds", event.getNewOrgUnitIds());
         writeOrgChangeLog("ORG_UNIT", event.getSourceOrgUnitId(), "SPLIT", changes, event.getReason());
+
+        notifyAdmins("组织单元拆分",
+            "组织拆分: " + event.getSourceUnitCode() + " 拆出 " + event.getNewOrgUnitIds().size() + " 个新单元"
+                + (event.getReason() != null ? " (原因: " + event.getReason() + ")" : ""));
+    }
+
+    /**
+     * 通知管理员组织结构变更 (站内信)。
+     *
+     * <p>收件人 = SUPER_ADMIN / TENANT_ADMIN 角色持有者 (role-based admin lookup),
+     * 排除操作人自己 (不给自己发"你刚做的操作")。组织结构变更 (创建/删除/合并/拆分)
+     * 是管理级操作, 管理员需知悉; 改名 (update) 仅审计不通知, 避免噪音。
+     *
+     * <p>站内信走 {@code system_messages} 表 (NotificationService.sendInAppMessage 真实落库),
+     * 微信模板通道当前是空壳故不触发。本方法静默失败 (通知非关键路径, 不应影响主事务)。
+     */
+    private void notifyAdmins(String title, String content) {
+        try {
+            Long actorId = UserContextHolder.getUserId();
+            java.util.List<Long> recipients = jdbcTemplate.queryForList(
+                "SELECT DISTINCT ur.user_id FROM user_roles ur " +
+                "JOIN roles r ON r.id = ur.role_id " +
+                "WHERE r.role_code IN ('SUPER_ADMIN','TENANT_ADMIN') AND r.deleted = 0",
+                Long.class);
+            recipients.removeIf(uid -> uid == null || uid.equals(actorId));
+            if (recipients.isEmpty()) return;
+            notificationService.sendInAppMessageBatch(recipients, title, content, "ORG_STRUCTURE_CHANGE");
+        } catch (Exception e) {
+            log.warn("[OrgNotify] admin notification failed ({}): {}", title, e.getMessage());
+        }
     }
 
     /**

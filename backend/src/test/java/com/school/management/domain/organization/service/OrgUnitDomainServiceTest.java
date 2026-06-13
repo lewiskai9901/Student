@@ -190,6 +190,49 @@ class OrgUnitDomainServiceTest {
             .hasMessageContaining("under itself");
     }
 
+    // ==================== assignTreePosition (P0: tree_path=null 修复) ====================
+
+    @Test
+    @DisplayName("树位置: 根节点 → /{id}/ (id 必须已生成, 不能是 /null/)")
+    void assignTreePosition_root_usesGeneratedId() {
+        // 模拟 save 后: id 已由雪花生成
+        OrgUnit unit = OrgUnit.create("A", "部门A", "DEPARTMENT", null, 1L);
+        ReflectionTestUtils.setField(unit, "id", 12345L);
+
+        service.assignTreePosition(unit, null);
+
+        assertThat(unit.getTreePath()).isEqualTo("/12345/");
+        assertThat(unit.getTreeLevel()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("树位置: 子节点 → <父路径>{id}/ (拼接已生成的 id)")
+    void assignTreePosition_child_appendsToParentPath() {
+        OrgUnit parent = OrgUnit.builder()
+            .id(1L).unitCode("P").unitName("父").unitType("DEPARTMENT")
+            .treePath("/1/").treeLevel(1).build();
+        OrgUnit child = OrgUnit.create("C", "子", "TEAM", 1L, 1L);
+        ReflectionTestUtils.setField(child, "id", 678L);
+
+        when(orgUnitRepository.findById(1L)).thenReturn(Optional.of(parent));
+
+        service.assignTreePosition(child, 1L);
+
+        assertThat(child.getTreePath()).isEqualTo("/1/678/");
+        assertThat(child.getTreeLevel()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("树位置: id 为 null 时拒绝 (防 /null/ 回归)")
+    void assignTreePosition_nullId_throws() {
+        OrgUnit unit = OrgUnit.create("A", "部门A", "DEPARTMENT", null, 1L);
+        // 不设 id → 模拟 save 前误调
+
+        assertThatThrownBy(() -> service.assignTreePosition(unit, null))
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("id");
+    }
+
     // ==================== canDelete ====================
 
     @Test
