@@ -184,16 +184,14 @@ public class CoreManifest implements PluginPackage {
             m(of("/access", "访问控制", "shield", 6).children(List.of(
                 of("/system/users", "用户管理", "users", 1)
                     .requiredPermissions(List.of("system:user:view")),
-                of("/system/roles", "角色管理", "user-cog", 2)
+                // 角色权限工作台 — 合并原角色管理/权限管理/数据权限三项
+                // (前端 AccessConsoleView: 角色 explorer + 基本信息/功能权限/数据权限 tabs + 权限目录模式)
+                of("/access/console", "角色权限", "user-cog", 2)
                     .requiredPermissions(List.of("system:role:view")),
-                of("/system/permissions", "权限管理", "lock", 3)
-                    .requiredPermissions(List.of("system:permission:view")),
                 of("/access/relations", "关系绑定", "link-2", 4)
                     .requiredPermissions(List.of("access:relation:view")),
                 of("/access/relation-types", "关系字典", "book", 5)
-                    .requiredPermissions(List.of("access:relation:view")),
-                of("/access/data-permissions", "数据权限", "shield-check", 6)
-                    .requiredPermissions(List.of("access:data-permission:view"))
+                    .requiredPermissions(List.of("access:relation:view"))
             ))),
 
             m(of("/organization", "组织管理", "building-2", 3).children(List.of(
