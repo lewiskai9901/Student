@@ -13,9 +13,16 @@ import java.util.Map;
  *
  * Spring 自动扫描所有 @Component 实现类并注册。
  *
- * @deprecated since 1.1.0 — 用 {@link PluginPackage#contribute()} 返回
- *   {@link Contribution.EntityTypeContribution} 替代. 旧 API 仍被
- *   {@link PluginRegistrar} 扫描, 运行时等价, 现有实现无需立即迁移.
+ * <h3>双轨收敛收官后的定位 (2026-06-13)</h3>
+ * 其余 6 个声明型 SPI (RelationType/DataScope/RolePreset/Menu/Permission/MessagingDomain)
+ * 已全部收敛到 {@link PluginPackage#contribute()} 并删除。<b>本接口是唯一保留的旧 SPI</b> —
+ * 因为它不只是声明: ClassPlugin/SuperAdminPlugin/DormitoryPlugin 重写了 beforeCreate/
+ * afterCreate/validate <b>生命周期钩子, 携带行为</b>, 是合法的 bean SPI (同 Policy /
+ * DataScopeResolver / TargetModeResolver), 不适合退化为纯数据 contribute() 声明。
+ *
+ * <p>仍标 {@code @Deprecated} 仅为提示"纯声明部分推荐走 contribute()"; 不计划删除
+ * ({@code forRemoval=false})。{@link Contribution.EntityTypeContribution} permit 作为
+ * 未来可选迁移通道保留, 当前无人 emit。
  */
 @Deprecated(since = "1.1.0", forRemoval = false)
 public interface EntityTypePlugin {

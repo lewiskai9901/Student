@@ -18,18 +18,17 @@ import java.util.concurrent.atomic.AtomicInteger;
  * 在 {@link PluginPackageRegistrar} (@Order 50) 之后、所有其他 Registrar (100+) 之前运行,
  * 遍历 {@link PluginPackage#contribute()} 流, 按 Contribution 子类型分发.
  *
- * <h3>当前语义 (Phase 2)</h3>
+ * <h3>双轨收敛收官后的语义 (2026-06-13)</h3>
  * <ul>
- *   <li>仅做 <b>可见性</b> — 日志登记 + 跨包 uniqueKey 冲突检测</li>
- *   <li>不写 DB — 因为所有现有插件仍通过旧 @Component SPI + 原 Registrar 完成 UPSERT,
- *       此处写 DB 会造成重复</li>
+ *   <li><b>无依赖类型直接 UPSERT</b> (@Order 60): RelationType / DataResource / DataScope /
+ *       EventDomain(messaging) / RoleScopeBinding — 调对应 Upserter/Registrar 写 DB。</li>
+ *   <li><b>有依赖顺序类型由有序 Registrar 接管</b>: Permission(@Order 400) / RolePreset(500) /
+ *       Menu(700) 各自过滤 contribute() 写 DB (保 permission→role→role-perm 依赖链);
+ *       RolePermissionBinding 由 @Order(600) runner 写。本 Dispatcher 对这几类只计数不写, 避免双写。</li>
+ *   <li><b>DI 型</b>: Policy / TargetModeResolver 只登记日志, bean 由 registry 直接收集。</li>
+ *   <li>跨包 uniqueKey 冲突检测 fail-fast。</li>
  * </ul>
- *
- * <h3>未来 (Phase 3+)</h3>
- * <ul>
- *   <li>把现有插件的声明迁移到 contribute() 内</li>
- *   <li>本 Dispatcher 逐步接管 UPSERT, 旧 Registrar 逐一下线</li>
- * </ul>
+ * 旧声明型 @Component SPI 已全部删除, 仅 EntityTypePlugin 保留 (携带生命周期行为)。
  */
 @Slf4j
 @Component
