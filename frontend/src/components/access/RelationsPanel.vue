@@ -155,6 +155,7 @@ import { Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { http } from '@/utils/request'
 import { accessRelationApi } from '@/api/accessRelation'
+import type { CreateAccessRelationRequest } from '@/types/accessRelation'
 import { relationTypeApi, type RelationTypeDef } from '@/api/relationType'
 
 const props = withDefaults(defineProps<{
@@ -450,23 +451,15 @@ async function submitAdd() {
   if (!form.value.relation || !form.value.otherId) { ElMessage.warning('请填写完整'); return }
   const [code, direction, otherType] = form.value.relation.split('|')
   try {
-    const payload: any = {
-      relation: code,
-      accessLevel: 'FULL'
-    }
-    if (direction === 'outward') {
-      // 当前实体作 subject, other 作 resource
-      payload.subjectType = props.entityType
-      payload.subjectId = props.entityId
-      payload.resourceType = otherType
-      payload.resourceId = form.value.otherId
-    } else {
-      payload.subjectType = otherType
-      payload.subjectId = form.value.otherId
-      payload.resourceType = props.entityType
-      payload.resourceId = props.entityId
-    }
-    await accessRelationApi.create(payload as any)
+    // outward: 当前实体作 subject, other 作 resource; inward: 反之
+    const payload: CreateAccessRelationRequest = direction === 'outward'
+      ? { relation: code, accessLevel: 'FULL',
+          subjectType: props.entityType, subjectId: props.entityId,
+          resourceType: otherType, resourceId: form.value.otherId }
+      : { relation: code, accessLevel: 'FULL',
+          subjectType: otherType, subjectId: form.value.otherId,
+          resourceType: props.entityType, resourceId: props.entityId }
+    await accessRelationApi.create(payload)
     ElMessage.success('关系已添加')
     addVisible.value = false
     emit('change')

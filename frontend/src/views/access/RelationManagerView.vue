@@ -253,7 +253,7 @@ async function handleWizardSubmit() {
       // 行业场景附带的 metadata (如班主任写 {role:'CLASS_TEACHER'} 与通用 admin 区分)
       metadata: m.metadata || undefined,
       remark: wiz.value.remark || undefined
-    } as any)
+    })
     ElMessage.success('关系已创建')
     wizardVisible.value = false
     await Promise.all([loadRecent(), load()])
