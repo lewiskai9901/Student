@@ -73,7 +73,11 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public Result<Void> handleAccessDeniedException(AccessDeniedException e, HttpServletRequest request) {
         log.warn("授权异常: {}", e.getMessage());
-        return Result.error(ResultCode.FORBIDDEN);
+        // 策略护栏等带了具体原因时透传给前端 (如"无权操作超级管理员账号"), 否则用通用文案
+        String msg = e.getMessage();
+        return (msg != null && !msg.isBlank())
+                ? Result.error(ResultCode.FORBIDDEN.getCode(), msg)
+                : Result.error(ResultCode.FORBIDDEN);
     }
 
     /**

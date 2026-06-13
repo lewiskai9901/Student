@@ -23,6 +23,8 @@ import com.school.management.infrastructure.extension.ExtensionDispatcher;
 import com.school.management.infrastructure.extension.PolicyContext;
 import com.school.management.infrastructure.extension.PolicyRegistry;
 import com.school.management.infrastructure.extension.Violation;
+import com.school.management.infrastructure.access.policy.AuthActions;
+import com.school.management.infrastructure.access.policy.UserManagementGuard;
 import com.school.management.security.JwtTokenService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,6 +65,7 @@ public class UserApplicationService {
     private final JwtTokenService jwtTokenService;
     private final PolicyRegistry policyRegistry;
     private final MembershipResolver membershipResolver;
+    private final UserManagementGuard userManagementGuard;
 
     @Autowired(required = false)
     private ExtensionDispatcher extensionDispatcher;
@@ -78,6 +81,9 @@ public class UserApplicationService {
     @Transactional
     public User createUser(CreateUserCommand command) {
         log.info("创建用户: {}", command.getUsername());
+
+        // 授权护栏 (闸3): 防提权 — 非超管不得创建即授超管角色
+        userManagementGuard.checkRoleAssignment(null, command.getRoleIds(), AuthActions.USER_CREATE);
 
         // Policy hook — BEFORE_CREATE 允许插件阻止创建 (BLOCK 级违规抛 PolicyViolationException, 事务回滚)
         policyRegistry.enforce(new PolicyContext<>("user", "BEFORE_CREATE", command));
@@ -225,6 +231,9 @@ public class UserApplicationService {
     public User updateUser(Long userId, UpdateUserCommand command) {
         log.info("更新用户: {}", userId);
 
+        // 授权护栏 (闸3): 不能改超管 / 管辖外组织的管理者
+        userManagementGuard.checkManage(userId, AuthActions.USER_UPDATE);
+
         // Policy hook — BEFORE_UPDATE 允许插件阻止更新
         policyRegistry.enforce(new PolicyContext<>("user", "BEFORE_UPDATE", command));
 
@@ -317,6 +326,8 @@ public class UserApplicationService {
     public User disableUser(Long userId) {
         log.info("禁用用户: {}", userId);
 
+        userManagementGuard.checkManage(userId, AuthActions.USER_DISABLE);
+
         User user = getUserOrThrow(userId);
         user.disable();
         user = userRepository.save(user);
@@ -333,6 +344,8 @@ public class UserApplicationService {
     @Transactional
     public String resetPassword(Long userId) {
         log.info("重置用户密码: {}", userId);
+
+        userManagementGuard.checkManage(userId, AuthActions.USER_RESET_PASSWORD);
 
         User user = getUserOrThrow(userId);
 
@@ -391,6 +404,8 @@ public class UserApplicationService {
     public void deleteUser(Long userId) {
         log.info("删除用户: {}", userId);
 
+        userManagementGuard.checkManage(userId, AuthActions.USER_DELETE);
+
         // Policy hook — BEFORE_DELETE 允许插件阻止删除 (例: 禁删超管 / 级联处理关系)
         policyRegistry.enforce(new PolicyContext<>("user", "BEFORE_DELETE", userId));
 
@@ -421,6 +436,10 @@ public class UserApplicationService {
     @Transactional
     public void deleteUsers(List<Long> userIds) {
         log.info("批量删除用户: {}", userIds);
+        // 授权护栏 (闸3): 逐个校验，任一不可删则整批拒绝
+        for (Long userId : userIds) {
+            userManagementGuard.checkManage(userId, AuthActions.USER_DELETE);
+        }
         for (Long userId : userIds) {
             // 吊销每个用户的 refresh token
             jwtTokenService.revokeAllTokensForUser(userId);
@@ -556,6 +575,9 @@ public class UserApplicationService {
     @Transactional
     public void assignRoles(Long userId, List<Long> roleIds) {
         log.info("分配用户角色: userId={}, roleIds={}", userId, roleIds);
+
+        // 授权护栏 (闸3): 不能给超管/管辖外管理者改角色, 且不能授出超管角色(防提权)
+        userManagementGuard.checkRoleAssignment(userId, roleIds, AuthActions.USER_ASSIGN_ROLES);
 
         User user = getUserOrThrow(userId);
 
