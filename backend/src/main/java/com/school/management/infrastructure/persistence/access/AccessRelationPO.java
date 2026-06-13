@@ -21,7 +21,6 @@ public class AccessRelationPO {
     private String relation;
     private String subjectType;
     private Long subjectId;
-    private Boolean includeChildren;
     /** 访问级别: READ_ONLY / FULL / OWNER (v3 语义化,替代 TINYINT) */
     private String accessLevel;
 

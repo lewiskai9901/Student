@@ -315,12 +315,11 @@ public class AccessRelationRepositoryImpl implements AccessRelationRepository {
         jdbcTemplate.update(
             "INSERT INTO access_relations " +
             "(resource_type, resource_id, relation, subject_type, subject_id, " +
-            " include_children, access_level, valid_from, valid_to, metadata, remark, " +
+            " access_level, valid_from, valid_to, metadata, remark, " +
             " tenant_id, created_by, is_primary, created_at) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())",
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())",
             cmd.resourceType(), cmd.resourceId(), cmd.relation(),
             cmd.subjectType(), cmd.subjectId(),
-            cmd.includeChildren() ? 1 : 0,
             cmd.accessLevel() != null ? cmd.accessLevel().name() : AccessLevel.FULL.name(),
             cmd.validFrom() != null ? cmd.validFrom() : LocalDateTime.now(),
             cmd.validTo(),
@@ -373,11 +372,11 @@ public class AccessRelationRepositoryImpl implements AccessRelationRepository {
         jdbcTemplate.update(
             "INSERT INTO access_relations_history " +
             "(original_id, resource_type, resource_id, relation, subject_type, subject_id, " +
-            " include_children, access_level, valid_from, valid_to, metadata, remark, " +
+            " access_level, valid_from, valid_to, metadata, remark, " +
             " archived_at, archived_reason, archived_by, operator_ip, operator_user_agent, operation, " +
             " tenant_id, created_by) " +
             "SELECT id, resource_type, resource_id, relation, subject_type, subject_id, " +
-            "       include_children, access_level, valid_from, valid_to, metadata, remark, " +
+            "       access_level, valid_from, valid_to, metadata, remark, " +
             "       NOW(), ?, ?, ?, ?, 'REVOKE', tenant_id, created_by " +
             "FROM access_relations WHERE id = ?",
             reason, actorId, operatorIp, userAgent, id);
@@ -413,7 +412,6 @@ public class AccessRelationRepositoryImpl implements AccessRelationRepository {
                 .relation(po.getRelation())
                 .subjectType(po.getSubjectType())
                 .subjectId(po.getSubjectId())
-                .includeChildren(Boolean.TRUE.equals(po.getIncludeChildren()))
                 .accessLevel(AccessLevel.parse(po.getAccessLevel()))
                 .isPrimary(Boolean.TRUE.equals(po.getIsPrimary()))
                 .metadata(meta)
@@ -434,7 +432,6 @@ public class AccessRelationRepositoryImpl implements AccessRelationRepository {
         po.setRelation(domain.getRelation());
         po.setSubjectType(domain.getSubjectType());
         po.setSubjectId(domain.getSubjectId());
-        po.setIncludeChildren(domain.isIncludeChildren());
         po.setAccessLevel(domain.getAccessLevel() != null ? domain.getAccessLevel().name() : AccessLevel.FULL.name());
         po.setIsPrimary(domain.isPrimary());
         po.setValidFrom(domain.getValidFrom());

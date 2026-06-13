@@ -251,7 +251,6 @@ CREATE TABLE `access_relations` (
   `relation` varchar(30) NOT NULL COMMENT '关系: owner, manager, user, member, viewer, responsible, occupant',
   `subject_type` varchar(30) NOT NULL COMMENT '主体类型: org_unit, user',
   `subject_id` bigint NOT NULL COMMENT '主体ID',
-  `include_children` tinyint(1) DEFAULT '0' COMMENT '是否包含主体的子级组织',
   `access_level` varchar(20) NOT NULL DEFAULT 'FULL',
   `valid_from` datetime DEFAULT CURRENT_TIMESTAMP,
   `valid_to` datetime DEFAULT NULL,
@@ -290,7 +289,7 @@ CREATE TABLE `access_relations` (
 
 LOCK TABLES `access_relations` WRITE;
 /*!40000 ALTER TABLE `access_relations` DISABLE KEYS */;
-INSERT INTO `access_relations` (`id`, `resource_type`, `resource_id`, `relation`, `subject_type`, `subject_id`, `include_children`, `access_level`, `valid_from`, `valid_to`, `metadata`, `remark`, `created_by`, `created_at`, `updated_at`, `deleted`, `deleted_at`, `deleted_by`, `tenant_id`, `is_primary`) VALUES (1,'org_unit',2040636269108707330,'member','user',2041870507300622337,0,'READ','2026-06-01 23:26:23',NULL,NULL,NULL,NULL,'2026-06-01 23:26:23','2026-06-01 23:26:23',0,NULL,NULL,1,1),(2,'org_unit',2041864691411632129,'member','user',2041870508646993922,0,'READ','2026-06-01 23:26:23',NULL,NULL,NULL,NULL,'2026-06-01 23:26:23','2026-06-01 23:26:23',0,NULL,NULL,1,1);
+INSERT INTO `access_relations` (`id`, `resource_type`, `resource_id`, `relation`, `subject_type`, `subject_id`, `access_level`, `valid_from`, `valid_to`, `metadata`, `remark`, `created_by`, `created_at`, `updated_at`, `deleted`, `deleted_at`, `deleted_by`, `tenant_id`, `is_primary`) VALUES (1,'org_unit',2040636269108707330,'member','user',2041870507300622337,'READ','2026-06-01 23:26:23',NULL,NULL,NULL,NULL,'2026-06-01 23:26:23','2026-06-01 23:26:23',0,NULL,NULL,1,1),(2,'org_unit',2041864691411632129,'member','user',2041870508646993922,'READ','2026-06-01 23:26:23',NULL,NULL,NULL,NULL,'2026-06-01 23:26:23','2026-06-01 23:26:23',0,NULL,NULL,1,1);
 /*!40000 ALTER TABLE `access_relations` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -333,7 +332,6 @@ CREATE TABLE `access_relations_history` (
   `relation` varchar(50) NOT NULL,
   `subject_type` varchar(30) NOT NULL,
   `subject_id` bigint NOT NULL,
-  `include_children` tinyint DEFAULT NULL,
   `access_level` varchar(20) DEFAULT NULL,
   `valid_from` datetime DEFAULT NULL,
   `valid_to` datetime DEFAULT NULL,

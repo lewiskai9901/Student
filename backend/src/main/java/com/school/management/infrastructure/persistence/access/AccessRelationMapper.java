@@ -26,7 +26,7 @@ public interface AccessRelationMapper extends BaseMapper<AccessRelationPO> {
             @Param("subjectId") Long subjectId);
 
     /**
-     * 查询某组织（含 include_children）能访问的资源ID列表
+     * 查询给定一组组织(子树已由调用方展开)能访问的资源ID列表
      */
     @Select("<script>" +
             "SELECT DISTINCT resource_id FROM access_relations " +

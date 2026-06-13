@@ -175,7 +175,6 @@ public class AccessRelationApplicationService {
                 cmd.getSubjectType(), cmd.getSubjectId(), cmd.getRelation(),
                 cmd.getResourceType(), cmd.getResourceId());
         r.accessLevel = cmd.getAccessLevel();
-        r.includeChildren = cmd.isIncludeChildren();
         r.metadata = cmd.getMetadata();
         r.validFrom = cmd.getValidFrom();
         r.validTo = cmd.getValidTo();
@@ -190,7 +189,6 @@ public class AccessRelationApplicationService {
                 .orElseThrow(() -> new IllegalArgumentException("关系不存在: " + id));
         if (cmd.getRelation() != null) relation.setRelation(cmd.getRelation());
         if (cmd.getAccessLevel() != null) relation.setAccessLevel(cmd.getAccessLevel());
-        if (cmd.getIncludeChildren() != null) relation.setIncludeChildren(cmd.getIncludeChildren());
         if (cmd.getMetadata() != null) {
             Map<String, Object> merged = relation.getMetadata() != null ? new HashMap<>(relation.getMetadata()) : new HashMap<>();
             merged.putAll(cmd.getMetadata());
@@ -283,7 +281,6 @@ public class AccessRelationApplicationService {
         private String relation;
         private String subjectType;
         private Long subjectId;
-        private boolean includeChildren;
         private AccessLevel accessLevel = AccessLevel.FULL;
         private Map<String, Object> metadata;
         private LocalDateTime validFrom;
@@ -295,7 +292,6 @@ public class AccessRelationApplicationService {
     public static class UpdateCommand {
         private String relation;
         private AccessLevel accessLevel;
-        private Boolean includeChildren;
         private Map<String, Object> metadata;
         private LocalDateTime validFrom;
         private LocalDateTime validTo;

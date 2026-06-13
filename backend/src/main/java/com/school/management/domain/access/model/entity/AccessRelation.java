@@ -32,17 +32,6 @@ public class AccessRelation {
     /** 主体ID */
     private Long subjectId;
 
-    /**
-     * 是否包含主体的子级组织.
-     *
-     * @deprecated 已废弃 — 关系传递性由 {@code RelationTypeDef.isTransitive} +
-     *   {@code impliedRelations} 声明 (类型级单一真相); BFS 不读此字段.
-     *   详见 ADR-002. 字段保留作数据兼容, V26 大版本计划 DROP.
-     */
-    @Deprecated
-    @Builder.Default
-    private boolean includeChildren = false;
-
     /** 访问级别: READ_ONLY / FULL / OWNER */
     @Builder.Default
     private AccessLevel accessLevel = AccessLevel.FULL;

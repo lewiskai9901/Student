@@ -164,7 +164,7 @@ public class AccessEventHandler {
                             "org_unit", event.getScopeId(),
                             role.getRoleCode(),
                             "user", event.getUserId(),
-                            false, null, null, null, null,
+                            null, null, null, null,
                             "auto-created from role assignment",
                             role.getTenantId(), event.getAssignedBy(), false);
                     Long arId = accessRelationRepository.insertDirect(cmd);

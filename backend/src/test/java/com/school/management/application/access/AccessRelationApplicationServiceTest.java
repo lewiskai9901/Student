@@ -245,7 +245,6 @@ class AccessRelationApplicationServiceTest {
             c.setRelation("user");
             c.setSubjectType("user");
             c.setSubjectId(9L);
-            c.setIncludeChildren(true);
             c.setAccessLevel(AccessLevel.READ_ONLY);
             c.setRemark("备注");
             return c;
@@ -273,7 +272,6 @@ class AccessRelationApplicationServiceTest {
             assertThat(r.resourceId).isEqualTo(100L);
             assertThat(r.relation).isEqualTo("user");
             assertThat(r.accessLevel).isEqualTo(AccessLevel.READ_ONLY);
-            assertThat(r.includeChildren).isTrue();
             assertThat(r.remark).isEqualTo("备注");
         }
 
@@ -328,7 +326,6 @@ class AccessRelationApplicationServiceTest {
                     new AccessRelationApplicationService.UpdateCommand();
             c.setRelation("manager");
             c.setAccessLevel(AccessLevel.OWNER);
-            c.setIncludeChildren(true);
             c.setMetadata(Map.of("added", "v2"));
             c.setRemark("新备注");
 
@@ -337,7 +334,6 @@ class AccessRelationApplicationServiceTest {
             verify(accessRelationRepository).update(existing);
             assertThat(existing.getRelation()).isEqualTo("manager");
             assertThat(existing.getAccessLevel()).isEqualTo(AccessLevel.OWNER);
-            assertThat(existing.isIncludeChildren()).isTrue();
             assertThat(existing.getMetadata()).containsEntry("keep", "v1")
                     .containsEntry("added", "v2");
             assertThat(existing.getRemark()).isEqualTo("新备注");

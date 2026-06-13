@@ -33,7 +33,8 @@ public interface AccessRelationRepository {
     List<Long> findAccessibleResourceIds(String resourceType, String subjectType, Long subjectId);
 
     /**
-     * 查询某 subject（及其子级组织）+ include_children 能访问的所有 resource IDs
+     * 查询给定一组组织(用户所属组织及其下级组织)能访问的所有 resource IDs。
+     * 子树展开由调用方预先算好传入 orgUnitIds, 此处只按 IN 过滤。
      * @param orgUnitIds 用户所属组织及下级组织ID列表
      */
     List<Long> findAccessibleResourceIdsByOrgUnits(String resourceType, List<Long> orgUnitIds);
@@ -192,7 +193,6 @@ public interface AccessRelationRepository {
     /** Grant 直插 INSERT 命令对象 (字段太多, 用 record 而非长签名). */
     record InsertDirectCommand(String resourceType, Long resourceId, String relation,
                                 String subjectType, Long subjectId,
-                                boolean includeChildren,
                                 AccessLevel accessLevel,
                                 LocalDateTime validFrom, LocalDateTime validTo,
                                 String metadataJson, String remark,
