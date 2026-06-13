@@ -1,6 +1,9 @@
 package com.school.management.infrastructure.extension.plugins.education.messaging;
 
-import com.school.management.infrastructure.extension.MessagingDomainPlugin;
+import com.school.management.infrastructure.extension.AbstractMessagingPackage;
+import com.school.management.infrastructure.extension.TriggerPointDef;
+import com.school.management.infrastructure.extension.EventTypeDef;
+import com.school.management.infrastructure.extension.DefaultTriggerDef;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -12,7 +15,7 @@ import java.util.List;
  * 此插件处理与学业成绩相关的"结果"事件及通知类.
  */
 @Component
-public class AcademicMessagingPlugin implements MessagingDomainPlugin {
+public class AcademicMessagingPlugin extends AbstractMessagingPackage {
 
     @Override public String getDomainCode() { return "academic"; }
     @Override public String getDomainName() { return "学业"; }

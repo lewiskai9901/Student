@@ -66,9 +66,9 @@ public sealed interface Contribution permits
 
     /** 消息域贡献 — 一个域打包: 触发点 + 事件类型 + 默认触发器 */
     record EventDomainContribution(String domainCode, String domainName,
-                                    List<MessagingDomainPlugin.TriggerPointDef> triggerPoints,
-                                    List<MessagingDomainPlugin.EventTypeDef> eventTypes,
-                                    List<MessagingDomainPlugin.DefaultTriggerDef> defaultTriggers)
+                                    List<TriggerPointDef> triggerPoints,
+                                    List<EventTypeDef> eventTypes,
+                                    List<DefaultTriggerDef> defaultTriggers)
             implements Contribution {
         @Override public String uniqueKey() { return "event-domain:" + domainCode; }
     }
@@ -83,14 +83,14 @@ public sealed interface Contribution permits
      * 留给 DB seed 或 admin UI 管, 不用 SPI 声明. 若需要整包声明, 仍用 EventDomainContribution.
      */
     record TriggerPointContribution(String domainCode, String domainName,
-                                     MessagingDomainPlugin.TriggerPointDef def)
+                                     TriggerPointDef def)
             implements Contribution {
         @Override public String uniqueKey() { return "trigger-point:" + def.pointCode(); }
     }
 
     /** 单个事件类型贡献 (Track M3) — 参考 TriggerPointContribution 的细粒度语义. */
     record EventTypeContribution(String domainCode, String domainName,
-                                  MessagingDomainPlugin.EventTypeDef def)
+                                  EventTypeDef def)
             implements Contribution {
         @Override public String uniqueKey() { return "event-type:" + def.typeCode(); }
     }

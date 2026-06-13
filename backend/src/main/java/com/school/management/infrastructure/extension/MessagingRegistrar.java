@@ -3,13 +3,8 @@ package com.school.management.infrastructure.extension;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.ApplicationRunner;
-import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 /**
  * 消息域 Registrar — 聚合 3 个子 Registrar 的统一入口, 对外只暴露一条日志.
@@ -29,70 +24,24 @@ import java.util.List;
  */
 @Slf4j
 @Component
-@Order(300)
 @RequiredArgsConstructor
-public class MessagingRegistrar implements ApplicationRunner {
+public class MessagingRegistrar {
 
-    private final List<MessagingDomainPlugin> plugins;
     private final JdbcTemplate jdbc;
     private final ObjectMapper objectMapper;
     private final PluginPackageRegistrar packageRegistrar;
 
-    @Override
-    public void run(ApplicationArguments args) {
-        if (plugins.isEmpty()) {
-            log.info("[MessagingRegistrar] 无消息插件");
-            return;
-        }
+    // 双轨收敛: 不再扫描 MessagingDomainPlugin (已删) — 降级为纯写入 helper,
+    // 由 ContributionDispatcher 分发 EventDomainContribution 时调用下面的 upsert 方法。
 
-        int tp = 0, et = 0, dt = 0;
-
-        // 1. 触发点
-        for (MessagingDomainPlugin p : plugins) {
-            String industry = packageRegistrar.resolveIndustry(p.getClass());
-            String pluginClass = p.getClass().getName();
-            String origin = packageRegistrar.resolveOrigin(p.getClass());
-            for (var def : p.triggerPoints()) {
-                try { upsertTriggerPoint(p.getDomainCode(), p.getDomainName(), def, industry, pluginClass, origin); tp++; }
-                catch (Exception e) { log.error("[MessagingRegistrar] 触发点写入失败 {}: {}", def.pointCode(), e.getMessage()); }
-            }
-        }
-
-        // 2. 事件类型
-        for (MessagingDomainPlugin p : plugins) {
-            String industry = packageRegistrar.resolveIndustry(p.getClass());
-            String pluginClass = p.getClass().getName();
-            String origin = packageRegistrar.resolveOrigin(p.getClass());
-            for (var def : p.eventTypes()) {
-                try { upsertEventType(p.getDomainCode(), p.getDomainName(), def, industry, pluginClass, origin); et++; }
-                catch (Exception e) { log.error("[MessagingRegistrar] 事件类型写入失败 {}: {}", def.typeCode(), e.getMessage()); }
-            }
-        }
-
-        // 3. 默认触发器
-        for (MessagingDomainPlugin p : plugins) {
-            String pluginClass = p.getClass().getName();
-            String industry = packageRegistrar.resolveIndustry(p.getClass());
-            String origin = packageRegistrar.resolveOrigin(p.getClass());
-            for (var def : p.defaultTriggers()) {
-                try { upsertDefaultTrigger(def, industry, pluginClass, origin); dt++; }
-                catch (Exception e) { log.error("[MessagingRegistrar] 默认触发器写入失败 {}->{}: {}",
-                        def.pointCode(), def.eventTypeCode(), e.getMessage()); }
-            }
-        }
-
-        log.info("[MessagingRegistrar] 扫描 {} 个域插件: 触发点 {} / 事件类型 {} / 默认触发器 {}",
-            plugins.size(), tp, et, dt);
-    }
-
-    // ═══════════════ 3 个写入方法 (public, Track M3 供 ContributionDispatcher 复用) ═══════════════
+    // ═══════════════ 3 个写入方法 (public, ContributionDispatcher 调用) ═══════════════
 
     /**
      * Track M3 便捷重载 — ContributionDispatcher 只有 domainCode/domainName/pluginClass,
      * 内部计算 industry/origin.
      */
     public void upsertTriggerPoint(String domainCode, String domainName,
-                                    MessagingDomainPlugin.TriggerPointDef def,
+                                    TriggerPointDef def,
                                     Class<?> pluginClass) throws Exception {
         String industry = packageRegistrar.resolveIndustry(pluginClass);
         String origin = packageRegistrar.resolveOrigin(pluginClass);
@@ -100,7 +49,7 @@ public class MessagingRegistrar implements ApplicationRunner {
     }
 
     public void upsertEventType(String domainCode, String domainName,
-                                 MessagingDomainPlugin.EventTypeDef def,
+                                 EventTypeDef def,
                                  Class<?> pluginClass) {
         String industry = packageRegistrar.resolveIndustry(pluginClass);
         String origin = packageRegistrar.resolveOrigin(pluginClass);
@@ -108,7 +57,7 @@ public class MessagingRegistrar implements ApplicationRunner {
     }
 
     public void upsertTriggerPoint(String domainCode, String domainName,
-                                    MessagingDomainPlugin.TriggerPointDef def,
+                                    TriggerPointDef def,
                                     String industry, String pluginClassName, String origin) throws Exception {
         String existingIndustry = jdbc.query(
             "SELECT industry FROM trigger_points WHERE point_code=? AND tenant_id=1 AND deleted=0",
@@ -142,7 +91,7 @@ public class MessagingRegistrar implements ApplicationRunner {
     }
 
     public void upsertEventType(String domainCode, String domainName,
-                                 MessagingDomainPlugin.EventTypeDef def,
+                                 EventTypeDef def,
                                  String industry, String pluginClassName, String origin) {
         String existingIndustry = jdbc.query(
             "SELECT industry FROM entity_event_types WHERE type_code=? AND tenant_id=1 AND deleted=0",
@@ -178,7 +127,7 @@ public class MessagingRegistrar implements ApplicationRunner {
         }
     }
 
-    public void upsertDefaultTrigger(MessagingDomainPlugin.DefaultTriggerDef def,
+    public void upsertDefaultTrigger(DefaultTriggerDef def,
                                       String industry, String pluginClassName, String origin) {
         Long exists = jdbc.queryForObject(
             "SELECT COUNT(1) FROM event_triggers " +

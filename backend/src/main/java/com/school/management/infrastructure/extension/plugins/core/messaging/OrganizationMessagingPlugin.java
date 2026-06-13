@@ -1,6 +1,9 @@
 package com.school.management.infrastructure.extension.plugins.core.messaging;
 
-import com.school.management.infrastructure.extension.MessagingDomainPlugin;
+import com.school.management.infrastructure.extension.AbstractMessagingPackage;
+import com.school.management.infrastructure.extension.TriggerPointDef;
+import com.school.management.infrastructure.extension.EventTypeDef;
+import com.school.management.infrastructure.extension.DefaultTriggerDef;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -12,7 +15,7 @@ import static com.school.management.infrastructure.extension.plugins.core.consta
  * 组织单元业务消息插件 — 通用核心.
  */
 @Component
-public class OrganizationMessagingPlugin implements MessagingDomainPlugin {
+public class OrganizationMessagingPlugin extends AbstractMessagingPackage {
 
     @Override public String getDomainCode() { return "organization"; }
     @Override public String getDomainName() { return "组织"; }

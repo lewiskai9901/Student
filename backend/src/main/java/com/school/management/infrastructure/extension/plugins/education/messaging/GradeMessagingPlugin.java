@@ -1,6 +1,9 @@
 package com.school.management.infrastructure.extension.plugins.education.messaging;
 
-import com.school.management.infrastructure.extension.MessagingDomainPlugin;
+import com.school.management.infrastructure.extension.AbstractMessagingPackage;
+import com.school.management.infrastructure.extension.TriggerPointDef;
+import com.school.management.infrastructure.extension.EventTypeDef;
+import com.school.management.infrastructure.extension.DefaultTriggerDef;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -12,7 +15,7 @@ import static com.school.management.infrastructure.extension.plugins.education.c
  * 成绩业务消息插件.
  */
 @Component
-public class GradeMessagingPlugin implements MessagingDomainPlugin {
+public class GradeMessagingPlugin extends AbstractMessagingPackage {
 
     @Override
     public String getDomainCode() { return "grade"; }

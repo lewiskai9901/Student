@@ -98,7 +98,23 @@ public class ContributionDispatcher implements ApplicationRunner {
                             rtc.def().relationCode(), e.getMessage());
                     }
                 }
-                else if (c instanceof Contribution.EventDomainContribution)  events.incrementAndGet();
+                else if (c instanceof Contribution.EventDomainContribution edc) {
+                    // 双轨收敛: 整域打包 — 写 trigger_points / entity_event_types / event_triggers。
+                    // 无依赖 (event_triggers 无 FK), dispatcher @Order(60) 直接 UPSERT。
+                    events.incrementAndGet();
+                    try {
+                        String edIndustry = packageRegistrar.resolveIndustry(pkgClass);
+                        String edOrigin = packageRegistrar.resolveOrigin(pkgClass);
+                        for (var tp : edc.triggerPoints())
+                            messagingRegistrar.upsertTriggerPoint(edc.domainCode(), edc.domainName(), tp, pkgClass);
+                        for (var et : edc.eventTypes())
+                            messagingRegistrar.upsertEventType(edc.domainCode(), edc.domainName(), et, pkgClass);
+                        for (var dt : edc.defaultTriggers())
+                            messagingRegistrar.upsertDefaultTrigger(dt, edIndustry, pkgClass.getName(), edOrigin);
+                    } catch (Exception e) {
+                        log.error("[ContributionDispatcher] 消息域写入失败 {}: {}", edc.domainCode(), e.getMessage());
+                    }
+                }
                 else if (c instanceof Contribution.TriggerPointContribution tpc) {
                     triggerPoints.incrementAndGet();
                     try {

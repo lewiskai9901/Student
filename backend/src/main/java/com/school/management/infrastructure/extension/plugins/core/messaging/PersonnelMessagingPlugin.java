@@ -1,6 +1,9 @@
 package com.school.management.infrastructure.extension.plugins.core.messaging;
 
-import com.school.management.infrastructure.extension.MessagingDomainPlugin;
+import com.school.management.infrastructure.extension.AbstractMessagingPackage;
+import com.school.management.infrastructure.extension.TriggerPointDef;
+import com.school.management.infrastructure.extension.EventTypeDef;
+import com.school.management.infrastructure.extension.DefaultTriggerDef;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -12,7 +15,7 @@ import java.util.List;
  * 打上 industry=CORE / plugin_class 标签,让插件平台不再归为"历史数据".
  */
 @Component
-public class PersonnelMessagingPlugin implements MessagingDomainPlugin {
+public class PersonnelMessagingPlugin extends AbstractMessagingPackage {
 
     @Override public String getDomainCode() { return "personnel"; }
     @Override public String getDomainName() { return "人事"; }

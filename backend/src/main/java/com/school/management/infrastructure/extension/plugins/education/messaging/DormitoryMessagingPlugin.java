@@ -1,7 +1,7 @@
 package com.school.management.infrastructure.extension.plugins.education.messaging;
 
 import com.school.management.infrastructure.extension.Contribution;
-import com.school.management.infrastructure.extension.MessagingDomainPlugin;
+import com.school.management.infrastructure.extension.EventTypeDef;
 import com.school.management.infrastructure.extension.PluginPackage;
 import org.springframework.stereotype.Component;
 
@@ -51,14 +51,14 @@ public class DormitoryMessagingPlugin implements PluginPackage {
     public Stream<Contribution> contribute() {
         return Stream.of(
             new Contribution.EventTypeContribution(DOMAIN_CODE, DOMAIN_NAME,
-                new MessagingDomainPlugin.EventTypeDef(
+                new EventTypeDef(
                     "DORM_CHECKIN_EVT", "入住登记",
                     "PLACE", "场所", "NEUTRAL",
                     "bed-double", "#0d9488",
                     List.of("USER"),
                     "学生新入住宿舍")),
             new Contribution.EventTypeContribution(DOMAIN_CODE, DOMAIN_NAME,
-                new MessagingDomainPlugin.EventTypeDef(
+                new EventTypeDef(
                     "DORM_CHECKOUT_EVT", "退宿登记",
                     "PLACE", "场所", "NEUTRAL",
                     "log-out", "#6b7280",

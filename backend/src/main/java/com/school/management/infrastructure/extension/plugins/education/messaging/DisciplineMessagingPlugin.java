@@ -1,6 +1,9 @@
 package com.school.management.infrastructure.extension.plugins.education.messaging;
 
-import com.school.management.infrastructure.extension.MessagingDomainPlugin;
+import com.school.management.infrastructure.extension.AbstractMessagingPackage;
+import com.school.management.infrastructure.extension.TriggerPointDef;
+import com.school.management.infrastructure.extension.EventTypeDef;
+import com.school.management.infrastructure.extension.DefaultTriggerDef;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -12,7 +15,7 @@ import java.util.List;
  * Attendance 管考勤系统产生的 *_EVT 事件(如 ATTENDANCE_LATE_EVT).
  */
 @Component
-public class DisciplineMessagingPlugin implements MessagingDomainPlugin {
+public class DisciplineMessagingPlugin extends AbstractMessagingPackage {
 
     @Override public String getDomainCode() { return "discipline"; }
     @Override public String getDomainName() { return "纪律"; }

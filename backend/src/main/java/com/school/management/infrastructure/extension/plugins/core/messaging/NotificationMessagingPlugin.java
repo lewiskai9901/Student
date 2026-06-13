@@ -1,6 +1,9 @@
 package com.school.management.infrastructure.extension.plugins.core.messaging;
 
-import com.school.management.infrastructure.extension.MessagingDomainPlugin;
+import com.school.management.infrastructure.extension.AbstractMessagingPackage;
+import com.school.management.infrastructure.extension.TriggerPointDef;
+import com.school.management.infrastructure.extension.EventTypeDef;
+import com.school.management.infrastructure.extension.DefaultTriggerDef;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -11,7 +14,7 @@ import java.util.List;
  * GRADE_RELEASE 属于教育专属,放在 education/AcademicMessagingPlugin.
  */
 @Component
-public class NotificationMessagingPlugin implements MessagingDomainPlugin {
+public class NotificationMessagingPlugin extends AbstractMessagingPackage {
 
     @Override public String getDomainCode() { return "notification"; }
     @Override public String getDomainName() { return "通知"; }

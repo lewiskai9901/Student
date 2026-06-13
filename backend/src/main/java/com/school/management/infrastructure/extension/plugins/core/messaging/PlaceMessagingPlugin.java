@@ -1,6 +1,9 @@
 package com.school.management.infrastructure.extension.plugins.core.messaging;
 
-import com.school.management.infrastructure.extension.MessagingDomainPlugin;
+import com.school.management.infrastructure.extension.AbstractMessagingPackage;
+import com.school.management.infrastructure.extension.TriggerPointDef;
+import com.school.management.infrastructure.extension.EventTypeDef;
+import com.school.management.infrastructure.extension.DefaultTriggerDef;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -15,7 +18,7 @@ import static com.school.management.infrastructure.extension.plugins.core.consta
  * 行业插件订阅这些核心点, 按需转译为行业特定事件 (如 EDU 的 DORM_CHECKIN_EVT).
  */
 @Component
-public class PlaceMessagingPlugin implements MessagingDomainPlugin {
+public class PlaceMessagingPlugin extends AbstractMessagingPackage {
 
     @Override public String getDomainCode() { return "place"; }
     @Override public String getDomainName() { return "场所"; }

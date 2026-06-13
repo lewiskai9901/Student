@@ -1,10 +1,10 @@
 package com.school.management.architecture;
 
 import com.school.management.infrastructure.extension.EntityTypePlugin;
-import com.school.management.infrastructure.extension.MessagingDomainPlugin;
 import com.school.management.infrastructure.extension.PluginManifest;
 import com.school.management.infrastructure.extension.PluginPackage;
 import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchRule;
@@ -63,8 +63,10 @@ class ArchUnitPluginArchitectureTest {
 
     @Test
     void all_PluginManifest_implementations_must_be_components() {
+        // 排除抽象基类 (如 AbstractMessagingPackage) — 它们不是 bean, 由具体子类 @Component
         ArchRule rule = classes()
                 .that().implement(PluginManifest.class)
+                .and().doNotHaveModifier(JavaModifier.ABSTRACT)
                 .should().beAnnotatedWith(Component.class);
         rule.check(classes);
     }
@@ -73,6 +75,7 @@ class ArchUnitPluginArchitectureTest {
     void all_PluginPackage_implementations_must_be_components() {
         ArchRule rule = classes()
                 .that().implement(PluginPackage.class)
+                .and().doNotHaveModifier(JavaModifier.ABSTRACT)
                 .should().beAnnotatedWith(Component.class);
         rule.check(classes);
     }
@@ -107,13 +110,8 @@ class ArchUnitPluginArchitectureTest {
     // RelationTypePlugin 已在 Phase 2 W2.2 删除 — 关系类型现在通过 PluginPackage.contribute()
     // 返回 Stream<Contribution.RelationTypeContribution> 声明. 无需独立 SPI 实现校验.
 
-    @Test
-    void all_MessagingDomainPlugin_implementations_must_be_components() {
-        ArchRule rule = classes()
-                .that().implement(MessagingDomainPlugin.class)
-                .should().beAnnotatedWith(Component.class);
-        rule.check(classes);
-    }
+    // MessagingDomainPlugin 已删 (双轨收敛): 12 消息域改 extends AbstractMessagingPackage
+    // (implements PluginPackage), 经 contribute() 的 EventDomainContribution 声明。
 
     // PermissionProvider 已删 (双轨收敛): 权限经 contribute() 的 PermissionContribution 声明,
     // CorePermissionProvider/EducationPermissionProvider 已降级为纯数据 holder, 不再 @Component。
@@ -132,17 +130,13 @@ class ArchUnitPluginArchitectureTest {
         ArchRule rule = classes()
                 .that().implement(PluginManifest.class)
                 .and().resideOutsideOfPackages("..plugins..messaging..")
+                .and().doNotHaveModifier(JavaModifier.ABSTRACT)
                 .should().haveSimpleNameEndingWith("Manifest");
         rule.check(classes);
     }
 
-    @Test
-    void messaging_domain_plugins_must_have_MessagingPlugin_suffix() {
-        ArchRule rule = classes()
-                .that().implement(MessagingDomainPlugin.class)
-                .should().haveSimpleNameEndingWith("MessagingPlugin");
-        rule.check(classes);
-    }
+    // 消息域命名守护已移除: MessagingDomainPlugin 删除后, 消息域改 extends AbstractMessagingPackage,
+    // 命名约定 (XxxMessagingPlugin) 不再强制 (Phase8 可按需重加针对 AbstractMessagingPackage 的守护)。
 
     // ─── 禁止再用已删除的 PermissionConstants ───
 

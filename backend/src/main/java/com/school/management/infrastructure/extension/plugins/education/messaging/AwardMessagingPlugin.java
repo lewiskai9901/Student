@@ -1,6 +1,9 @@
 package com.school.management.infrastructure.extension.plugins.education.messaging;
 
-import com.school.management.infrastructure.extension.MessagingDomainPlugin;
+import com.school.management.infrastructure.extension.AbstractMessagingPackage;
+import com.school.management.infrastructure.extension.TriggerPointDef;
+import com.school.management.infrastructure.extension.EventTypeDef;
+import com.school.management.infrastructure.extension.DefaultTriggerDef;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -9,7 +12,7 @@ import java.util.List;
  * 教育行业奖励表彰事件 — 三好学生/荣誉/表扬/全勤/先进个人/先进班级等.
  */
 @Component
-public class AwardMessagingPlugin implements MessagingDomainPlugin {
+public class AwardMessagingPlugin extends AbstractMessagingPackage {
 
     @Override public String getDomainCode() { return "award"; }
     @Override public String getDomainName() { return "奖励"; }

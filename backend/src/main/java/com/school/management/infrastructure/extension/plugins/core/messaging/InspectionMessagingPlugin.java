@@ -1,6 +1,9 @@
 package com.school.management.infrastructure.extension.plugins.core.messaging;
 
-import com.school.management.infrastructure.extension.MessagingDomainPlugin;
+import com.school.management.infrastructure.extension.AbstractMessagingPackage;
+import com.school.management.infrastructure.extension.TriggerPointDef;
+import com.school.management.infrastructure.extension.EventTypeDef;
+import com.school.management.infrastructure.extension.DefaultTriggerDef;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -13,7 +16,7 @@ import static com.school.management.domain.inspection.event.InspectionTriggerPoi
  * 具体的检查模板由行业插件贡献(未来会加 InspectionTemplateContributionPlugin).
  */
 @Component
-public class InspectionMessagingPlugin implements MessagingDomainPlugin {
+public class InspectionMessagingPlugin extends AbstractMessagingPackage {
 
     @Override
     public String getDomainCode() { return "inspection"; }

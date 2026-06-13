@@ -80,13 +80,12 @@ class UnifiedPluginPackageTest {
     }
 
     @Test
-    @DisplayName("剩余 2 个旧 SPI 必须打 @Deprecated — RelationType/DataScope/RolePreset/Menu/Permission 已删除")
+    @DisplayName("仅剩 1 个旧 SPI 必须打 @Deprecated — 其余全部迁移完毕")
     void oldSpisAreDeprecated() {
-        // 已删除并迁移: RelationType/DataScope/RolePreset/Menu/Permission。
-        // 剩余 2 个: EntityTypePlugin(携带行为, 保留) + MessagingDomainPlugin(待迁), 需保持 @Deprecated。
+        // 双轨收敛收官: RelationType/DataScope/RolePreset/Menu/Permission/MessagingDomain 全删。
+        // 仅剩 EntityTypePlugin — 携带生命周期行为, 作为合法 bean SPI 保留, 仍须 @Deprecated 标注迁移意图。
         List<Class<?>> oldSpis = List.of(
-            EntityTypePlugin.class,
-            MessagingDomainPlugin.class
+            EntityTypePlugin.class
         );
         for (Class<?> c : oldSpis) {
             assertTrue(c.isAnnotationPresent(Deprecated.class),

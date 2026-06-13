@@ -36,12 +36,11 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class NoNewDeprecatedSpiImplTest {
 
-    // 双轨收敛进展: RelationTypePlugin(W2.2) / DataScopePlugin / RolePresetPlugin / MenuContributionPlugin
-    // 已删除并迁移到 PluginPackage.contribute()。剩余 3 个: EntityTypePlugin(携带行为, 保留),
-    // MessagingDomainPlugin / PermissionProvider(待迁)。
+    // 双轨收敛收官: RelationType/DataScope/RolePreset/Menu/Permission/MessagingDomain 全部
+    // 删除并迁移到 PluginPackage.contribute()。**仅剩 1 个** EntityTypePlugin —
+    // 它携带 beforeCreate/afterCreate/validate 生命周期行为 (非纯声明), 作为合法 bean SPI 保留。
     private static final String[] DEPRECATED_SPIS = {
-        "EntityTypePlugin",
-        "MessagingDomainPlugin"
+        "EntityTypePlugin"
     };
 
     /**
@@ -64,23 +63,9 @@ class NoNewDeprecatedSpiImplTest {
         "plugins/education/SchoolPlugin.java",
         "plugins/education/StudentPlugin.java",
         "plugins/education/SuperAdminPlugin.java",
-        "plugins/education/TeacherPlugin.java",
-        // MessagingDomainPlugin (11)
-        "plugins/core/messaging/InspectionMessagingPlugin.java",
-        "plugins/core/messaging/NotificationMessagingPlugin.java",
-        "plugins/core/messaging/OrganizationMessagingPlugin.java",
-        "plugins/core/messaging/PersonnelMessagingPlugin.java",
-        "plugins/core/messaging/PlaceMessagingPlugin.java",
-        "plugins/education/messaging/AcademicMessagingPlugin.java",
-        "plugins/education/messaging/AttendanceMessagingPlugin.java",
-        "plugins/education/messaging/AwardMessagingPlugin.java",
-        "plugins/education/messaging/DisciplineMessagingPlugin.java",
-        // DormitoryMessagingPlugin 已迁移到 PluginPackage (Track M3 reference) — 不在 baseline
-        "plugins/education/messaging/EnrollmentMessagingPlugin.java",
-        "plugins/education/messaging/GradeMessagingPlugin.java",
-        "plugins/education/messaging/TeachingMessagingPlugin.java"
-        // 已删除并迁移 (无 baseline 条目): RelationTypePlugin / DataScopePlugin /
-        // RolePresetPlugin / MenuContributionPlugin / PermissionProvider
+        "plugins/education/TeacherPlugin.java"
+        // 已删除并迁移 (无 baseline 条目): RelationType / DataScope / RolePreset / Menu /
+        // Permission / MessagingDomain (12 个消息插件已转 AbstractMessagingPackage)
     );
 
     /** 匹配 {@code class Xxx ... implements ... <SpiName>} (允许多接口列表 + 跨行) */

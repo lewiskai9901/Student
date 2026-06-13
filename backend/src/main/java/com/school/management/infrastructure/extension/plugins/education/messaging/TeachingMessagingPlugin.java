@@ -1,6 +1,9 @@
 package com.school.management.infrastructure.extension.plugins.education.messaging;
 
-import com.school.management.infrastructure.extension.MessagingDomainPlugin;
+import com.school.management.infrastructure.extension.AbstractMessagingPackage;
+import com.school.management.infrastructure.extension.TriggerPointDef;
+import com.school.management.infrastructure.extension.EventTypeDef;
+import com.school.management.infrastructure.extension.DefaultTriggerDef;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -13,7 +16,7 @@ import static com.school.management.infrastructure.extension.plugins.education.c
  * 教务业务消息插件 — 考试 + 课程表.
  */
 @Component
-public class TeachingMessagingPlugin implements MessagingDomainPlugin {
+public class TeachingMessagingPlugin extends AbstractMessagingPackage {
 
     @Override public String getDomainCode() { return "teaching"; }
     @Override public String getDomainName() { return "教务"; }

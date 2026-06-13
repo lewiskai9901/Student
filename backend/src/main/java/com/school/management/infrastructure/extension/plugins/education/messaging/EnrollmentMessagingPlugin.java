@@ -1,6 +1,9 @@
 package com.school.management.infrastructure.extension.plugins.education.messaging;
 
-import com.school.management.infrastructure.extension.MessagingDomainPlugin;
+import com.school.management.infrastructure.extension.AbstractMessagingPackage;
+import com.school.management.infrastructure.extension.TriggerPointDef;
+import com.school.management.infrastructure.extension.EventTypeDef;
+import com.school.management.infrastructure.extension.DefaultTriggerDef;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -15,7 +18,7 @@ import static com.school.management.infrastructure.extension.plugins.education.c
  * 招生与学籍业务消息插件.
  */
 @Component
-public class EnrollmentMessagingPlugin implements MessagingDomainPlugin {
+public class EnrollmentMessagingPlugin extends AbstractMessagingPackage {
 
     @Override public String getDomainCode() { return "enrollment"; }
     @Override public String getDomainName() { return "招生与学籍"; }
