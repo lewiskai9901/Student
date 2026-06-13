@@ -283,6 +283,15 @@ public class UniversalPlaceApplicationService {
         place.setDescription(command.getDescription());
         place.setCapacity(command.getCapacity());
 
+        // 性别限制 (MALE/FEMALE/MIXED): 持久化 + 与父节点有效性别兼容性校验
+        // (之前 command.gender 被静默丢弃, 场所性别既写不进也读不出)。
+        if (command.getGender() != null && !command.getGender().isBlank()) {
+            place.setGender(command.getGender().trim().toUpperCase());
+            if (parent != null) {
+                place.validateGender(resolveEffectiveGender(parent));
+            }
+        }
+
         if (command.getAttributes() != null) {
             command.getAttributes().forEach(place::setAttribute);
         }
@@ -366,6 +375,14 @@ public class UniversalPlaceApplicationService {
         }
         if (command.getCapacity() != null) {
             place.setCapacity(command.getCapacity());
+        }
+        // 性别限制更新 + 父节点兼容性校验 (之前 command.gender 被丢弃)
+        if (command.getGender() != null && !command.getGender().isBlank()) {
+            place.setGender(command.getGender().trim().toUpperCase());
+            if (place.getParentId() != null) {
+                placeRepository.findById(place.getParentId())
+                        .ifPresent(p -> place.validateGender(resolveEffectiveGender(p)));
+            }
         }
         if (command.getAttributes() != null) {
             command.getAttributes().forEach(place::setAttribute);
@@ -521,6 +538,47 @@ public class UniversalPlaceApplicationService {
         Object v = t.getUiConfig().get("isRootType");
         if (v instanceof Boolean) return (Boolean) v;
         return v != null && Boolean.parseBoolean(v.toString());
+    }
+
+    /**
+     * 解析场所的<b>有效性别限制</b> (MALE/FEMALE/MIXED): 自身 gender 非空则用自身,
+     * 否则沿 path 祖先就近继承 (places.gender 列语义: NULL=继承父节点), 均无则 MIXED。
+     *
+     * <p>用于 check-in 混住校验与对外 effective-gender 查询。
+     */
+    public String resolveEffectiveGender(UniversalPlace place) {
+        if (place == null) return "MIXED";
+        if (place.getGender() != null && !place.getGender().isBlank()) {
+            return place.getGender();
+        }
+        String path = place.getPath();
+        if (path != null && !path.isBlank()) {
+            // path 形如 /1/2/3/ (3 为自身); 祖先 = 去掉自身后就近 (深→浅) 查首个非空 gender
+            java.util.List<Long> ids = new java.util.ArrayList<>();
+            for (String seg : path.split("/")) {
+                if (!seg.isBlank()) {
+                    try { ids.add(Long.valueOf(seg.trim())); } catch (NumberFormatException ignore) {}
+                }
+            }
+            if (!ids.isEmpty()) ids.remove(ids.size() - 1); // 去自身
+            for (int i = ids.size() - 1; i >= 0; i--) {
+                UniversalPlace anc = placeRepository.findById(ids.get(i)).orElse(null);
+                if (anc != null && anc.getGender() != null && !anc.getGender().isBlank()) {
+                    return anc.getGender();
+                }
+            }
+        }
+        return "MIXED";
+    }
+
+    /**
+     * 对外查询场所有效性别 (controller /effective-gender 用)。
+     */
+    @Transactional(readOnly = true)
+    public String getEffectiveGender(Long placeId) {
+        UniversalPlace place = placeRepository.findById(placeId)
+                .orElseThrow(() -> new IllegalArgumentException("场所不存在"));
+        return resolveEffectiveGender(place);
     }
 
     private String placeCapacityUnit(EntityTypeConfig t) {
@@ -865,6 +923,15 @@ public class UniversalPlaceApplicationService {
         String occupantName = user.getRealName() != null ? user.getRealName() : user.getUsername();
         String username = user.getUsername();
         Integer gender = user.getGender();
+
+        // 性别限制强制 (混住校验): 场所有效性别 (自身或继承自祖先) 受限时, 入住者性别必须匹配。
+        // 之前仅快照 occupant 性别而从不比对, 可把男性住进女生宿舍 (核心安全规则缺失)。
+        com.school.management.domain.place.model.valueobject.GenderType restriction =
+                com.school.management.domain.place.model.valueobject.GenderType.fromName(resolveEffectiveGender(place));
+        if (restriction.isRestricted() && !restriction.allowsOccupant(gender)) {
+            throw new IllegalStateException(
+                    "场所性别限制为「" + restriction.getDescription() + "」，该用户性别不符，不可入住");
+        }
 
         // 从 access_relations 查询用户当前主要组织
         String orgUnitName = null;

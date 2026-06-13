@@ -97,13 +97,12 @@ public class UniversalPlaceController {
         return Result.success(placeService.getStatistics());
     }
 
-    // TODO: 待实现 - 获取有效性别
-    // @GetMapping("/{id}/effective-gender")
-    // @Operation(summary = "获取场所有效性别")
-    // @CasbinAccess(resource = "place", action = "view")
-    // public Result<String> getEffectiveGender(@PathVariable Long id) {
-    //     return Result.success(placeService.getEffectiveGender(id));
-    // }
+    @GetMapping("/{id}/effective-gender")
+    @Operation(summary = "获取场所有效性别 (自身或继承自祖先, MALE/FEMALE/MIXED)")
+    @CasbinAccess(resource = "place", action = "view")
+    public Result<String> getEffectiveGender(@PathVariable Long id) {
+        return Result.success(placeService.getEffectiveGender(id));
+    }
 
     // ==================== 写入接口 ====================
 
