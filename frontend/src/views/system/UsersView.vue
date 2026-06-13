@@ -1013,7 +1013,7 @@ const handleResetPassword = async (row: UserListItem) => {
     await ElMessageBox.confirm(`确定要重置用户"${row.realName}"的密码吗?`, '重置密码', { type: 'warning' })
     const newPassword = await resetPassword(row.id)
     ElMessageBox.alert(
-      `新密码为: <strong style="font-size:16px;color:#409EFF">${newPassword || 'admin123'}</strong><br/><span style="color:#999;font-size:12px">请妥善保管并通知用户</span>`,
+      `新密码为: <strong style="font-size:16px;color:#409EFF">${newPassword}</strong><br/><span style="color:#999;font-size:12px">请妥善保管并通知用户</span>`,
       '密码重置成功',
       { dangerouslyUseHTMLString: true, confirmButtonText: '我已记住' }
     )

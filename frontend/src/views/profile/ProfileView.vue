@@ -118,10 +118,6 @@
             <div class="text-gray-900">{{ userInfo.orgUnit?.orgUnitName || '-' }}</div>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-500 mb-1">所属班级</label>
-            <div class="text-gray-900">{{ userInfo.classInfo?.className || '-' }}</div>
-          </div>
-          <div>
             <label class="block text-sm font-medium text-gray-500 mb-1">角色</label>
             <div class="flex flex-wrap gap-2 items-center">
               <!-- #7 优先用 roleDetails 渲染 (含插件禁用状态), 回退到 roles 字符串数组 -->
