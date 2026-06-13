@@ -80,15 +80,14 @@ class UnifiedPluginPackageTest {
     }
 
     @Test
-    @DisplayName("剩余 5 个旧 SPI 必须打 @Deprecated (迁移提示) — RelationTypePlugin/DataScopePlugin 已删除")
+    @DisplayName("剩余 4 个旧 SPI 必须打 @Deprecated (迁移提示) — RelationType/DataScope/RolePreset 已删除")
     void oldSpisAreDeprecated() {
-        // RelationTypePlugin (W2.2) 与 DataScopePlugin (双轨收敛 Phase2) 已删除并完成迁移。
-        // 剩余 5 个 SPI 仍向下兼容, 需保持 @Deprecated 标注。
+        // RelationTypePlugin/DataScopePlugin/RolePresetPlugin 已删除并完成迁移。
+        // 剩余 4 个 SPI 仍向下兼容, 需保持 @Deprecated 标注。
         List<Class<?>> oldSpis = List.of(
             EntityTypePlugin.class,
             MessagingDomainPlugin.class,
             PermissionProvider.class,
-            RolePresetPlugin.class,
             MenuContributionPlugin.class
         );
         for (Class<?> c : oldSpis) {
@@ -142,10 +141,11 @@ class UnifiedPluginPackageTest {
         // Phase 6 (workflow-engine): 加 access-relation-approval workflow → 17+1=18.
         // Casbin 缺口修复 (2026-06-12): 加 TENANT_ADMIN RolePermissionBindingContribution
         // (23 + 菜单对齐补 3 个 workflow 查看码 = 26) → 18+26=44.
-        // Phase1 双轨收敛 (2026-06-13): 加 19 个 DataResourceContribution (取代 CoreDataResourceProvider) → 44+19=63.
+        // Phase1 双轨收敛: 加 19 个 DataResourceContribution → 44+19=63.
+        // Role 双轨收敛: 加 3 个 RoleContribution (SUPER_ADMIN/TENANT_ADMIN/GUEST, 取代 CoreRolePresetPlugin) → 63+3=66.
         // 旧测试期望"默认空流"已不再适用; 改为校验内容契约.
         long count = core.contribute().count();
-        assertEquals(63, count, "CoreManifest 应贡献 63 个 contribution (15 关系 + 3 workflow + 26 TENANT_ADMIN 授权 + 19 data-resource)");
+        assertEquals(66, count, "CoreManifest 应贡献 66 个 contribution (15 关系 + 3 workflow + 26 TENANT_ADMIN 授权 + 19 data-resource + 3 role)");
         long rolePermCount = new CoreManifest().contribute()
             .filter(c -> c instanceof Contribution.RolePermissionBindingContribution)
             .count();

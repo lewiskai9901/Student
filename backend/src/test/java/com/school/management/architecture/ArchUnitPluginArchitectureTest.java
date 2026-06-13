@@ -5,7 +5,6 @@ import com.school.management.infrastructure.extension.MessagingDomainPlugin;
 import com.school.management.infrastructure.extension.PermissionProvider;
 import com.school.management.infrastructure.extension.PluginManifest;
 import com.school.management.infrastructure.extension.PluginPackage;
-import com.school.management.infrastructure.extension.RolePresetPlugin;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -125,13 +124,8 @@ class ArchUnitPluginArchitectureTest {
         rule.check(classes);
     }
 
-    @Test
-    void all_RolePresetPlugin_implementations_must_be_components() {
-        ArchRule rule = classes()
-                .that().implement(RolePresetPlugin.class)
-                .should().beAnnotatedWith(Component.class);
-        rule.check(classes);
-    }
+    // RolePresetPlugin 已删 (双轨收敛): 角色经 PluginPackage.contribute() 的 RoleContribution 声明,
+    // 不再有 @Component 实现, 故移除"impl 必须是 @Component"守护。
 
     // ─── 命名规范 ───
 

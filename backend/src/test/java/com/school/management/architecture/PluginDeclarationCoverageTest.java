@@ -141,7 +141,7 @@ class PluginDeclarationCoverageTest {
             "RolePresetDef\\.of\\s*\\(\\s*\"([A-Z_][A-Z0-9_]*)\"");
         Set<String> declared = new TreeSet<>();
         for (String src : allJavaSource) {
-            if (!src.contains("implements RolePresetPlugin")) continue;
+            if (!src.contains("implements PluginPackage")) continue;
             Matcher m = declPattern.matcher(src);
             while (m.find()) declared.add(m.group(1));
         }
@@ -204,7 +204,7 @@ class PluginDeclarationCoverageTest {
             "RolePresetDef\\.of\\s*\\(\\s*\"([A-Z_][A-Z0-9_]*)\"");
         Set<String> declaredRoles = new TreeSet<>();
         for (String src : allJavaSource) {
-            if (!src.contains("implements RolePresetPlugin")) continue;
+            if (!src.contains("implements PluginPackage")) continue;
             Matcher m = roleDeclPattern.matcher(src);
             while (m.find()) declaredRoles.add(m.group(1));
         }

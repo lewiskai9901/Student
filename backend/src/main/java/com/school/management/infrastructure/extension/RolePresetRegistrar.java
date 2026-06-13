@@ -10,9 +10,10 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 /**
- * 预置角色 Registrar — 扫描 {@link RolePresetPlugin}, UPSERT 到 roles 表.
+ * 预置角色 Registrar — UPSERT {@link Contribution.RoleContribution} 到 roles 表.
  *
- * 继承 {@link AbstractPluginRegistrar}, 业务仅 upsertOne() 一个方法.
+ * <p>双轨收敛: 输入源从扫描 RolePresetPlugin bean 改为过滤所有 PluginPackage.contribute()
+ * 的 RoleContribution (保留 @Order(500) 依赖链 + upsertOne 合并逻辑, 不破坏顺序)。
  *
  * 策略:
  *  - 匹配 role_code 唯一键(含软删)
@@ -23,39 +24,42 @@ import java.util.List;
 @Slf4j
 @Component
 @Order(500)
-public class RolePresetRegistrar extends AbstractPluginRegistrar<RolePresetPlugin, RolePresetPlugin.RolePresetDef> {
+public class RolePresetRegistrar extends AbstractPluginRegistrar<PluginPackage, RolePresetDef> {
 
-    private final List<RolePresetPlugin> plugins;
+    private final List<PluginPackage> packages;
     private final ApplicationEventPublisher eventPublisher;
 
-    public RolePresetRegistrar(List<RolePresetPlugin> plugins,
+    public RolePresetRegistrar(List<PluginPackage> packages,
                                 JdbcTemplate jdbc,
                                 PluginPackageRegistrar packageRegistrar,
                                 ApplicationEventPublisher eventPublisher) {
         super(jdbc, packageRegistrar);
-        this.plugins = plugins;
+        this.packages = packages;
         this.eventPublisher = eventPublisher;
     }
 
-    @Override protected List<RolePresetPlugin> getPluginList() { return plugins; }
+    @Override protected List<PluginPackage> getPluginList() { return packages; }
 
-    @Override protected List<RolePresetPlugin.RolePresetDef> extractDefs(RolePresetPlugin p) {
-        return p.getPresets();
+    @Override protected List<RolePresetDef> extractDefs(PluginPackage p) {
+        return p.contribute()
+            .filter(c -> c instanceof Contribution.RoleContribution)
+            .map(c -> ((Contribution.RoleContribution) c).def())
+            .toList();
     }
 
-    @Override protected String describeDef(RolePresetPlugin.RolePresetDef def) {
+    @Override protected String describeDef(RolePresetDef def) {
         return def.roleCode();
     }
 
     /** 声明完成后发事件, Casbin 自动 reload */
     @Override
-    protected void afterSync(List<RolePresetPlugin> plugins) {
+    protected void afterSync(List<PluginPackage> plugins) {
         eventPublisher.publishEvent(new PermissionsRefreshedEvent(this, "RolePresetRegistrar"));
     }
 
     @Override
-    protected UpsertResult upsertOne(RolePresetPlugin plugin,
-                                      RolePresetPlugin.RolePresetDef def,
+    protected UpsertResult upsertOne(PluginPackage plugin,
+                                      RolePresetDef def,
                                       String industry, String pluginClass) {
         if (isCustomProtected(
                 "SELECT industry FROM roles WHERE role_code=?",

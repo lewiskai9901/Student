@@ -2,6 +2,7 @@ package com.school.management.infrastructure.extension.plugins.core;
 
 import com.school.management.infrastructure.extension.Contribution;
 import com.school.management.infrastructure.extension.DataResourceDef;
+import com.school.management.infrastructure.extension.RolePresetDef;
 import com.school.management.infrastructure.extension.PluginPackage;
 import com.school.management.infrastructure.extension.RelationTypeDef;
 import com.school.management.infrastructure.extension.RelationTypeDef.Implied;
@@ -126,7 +127,23 @@ public class CoreManifest implements PluginPackage {
                 "processes/access-relation-approval.bpmn20.xml",
                 "关系授权审批流程")
         );
-        return Stream.concat(Stream.concat(base, tenantAdminPermissionBindings()), coreDataResources());
+        return Stream.concat(
+            Stream.concat(Stream.concat(base, tenantAdminPermissionBindings()), coreDataResources()),
+            coreRoles());
+    }
+
+    /**
+     * 通用核心预置角色 (双轨收敛: 从已删的 CoreRolePresetPlugin 迁入)。平台级、行业无关。
+     */
+    private Stream<Contribution> coreRoles() {
+        return Stream.of(
+            new Contribution.RoleContribution(RolePresetDef.of("SUPER_ADMIN", "超级管理员",
+                "平台最高权限,系统唯一,不受租户/行业限制", 0)),
+            new Contribution.RoleContribution(RolePresetDef.of("TENANT_ADMIN", "租户管理员",
+                "单租户下的管理员,管理本租户所有业务", 10)),
+            new Contribution.RoleContribution(RolePresetDef.of("GUEST", "访客",
+                "只读角色,不能创建/修改任何数据", 90))
+        );
     }
 
     /**

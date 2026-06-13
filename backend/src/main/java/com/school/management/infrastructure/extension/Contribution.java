@@ -102,7 +102,7 @@ public sealed interface Contribution permits
     }
 
     /** 预置角色贡献 */
-    record RoleContribution(RolePresetPlugin.RolePresetDef def) implements Contribution {
+    record RoleContribution(RolePresetDef def) implements Contribution {
         @Override public String uniqueKey() { return "role:" + def.roleCode(); }
     }
 
