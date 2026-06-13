@@ -1,5 +1,16 @@
 <template>
   <div class="flex h-full flex-col bg-white">
+    <!-- 标题 + 新建 -->
+    <div class="flex items-center justify-between border-b border-gray-200 px-3 py-2">
+      <span class="text-xs font-semibold text-gray-700">角色</span>
+      <button
+        class="flex h-7 items-center gap-1 rounded-md bg-blue-600 px-2 text-xs font-medium text-white hover:bg-blue-700"
+        @click="$emit('create')"
+      >
+        <Plus class="h-3.5 w-3.5" />
+        新建
+      </button>
+    </div>
     <!-- 搜索 -->
     <div class="border-b border-gray-200 p-3">
       <div class="relative">
@@ -109,7 +120,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { Search, Loader2, Shield, ChevronDown } from 'lucide-vue-next'
+import { Search, Loader2, Shield, ChevronDown, Plus } from 'lucide-vue-next'
 import { ElMessage } from 'element-plus'
 import { getRolesPage, type RoleResponse } from '@/api/access'
 
@@ -121,6 +132,7 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   'update:modelValue': [value: number | string]
   compare: [ids: (number | string)[]]
+  create: []
 }>()
 
 const keyword = ref('')

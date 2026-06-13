@@ -14,26 +14,27 @@ const accessRoutes: RouteRecordRaw[] = [
       group: 'daily'
     },
     children: [
-      // RBAC: 用户 / 角色 / 权限 (从 system.ts 迁入, 路径保持 /system/*; 与关系 ReBAC + 数据权限统一)
       {
         path: '/system/users',
         name: 'SystemUsers',
         component: () => import('@/views/system/UsersView.vue'),
         meta: { title: '用户管理', requiresAuth: true, permission: 'system:user:view', order: 1 }
       },
+      // 角色权限工作台 — 合并原「角色管理 / 权限管理 / 数据权限」三页:
+      //   角色模式 = explorer + 基本信息/功能权限/数据权限 tabs; 权限目录模式 = 全局只读权限字典.
       {
-        path: '/system/roles',
-        name: 'SystemRoles',
-        component: () => import('@/views/system/RolesView.vue'),
-        meta: { title: '角色管理', requiresAuth: true, permission: 'system:role:view', order: 2 }
+        path: '/access/console',
+        name: 'AccessConsole',
+        component: () => import('@/views/access/AccessConsoleView.vue'),
+        meta: {
+          title: '角色权限',
+          requiresAuth: true,
+          permission: 'system:role:view',
+          permissions: ['system:role:view', 'system:config:view'],
+          order: 2
+        }
       },
-      {
-        path: '/system/permissions',
-        name: 'SystemPermissions',
-        component: () => import('@/views/system/PermissionsView.vue'),
-        meta: { title: '权限管理', requiresAuth: true, permission: 'system:permission:view', order: 3 }
-      },
-      // ReBAC + 数据范围
+      // ReBAC 关系
       {
         path: '/access/relations',
         name: 'RelationManager',
@@ -45,19 +46,6 @@ const accessRoutes: RouteRecordRaw[] = [
         name: 'RelationTypes',
         component: () => import('@/views/access/RelationTypesView.vue'),
         meta: { title: '关系字典', requiresAuth: true, permission: 'system:config:view', order: 5 }
-      },
-      {
-        path: '/access/data-permissions',
-        name: 'DataPermissions',
-        component: () => import('@/views/access/data-permissions/DataPermissionsLayout.vue'),
-        // 数据权限配置高敏 — 同时要求 role:view 和 config:view
-        meta: {
-          title: '数据权限',
-          requiresAuth: true,
-          permission: 'system:role:view',
-          permissions: ['system:role:view', 'system:config:view'],
-          order: 6
-        }
       }
     ]
   },

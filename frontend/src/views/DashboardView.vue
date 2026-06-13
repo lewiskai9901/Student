@@ -183,7 +183,7 @@ const halfCards = computed(() => pluginCards.value.filter((c) => c.span === 'hal
 const coreQuickActions = [
   { label: '组织架构', path: '/organization/units', perm: 'system:org:view' },
   { label: '用户管理', path: '/system/users',       perm: 'system:user:view' },
-  { label: '角色管理', path: '/system/roles',       perm: 'system:role:view' },
+  { label: '角色权限', path: '/access/console',     perm: 'system:role:view' },
   { label: '检查项目', path: '/inspection/projects',  perm: 'insp:project:view' },
   { label: '模板管理', path: '/inspection/templates', perm: 'insp:template:view' },
   { label: '系统配置', path: '/system/configs',     perm: 'system:config:view' },
