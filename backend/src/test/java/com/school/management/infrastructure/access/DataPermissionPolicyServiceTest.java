@@ -54,7 +54,6 @@ class DataPermissionPolicyServiceTest {
         row.put("subject_rel_include", null);
         row.put("subject_rel_exclude", "[\"admin\"]");
         row.put("type_filter", "[\"STUDENT\"]");
-        row.put("scope_type", "MANAGED_ORGS_AND_BELOW");
 
         when(jdbcTemplate.queryForList(any(String.class), any(Object[].class)))
                 .thenReturn(List.of(row));
@@ -84,14 +83,13 @@ class DataPermissionPolicyServiceTest {
     }
 
     @Test
-    @DisplayName("getScopeSpec: null org_anchor falls back to legacy scope_type translation")
-    void getScopeSpec_nullAnchor_legacyFallback() {
+    @DisplayName("getScopeSpec: null org_anchor 收窄到 SELF (T9: scope_type 列已删, 不再翻译, 防御默认收窄)")
+    void getScopeSpec_nullAnchor_defaultsToSelf() {
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("apply_to", "BOTH");
         row.put("org_anchor", null);
         row.put("anchor_param", null);
         row.put("include_subtree", 0);
-        row.put("scope_type", "DEPARTMENT_AND_BELOW");
 
         when(jdbcTemplate.queryForList(any(String.class), any(Object[].class)))
                 .thenReturn(List.of(row));
@@ -99,8 +97,8 @@ class DataPermissionPolicyServiceTest {
         ScopeSpec spec = service.getScopeSpec(1L, 9L, "user", "READ");
 
         assertThat(spec).isNotNull();
-        assertThat(spec.getOrgAnchor()).isEqualTo(OrgAnchor.PRIMARY_ORG);
-        assertThat(spec.isIncludeSubtree()).isTrue();
+        assertThat(spec.getOrgAnchor()).isEqualTo(OrgAnchor.SELF);
+        assertThat(spec.isIncludeSubtree()).isFalse();
         assertThat(spec.getApplyTo()).isEqualTo("BOTH");
     }
 }

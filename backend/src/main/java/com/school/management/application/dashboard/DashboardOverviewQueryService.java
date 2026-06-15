@@ -1,7 +1,7 @@
 package com.school.management.application.dashboard;
 
-import com.school.management.domain.access.model.DataScope;
-import com.school.management.domain.access.model.valueobject.MergedDataScope;
+import com.school.management.domain.access.model.OrgAnchor;
+import com.school.management.domain.access.model.valueobject.ScopeSpec;
 import com.school.management.infrastructure.access.DataPermissionPolicyService;
 import com.school.management.infrastructure.access.UserContext;
 import com.school.management.infrastructure.access.UserContextHolder;
@@ -18,7 +18,7 @@ import java.util.Map;
  * /dashboard/overview 聚合查询服务。
  *
  * <p>将 {@code DashboardController} 里的 JdbcTemplate 原生 SQL 抽离到应用层，
- * 并按 {@code dashboard} 模块的数据范围 ({@link DataScope}) 收敛查询：
+ * 并按 {@code dashboard} 模块的数据范围 (可组合 {@link ScopeSpec} 轴①) 收敛查询：
  *
  * <ul>
  *   <li>ALL / 超管 — 全校聚合（历史行为）。</li>
@@ -68,26 +68,39 @@ public class DashboardOverviewQueryService {
         if (roleIds == null || roleIds.isEmpty()) {
             return ScopeFilter.empty(tenantId);
         }
-        MergedDataScope merged = policyService.getMergedScope(tenantId, roleIds, MODULE_CODE);
-        DataScope scope = merged.getEffectiveScope();
 
-        switch (scope) {
-            case ALL:
+        // 多角色取最宽: 逐角色读 dashboard 资源的可组合范围 (轴①), 命中最宽者即停。
+        // 优先级 ALL > 子树(PRIMARY_ORG+subtree) > 本组织(PRIMARY_ORG) > 其它(空)。
+        boolean anySubtree = false;
+        boolean anySingle = false;
+        for (Long roleId : roleIds) {
+            ScopeSpec spec = policyService.getScopeSpec(tenantId, roleId, MODULE_CODE, "READ");
+            if (spec == null) continue;
+            OrgAnchor anchor = spec.getOrgAnchor();
+            if (anchor == OrgAnchor.ALL) {
                 return ScopeFilter.unrestricted(tenantId);
-            case DEPARTMENT_AND_BELOW: {
-                String path = ctx.getOrgUnitPath();
-                if (path == null || path.isBlank()) return ScopeFilter.empty(tenantId);
-                return ScopeFilter.subtree(tenantId, path);
             }
-            case DEPARTMENT: {
-                Long orgUnitId = ctx.getOrgUnitId();
-                if (orgUnitId == null) return ScopeFilter.empty(tenantId);
-                return ScopeFilter.single(tenantId, orgUnitId);
+            if (anchor == OrgAnchor.PRIMARY_ORG) {
+                if (spec.isIncludeSubtree()) {
+                    anySubtree = true;
+                } else {
+                    anySingle = true;
+                }
             }
-            default:
-                // CUSTOM / SELF — 仪表盘层面无意义，返回空
-                return ScopeFilter.empty(tenantId);
+            // RELATION / CUSTOM_ORG / PLUGIN_DIM / SELF — 仪表盘层面不收敛, 视为空
         }
+
+        if (anySubtree) {
+            String path = ctx.getOrgUnitPath();
+            if (path == null || path.isBlank()) return ScopeFilter.empty(tenantId);
+            return ScopeFilter.subtree(tenantId, path);
+        }
+        if (anySingle) {
+            Long orgUnitId = ctx.getOrgUnitId();
+            if (orgUnitId == null) return ScopeFilter.empty(tenantId);
+            return ScopeFilter.single(tenantId, orgUnitId);
+        }
+        return ScopeFilter.empty(tenantId);
     }
 
     // ================= Organization =================
@@ -202,7 +215,7 @@ public class DashboardOverviewQueryService {
 
     /**
      * 内部范围描述器，用于在 SQL 生成时携带组织过滤条件。
-     * 不对外暴露 DataScope 概念——Controller 侧无需关心 SQL 细节。
+     * 不对外暴露范围枚举概念——Controller 侧无需关心 SQL 细节。
      */
     private static final class ScopeFilter {
         final ScopeKind kind;

@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 /**
  * 数据资源配置服务 (v3)
  * 读写 data_resources 表,返回 DataModulePO 结构(API 契约对象)。
- * CUSTOM scope 在 role_data_scopes.custom_org_unit_ids JSON 列中表达,
+ * CUSTOM scope 在 role_data_scopes.custom_org_ids JSON 列中表达,
  * 不再需要 v2 的 scope_item_types / module_scope_item_types 配置表。
  */
 @Slf4j

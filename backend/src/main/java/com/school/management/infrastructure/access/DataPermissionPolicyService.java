@@ -2,17 +2,13 @@ package com.school.management.infrastructure.access;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.school.management.domain.access.model.DataScope;
 import com.school.management.domain.access.model.OrgAnchor;
 import com.school.management.domain.access.model.ScopePreset;
 import com.school.management.domain.access.model.entity.DataScopeItem;
 import com.school.management.domain.access.model.entity.RoleDataPermission;
-import com.school.management.domain.access.model.valueobject.MergedDataScope;
 import com.school.management.domain.access.model.valueobject.ScopeSpec;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -20,16 +16,17 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 数据权限策略服务 (v3 改读 role_data_scopes 替代 role_data_permissions_v5)
+ * 数据权限策略服务 —— 读/存 {@code role_data_scopes} 的可组合范围轴。
  *
- * 关键字段映射:
- *   v2: module_code / scope_code        (role_data_permissions_v5)
- *   v3: resource_code / scope_type      (role_data_scopes)
+ * <p>存储真相是三组正交轴 (T9 已删旧 {@code scope_type}/{@code custom_org_unit_ids} 列):
+ * <ul>
+ *   <li>轴① 组织锚点: {@code org_anchor} / {@code anchor_param} / {@code include_subtree} / {@code custom_org_ids}</li>
+ *   <li>轴② 主体关系过滤: {@code subject_rel_include} / {@code subject_rel_exclude}</li>
+ *   <li>轴③ 类型过滤: {@code type_filter}</li>
+ * </ul>
  *
- * CUSTOM scope 自定义项:
- *   v2: role_data_scope_items 独立表 (item_type_code / scope_id / scope_name / include_children)
- *   v3: role_data_scopes.custom_org_unit_ids JSON 列表
- *   简化: v3 CUSTOM 就是"给这个角色指定这些组织 ID",不再区分 item_type_code。
+ * <p>面向 UI 的命名范围码 ({@code scopeCode}: ALL/SELF/DEPARTMENT/.../CUSTOM) 不再持久化,
+ * 读路径由轴① 反推 ({@link ScopePreset#scopeCodeFromAxes}); 插件维度直接用 {@code anchor_param}。
  */
 @Slf4j
 @Service
@@ -46,60 +43,6 @@ public class DataPermissionPolicyService {
     }
 
     /**
-     * 获取多角色合并 DataScope。
-     * Cache key 使用 sorted roleIds 避免顺序问题。
-     */
-    @Cacheable(value = CACHE_NAME,
-            key = "'merged:' + #tenantId + ':' + new java.util.TreeSet(#roleIds) + ':' + #moduleCode",
-            unless = "#result == null")
-    public MergedDataScope getMergedScope(Long tenantId, List<Long> roleIds, String moduleCode) {
-        if (roleIds == null || roleIds.isEmpty()) {
-            return MergedDataScope.builder()
-                    .moduleCode(moduleCode)
-                    .effectiveScope(DataScope.SELF)
-                    .hasSelfScope(true)
-                    .build();
-        }
-
-        // v3: role_data_scopes (resource_code / scope_type / custom_org_unit_ids / type_filter)
-        String placeholders = roleIds.stream().map(id -> "?").collect(Collectors.joining(","));
-        String sql = "SELECT id, role_id, resource_code, scope_type, custom_org_unit_ids, type_filter " +
-                "FROM role_data_scopes WHERE tenant_id = ? AND role_id IN (" +
-                placeholders + ") AND resource_code = ? AND deleted = 0";
-
-        Object[] params = new Object[roleIds.size() + 2];
-        params[0] = tenantId;
-        for (int i = 0; i < roleIds.size(); i++) {
-            params[i + 1] = roleIds.get(i);
-        }
-        params[roleIds.size() + 1] = moduleCode;
-
-        List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, params);
-
-        if (rows.isEmpty()) {
-            return MergedDataScope.builder()
-                    .moduleCode(moduleCode)
-                    .effectiveScope(DataScope.SELF)
-                    .hasSelfScope(true)
-                    .sourceRoleIds(roleIds)
-                    .build();
-        }
-
-        List<RoleDataPermission> permissions = rows.stream()
-                .map(this::mapToPermission)
-                .collect(Collectors.toList());
-
-        // CUSTOM scope: 从 custom_org_unit_ids JSON 解析组织 ID 列表
-        for (RoleDataPermission permission : permissions) {
-            if ("CUSTOM".equals(permission.getScopeCode())) {
-                loadCustomOrgUnitIds(permission, rows);
-            }
-        }
-
-        return MergedDataScope.merge(moduleCode, permissions);
-    }
-
-    /**
      * 读取可组合数据范围规格 (ScopeSpec) —— 单角色×资源×动作类的一行配置。
      *
      * <p>从新轴列 (org_anchor / anchor_param / include_subtree / custom_org_ids /
@@ -112,7 +55,7 @@ public class DataPermissionPolicyService {
     public ScopeSpec getScopeSpec(Long tenantId, Long roleId, String resourceCode, String actionClass) {
         // apply_to IN (actionClass, 'BOTH'), 精确动作类优先 (apply_to='BOTH' ASC → 非 BOTH 排前)
         String sql = "SELECT apply_to, org_anchor, anchor_param, include_subtree, " +
-                "custom_org_ids, subject_rel_include, subject_rel_exclude, type_filter, scope_type " +
+                "custom_org_ids, subject_rel_include, subject_rel_exclude, type_filter " +
                 "FROM role_data_scopes " +
                 "WHERE tenant_id = ? AND role_id = ? AND resource_code = ? " +
                 "AND apply_to IN (?, 'BOTH') AND deleted = 0 " +
@@ -134,19 +77,9 @@ public class DataPermissionPolicyService {
         boolean includeSubtree = getIntValue(row.get("include_subtree")) == 1;
 
         if (anchor == null) {
-            // 防御: org_anchor 为 NULL (迁移后不应出现) → 用旧 scope_type 翻译
-            String scopeType = (String) row.get("scope_type");
-            ScopePreset preset = ScopePreset.fromLegacyScopeType(scopeType);
-            if (preset != null) {
-                ScopeSpec base = preset.toSpec();
-                anchor = base.getOrgAnchor();
-                anchorParam = base.getAnchorParam();
-                includeSubtree = base.isIncludeSubtree();
-            } else {
-                // 仍未知 → 当作插件维度, anchorParam = scope_type
-                anchor = OrgAnchor.PLUGIN_DIM;
-                anchorParam = scopeType;
-            }
+            // 防御: org_anchor 为 NULL (T4 迁移后不应出现) → 收窄到 SELF, 不放宽。
+            log.warn("role_data_scopes row has NULL org_anchor — defaulting to SELF (data should have been migrated by T4)");
+            anchor = OrgAnchor.SELF;
         }
 
         return ScopeSpec.builder()
@@ -170,7 +103,7 @@ public class DataPermissionPolicyService {
                 "WHERE tenant_id = ? AND role_id = ? AND resource_code = ? AND deleted = 0",
                 tenantId, permission.getRoleId(), permission.getModuleCode());
 
-        // 构造 custom_org_unit_ids JSON
+        // 从 CUSTOM scopeItems 派生组织 id JSON (作为 custom_org_ids 的兜底来源)
         String customJson = null;
         if ("CUSTOM".equals(permission.getScopeCode()) && permission.getScopeItems() != null
                 && !permission.getScopeItems().isEmpty()) {
@@ -181,7 +114,7 @@ public class DataPermissionPolicyService {
                         .collect(Collectors.toList());
                 customJson = objectMapper.writeValueAsString(orgIds);
             } catch (Exception e) {
-                log.warn("Failed to serialize custom_org_unit_ids: {}", e.getMessage());
+                log.warn("Failed to serialize custom org ids: {}", e.getMessage());
             }
         }
 
@@ -214,21 +147,20 @@ public class DataPermissionPolicyService {
 
         // UK (role_id, resource_code, apply_to, tenant_id) 不含 deleted, 软删后再 INSERT 会撞 unique.
         // 用 ON DUPLICATE KEY 覆盖同一行, 顺便把 deleted 翻回 0。
-        // 同时写新轴列 + 旧 scope_type (T9 删除前保持双写)。
+        // T9: 只写可组合轴列 (scope_type/custom_org_unit_ids 列已删)。
         jdbcTemplate.update(
-                "INSERT INTO role_data_scopes (tenant_id, role_id, resource_code, apply_to, scope_type, " +
+                "INSERT INTO role_data_scopes (tenant_id, role_id, resource_code, apply_to, " +
                 "org_anchor, anchor_param, include_subtree, custom_org_ids, subject_rel_include, subject_rel_exclude, " +
-                "custom_org_unit_ids, type_filter, priority, created_at, deleted) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 0) " +
-                "ON DUPLICATE KEY UPDATE scope_type=VALUES(scope_type), " +
+                "type_filter, priority, created_at, deleted) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 0) " +
+                "ON DUPLICATE KEY UPDATE " +
                 "org_anchor=VALUES(org_anchor), anchor_param=VALUES(anchor_param), include_subtree=VALUES(include_subtree), " +
                 "custom_org_ids=VALUES(custom_org_ids), subject_rel_include=VALUES(subject_rel_include), " +
-                "subject_rel_exclude=VALUES(subject_rel_exclude), custom_org_unit_ids=VALUES(custom_org_unit_ids), " +
+                "subject_rel_exclude=VALUES(subject_rel_exclude), " +
                 "type_filter=VALUES(type_filter), priority=VALUES(priority), updated_at=NOW(), deleted=0",
                 tenantId, permission.getRoleId(), permission.getModuleCode(), applyTo,
-                permission.getScopeCode(),
                 orgAnchor, anchorParam, includeSubtree, customOrgIdsJson, subjectRelIncludeJson, subjectRelExcludeJson,
-                customJson, typeFilterFinal,
+                typeFilterFinal,
                 0);
 
         log.info("Saved role data scope: tenantId={}, roleId={}, resourceCode={}, scopeType={}, anchor={}, applyTo={}",
@@ -249,70 +181,15 @@ public class DataPermissionPolicyService {
 
     /** 获取角色的所有权限配置 */
     public List<RoleDataPermission> getRolePermissions(Long tenantId, Long roleId) {
-        String sql = "SELECT id, role_id, resource_code, scope_type, custom_org_unit_ids, type_filter, " +
+        String sql = "SELECT id, role_id, resource_code, type_filter, " +
                 "apply_to, org_anchor, anchor_param, include_subtree, custom_org_ids, " +
                 "subject_rel_include, subject_rel_exclude " +
                 "FROM role_data_scopes WHERE tenant_id = ? AND role_id = ? AND deleted = 0";
 
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, tenantId, roleId);
-        List<RoleDataPermission> permissions = rows.stream()
+        return rows.stream()
                 .map(this::mapToPermission)
                 .collect(Collectors.toList());
-
-        for (RoleDataPermission permission : permissions) {
-            if ("CUSTOM".equals(permission.getScopeCode())) {
-                loadCustomOrgUnitIds(permission, rows);
-            }
-        }
-
-        return permissions;
-    }
-
-    /** 获取单角色在某资源上的 DataScope (仅 core hardcoded 5 种). 插件维度返回 null. */
-    public DataScope getScopeForRole(Long tenantId, Long roleId, String moduleCode) {
-        String scopeCode = getScopeCodeForRole(tenantId, roleId, moduleCode);
-        if (scopeCode == null) return null;
-        DataScope core = DataScope.fromCodeStrict(scopeCode);
-        if (core == null) {
-            // 插件维度, 由 interceptor 走 PluginDataScopeRouter 路由
-            log.debug("scope_type '{}' is a plugin dim for role {} resource {}", scopeCode, roleId, moduleCode);
-        }
-        return core;
-    }
-
-    /**
-     * 获取单角色在某资源上的原始 scope code 字符串.
-     *
-     * 相比 {@link #getScopeForRole} 这个不做 enum 转换, 调用方可自行判断是否是 core 维度
-     * (DataScope.fromCodeStrict) 还是插件维度(走 PluginDataScopeRouter).
-     */
-    public String getScopeCodeForRole(Long tenantId, Long roleId, String moduleCode) {
-        String sql = "SELECT scope_type FROM role_data_scopes " +
-                "WHERE tenant_id = ? AND role_id = ? AND resource_code = ? AND deleted = 0 LIMIT 1";
-        try {
-            return jdbcTemplate.queryForObject(sql, String.class, tenantId, roleId, moduleCode);
-        } catch (Exception e) {
-            // No config found → return null
-            return null;
-        }
-    }
-
-    /**
-     * 获取单角色在某资源上的类型过滤集 (闸2/2b).
-     *
-     * 仅在该资源配置了 type_field 时由拦截器调用 (大多数资源无 type_field → 拦截器根本不调,
-     * 零额外开销)。返回的类型码集与组织范围 AND 组合。null/空 = 不做类型过滤。
-     */
-    public List<String> getTypeFilterForRole(Long tenantId, Long roleId, String moduleCode) {
-        String sql = "SELECT type_filter FROM role_data_scopes " +
-                "WHERE tenant_id = ? AND role_id = ? AND resource_code = ? AND deleted = 0 LIMIT 1";
-        try {
-            String json = jdbcTemplate.queryForObject(sql, String.class, tenantId, roleId, moduleCode);
-            return parseTypeFilter(json);
-        } catch (Exception e) {
-            // 无配置 / 查询失败 → 不过滤
-            return null;
-        }
     }
 
     @CacheEvict(value = CACHE_NAME, allEntries = true)
@@ -325,22 +202,49 @@ public class DataPermissionPolicyService {
     // ══════════════════════════════════════════════════════════════
 
     private RoleDataPermission mapToPermission(Map<String, Object> row) {
-        // 轴列 (getRolePermissions 的 SELECT 带; getMergedScope 的精简 SELECT 不带 → row.get 返 null, 安全)
-        return RoleDataPermission.builder()
+        OrgAnchor anchor = OrgAnchor.fromCode((String) row.get("org_anchor"));
+        String anchorParam = (String) row.get("anchor_param");
+        boolean includeSubtree = getIntValue(row.get("include_subtree")) == 1;
+        Set<Long> customOrgIds = parseLongSet(row.get("custom_org_ids"));
+
+        // T9: scope_type 列已删 → 由轴① 反推面向 UI 的命名范围码 (回填前端)。
+        // 预设命中 → 预设名 (ALL/SELF/DEPARTMENT/.../CUSTOM); 插件维度 → 维度码 (anchorParam)。
+        String scopeCode = ScopePreset.scopeCodeFromAxes(anchor, anchorParam, includeSubtree);
+        if (scopeCode == null && anchor == OrgAnchor.PLUGIN_DIM) {
+            scopeCode = anchorParam;
+        }
+
+        RoleDataPermission permission = RoleDataPermission.builder()
                 .id(getLongValue(row, "id"))
                 .roleId(getLongValue(row, "role_id"))
                 .moduleCode((String) row.get("resource_code"))  // v3 字段映射
-                .scopeCode((String) row.get("scope_type"))      // v3 字段映射
+                .scopeCode(scopeCode)
                 .typeFilter(parseTypeFilter(row.get("type_filter")))
                 .description(null)  // v3 无 description 字段
                 .applyTo((String) row.get("apply_to"))
-                .orgAnchor(OrgAnchor.fromCode((String) row.get("org_anchor")))
-                .anchorParam((String) row.get("anchor_param"))
-                .includeSubtree(getIntValue(row.get("include_subtree")) == 1)
-                .customOrgIds(parseLongSet(row.get("custom_org_ids")))
+                .orgAnchor(anchor)
+                .anchorParam(anchorParam)
+                .includeSubtree(includeSubtree)
+                .customOrgIds(customOrgIds)
                 .subjectRelInclude(parseStringSet(row.get("subject_rel_include")))
                 .subjectRelExclude(parseStringSet(row.get("subject_rel_exclude")))
                 .build();
+
+        // CUSTOM: 由 custom_org_ids 还原 scopeItems (前端 CUSTOM picker 回填用)
+        if (anchor == OrgAnchor.CUSTOM_ORG && customOrgIds != null && !customOrgIds.isEmpty()) {
+            List<DataScopeItem> items = customOrgIds.stream()
+                    .map(id -> DataScopeItem.builder()
+                            .roleDataPermissionId(permission.getId())
+                            .itemTypeCode("ORG_UNIT")
+                            .scopeId(id)
+                            .scopeName(null)        // 按需加载
+                            .includeChildren(true)  // 默认含子树
+                            .build())
+                    .collect(Collectors.toList());
+            permission.setScopeItems(items);
+        }
+
+        return permission;
     }
 
     /**
@@ -433,47 +337,13 @@ public class DataPermissionPolicyService {
         }
     }
 
-    /** 解析 type_filter JSON (闸2/2b) → 类型码列表; null/空/解析失败 → null (= 不过滤) */
+    /**
+     * 解析 type_filter JSON (闸2/2b) → 类型码列表; null/空/解析失败 → null (= 不过滤)。
+     * 委托 {@link #parseStringSet} 复用同一段 JSON 解析, 再转回有序 List。
+     */
     private List<String> parseTypeFilter(Object json) {
-        if (json == null) return null;
-        String raw = json.toString();
-        if (raw.isBlank()) return null;
-        try {
-            List<String> codes = objectMapper.readValue(raw, new TypeReference<List<String>>() {});
-            return (codes == null || codes.isEmpty()) ? null : codes;
-        } catch (Exception e) {
-            log.warn("Failed to parse type_filter: {}", e.getMessage());
-            return null;
-        }
-    }
-
-    /** 从 custom_org_unit_ids JSON 构造 scopeItems 列表 */
-    private void loadCustomOrgUnitIds(RoleDataPermission permission, List<Map<String, Object>> allRows) {
-        // 找到 permission 对应的行
-        Map<String, Object> myRow = allRows.stream()
-                .filter(r -> Objects.equals(getLongValue(r, "id"), permission.getId()))
-                .findFirst().orElse(null);
-        if (myRow == null) return;
-
-        Object json = myRow.get("custom_org_unit_ids");
-        if (json == null) return;
-
-        try {
-            List<Long> orgIds = objectMapper.readValue(json.toString(),
-                    new TypeReference<List<Long>>() {});
-            List<DataScopeItem> items = orgIds.stream()
-                    .map(id -> DataScopeItem.builder()
-                            .roleDataPermissionId(permission.getId())
-                            .itemTypeCode("ORG_UNIT")     // v3 无 item_type_code,统一 'ORG_UNIT' (大写, 与 MergedDataScope.getOrgUnitIds/DataScopeItem.isOrgUnitType 对齐)
-                            .scopeId(id)
-                            .scopeName(null)              // 按需加载
-                            .includeChildren(true)        // v3 默认 include_children
-                            .build())
-                    .collect(Collectors.toList());
-            permission.setScopeItems(items);
-        } catch (Exception e) {
-            log.warn("Failed to parse custom_org_unit_ids: {}", e.getMessage());
-        }
+        Set<String> set = parseStringSet(json);
+        return (set == null) ? null : new ArrayList<>(set);
     }
 
     private Long getLongValue(Map<String, Object> row, String key) {

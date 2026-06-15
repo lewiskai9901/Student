@@ -15,8 +15,11 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * 角色数据权限实体 (V5)
- * 表示角色对某个模块的数据访问范围配置
+ * 角色数据权限实体 —— 角色对某资源的可组合数据范围配置。
+ *
+ * <p>存储真相是三组正交轴 (轴① org anchor / 轴② subject-relation / 轴③ type filter),
+ * 见 {@code role_data_scopes} 表与 {@link com.school.management.domain.access.model.valueobject.ScopeSpec}。
+ * {@code scopeCode} 是面向 UI 的命名范围码 (由轴① 反推, 非独立持久化列)。
  */
 @Data
 @Builder
@@ -85,20 +88,6 @@ public class RoleDataPermission implements Entity<Long> {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-
-    /**
-     * 获取数据范围枚举
-     */
-    public DataScope getScope() {
-        return DataScope.fromCode(scopeCode);
-    }
-
-    /**
-     * 判断是否为自定义范围
-     */
-    public boolean isCustomScope() {
-        return DataScope.CUSTOM.getCode().equals(scopeCode);
-    }
 
     /**
      * 添加自定义范围项

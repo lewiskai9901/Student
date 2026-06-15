@@ -92,4 +92,31 @@ public enum ScopePreset {
         }
         return null;
     }
+
+    /**
+     * 反向: 由已持久化的轴① (anchor + param + subtree) 还原对应预设的命名码。
+     *
+     * <p>T9 删除 {@code scope_type} 列后, 读路径需要把三轴反推回 UI 熟悉的命名范围码
+     * (ALL/SELF/DEPARTMENT/.../CUSTOM), 作为 {@code RoleDataPermission.scopeCode} 回填前端。
+     * 与 {@link #toSpec()} 严格往返。
+     *
+     * <p>插件维度 (anchor=PLUGIN_DIM) 不是预设 → 返回 {@code null}; 调用方应直接用
+     * {@code anchorParam} (维度码 BY_CLASS…) 作为 scopeCode。anchor 为 {@code null} 同样返回
+     * {@code null} (无配置)。
+     *
+     * @return 命中预设的 {@code name()}; 插件维度/未知/null → {@code null}
+     */
+    public static String scopeCodeFromAxes(OrgAnchor anchor, String anchorParam, boolean includeSubtree) {
+        if (anchor == null) {
+            return null;
+        }
+        for (ScopePreset p : values()) {
+            if (p.orgAnchor == anchor
+                    && java.util.Objects.equals(p.anchorParam, anchorParam)
+                    && p.includeSubtree == includeSubtree) {
+                return p.name();
+            }
+        }
+        return null;
+    }
 }
