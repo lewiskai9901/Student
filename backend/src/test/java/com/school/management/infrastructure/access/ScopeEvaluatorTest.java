@@ -78,7 +78,7 @@ class ScopeEvaluatorTest {
                 .includeSubtree(true)
                 .build();
 
-        ScopeCondition c = evaluator().toSqlCondition(spec, orgFieldMeta(), ctx(), TENANT, 0);
+        ScopeCondition c = evaluator().toSqlCondition(spec, orgFieldMeta(), ctx(), 100L, "/1/100/", TENANT, 0);
 
         assertThat(c.sql).contains(
                 "t.org_unit_id IN (SELECT id FROM org_units WHERE tenant_id = ? AND tree_path LIKE ?)");
@@ -93,7 +93,7 @@ class ScopeEvaluatorTest {
     @DisplayName("PRIMARY_ORG 无子树 → 单 org 等值")
     void primaryOrgSingle() {
         ScopeSpec spec = ScopeSpec.builder().orgAnchor(OrgAnchor.PRIMARY_ORG).includeSubtree(false).build();
-        ScopeCondition c = evaluator().toSqlCondition(spec, orgFieldMeta(), ctx(), TENANT, 0);
+        ScopeCondition c = evaluator().toSqlCondition(spec, orgFieldMeta(), ctx(), 100L, "/1/100/", TENANT, 0);
         assertThat(c.sql).isEqualTo("t.org_unit_id = ?");
         assertThat(c.params).hasSize(1);
         assertThat(c.params.get(0).value).isEqualTo(100L);
@@ -109,7 +109,7 @@ class ScopeEvaluatorTest {
                 .includeSubtree(false)
                 .build();
 
-        ScopeCondition c = evaluator().toSqlCondition(spec, membershipMeta(), ctx(), TENANT, 0);
+        ScopeCondition c = evaluator().toSqlCondition(spec, membershipMeta(), ctx(), 100L, "/1/100/", TENANT, 0);
 
         assertThat(c.sql).contains("u.id IN (SELECT ar.subject_id FROM access_relations ar");
         assertThat(c.sql).contains("ar.relation = 'member'");
@@ -129,7 +129,7 @@ class ScopeEvaluatorTest {
                 .subjectRelExclude(Set.of("admin"))
                 .build();
 
-        ScopeCondition c = evaluator().toSqlCondition(spec, membershipMeta(), ctx(), TENANT, 0);
+        ScopeCondition c = evaluator().toSqlCondition(spec, membershipMeta(), ctx(), 100L, "/1/100/", TENANT, 0);
 
         assertThat(c.sql).contains("NOT IN (");
         assertThat(c.sql).contains("ar.relation IN (?)");
@@ -149,7 +149,7 @@ class ScopeEvaluatorTest {
                 .typeFilter(Set.of("STUDENT"))
                 .build();
 
-        ScopeCondition c = evaluator().toSqlCondition(spec, membershipMetaWithType(), ctx(), TENANT, 0);
+        ScopeCondition c = evaluator().toSqlCondition(spec, membershipMetaWithType(), ctx(), 100L, "/1/100/", TENANT, 0);
 
         assertThat(c.sql).contains("u.user_type_code IN (?)");
         assertThat(c.sql).endsWith("u.user_type_code IN (?))");
@@ -168,7 +168,7 @@ class ScopeEvaluatorTest {
                 .typeFilter(Set.of("STUDENT"))
                 .build();
 
-        ScopeCondition c = evaluator().toSqlCondition(spec, membershipMetaWithType(), ctx(), TENANT, 0);
+        ScopeCondition c = evaluator().toSqlCondition(spec, membershipMetaWithType(), ctx(), 100L, "/1/100/", TENANT, 0);
 
         assertThat(c.sql).isEqualTo("u.user_type_code IN (?)");
         assertThat(c.params).hasSize(1);
@@ -179,7 +179,7 @@ class ScopeEvaluatorTest {
     @DisplayName("ALL 无类型过滤 → 空 SQL (放行)")
     void allUnbounded() {
         ScopeSpec spec = ScopeSpec.builder().orgAnchor(OrgAnchor.ALL).build();
-        ScopeCondition c = evaluator().toSqlCondition(spec, orgFieldMeta(), ctx(), TENANT, 0);
+        ScopeCondition c = evaluator().toSqlCondition(spec, orgFieldMeta(), ctx(), 100L, "/1/100/", TENANT, 0);
         assertThat(c.sql).isEmpty();
         assertThat(c.params).isEmpty();
     }
@@ -189,7 +189,7 @@ class ScopeEvaluatorTest {
     @DisplayName("SELF org-field → t.created_by = ?")
     void selfOrgField() {
         ScopeSpec spec = ScopeSpec.builder().orgAnchor(OrgAnchor.SELF).build();
-        ScopeCondition c = evaluator().toSqlCondition(spec, orgFieldMeta(), ctx(), TENANT, 0);
+        ScopeCondition c = evaluator().toSqlCondition(spec, orgFieldMeta(), ctx(), 100L, "/1/100/", TENANT, 0);
         assertThat(c.sql).isEqualTo("t.created_by = ?");
         assertThat(c.params.get(0).value).isEqualTo(7L);
         assertThat(c.params.get(0).jdbcType).isEqualTo(JdbcType.BIGINT);
@@ -199,7 +199,7 @@ class ScopeEvaluatorTest {
     @DisplayName("SELF membership → u.id = ?")
     void selfMembership() {
         ScopeSpec spec = ScopeSpec.builder().orgAnchor(OrgAnchor.SELF).build();
-        ScopeCondition c = evaluator().toSqlCondition(spec, membershipMeta(), ctx(), TENANT, 0);
+        ScopeCondition c = evaluator().toSqlCondition(spec, membershipMeta(), ctx(), 100L, "/1/100/", TENANT, 0);
         assertThat(c.sql).isEqualTo("u.id = ?");
         assertThat(c.params.get(0).value).isEqualTo(7L);
     }
@@ -211,7 +211,7 @@ class ScopeEvaluatorTest {
         when(pluginDataScopeRouter.resolve(eq("BY_MAJOR"), anyLong(), any()))
                 .thenReturn(List.of(5L, 6L));
         ScopeSpec spec = ScopeSpec.builder().orgAnchor(OrgAnchor.PLUGIN_DIM).anchorParam("BY_MAJOR").build();
-        ScopeCondition c = evaluator().toSqlCondition(spec, membershipMeta(), ctx(), TENANT, 0);
+        ScopeCondition c = evaluator().toSqlCondition(spec, membershipMeta(), ctx(), 100L, "/1/100/", TENANT, 0);
         assertThat(c.sql).isEqualTo("u.id IN (5,6)");
         assertThat(c.params).isEmpty();
     }
@@ -221,7 +221,7 @@ class ScopeEvaluatorTest {
     void pluginDimNullDegrade() {
         when(pluginDataScopeRouter.resolve(eq("BY_MAJOR"), anyLong(), any())).thenReturn(null);
         ScopeSpec spec = ScopeSpec.builder().orgAnchor(OrgAnchor.PLUGIN_DIM).anchorParam("BY_MAJOR").build();
-        ScopeCondition c = evaluator().toSqlCondition(spec, membershipMeta(), ctx(), TENANT, 0);
+        ScopeCondition c = evaluator().toSqlCondition(spec, membershipMeta(), ctx(), 100L, "/1/100/", TENANT, 0);
         assertThat(c.sql).isEqualTo("u.id = ?");
         assertThat(c.params.get(0).value).isEqualTo(7L);
     }
@@ -231,7 +231,7 @@ class ScopeEvaluatorTest {
     void pluginDimNullDegradeCreator() {
         when(pluginDataScopeRouter.resolve(eq("BY_MAJOR"), anyLong(), any())).thenReturn(null);
         ScopeSpec spec = ScopeSpec.builder().orgAnchor(OrgAnchor.PLUGIN_DIM).anchorParam("BY_MAJOR").build();
-        ScopeCondition c = evaluator().toSqlCondition(spec, orgFieldMeta(), ctx(), TENANT, 0);
+        ScopeCondition c = evaluator().toSqlCondition(spec, orgFieldMeta(), ctx(), 100L, "/1/100/", TENANT, 0);
         assertThat(c.sql).isEqualTo("t.created_by = ?");
         assertThat(c.params.get(0).value).isEqualTo(7L);
     }
@@ -241,7 +241,7 @@ class ScopeEvaluatorTest {
     void pluginDimEmptyDeny() {
         when(pluginDataScopeRouter.resolve(eq("BY_MAJOR"), anyLong(), any())).thenReturn(List.of());
         ScopeSpec spec = ScopeSpec.builder().orgAnchor(OrgAnchor.PLUGIN_DIM).anchorParam("BY_MAJOR").build();
-        ScopeCondition c = evaluator().toSqlCondition(spec, membershipMeta(), ctx(), TENANT, 0);
+        ScopeCondition c = evaluator().toSqlCondition(spec, membershipMeta(), ctx(), 100L, "/1/100/", TENANT, 0);
         assertThat(c.sql).isEqualTo("1 = 0");
     }
 
@@ -254,7 +254,7 @@ class ScopeEvaluatorTest {
                 .customOrgIds(Set.of(9L))
                 .includeSubtree(true)
                 .build();
-        ScopeCondition c = evaluator().toSqlCondition(spec, orgFieldMeta(), ctx(), TENANT, 0);
+        ScopeCondition c = evaluator().toSqlCondition(spec, orgFieldMeta(), ctx(), 100L, "/1/100/", TENANT, 0);
         assertThat(c.sql).contains("t.org_unit_id IN (");
         assertThat(c.sql).contains("SELECT id FROM org_units WHERE tenant_id = ? AND tree_path LIKE (");
         assertThat(c.sql).contains("SELECT CONCAT(tree_path, '%') FROM org_units WHERE id = ?))");
@@ -269,7 +269,7 @@ class ScopeEvaluatorTest {
     @DisplayName("access_relation SELF → 含 (subject=me) OR (subject_id IN org_units tree_path LIKE ?), org-OR 不丢")
     void accessRelationSelfKeepsOrgOr() {
         ScopeSpec spec = ScopeSpec.builder().orgAnchor(OrgAnchor.SELF).build();
-        ScopeCondition c = evaluator().toSqlCondition(spec, accessRelationMeta(), ctx(), TENANT, 0);
+        ScopeCondition c = evaluator().toSqlCondition(spec, accessRelationMeta(), ctx(), 100L, "/1/100/", TENANT, 0);
 
         // 基础 subject=me 单边
         assertThat(c.sql).contains("(ar.subject_type = 'user' AND ar.subject_id = ?)");
@@ -296,7 +296,7 @@ class ScopeEvaluatorTest {
                 .orgAnchor(OrgAnchor.PRIMARY_ORG)
                 .includeSubtree(false)
                 .build();
-        ScopeCondition c = evaluator().toSqlCondition(spec, accessRelationMeta(), ctx(), TENANT, 0);
+        ScopeCondition c = evaluator().toSqlCondition(spec, accessRelationMeta(), ctx(), 100L, "/1/100/", TENANT, 0);
 
         // org-subject-OR keyed on orgPath != null (NOT subtree-gated) → 仍是 tree_path 子查询
         assertThat(c.sql).contains(
@@ -319,7 +319,7 @@ class ScopeEvaluatorTest {
                 .orgAnchor(OrgAnchor.PRIMARY_ORG)
                 .includeSubtree(true)
                 .build();
-        ScopeCondition c = evaluator().toSqlCondition(spec, accessRelationMeta(), ctx(), TENANT, 0);
+        ScopeCondition c = evaluator().toSqlCondition(spec, accessRelationMeta(), ctx(), 100L, "/1/100/", TENANT, 0);
 
         // org-subject-OR subtree
         assertThat(c.sql).contains(
@@ -344,7 +344,7 @@ class ScopeEvaluatorTest {
                 .customOrgIds(Set.of(9L))
                 .includeSubtree(false)
                 .build();
-        ScopeCondition c = evaluator().toSqlCondition(spec, membershipMeta(), ctx(), TENANT, 0);
+        ScopeCondition c = evaluator().toSqlCondition(spec, membershipMeta(), ctx(), 100L, "/1/100/", TENANT, 0);
 
         // 始终子树展开 JOIN 形态 (端口自 buildMembershipCondition CUSTOM)
         assertThat(c.sql).contains(

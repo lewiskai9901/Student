@@ -1,9 +1,9 @@
 package com.school.management.infrastructure.access;
 
 import com.school.management.application.access.DynamicModuleService;
-import com.school.management.domain.access.model.DataScope;
+import com.school.management.domain.access.model.OrgAnchor;
 import com.school.management.domain.access.model.ScopeType;
-import com.school.management.domain.access.model.valueobject.MergedDataScope;
+import com.school.management.domain.access.model.valueobject.ScopeSpec;
 import com.school.management.infrastructure.persistence.access.DataModulePO;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,9 +63,15 @@ class DataPermissionInterceptorMembershipCustomTest {
         interceptor = new DataPermissionInterceptor();
         ReflectionTestUtils.setField(interceptor, "dynamicModuleService", dynamicModuleService);
         ReflectionTestUtils.setField(interceptor, "dataPermissionPolicyService", dataPermissionPolicyService);
-        ReflectionTestUtils.setField(interceptor, "pluginDataScopeRouter", pluginDataScopeRouter);
+        // T7: CUSTOM membership compose 下沉 ScopeEvaluator; 拦截器只编排。
+        ReflectionTestUtils.setField(interceptor, "scopeEvaluator", new ScopeEvaluator(pluginDataScopeRouter));
         UserContextHolder.clear();
         UserContextHolder.enableDataPermission();
+    }
+
+    /** CUSTOM_ORG 规格 (customOrgIds = 指定组织集)。 */
+    private ScopeSpec customOrgSpec(Set<Long> ids) {
+        return ScopeSpec.builder().orgAnchor(OrgAnchor.CUSTOM_ORG).customOrgIds(ids).build();
     }
 
     @AfterEach
@@ -119,7 +125,7 @@ class DataPermissionInterceptorMembershipCustomTest {
 
     private Object build(DataPermission ann, DataModulePO module, UserContext ctx, Long tenantId) {
         return ReflectionTestUtils.invokeMethod(interceptor, "buildScopedCondition",
-                ann, module, ctx, tenantId);
+                ann, module, ctx, tenantId, "READ");
     }
 
     private String sqlOf(Object cond) {
@@ -135,13 +141,8 @@ class DataPermissionInterceptorMembershipCustomTest {
     @DisplayName("CUSTOM 含 GRADE/部门 org → 必须子树展开 (org + 后代), 而非裸 IN(<id>)")
     void customMembershipSubtreeExpandsGrantedOrg() {
         UserContext ctx = userWithScopedRoles(List.of(scopedRole(6L, ScopeType.ALL, 0L, null)));
-        when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(6L), anyString()))
-                .thenReturn(DataScope.CUSTOM.getCode());
-        MergedDataScope merged = MergedDataScope.builder()
-                .moduleCode("student").effectiveScope(DataScope.CUSTOM).build();
-        merged.getMergedScopeItems().put("ORG_UNIT", new HashSet<>(Set.of(77L)));
-        when(dataPermissionPolicyService.getMergedScope(eq(1L), eq(Collections.singletonList(6L)), anyString()))
-                .thenReturn(merged);
+        when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(6L), anyString(), anyString()))
+                .thenReturn(customOrgSpec(new HashSet<>(Set.of(77L))));
 
         Object cond = build(studentAnnotation(), moduleConfig("student"), ctx, 1L);
         assertThat(cond).isNotNull();
@@ -172,12 +173,8 @@ class DataPermissionInterceptorMembershipCustomTest {
     @DisplayName("CUSTOM 无配置 org → 仍拒绝所有 1 = 0 (空 guard 保留)")
     void customMembershipEmptyOrgsStillDeniesAll() {
         UserContext ctx = userWithScopedRoles(List.of(scopedRole(5L, ScopeType.ALL, 0L, null)));
-        when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(5L), anyString()))
-                .thenReturn(DataScope.CUSTOM.getCode());
-        MergedDataScope merged = MergedDataScope.builder()
-                .moduleCode("student").effectiveScope(DataScope.CUSTOM).build();
-        when(dataPermissionPolicyService.getMergedScope(eq(1L), eq(Collections.singletonList(5L)), anyString()))
-                .thenReturn(merged);
+        when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(5L), anyString(), anyString()))
+                .thenReturn(customOrgSpec(new HashSet<>()));
 
         Object cond = build(studentAnnotation(), moduleConfig("student"), ctx, 1L);
         assertThat(cond).isNotNull();

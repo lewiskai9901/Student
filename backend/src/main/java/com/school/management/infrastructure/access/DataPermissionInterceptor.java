@@ -1,9 +1,9 @@
 package com.school.management.infrastructure.access;
 
-import com.school.management.domain.access.model.DataScope;
+import com.school.management.domain.access.model.OrgAnchor;
+import com.school.management.domain.access.model.ScopePreset;
 import com.school.management.domain.access.model.ScopeType;
-import com.school.management.domain.access.model.entity.RoleDataPermission;
-import com.school.management.domain.access.model.valueobject.MergedDataScope;
+import com.school.management.domain.access.model.valueobject.ScopeSpec;
 import com.school.management.infrastructure.persistence.access.DataModulePO;
 import com.school.management.infrastructure.tenant.TenantContextHolder;
 import lombok.extern.slf4j.Slf4j;
@@ -15,34 +15,26 @@ import org.apache.ibatis.plugin.*;
 import org.apache.ibatis.reflection.MetaObject;
 import org.apache.ibatis.reflection.SystemMetaObject;
 import org.apache.ibatis.session.Configuration;
-import org.apache.ibatis.type.JdbcType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
- * Data Permission Interceptor (Scoped Roles)
+ * Data Permission Interceptor (Scoped Roles) —— <b>瘦壳化 (T7)</b>。
  *
- * MyBatis interceptor that injects parameterized data permission filtering.
- * Supports scoped role assignments: each role's scope determines the org root
- * for data filtering. Multiple role conditions are OR-combined.
+ * <p>MyBatis 拦截器, 向出站 SQL 注入参数化的行级数据权限过滤。每个角色的 scope 决定其
+ * 数据过滤的 org root; 多角色条件 OR 合并。
  *
- * <p>此拦截器是 {@link DataScope} (粗粒度 RBAC 视图) 与
- * {@code access_relations} 表 (细粒度 ReBAC 视图) 的桥接,详见
- * {@code backend/docs/design/access/ADR-001-datascope-as-access-relation-macro.md}。
+ * <p><b>职责边界</b>: 本类只负责拦截器自有机制 —— SQL 注入点定位 (injectFilterCondition)、
+ * 参数位置绑定 (trailing-LIMIT 映射插入)、注解解析缓存、per-role effective-org 计算、
+ * 多角色 OR 合并 + ALL 短路。<b>SQL compose 全部委托</b> {@link ScopeEvaluator#toSqlCondition}
+ * (读路径统一 compose 真相源, 三正交轴: org anchor / subject-relation filter / type filter)。
  *
- * <p>实际行为:从角色读 MergedDataScope, 按 effectiveScope 决定走哪条路径:
- * <ul>
- *   <li>静态 scope (SELF / DEPARTMENT / DEPARTMENT_AND_BELOW) → 直接拼 WHERE 子句</li>
- *   <li>module 配置了 resourceType → access_relations 子查询 (buildAccessRelationCondition)</li>
- *   <li>插件维度 (如 BY_MAJOR) → PluginDataScopeRouter (buildPluginDimCondition)</li>
- *   <li>CUSTOM → role_custom_scope (buildCustomCondition)</li>
- * </ul>
- * 二者职责清晰,不互斥; DataScope 是 AccessRelation 的宏观快捷表达。
+ * <p>每个角色: 读 {@link ScopeSpec} (PolicyService, 无配置→SELF) + 构建 {@link ResourceScopeMeta}
+ * (注解 ⊕ moduleConfig), 计算该角色有效 org, 交 evaluator compose 出 {@link ScopeCondition}。
  */
 @Slf4j
 @Component
@@ -61,7 +53,7 @@ public class DataPermissionInterceptor implements Interceptor {
 
     @Autowired
     @org.springframework.context.annotation.Lazy
-    private PluginDataScopeRouter pluginDataScopeRouter;
+    private ScopeEvaluator scopeEvaluator;
 
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
@@ -121,9 +113,14 @@ public class DataPermissionInterceptor implements Interceptor {
             return invocation.proceed();
         }
 
+        // 动作类: SELECT→READ, 其余 (UPDATE/DELETE) → WRITE。INSERT 已在上方早退。
+        // 当前所有 seed 行 apply_to=BOTH, READ 与 WRITE 都命中同一行 → 行为等价。
+        String actionClass = mappedStatement.getSqlCommandType()
+                == org.apache.ibatis.mapping.SqlCommandType.SELECT ? "READ" : "WRITE";
+
         // Build scoped condition using scopedRoles
-        ParameterizedCondition condition = buildScopedCondition(
-                dataPermission, moduleConfig, userContext, tenantId);
+        ScopeCondition condition = buildScopedCondition(
+                dataPermission, moduleConfig, userContext, tenantId, actionClass);
 
         if (condition == null || condition.sql.isEmpty()) {
             return invocation.proceed();
@@ -161,7 +158,7 @@ public class DataPermissionInterceptor implements Interceptor {
         int trailingPlaceholders = countPlaceholdersAfterInjection(newSql, effectiveFilter);
         int insertAt = trailingPlaceholders > 0 && trailingPlaceholders <= mappings.size()
                 ? mappings.size() - trailingPlaceholders : -1;
-        for (AdditionalParam param : condition.params) {
+        for (ScopeCondition.Param param : condition.params) {
             ParameterMapping.Builder pmBuilder = new ParameterMapping.Builder(
                     configuration, param.property, param.javaType);
             pmBuilder.jdbcType(param.jdbcType);
@@ -186,640 +183,204 @@ public class DataPermissionInterceptor implements Interceptor {
     }
 
     /**
-     * Build condition using scoped roles.
-     * For each active scoped role, resolve its DataPermission for the module,
-     * then generate a scoped filter. All roles' filters are OR-combined.
-     * If any role has ALL scope + ALL DataScope → short-circuit to no filter.
+     * Build condition using scoped roles —— <b>瘦壳化 (T7)</b>: 每角色委托
+     * {@link ScopeEvaluator#toSqlCondition} compose SQL, 拦截器只负责
+     * (1) per-role effective-org 计算 (2) 多角色 OR 合并 (3) ALL 短路 (4) empty→deny。
+     *
+     * <p>各角色: 读 {@link ScopeSpec} (null→SELF) + 构建 {@link ResourceScopeMeta} (注解⊕moduleConfig),
+     * 算出该角色有效 org (ORG_UNIT scope-type→角色 scope org; 否则用户主组织), 交给 evaluator。
+     * 非空 role 条件 OR 合并; 全 ALL-unbounded → null (放行全量); 全 empty → "1 = 0" (deny)。
      */
-    private ParameterizedCondition buildScopedCondition(
+    private ScopeCondition buildScopedCondition(
             DataPermission annotation, DataModulePO moduleConfig,
-            UserContext userContext, Long tenantId) {
+            UserContext userContext, Long tenantId, String actionClass) {
 
         List<UserContext.ScopedRoleInfo> scopedRoles = userContext.getScopedRoles();
 
-        // Fallback: if no scopedRoles, use legacy merged scope approach
+        // Fallback: if no scopedRoles, route legacy roleIds through the same evaluator path.
         if (scopedRoles == null || scopedRoles.isEmpty()) {
-            return buildLegacyCondition(annotation, moduleConfig, userContext, tenantId);
+            return buildLegacyCondition(annotation, moduleConfig, userContext, tenantId, actionClass);
         }
 
         String moduleCode = annotation.module();
-        // 类型过滤(闸2/2b): 资源声明了 type_field 才启用 — 大多数资源 type_field=NULL,
-        // 此时 typeFilterable=false, 整个流程零额外开销 (不查 type_filter)。
-        String typeField = sanitizeIdentifier(moduleConfig.getTypeField());
-        boolean typeFilterable = typeField != null && !typeField.isEmpty();
-        String mainAlias = annotation.tableAlias().isEmpty() ? "" : sanitizeIdentifier(annotation.tableAlias()) + ".";
+        ResourceScopeMeta meta = buildMeta(annotation, moduleConfig);
+
         List<String> roleSqls = new ArrayList<>();
-        ParameterizedCondition combinedCond = new ParameterizedCondition();
+        ScopeCondition combined = new ScopeCondition();
         int globalParamIdx = 0;
 
         for (UserContext.ScopedRoleInfo sr : scopedRoles) {
-            // 该角色在本资源上的类型过滤集 (仅 typeFilterable 时查)
-            List<String> typeValues = typeFilterable
-                    ? dataPermissionPolicyService.getTypeFilterForRole(tenantId, sr.getRoleId(), moduleCode)
-                    : null;
-
-            // Get this role's raw scope code (could be core enum OR plugin dim code like BY_MAJOR)
-            String rawScopeCode = dataPermissionPolicyService.getScopeCodeForRole(
-                    tenantId, sr.getRoleId(), moduleCode);
-
-            DataScope coreScope = DataScope.fromCodeStrict(rawScopeCode);
-
-            // 各路径统一产出 roleCond, 然后在循环尾部叠加类型过滤 — 不再用 continue 提前跳过,
-            // 否则插件维度路径拿不到类型过滤。
-            ParameterizedCondition roleCond;
-
-            // Plugin dim path: rawScopeCode is non-null but not a core enum
-            if (rawScopeCode != null && coreScope == null) {
-                String resourceType = annotation.resourceType();
-                if (resourceType.isEmpty() && moduleConfig.getResourceType() != null) {
-                    resourceType = moduleConfig.getResourceType();
-                }
-                // 最终兜底: moduleCode 本身。注解 resourceType 默认 "", 而
-                // moduleConfig.resourceType 映射自 data_resources.access_resource_type
-                // (另一语义: 是否走 access_relations 子查询, student 等均为 NULL) —
-                // 不兜底时 resolver 收到 "" → "not supported" → 一律降级 SELF
-                // (Casbin 缺口 E2E 实测: BY_CLASS 班主任查学生被降成只看自己)。
-                // resolver 的 switch case 就是 data_resources 资源码 (= moduleCode)。
-                if (resourceType.isEmpty()) {
-                    resourceType = moduleCode;
-                }
-                roleCond = buildPluginDimCondition(
-                        rawScopeCode, annotation, resourceType, userContext, globalParamIdx);
-            } else {
-                // Core path: rawScopeCode is null (unconfigured) OR a core enum
-                DataScope dataScope = coreScope;
-                if (dataScope == null) {
-                    // No data permission configured for this role+module → default SELF
-                    dataScope = DataScope.SELF;
-                }
-
-                // Short-circuit: ALL scope + ALL DataScope → no filter needed —
-                // 但仅在无类型过滤时才整查询放行; 有类型过滤时退化为"仅类型条件"。
-                if (ScopeType.ALL.equals(sr.getScopeType()) && dataScope == DataScope.ALL) {
-                    if (typeValues == null || typeValues.isEmpty()) {
-                        return null; // No filter
-                    }
-                    roleCond = null; // 全组织无界 → 下方 applyTypeFilter 产出仅类型谓词
-                } else {
-                    // Determine the effective org root for this role
-                    String effectiveOrgPath;
-                    Long effectiveOrgId;
-                    if (ScopeType.ORG_UNIT.equals(sr.getScopeType())) {
-                        effectiveOrgPath = sr.getScopeOrgPath();
-                        effectiveOrgId = sr.getScopeId();
-                    } else {
-                        // ALL scope type - use user's primary org as fallback
-                        effectiveOrgPath = userContext.getOrgUnitPath();
-                        effectiveOrgId = userContext.getOrgUnitId();
-                    }
-
-                    // Build condition for this role
-                    roleCond = buildSingleRoleCondition(
-                            dataScope, annotation, moduleConfig, userContext, tenantId,
-                            effectiveOrgId, effectiveOrgPath, globalParamIdx, sr.getRoleId());
-                }
+            // 该角色×资源×动作类 的可组合规格; 无配置 → 安全降级 SELF (等价旧 coreScope==null→SELF)。
+            ScopeSpec spec = dataPermissionPolicyService.getScopeSpec(
+                    tenantId, sr.getRoleId(), moduleCode, actionClass);
+            if (spec == null) {
+                spec = ScopePreset.SELF.toSpec();
             }
 
-            // 类型过滤 AND 组合 (闸2/2b) — 对任意路径(org字段/成员/access_relation/插件维度)统一生效。
-            // 类型谓词作用在主表别名列上, 与组织条件正交; 类型参数排在组织参数之后(位置绑定一致)。
-            roleCond = applyTypeFilter(roleCond, mainAlias, typeField, typeValues, globalParamIdx);
+            // ALL 短路 (等价旧 buildScopedCondition): scopeType==ALL 且 spec 为"全组织无界"
+            // (orgAnchor==ALL 且无类型/关系过滤) → 整查询放行 (返回 null)。
+            // 注意: scopeType==ORG_UNIT 但 anchor==ALL 不短路 — evaluator 产空 cond, 下方 skip,
+            // 与旧 case ALL→null (该角色不贡献, 不释放整查询) 等价。
+            if (ScopeType.ALL.equals(sr.getScopeType())
+                    && spec.isOrgUnbounded()
+                    && !spec.hasTypeFilter() && !spec.hasRelInclude() && !spec.hasRelExclude()) {
+                return null; // No filter — see everything
+            }
+
+            // per-role 有效 org: ORG_UNIT scope-type → 角色 scope org; 否则用户主组织。
+            Long effectiveOrgId;
+            String effectiveOrgPath;
+            if (ScopeType.ORG_UNIT.equals(sr.getScopeType())) {
+                effectiveOrgId = sr.getScopeId();
+                effectiveOrgPath = sr.getScopeOrgPath();
+            } else {
+                effectiveOrgId = userContext.getOrgUnitId();
+                effectiveOrgPath = userContext.getOrgUnitPath();
+            }
+
+            // PLUGIN_DIM resolve 的 resourceType 需要 moduleCode 兜底 (端口自旧 plugin-dim 分支),
+            // 但核心路径的 hasResourceType() 选择 *不可* 被 moduleCode 污染 (否则核心 scope 误走
+            // access_relation)。故仅在 PLUGIN_DIM 时切换到带兜底的 meta 变体。
+            ResourceScopeMeta roleMeta = meta;
+            if (OrgAnchor.PLUGIN_DIM.equals(spec.getOrgAnchor())
+                    && (meta.resourceType() == null || meta.resourceType().isEmpty())) {
+                roleMeta = withResourceType(meta, moduleCode);
+            }
+
+            ScopeCondition roleCond = scopeEvaluator.toSqlCondition(
+                    spec, roleMeta, userContext, effectiveOrgId, effectiveOrgPath, tenantId, globalParamIdx);
 
             if (roleCond != null && !roleCond.sql.isEmpty()) {
                 roleSqls.add(roleCond.sql);
-                combinedCond.params.addAll(roleCond.params);
+                combined.params.addAll(roleCond.params);
                 globalParamIdx += roleCond.params.size();
             }
         }
 
         if (roleSqls.isEmpty()) {
             // No valid conditions → deny all
-            combinedCond.sql = "1 = 0";
-            return combinedCond;
+            combined.sql = "1 = 0";
+            return combined;
         }
 
         if (roleSqls.size() == 1) {
-            combinedCond.sql = roleSqls.get(0);
+            combined.sql = roleSqls.get(0);
         } else {
-            combinedCond.sql = "(" + String.join(" OR ", roleSqls) + ")";
+            combined.sql = "(" + String.join(" OR ", roleSqls) + ")";
         }
 
-        return combinedCond;
+        return combined;
     }
 
     /**
-     * 类型过滤 (闸2/2b): 把"主表类型列 ∈ 类型码集"作为 AND 谓词叠加到组织条件上。
+     * Legacy path (no scopedRoles): 把每个 roleId 当作"ALL scope-type, 锚点=用户主组织"
+     * 路由进同一 {@link ScopeEvaluator}, 与 scopedRoles 路径同语义。无配置 → SELF。
      *
-     * <p>语义边界 (避免误放宽/误收紧):
-     * <ul>
-     *   <li>typeValues 空 或 typeField 未配置 → 原样返回 (不过滤)。</li>
-     *   <li>cond == null (锚点为"全组织 ALL", 无 org 约束) → 产出"仅类型"谓词
-     *       {@code alias.typeField IN (...)}。</li>
-     *   <li>cond.sql 为空 (org 锚点解析失败的退化态) 或 "1 = 0" (已 deny) → 原样返回,
-     *       绝不因类型而放宽 deny 或给一个解析失败的范围补出数据。</li>
-     *   <li>其余 → {@code (orgSql AND alias.typeField IN (...))}。</li>
-     * </ul>
-     * 类型参数追加在 cond 既有参数(组织参数)之后, 与 SQL 中 `?` 顺序一致(位置绑定)。
+     * <p>legacy 路径在真实 HTTP 请求中极少/从不命中 (JwtAuthenticationFilter 一定填 scopedRoles);
+     * 仅作为 scopedRoles 为空时的兜底。改走 evaluator 换取删除旧 merge-semantics build* 方法,
+     * dedup 收益。注: 旧 legacy 走 getMergedScope (跨角色合并取最宽) + hasSelfScope OR-creator,
+     * 新路径改为逐角色 compose 后 OR 合并 — 对单一锚点结果一致, 多角色时新路径是各角色范围的并集
+     * (等价或更安全的收窄), 且此路径几乎不被命中。
      */
-    private ParameterizedCondition applyTypeFilter(
-            ParameterizedCondition cond, String alias, String typeField,
-            List<String> typeValues, int paramOffset) {
-        if (typeValues == null || typeValues.isEmpty() || typeField == null || typeField.isEmpty()) {
-            return cond;
-        }
-        if (cond != null && (cond.sql.isEmpty() || "1 = 0".equals(cond.sql))) {
-            return cond;
-        }
-        String placeholders = typeValues.stream().map(v -> "?").collect(Collectors.joining(","));
-        String typeSql = alias + typeField + " IN (" + placeholders + ")";
-
-        ParameterizedCondition result = (cond == null) ? new ParameterizedCondition() : cond;
-        result.sql = (cond == null) ? typeSql : "(" + cond.sql + " AND " + typeSql + ")";
-
-        int i = 0;
-        for (String code : typeValues) {
-            result.addParam("_dp_type_" + paramOffset + "_" + (i++), code, String.class, JdbcType.VARCHAR);
-        }
-        return result;
-    }
-
-    /**
-     * Build condition for a plugin-contributed data scope dimension (e.g. BY_MAJOR).
-     *
-     * Routes to {@link PluginDataScopeRouter} which looks up data_scope_dims.resolver_type
-     * and invokes the resolver's resolve(userId, resourceType).
-     *
-     * Return semantics:
-     *   null from router       → degrade to SELF (safe: creator filter)
-     *   empty list from router → deny all ("1 = 0")
-     *   non-empty list         → {alias}id IN (?, ?, ...)
-     */
-    private ParameterizedCondition buildPluginDimCondition(
-            String dimCode, DataPermission annotation, String resourceType,
-            UserContext userContext, int paramOffset) {
-
-        String alias = annotation.tableAlias().isEmpty() ? "" : sanitizeIdentifier(annotation.tableAlias()) + ".";
-        ParameterizedCondition cond = new ParameterizedCondition();
-
-        List<Long> ids = pluginDataScopeRouter.resolve(dimCode, userContext.getUserId(), resourceType);
-
-        if (ids == null) {
-            // Dim not found or resolver unavailable → safe degrade to SELF
-            log.warn("[DataPermission] plugin dim '{}' unavailable, degrading to SELF", dimCode);
-            // viaMembership 主表: 行本身的 subject 列就是"本人"(如 user_student.user_id),
-            // 与静态 SELF 路径 (buildMembershipCondition) 同语义。不可拼 creatorField —
-            // 这类表往往没有 created_by 列 (user_student 的已 DROP), 拼进去直接 SQL 报错。
-            String selfField;
-            if (annotation.viaMembership()) {
-                selfField = sanitizeIdentifier(
-                        annotation.membershipSubjectColumn() == null || annotation.membershipSubjectColumn().isEmpty()
-                                ? "user_id" : annotation.membershipSubjectColumn());
-            } else {
-                selfField = sanitizeIdentifier(
-                        annotation.creatorField() == null || annotation.creatorField().isEmpty()
-                                ? "created_by" : annotation.creatorField());
-            }
-            cond.sql = alias + selfField + " = ?";
-            cond.addParam("_dp_pluginSelf_" + paramOffset, userContext.getUserId(),
-                    Long.class, JdbcType.BIGINT);
-            return cond;
-        }
-
-        if (ids.isEmpty()) {
-            // Resolver explicitly says "no access"
-            cond.sql = "1 = 0";
-            return cond;
-        }
-
-        // Numeric IDs are safe to inline (no injection surface). Keeps the param
-        // mapping list simple given that id counts can be large.
-        String csv = ids.stream().map(String::valueOf).collect(Collectors.joining(","));
-        cond.sql = alias + "id IN (" + csv + ")";
-        return cond;
-    }
-
-    /**
-     * Build condition for a single role with a specific DataScope and org root.
-     */
-    private ParameterizedCondition buildSingleRoleCondition(
-            DataScope scope, DataPermission annotation, DataModulePO moduleConfig,
-            UserContext userContext, Long tenantId,
-            Long orgId, String orgPath, int paramOffset, Long roleId) {
-
-        String alias = annotation.tableAlias().isEmpty() ? "" : sanitizeIdentifier(annotation.tableAlias()) + ".";
-        ParameterizedCondition cond = new ParameterizedCondition();
-
-        // Membership path: the main-table row IS the subject (user) of a 'member' relation.
-        // Filter by org scope on the relation's resource_id, not on a column of the main table.
-        if (annotation.viaMembership()) {
-            Set<Long> customOrgIds = null;
-            if (scope == DataScope.CUSTOM) {
-                MergedDataScope mergedScope = dataPermissionPolicyService.getMergedScope(
-                        tenantId, Collections.singletonList(roleId), annotation.module());
-                customOrgIds = mergedScope != null ? mergedScope.getOrgUnitIds() : Collections.emptySet();
-            }
-            return buildMembershipCondition(annotation, scope, userContext, tenantId,
-                    orgId, orgPath, paramOffset, customOrgIds);
-        }
-
-        String resourceType = annotation.resourceType();
-        if (resourceType.isEmpty() && moduleConfig.getResourceType() != null) {
-            resourceType = moduleConfig.getResourceType();
-        }
-
-        // If module uses access_relations, build access relation condition
-        if (!resourceType.isEmpty()) {
-            return buildAccessRelationCondition(resourceType, annotation, scope,
-                    userContext, tenantId, orgId, orgPath, paramOffset);
-        }
-
-        // Otherwise use org field filtering
-        String orgField = sanitizeIdentifier(
-                moduleConfig.getOrgUnitField() != null ? moduleConfig.getOrgUnitField() : annotation.orgUnitField());
-        String creatorField = sanitizeIdentifier(
-                moduleConfig.getCreatorField() != null ? moduleConfig.getCreatorField() : annotation.creatorField());
-
-        switch (scope) {
-            case ALL:
-                return null; // No filter for this role
-
-            case DEPARTMENT:
-                if (orgId != null) {
-                    cond.sql = alias + orgField + " = ?";
-                    cond.addParam("_dp_orgId_" + paramOffset, orgId, Long.class, JdbcType.BIGINT);
-                }
-                break;
-
-            case DEPARTMENT_AND_BELOW:
-                if (orgPath != null) {
-                    cond.sql = "(" + alias + orgField + " IN (" +
-                            "SELECT id FROM org_units WHERE tenant_id = ? AND tree_path LIKE ?))";
-                    cond.addParam("_dp_tenantId_" + paramOffset, tenantId, Long.class, JdbcType.BIGINT);
-                    cond.addParam("_dp_orgPath_" + paramOffset, orgPath + "%", String.class, JdbcType.VARCHAR);
-                } else if (orgId != null) {
-                    cond.sql = alias + orgField + " = ?";
-                    cond.addParam("_dp_orgId_" + paramOffset, orgId, Long.class, JdbcType.BIGINT);
-                }
-                break;
-
-            case MANAGED_ORGS:
-                // 我管理的组织: orgField ∈ { 当前用户持 admin 关系的组织 } —— 不依赖单一主组织,
-                // 可一人管多组织 (如 a 管 B、C)。关系实时从 access_relations 解析。
-                cond.sql = alias + orgField + " IN (" +
-                        "SELECT ar.resource_id FROM access_relations ar " +
-                        "WHERE ar.deleted = 0 AND ar.subject_type = 'user' AND ar.subject_id = ? " +
-                        "  AND ar.resource_type = 'org_unit' AND ar.relation = 'admin' " +
-                        "  AND (ar.valid_to IS NULL OR ar.valid_to > NOW()))";
-                cond.addParam("_dp_mgrUser_" + paramOffset, userContext.getUserId(), Long.class, JdbcType.BIGINT);
-                break;
-
-            case MANAGED_ORGS_AND_BELOW:
-                // 我管理的组织及其子树
-                cond.sql = alias + orgField + " IN (" +
-                        "SELECT o.id FROM org_units o " +
-                        "JOIN org_units mo ON o.tree_path LIKE CONCAT(mo.tree_path, '%') " +
-                        "JOIN access_relations ar ON ar.resource_id = mo.id " +
-                        "WHERE o.tenant_id = ? AND ar.deleted = 0 AND ar.subject_type = 'user' " +
-                        "  AND ar.subject_id = ? AND ar.resource_type = 'org_unit' AND ar.relation = 'admin' " +
-                        "  AND (ar.valid_to IS NULL OR ar.valid_to > NOW()))";
-                cond.addParam("_dp_tenantId_" + paramOffset, tenantId, Long.class, JdbcType.BIGINT);
-                cond.addParam("_dp_mgrUser_" + paramOffset, userContext.getUserId(), Long.class, JdbcType.BIGINT);
-                break;
-
-            case SELF:
-                cond.sql = alias + creatorField + " = ?";
-                cond.addParam("_dp_creatorId_" + paramOffset, userContext.getUserId(), Long.class, JdbcType.BIGINT);
-                break;
-
-            case CUSTOM:
-                // CUSTOM scope: fall back to legacy merged scope approach for this role.
-                // 必须用真实 roleId — 历史 bug 曾误传 paramOffset (参数序号) 导致
-                // CUSTOM 范围解析到错误角色 / 空范围 (安全审计 B3, 2026-05-20).
-                MergedDataScope mergedScope = dataPermissionPolicyService.getMergedScope(
-                        tenantId, Collections.singletonList(roleId), annotation.module());
-                if (mergedScope != null) {
-                    return buildCustomCondition(mergedScope, alias, orgField, tenantId, paramOffset);
-                }
-                break;
-
-            default:
-                return null;
-        }
-
-        return cond;
-    }
-
-    /**
-     * Build condition using access_relations subquery with scoped org root.
-     */
-    private ParameterizedCondition buildAccessRelationCondition(
-            String resourceType, DataPermission annotation, DataScope scope,
-            UserContext userContext, Long tenantId,
-            Long orgId, String orgPath, int paramOffset) {
-
-        String alias = annotation.tableAlias().isEmpty() ? "" : sanitizeIdentifier(annotation.tableAlias()) + ".";
-        ParameterizedCondition cond = new ParameterizedCondition();
-
-        StringBuilder sb = new StringBuilder();
-        sb.append(alias).append("id IN (")
-          .append("SELECT ar.resource_id FROM access_relations ar WHERE ar.resource_type = ? AND ar.tenant_id = ? AND ar.deleted = 0 AND (")
-          .append("(ar.subject_type = 'user' AND ar.subject_id = ?)");
-
-        cond.addParam("_dp_resType_" + paramOffset, resourceType, String.class, JdbcType.VARCHAR);
-        cond.addParam("_dp_tenantId_" + paramOffset, tenantId, Long.class, JdbcType.BIGINT);
-        cond.addParam("_dp_userId_" + paramOffset, userContext.getUserId(), Long.class, JdbcType.BIGINT);
-
-        // Use the scoped org root (not user's primary org)
-        if (orgPath != null) {
-            sb.append(" OR (ar.subject_type = 'org_unit' AND ar.subject_id IN (")
-              .append("SELECT id FROM org_units WHERE tenant_id = ? AND tree_path LIKE ? AND deleted = 0))");
-            cond.addParam("_dp_tenantId2_" + paramOffset, tenantId, Long.class, JdbcType.BIGINT);
-            cond.addParam("_dp_orgPath_" + paramOffset, orgPath + "%", String.class, JdbcType.VARCHAR);
-        } else if (orgId != null) {
-            sb.append(" OR (ar.subject_type = 'org_unit' AND ar.subject_id = ?)");
-            cond.addParam("_dp_orgId_" + paramOffset, orgId, Long.class, JdbcType.BIGINT);
-        }
-
-        sb.append("))");
-
-        // Also add orgUnitField direct filter with OR
-        String orgField = sanitizeIdentifier(annotation.orgUnitField());
-        if (orgField != null && orgId != null &&
-                (scope == DataScope.DEPARTMENT || scope == DataScope.DEPARTMENT_AND_BELOW)) {
-            sb.insert(0, "(");
-            if (scope == DataScope.DEPARTMENT_AND_BELOW && orgPath != null) {
-                sb.append(" OR ").append(alias).append(orgField)
-                  .append(" IN (SELECT id FROM org_units WHERE tenant_id = ? AND tree_path LIKE ?)");
-                cond.addParam("_dp_tenantId3_" + paramOffset, tenantId, Long.class, JdbcType.BIGINT);
-                cond.addParam("_dp_orgPath2_" + paramOffset, orgPath + "%", String.class, JdbcType.VARCHAR);
-            } else {
-                sb.append(" OR ").append(alias).append(orgField).append(" = ?");
-                cond.addParam("_dp_orgDirect_" + paramOffset, orgId, Long.class, JdbcType.BIGINT);
-            }
-            sb.append(")");
-        }
-
-        cond.sql = sb.toString();
-        return cond;
-    }
-
-    /**
-     * Build a "membership" condition: the main-table row is the SUBJECT (user) of a
-     * {@code member} relation in {@code access_relations}, and its org membership is the
-     * relation's {@code resource_id}. Used for the {@code users} table whose
-     * {@code primary_org_unit_id} column has been retired in favour of unified relations.
-     *
-     * <p>Emits (scope = DEPARTMENT_AND_BELOW with org path shown):
-     * <pre>
-     * {alias}.id IN (
-     *   SELECT ar.subject_id FROM access_relations ar
-     *   WHERE ar.relation = 'member' AND ar.resource_type = 'org_unit'
-     *     AND ar.subject_type = 'user' AND ar.deleted = 0 AND ar.tenant_id = ?
-     *     AND ar.resource_id IN (
-     *       SELECT id FROM org_units WHERE tenant_id = ? AND tree_path LIKE ? AND deleted = 0))
-     * </pre>
-     * <ul>
-     *   <li>ALL → null (no filter)</li>
-     *   <li>DEPARTMENT → resource_id = ? (single org)</li>
-     *   <li>DEPARTMENT_AND_BELOW → resource_id IN (tree_path subtree)</li>
-     *   <li>SELF → {alias}.id = ? (the user themself)</li>
-     *   <li>CUSTOM → resource_id IN (merged custom org ids), via the membership shell</li>
-     * </ul>
-     */
-    private ParameterizedCondition buildMembershipCondition(
-            DataPermission annotation, DataScope scope,
-            UserContext userContext, Long tenantId,
-            Long orgId, String orgPath, int paramOffset, Set<Long> customOrgIds) {
-
-        String alias = annotation.tableAlias().isEmpty() ? "" : sanitizeIdentifier(annotation.tableAlias()) + ".";
-        // 主表中作为 access_relations.subject_id 的列。默认 id(主表行即用户,如 users);
-        // 若主表是"挂在用户上的档案表"(如 user_student),设为 user_id。
-        String subjectCol = sanitizeIdentifier(
-                annotation.membershipSubjectColumn() == null || annotation.membershipSubjectColumn().isEmpty()
-                        ? "id" : annotation.membershipSubjectColumn());
-        ParameterizedCondition cond = new ParameterizedCondition();
-
-        if (scope == DataScope.ALL) {
-            return null; // No filter for this role
-        }
-
-        if (scope == DataScope.SELF) {
-            cond.sql = alias + subjectCol + " = ?";
-            cond.addParam("_dp_self_" + paramOffset, userContext.getUserId(), Long.class, JdbcType.BIGINT);
-            return cond;
-        }
-
-        // Resolve the org-scope predicate against ar.resource_id.
-        StringBuilder orgPredicate = new StringBuilder();
-        if (scope == DataScope.CUSTOM) {
-            if (customOrgIds == null || customOrgIds.isEmpty()) {
-                cond.sql = "1 = 0"; // CUSTOM with no orgs configured → deny all
-                return cond;
-            }
-            // Granted org ids must be SUBTREE-expanded (org + all descendants) before matching
-            // member tuples. A student is a 'member' of its CLASS org, NOT of the ancestor GRADE
-            // or department. Granting a GRADE must therefore reach the grade's descendant CLASS
-            // members. Mirrors buildCustomCondition's tree_path subtree pattern. org ids are safe
-            // numerics — inline (mirrors buildPluginDimCondition); the subquery binds o.tenant_id.
-            String csv = customOrgIds.stream().map(String::valueOf).collect(Collectors.joining(","));
-            orgPredicate.append("ar.resource_id IN (")
-                    .append("SELECT o.id FROM org_units o ")
-                    .append("JOIN org_units g ON g.id IN (").append(csv).append(") ")
-                    .append("WHERE o.tenant_id = ? AND o.deleted = 0 ")
-                    .append("AND o.tree_path LIKE CONCAT(g.tree_path, '%'))");
-            cond.addParam("_dp_memCustomTenant_" + paramOffset, tenantId, Long.class, JdbcType.BIGINT);
-        } else if (scope == DataScope.DEPARTMENT_AND_BELOW && orgPath != null) {
-            orgPredicate.append("ar.resource_id IN (")
-                    .append("SELECT id FROM org_units WHERE tenant_id = ? AND tree_path LIKE ? AND deleted = 0)");
-            cond.addParam("_dp_memTenant_" + paramOffset, tenantId, Long.class, JdbcType.BIGINT);
-            cond.addParam("_dp_memPath_" + paramOffset, orgPath + "%", String.class, JdbcType.VARCHAR);
-        } else if (scope == DataScope.MANAGED_ORGS) {
-            // 我管理的组织: 成员 tuple 的 resource_id ∈ { 我持 admin 关系的组织 }
-            orgPredicate.append("ar.resource_id IN (")
-                    .append("SELECT mar.resource_id FROM access_relations mar ")
-                    .append("WHERE mar.deleted = 0 AND mar.subject_type = 'user' AND mar.subject_id = ? ")
-                    .append("AND mar.resource_type = 'org_unit' AND mar.relation = 'admin' ")
-                    .append("AND (mar.valid_to IS NULL OR mar.valid_to > NOW()))");
-            cond.addParam("_dp_memMgr_" + paramOffset, userContext.getUserId(), Long.class, JdbcType.BIGINT);
-        } else if (scope == DataScope.MANAGED_ORGS_AND_BELOW) {
-            // 我管理的组织 + 子树
-            orgPredicate.append("ar.resource_id IN (")
-                    .append("SELECT o.id FROM org_units o ")
-                    .append("JOIN org_units mo ON o.tree_path LIKE CONCAT(mo.tree_path, '%') ")
-                    .append("JOIN access_relations mar ON mar.resource_id = mo.id ")
-                    .append("WHERE o.tenant_id = ? AND mar.deleted = 0 AND mar.subject_type = 'user' ")
-                    .append("AND mar.subject_id = ? AND mar.resource_type = 'org_unit' AND mar.relation = 'admin' ")
-                    .append("AND (mar.valid_to IS NULL OR mar.valid_to > NOW()))");
-            cond.addParam("_dp_memMgrTenant_" + paramOffset, tenantId, Long.class, JdbcType.BIGINT);
-            cond.addParam("_dp_memMgr_" + paramOffset, userContext.getUserId(), Long.class, JdbcType.BIGINT);
-        } else if (orgId != null) {
-            // DEPARTMENT, or DEPARTMENT_AND_BELOW without a known path → single org
-            orgPredicate.append("ar.resource_id = ?");
-            cond.addParam("_dp_memOrg_" + paramOffset, orgId, Long.class, JdbcType.BIGINT);
-        } else {
-            // No org root to anchor on → deny all (avoid leaking the full table).
-            cond.sql = "1 = 0";
-            return cond;
-        }
-
-        // The membership param (tenant for the ar row) is bound BEFORE the org predicate params
-        // in positional order, so the SQL string must list them in that same order. We therefore
-        // build the SQL after computing the predicate but bind the ar.tenant_id param FIRST.
-        // To keep positional binding correct, prepend the tenant param to the list.
-        AdditionalParam tenantParam = new AdditionalParam();
-        tenantParam.property = "_dp_memArTenant_" + paramOffset;
-        tenantParam.value = tenantId;
-        tenantParam.javaType = Long.class;
-        tenantParam.jdbcType = JdbcType.BIGINT;
-        cond.params.add(0, tenantParam);
-
-        cond.sql = alias + subjectCol + " IN ("
-                + "SELECT ar.subject_id FROM access_relations ar "
-                + "WHERE ar.relation = 'member' AND ar.resource_type = 'org_unit' "
-                + "AND ar.subject_type = 'user' AND ar.deleted = 0 AND ar.tenant_id = ? "
-                + "AND " + orgPredicate + ")";
-        return cond;
-    }
-
-    /**
-     * Legacy condition builder: used when no scopedRoles are present (backward compatibility).
-     */
-    private ParameterizedCondition buildLegacyCondition(
+    private ScopeCondition buildLegacyCondition(
             DataPermission annotation, DataModulePO moduleConfig,
-            UserContext userContext, Long tenantId) {
+            UserContext userContext, Long tenantId, String actionClass) {
 
         String moduleCode = annotation.module();
-        MergedDataScope mergedScope = dataPermissionPolicyService.getMergedScope(
-                tenantId, userContext.getRoleIds(), moduleCode);
+        ResourceScopeMeta meta = buildMeta(annotation, moduleConfig);
 
-        if (mergedScope == null || mergedScope.isAllScope()) {
-            return null;
+        // 无角色 → 单个 SELF 规格 (保留旧 getMergedScope(empty)→SELF 的"仅本人"收窄,
+        // 不放宽为全量)。真实请求几乎不会落到此处 (无 scopedRoles 且无 roleIds)。
+        List<Long> roleIds = userContext.getRoleIds();
+        if (roleIds == null || roleIds.isEmpty()) {
+            roleIds = Collections.singletonList(-1L); // 占位, spec 强制 SELF 见下
         }
 
-        // Membership path (see buildMembershipCondition): filter users by their 'member'
-        // relation's org scope rather than a column on the users table.
-        if (annotation.viaMembership()) {
-            Set<Long> customOrgIds = mergedScope.getEffectiveScope() == DataScope.CUSTOM
-                    ? mergedScope.getOrgUnitIds() : null;
-            return buildMembershipCondition(annotation, mergedScope.getEffectiveScope(),
-                    userContext, tenantId, userContext.getOrgUnitId(), userContext.getOrgUnitPath(), 0,
-                    customOrgIds);
+        List<String> roleSqls = new ArrayList<>();
+        ScopeCondition combined = new ScopeCondition();
+        int globalParamIdx = 0;
+        boolean noRealRoles = userContext.getRoleIds() == null || userContext.getRoleIds().isEmpty();
+
+        for (Long roleId : roleIds) {
+            ScopeSpec spec = noRealRoles
+                    ? ScopePreset.SELF.toSpec()
+                    : dataPermissionPolicyService.getScopeSpec(tenantId, roleId, moduleCode, actionClass);
+            if (spec == null) {
+                spec = ScopePreset.SELF.toSpec();
+            }
+
+            // legacy 无 per-role scope → 锚点一律用户主组织; ALL-unbounded → 整查询放行。
+            if (spec.isOrgUnbounded()
+                    && !spec.hasTypeFilter() && !spec.hasRelInclude() && !spec.hasRelExclude()) {
+                return null;
+            }
+
+            ResourceScopeMeta roleMeta = meta;
+            if (OrgAnchor.PLUGIN_DIM.equals(spec.getOrgAnchor())
+                    && (meta.resourceType() == null || meta.resourceType().isEmpty())) {
+                roleMeta = withResourceType(meta, moduleCode);
+            }
+
+            ScopeCondition roleCond = scopeEvaluator.toSqlCondition(
+                    spec, roleMeta, userContext,
+                    userContext.getOrgUnitId(), userContext.getOrgUnitPath(), tenantId, globalParamIdx);
+
+            if (roleCond != null && !roleCond.sql.isEmpty()) {
+                roleSqls.add(roleCond.sql);
+                combined.params.addAll(roleCond.params);
+                globalParamIdx += roleCond.params.size();
+            }
         }
+
+        if (roleSqls.isEmpty()) {
+            combined.sql = "1 = 0";
+            return combined;
+        }
+        combined.sql = roleSqls.size() == 1 ? roleSqls.get(0) : "(" + String.join(" OR ", roleSqls) + ")";
+        return combined;
+    }
+
+    /**
+     * 从 {@code @DataPermission} 注解 ⊕ {@code moduleConfig} 构建 {@link ResourceScopeMeta}。
+     * 合并规则与旧 build* 一致 (moduleConfig 优先, 注解兜底):
+     * <ul>
+     *   <li>tableAlias —— 注解 (sanitize)。</li>
+     *   <li>orgUnitField —— moduleConfig.orgUnitField ?? annotation.orgUnitField (sanitize)。</li>
+     *   <li>creatorField —— moduleConfig.creatorField ?? annotation.creatorField (sanitize)。</li>
+     *   <li>resourceType —— annotation.resourceType (非空) ?? moduleConfig.resourceType。
+     *       <b>不</b>兜底 moduleCode — 核心路径 hasResourceType() 选择必须与旧 buildSingleRoleCondition
+     *       一致 (空→org-field, 非空→access_relation)。PLUGIN_DIM 的 moduleCode 兜底由调用方在
+     *       per-role 切换 meta 变体 ({@link #withResourceType}) 实现, 不污染此处。</li>
+     *   <li>viaMembership / membershipSubjectColumn —— 注解。</li>
+     *   <li>typeField —— moduleConfig.typeField (sanitize; 为空则轴③禁用)。</li>
+     * </ul>
+     */
+    private ResourceScopeMeta buildMeta(DataPermission annotation, DataModulePO moduleConfig) {
+        String tableAlias = annotation.tableAlias().isEmpty() ? "" : sanitizeIdentifier(annotation.tableAlias());
+        String orgField = sanitizeIdentifier(
+                moduleConfig.getOrgUnitField() != null ? moduleConfig.getOrgUnitField() : annotation.orgUnitField());
+        String creatorField = sanitizeIdentifier(
+                moduleConfig.getCreatorField() != null ? moduleConfig.getCreatorField() : annotation.creatorField());
 
         String resourceType = annotation.resourceType();
         if (resourceType.isEmpty() && moduleConfig.getResourceType() != null) {
             resourceType = moduleConfig.getResourceType();
         }
 
-        if (!resourceType.isEmpty()) {
-            return buildAccessRelationCondition(resourceType, annotation, mergedScope.getEffectiveScope(),
-                    userContext, tenantId, userContext.getOrgUnitId(), userContext.getOrgUnitPath(), 0);
-        }
+        String membershipSubjectColumn = annotation.membershipSubjectColumn() == null
+                ? null : sanitizeIdentifier(annotation.membershipSubjectColumn());
+        String typeField = sanitizeIdentifier(moduleConfig.getTypeField());
 
-        return buildLegacyOrgFilterCondition(mergedScope, annotation, moduleConfig, userContext, tenantId);
+        return new ResourceScopeMeta(
+                tableAlias, orgField, creatorField, resourceType,
+                annotation.viaMembership(), membershipSubjectColumn, typeField);
     }
 
-    /**
-     * Legacy org filter condition (unchanged from V6).
-     */
-    private ParameterizedCondition buildLegacyOrgFilterCondition(
-            MergedDataScope mergedScope, DataPermission annotation,
-            DataModulePO moduleConfig, UserContext userContext, Long tenantId) {
-
-        DataScope scope = mergedScope.getEffectiveScope();
-        String alias = annotation.tableAlias().isEmpty() ? "" : sanitizeIdentifier(annotation.tableAlias()) + ".";
-        ParameterizedCondition cond = new ParameterizedCondition();
-
-        String orgField = sanitizeIdentifier(
-                moduleConfig.getOrgUnitField() != null ? moduleConfig.getOrgUnitField() : annotation.orgUnitField());
-        String creatorField = sanitizeIdentifier(
-                moduleConfig.getCreatorField() != null ? moduleConfig.getCreatorField() : annotation.creatorField());
-
-        switch (scope) {
-            case DEPARTMENT:
-                cond.sql = alias + orgField + " = ?";
-                cond.addParam("_dp_orgId", userContext.getOrgUnitId(), Long.class, JdbcType.BIGINT);
-                break;
-
-            case DEPARTMENT_AND_BELOW:
-                if (userContext.getOrgUnitPath() != null) {
-                    cond.sql = "(" + alias + orgField + " IN (" +
-                            "SELECT id FROM org_units WHERE tenant_id = ? AND tree_path LIKE ?))";
-                    cond.addParam("_dp_tenantId", tenantId, Long.class, JdbcType.BIGINT);
-                    cond.addParam("_dp_orgPath", userContext.getOrgUnitPath() + "%", String.class, JdbcType.VARCHAR);
-                } else {
-                    cond.sql = alias + orgField + " = ?";
-                    cond.addParam("_dp_orgId", userContext.getOrgUnitId(), Long.class, JdbcType.BIGINT);
-                }
-                break;
-
-            case CUSTOM:
-                cond = buildCustomCondition(mergedScope, alias, orgField, tenantId, 0);
-                break;
-
-            case SELF:
-                cond.sql = alias + creatorField + " = ?";
-                cond.addParam("_dp_creatorId", userContext.getUserId(), Long.class, JdbcType.BIGINT);
-                break;
-
-            default:
-                return null;
-        }
-
-        // If scope != SELF but hasSelfScope, OR with creator condition
-        if (mergedScope.isHasSelfScope() && scope != DataScope.SELF && !cond.sql.isEmpty()) {
-            cond.sql = "(" + cond.sql + " OR " + alias + creatorField + " = ?)";
-            cond.addParam("_dp_selfCreator", userContext.getUserId(), Long.class, JdbcType.BIGINT);
-        }
-
-        return cond;
-    }
-
-    /**
-     * Build CUSTOM scope condition (parameterized)
-     */
-    private ParameterizedCondition buildCustomCondition(
-            MergedDataScope mergedScope, String alias, String orgField, Long tenantId, int baseParamOffset) {
-
-        ParameterizedCondition cond = new ParameterizedCondition();
-        StringBuilder sb = new StringBuilder();
-        boolean hasCondition = false;
-        int paramIdx = baseParamOffset;
-
-        Set<Long> orgUnitIds = mergedScope.getOrgUnitIds();
-        if (!orgUnitIds.isEmpty()) {
-            Set<Long> withChildren = mergedScope.getOrgUnitsWithChildren();
-            Set<Long> withoutChildren = orgUnitIds.stream()
-                    .filter(id -> !withChildren.contains(id))
-                    .collect(Collectors.toSet());
-
-            if (!withoutChildren.isEmpty()) {
-                String placeholders = withoutChildren.stream().map(id -> "?").collect(Collectors.joining(","));
-                sb.append(alias).append(orgField).append(" IN (").append(placeholders).append(")");
-                for (Long id : withoutChildren) {
-                    cond.addParam("_dp_customOrg_" + paramIdx++, id, Long.class, JdbcType.BIGINT);
-                }
-                hasCondition = true;
-            }
-
-            for (Long orgId : withChildren) {
-                if (hasCondition) sb.append(" OR ");
-                sb.append(alias).append(orgField).append(" IN (")
-                  .append("SELECT id FROM org_units WHERE tenant_id = ? AND tree_path LIKE (")
-                  .append("SELECT CONCAT(tree_path, '%') FROM org_units WHERE id = ?))");
-                cond.addParam("_dp_tenantOrg_" + paramIdx, tenantId, Long.class, JdbcType.BIGINT);
-                cond.addParam("_dp_childOrg_" + paramIdx, orgId, Long.class, JdbcType.BIGINT);
-                paramIdx++;
-                hasCondition = true;
-            }
-        }
-
-        if (!hasCondition) {
-            cond.sql = "1 = 0";
-            return cond;
-        }
-
-        cond.sql = "(" + sb + ")";
-        return cond;
+    /** 复制一个 meta, 仅替换 resourceType (供 PLUGIN_DIM resolve 注入 moduleCode 兜底)。 */
+    private ResourceScopeMeta withResourceType(ResourceScopeMeta base, String resourceType) {
+        return new ResourceScopeMeta(
+                base.tableAlias(), base.orgUnitField(), base.creatorField(), resourceType,
+                base.viaMembership(), base.membershipSubjectColumn(), base.typeField());
     }
 
     /**
@@ -949,29 +510,5 @@ public class DataPermissionInterceptor implements Interceptor {
 
     @Override
     public void setProperties(Properties properties) {
-    }
-
-    /**
-     * Holds a parameterized SQL condition and its parameters
-     */
-    private static class ParameterizedCondition {
-        String sql = "";
-        final List<AdditionalParam> params = new ArrayList<>();
-
-        void addParam(String property, Object value, Class<?> javaType, JdbcType jdbcType) {
-            AdditionalParam p = new AdditionalParam();
-            p.property = property;
-            p.value = value;
-            p.javaType = javaType;
-            p.jdbcType = jdbcType;
-            params.add(p);
-        }
-    }
-
-    private static class AdditionalParam {
-        String property;
-        Object value;
-        Class<?> javaType;
-        JdbcType jdbcType;
     }
 }

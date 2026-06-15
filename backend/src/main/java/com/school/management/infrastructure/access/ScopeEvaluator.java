@@ -50,16 +50,26 @@ public class ScopeEvaluator {
     /**
      * compose 一个 spec → 一个 ScopeCondition。
      *
-     * @param spec        三轴数据范围规格
-     * @param meta        资源侧元数据 (别名/org 字段/creator/resourceType/viaMembership/...)
-     * @param ctx         当前用户上下文
-     * @param tenantId    租户
-     * @param paramOffset 参数名唯一化偏移 (多角色时每角色递增)
+     * <p><b>per-role effective org (T7 关键)</b>: 锚点 org 由调用方<b>显式</b>传入
+     * ({@code effectiveOrgId} / {@code effectiveOrgPath}), 而非从 {@code ctx} 直接读取。
+     * 这保留 interceptor 旧 {@code buildScopedCondition} 的语义: ORG_UNIT scope-type 的角色用
+     * 该角色的 scope org 作锚点, 其它 (ALL scope-type) 用用户主组织。PRIMARY_ORG 解析与
+     * access_relation 的 org-subject-OR / orgField-direct-OR 一律消费这两个参数。
+     * SELF / creator / RELATION / plugin-dim self 仍用 {@code ctx.getUserId()} (与角色 org 无关)。
+     *
+     * @param spec            三轴数据范围规格
+     * @param meta            资源侧元数据 (别名/org 字段/creator/resourceType/viaMembership/...)
+     * @param ctx             当前用户上下文 (仅用于 userId 与 plugin-dim resolve)
+     * @param effectiveOrgId  该角色的有效锚点 org id (ORG_UNIT scope → 角色 scope id; 否则 ctx 主组织)
+     * @param effectiveOrgPath该角色的有效锚点 org path (同上)
+     * @param tenantId        租户
+     * @param paramOffset     参数名唯一化偏移 (多角色时每角色递增)
      */
     public ScopeCondition toSqlCondition(ScopeSpec spec, ResourceScopeMeta meta,
-                                         UserContext ctx, Long tenantId, int paramOffset) {
+                                         UserContext ctx, Long effectiveOrgId, String effectiveOrgPath,
+                                         Long tenantId, int paramOffset) {
         // 轴① 解析 org id 集合 (单一真相)
-        OrgSet orgSet = resolveOrgSet(spec, meta, ctx, tenantId, paramOffset);
+        OrgSet orgSet = resolveOrgSet(spec, meta, ctx, effectiveOrgId, effectiveOrgPath, tenantId, paramOffset);
 
         // PLUGIN_DIM 的 deny / inline-id / self-degrade 是终态, 直接由 resolveOrgSet 产出完整 cond
         if (orgSet.terminalCond != null) {
@@ -68,7 +78,7 @@ public class ScopeEvaluator {
         }
 
         // 轴① 消费: 按资源路径生成 subjectSelect 谓词
-        ScopeCondition cond = subjectSelect(orgSet, spec, meta, ctx, tenantId, paramOffset);
+        ScopeCondition cond = subjectSelect(orgSet, spec, meta, ctx, effectiveOrgId, effectiveOrgPath, tenantId, paramOffset);
 
         // 轴② subject-relation filter (仅 membership 资源 + include/exclude 非空)
         cond = subjectRelFilter(cond, orgSet, spec, meta, ctx, tenantId, paramOffset);
@@ -106,7 +116,8 @@ public class ScopeEvaluator {
     }
 
     private OrgSet resolveOrgSet(ScopeSpec spec, ResourceScopeMeta meta,
-                                 UserContext ctx, Long tenantId, int paramOffset) {
+                                 UserContext ctx, Long effectiveOrgId, String effectiveOrgPath,
+                                 Long tenantId, int paramOffset) {
         OrgSet os = new OrgSet();
         OrgAnchor anchor = spec.getOrgAnchor();
         if (anchor == null) {
@@ -125,8 +136,9 @@ public class ScopeEvaluator {
                 return os;
 
             case PRIMARY_ORG: {
-                Long orgId = ctx.getOrgUnitId();
-                String orgPath = ctx.getOrgUnitPath();
+                // per-role effective org (T7): 不再读 ctx 主组织, 用调用方传入的有效锚点。
+                Long orgId = effectiveOrgId;
+                String orgPath = effectiveOrgPath;
                 if (spec.isIncludeSubtree() && orgPath != null) {
                     // 端口自 DEPARTMENT_AND_BELOW
                     os.predicate = (column, cond, tid, off) -> {
@@ -273,7 +285,8 @@ public class ScopeEvaluator {
     // ====================================================================
 
     private ScopeCondition subjectSelect(OrgSet orgSet, ScopeSpec spec, ResourceScopeMeta meta,
-                                         UserContext ctx, Long tenantId, int paramOffset) {
+                                         UserContext ctx, Long effectiveOrgId, String effectiveOrgPath,
+                                         Long tenantId, int paramOffset) {
         if (orgSet.unbounded) {
             return new ScopeCondition(); // ALL → 空 (无过滤)
         }
@@ -282,7 +295,7 @@ public class ScopeEvaluator {
             return membershipSelect(orgSet, spec, meta, ctx, tenantId, paramOffset);
         }
         if (meta.hasResourceType()) {
-            return accessRelationSelect(orgSet, spec, meta, ctx, tenantId, paramOffset);
+            return accessRelationSelect(orgSet, spec, meta, ctx, effectiveOrgId, effectiveOrgPath, tenantId, paramOffset);
         }
         return orgFieldSelect(orgSet, meta, ctx, tenantId, paramOffset);
     }
@@ -382,15 +395,17 @@ public class ScopeEvaluator {
      * 路径分流), 这里保持一致仍用 ctx org —— 不过度设计 (见类注释末)。
      */
     private ScopeCondition accessRelationSelect(OrgSet orgSet, ScopeSpec spec, ResourceScopeMeta meta,
-                                                UserContext ctx, Long tenantId, int paramOffset) {
+                                                UserContext ctx, Long effectiveOrgId, String effectiveOrgPath,
+                                                Long tenantId, int paramOffset) {
         String alias = meta.aliasPrefix();
         String resourceType = meta.resourceType();
         ScopeCondition cond = new ScopeCondition();
 
-        // 锚点 org = interceptor caller 口径 (该角色的有效 org; ALL-scope-type 用主组织)。
-        // SELF/PRIMARY_ORG/ALL/(CUSTOM_ORG 不被走到) 一律取 ctx 主组织, 与 interceptor 一致。
-        Long orgId = ctx.getOrgUnitId();
-        String orgPath = ctx.getOrgUnitPath();
+        // 锚点 org = interceptor caller 口径 (该角色的有效 org; ORG_UNIT scope → 角色 scope org,
+        // 否则用户主组织)。SELF/PRIMARY_ORG/ALL/(CUSTOM_ORG 不被走到) 一律取调用方传入的有效锚点,
+        // 与 interceptor buildScopedCondition 的 per-role effective org 一致。
+        Long orgId = effectiveOrgId;
+        String orgPath = effectiveOrgPath;
 
         StringBuilder sb = new StringBuilder();
         sb.append(alias).append("id IN (")

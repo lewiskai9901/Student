@@ -1,6 +1,8 @@
 package com.school.management.infrastructure.access;
 
 import com.school.management.application.access.DynamicModuleService;
+import com.school.management.domain.access.model.OrgAnchor;
+import com.school.management.domain.access.model.valueobject.ScopeSpec;
 import com.school.management.infrastructure.persistence.access.DataModulePO;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -60,9 +62,15 @@ class DataPermissionInterceptorPluginDimTest {
         interceptor = new DataPermissionInterceptor();
         ReflectionTestUtils.setField(interceptor, "dynamicModuleService", dynamicModuleService);
         ReflectionTestUtils.setField(interceptor, "dataPermissionPolicyService", dataPermissionPolicyService);
-        ReflectionTestUtils.setField(interceptor, "pluginDataScopeRouter", pluginDataScopeRouter);
+        // T7: 插件维度 compose 已下沉 ScopeEvaluator (持 router); 拦截器只编排。
+        ReflectionTestUtils.setField(interceptor, "scopeEvaluator", new ScopeEvaluator(pluginDataScopeRouter));
         UserContextHolder.clear();
         UserContextHolder.enableDataPermission();
+    }
+
+    /** PLUGIN_DIM 规格 (anchorParam = dimCode), 替代旧 getScopeCodeForRole 返回原始码。 */
+    private ScopeSpec pluginDimSpec(String dimCode) {
+        return ScopeSpec.builder().orgAnchor(OrgAnchor.PLUGIN_DIM).anchorParam(dimCode).build();
     }
 
     @AfterEach
@@ -107,7 +115,7 @@ class DataPermissionInterceptorPluginDimTest {
 
     private Object build(DataPermission ann, DataModulePO module, UserContext ctx) {
         return ReflectionTestUtils.invokeMethod(interceptor, "buildScopedCondition",
-                ann, module, ctx, 1L);
+                ann, module, ctx, 1L, "READ");
     }
 
     private String sqlOf(Object cond) {
@@ -118,8 +126,8 @@ class DataPermissionInterceptorPluginDimTest {
     @DisplayName("resourceType 空时必须兜底到 moduleCode 传给 resolver (而非空串)")
     void pluginDim_fallsBackToModuleCode_whenResourceTypeBlank() {
         UserContext ctx = classTeacherCtx(7L);
-        when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(7L), anyString()))
-                .thenReturn("BY_CLASS");
+        when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(7L), anyString(), anyString()))
+                .thenReturn(pluginDimSpec("BY_CLASS"));
         when(pluginDataScopeRouter.resolve(eq("BY_CLASS"), eq(42L), anyString()))
                 .thenReturn(List.of(3001L, 3002L));
 
@@ -133,8 +141,8 @@ class DataPermissionInterceptorPluginDimTest {
     @DisplayName("resolver 命中 → s.id IN (ids)")
     void pluginDim_resolved_filtersByIdList() {
         UserContext ctx = classTeacherCtx(7L);
-        when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(7L), anyString()))
-                .thenReturn("BY_CLASS");
+        when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(7L), anyString(), anyString()))
+                .thenReturn(pluginDimSpec("BY_CLASS"));
         when(pluginDataScopeRouter.resolve(eq("BY_CLASS"), eq(42L), anyString()))
                 .thenReturn(List.of(3001L, 3002L));
 
@@ -147,8 +155,8 @@ class DataPermissionInterceptorPluginDimTest {
     @DisplayName("resolver 降级 SELF + viaMembership → s.user_id = ? (不得拼已 DROP 的 created_by)")
     void pluginDim_degradeSelf_respectsMembershipSubjectColumn() {
         UserContext ctx = classTeacherCtx(7L);
-        when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(7L), anyString()))
-                .thenReturn("BY_CLASS");
+        when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(7L), anyString(), anyString()))
+                .thenReturn(pluginDimSpec("BY_CLASS"));
         // resolver 不可用 → 降级 SELF
         when(pluginDataScopeRouter.resolve(eq("BY_CLASS"), eq(42L), anyString()))
                 .thenReturn(null);
@@ -168,8 +176,8 @@ class DataPermissionInterceptorPluginDimTest {
     @DisplayName("resolver 降级 SELF + 非 membership 表 → 仍走 creatorField (行为不回归)")
     void pluginDim_degradeSelf_nonMembership_usesCreatorField() {
         UserContext ctx = classTeacherCtx(7L);
-        when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(7L), anyString()))
-                .thenReturn("BY_CLASS");
+        when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(7L), anyString(), anyString()))
+                .thenReturn(pluginDimSpec("BY_CLASS"));
         when(pluginDataScopeRouter.resolve(eq("BY_CLASS"), eq(42L), anyString()))
                 .thenReturn(null);
 

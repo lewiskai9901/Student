@@ -1,9 +1,9 @@
 package com.school.management.infrastructure.access;
 
 import com.school.management.application.access.DynamicModuleService;
-import com.school.management.domain.access.model.DataScope;
+import com.school.management.domain.access.model.OrgAnchor;
 import com.school.management.domain.access.model.ScopeType;
-import com.school.management.domain.access.model.valueobject.MergedDataScope;
+import com.school.management.domain.access.model.valueobject.ScopeSpec;
 import com.school.management.infrastructure.persistence.access.DataModulePO;
 import org.apache.ibatis.executor.statement.StatementHandler;
 import org.apache.ibatis.mapping.BoundSql;
@@ -49,12 +49,17 @@ import static org.mockito.Mockito.when;
  *       {@code sanitizeIdentifier}, {@code countPlaceholdersAfterInjection}) via reflection.</li>
  *   <li>Annotation resolution ({@code getDataPermissionAnnotation} /
  *       {@code resolveDataPermissionAnnotation}) against real test mapper classes.</li>
- *   <li>Scope-condition builders ({@code buildScopedCondition}, {@code buildSingleRoleCondition},
- *       {@code buildAccessRelationCondition}, {@code buildPluginDimCondition},
- *       {@code buildCustomCondition}, {@code buildLegacyOrgFilterCondition}) with real
- *       {@link UserContext} input for ALL / DEPARTMENT / DEPARTMENT_AND_BELOW / SELF / CUSTOM.</li>
+ *   <li><b>T7 委托行为</b> ({@code buildScopedCondition}): ALL 短路→null / 多角色 OR 合并 /
+ *       无配置→SELF / 全 empty→1=0 / 委托 {@link ScopeEvaluator} 各资源路径。SQL 片段的逐字节
+ *       等价由 {@code ScopeEvaluatorTest} 保证, 此处只验证拦截器自有的编排逻辑。</li>
  *   <li>The {@code intercept(Invocation)} early-return branches.</li>
  * </ul>
+ *
+ * <p><b>T7 注</b>: 旧 {@code buildSingleRoleCondition / buildMembershipCondition /
+ * buildAccessRelationCondition / buildPluginDimCondition / buildCustomCondition /
+ * buildLegacyOrgFilterCondition} 已删除并迁移到 {@link ScopeEvaluator} (compose 单一真相源),
+ * 它们的精确 SQL 断言现位于 {@code ScopeEvaluatorTest}。本测试用<b>真实</b> {@link ScopeEvaluator}
+ * (router 用 mock) 跑委托路径, 用 mock {@code getScopeSpec} 喂规格。
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -70,15 +75,22 @@ class DataPermissionInterceptorTest {
     private PluginDataScopeRouter pluginDataScopeRouter;
 
     private DataPermissionInterceptor interceptor;
+    private ScopeEvaluator scopeEvaluator;
 
     @BeforeEach
     void setUp() {
         interceptor = new DataPermissionInterceptor();
+        scopeEvaluator = new ScopeEvaluator(pluginDataScopeRouter);
         ReflectionTestUtils.setField(interceptor, "dynamicModuleService", dynamicModuleService);
         ReflectionTestUtils.setField(interceptor, "dataPermissionPolicyService", dataPermissionPolicyService);
-        ReflectionTestUtils.setField(interceptor, "pluginDataScopeRouter", pluginDataScopeRouter);
+        ReflectionTestUtils.setField(interceptor, "scopeEvaluator", scopeEvaluator);
         UserContextHolder.clear();
         UserContextHolder.enableDataPermission();
+    }
+
+    // ── ScopeSpec 工厂 (T7): 用 OrgAnchor 直接构造规格, 替代旧 DataScope 码 ──
+    private ScopeSpec specOf(OrgAnchor anchor, boolean subtree) {
+        return ScopeSpec.builder().orgAnchor(anchor).includeSubtree(subtree).build();
     }
 
     @AfterEach
@@ -386,121 +398,117 @@ class DataPermissionInterceptorTest {
     }
 
     // ==================================================================
-    // buildScopedCondition (via reflection, with real UserContext)
+    // buildScopedCondition — T7 委托 ScopeEvaluator 的编排逻辑
     // ==================================================================
     @Nested
-    @DisplayName("buildScopedCondition — 按 scoped roles 生成过滤条件")
+    @DisplayName("buildScopedCondition — 委托 ScopeEvaluator + 多角色编排")
     class BuildScopedCondition {
 
-        private Object build(DataPermission ann, DataModulePO module, UserContext ctx, Long tenantId) {
+        private ScopeCondition build(DataPermission ann, DataModulePO module, UserContext ctx, Long tenantId) {
             return ReflectionTestUtils.invokeMethod(interceptor, "buildScopedCondition",
-                    ann, module, ctx, tenantId);
+                    ann, module, ctx, tenantId, "READ");
         }
 
-        private String sqlOf(Object cond) {
-            return (String) ReflectionTestUtils.getField(cond, "sql");
-        }
-
-        @SuppressWarnings("unchecked")
-        private List<Object> paramsOf(Object cond) {
-            return (List<Object>) ReflectionTestUtils.getField(cond, "params");
+        private String sqlOf(ScopeCondition cond) {
+            return cond.sql;
         }
 
         @Test
-        @DisplayName("ALL scope + ALL DataScope → 短路返回 null (不过滤)")
+        @DisplayName("ALL scopeType + ALL anchor (无类型/关系过滤) → 短路返回 null (不过滤)")
         void allScopeShortCircuits() {
             UserContext ctx = userWithScopedRoles(List.of(scopedRole(1L, ScopeType.ALL, 0L, null)));
-            when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(1L), anyString()))
-                    .thenReturn(DataScope.ALL.getCode());
+            when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(1L), anyString(), anyString()))
+                    .thenReturn(specOf(OrgAnchor.ALL, false));
 
-            Object cond = build(stubAnnotation(), moduleConfig(true, ""), ctx, 1L);
+            ScopeCondition cond = build(stubAnnotation(), moduleConfig(true, ""), ctx, 1L);
             assertThat(cond).isNull();
         }
 
         @Test
-        @DisplayName("DEPARTMENT scope → '别名.org字段 = ?' 单参数")
+        @DisplayName("DEPARTMENT (PRIMARY_ORG 无子树, ORG_UNIT scope) → '别名.org字段 = ?' 用角色 scope org")
         void departmentScopeBuildsEqualsCondition() {
             UserContext ctx = userWithScopedRoles(List.of(scopedRole(2L, ScopeType.ORG_UNIT, 200L, "1.10.200.")));
-            when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(2L), anyString()))
-                    .thenReturn(DataScope.DEPARTMENT.getCode());
+            when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(2L), anyString(), anyString()))
+                    .thenReturn(specOf(OrgAnchor.PRIMARY_ORG, false));
 
-            Object cond = build(stubAnnotation(), moduleConfig(true, ""), ctx, 1L);
+            ScopeCondition cond = build(stubAnnotation(), moduleConfig(true, ""), ctx, 1L);
             assertThat(cond).isNotNull();
             assertThat(sqlOf(cond)).isEqualTo("s.org_unit_id = ?");
-            assertThat(paramsOf(cond)).hasSize(1);
+            assertThat(cond.params).hasSize(1);
+            // per-role effective org: ORG_UNIT scope → 角色 scope id 200 (非用户主组织 100)
+            assertThat(cond.params.get(0).value).isEqualTo(200L);
         }
 
         @Test
-        @DisplayName("DEPARTMENT_AND_BELOW scope → tree_path LIKE 子查询")
+        @DisplayName("DEPARTMENT_AND_BELOW (PRIMARY_ORG + 子树) → tree_path LIKE 子查询")
         void departmentAndBelowBuildsTreePathSubquery() {
             UserContext ctx = userWithScopedRoles(List.of(scopedRole(3L, ScopeType.ORG_UNIT, 300L, "1.10.300.")));
-            when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(3L), anyString()))
-                    .thenReturn(DataScope.DEPARTMENT_AND_BELOW.getCode());
+            when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(3L), anyString(), anyString()))
+                    .thenReturn(specOf(OrgAnchor.PRIMARY_ORG, true));
 
-            Object cond = build(stubAnnotation(), moduleConfig(true, ""), ctx, 1L);
+            ScopeCondition cond = build(stubAnnotation(), moduleConfig(true, ""), ctx, 1L);
             assertThat(cond).isNotNull();
             assertThat(sqlOf(cond)).contains("org_units").contains("tree_path LIKE ?");
-            assertThat(paramsOf(cond)).hasSize(2);
+            assertThat(cond.params).hasSize(2);
+            // 角色 scope path 1.10.300. (非用户主组织 path)
+            assertThat(cond.params.get(1).value).isEqualTo("1.10.300.%");
         }
 
         @Test
-        @DisplayName("SELF scope → 'creator 字段 = ?' 当前用户")
+        @DisplayName("SELF anchor → 'creator 字段 = ?' 当前用户")
         void selfScopeBuildsCreatorCondition() {
             UserContext ctx = userWithScopedRoles(List.of(scopedRole(4L, ScopeType.ALL, 0L, null)));
-            when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(4L), anyString()))
-                    .thenReturn(DataScope.SELF.getCode());
+            when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(4L), anyString(), anyString()))
+                    .thenReturn(specOf(OrgAnchor.SELF, false));
 
-            Object cond = build(stubAnnotation(), moduleConfig(true, ""), ctx, 1L);
+            ScopeCondition cond = build(stubAnnotation(), moduleConfig(true, ""), ctx, 1L);
             assertThat(cond).isNotNull();
             assertThat(sqlOf(cond)).isEqualTo("s.created_by = ?");
-            assertThat(paramsOf(cond)).hasSize(1);
+            assertThat(cond.params).hasSize(1);
         }
 
         @Test
-        @DisplayName("角色未配置 scope (返回 null) → 默认降级 SELF")
+        @DisplayName("角色无配置 (getScopeSpec 返回 null) → 默认降级 SELF")
         void unconfiguredRoleDefaultsToSelf() {
             UserContext ctx = userWithScopedRoles(List.of(scopedRole(5L, ScopeType.ALL, 0L, null)));
-            when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(5L), anyString()))
+            when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(5L), anyString(), anyString()))
                     .thenReturn(null);
 
-            Object cond = build(stubAnnotation(), moduleConfig(true, ""), ctx, 1L);
+            ScopeCondition cond = build(stubAnnotation(), moduleConfig(true, ""), ctx, 1L);
             assertThat(cond).isNotNull();
             assertThat(sqlOf(cond)).isEqualTo("s.created_by = ?");
         }
 
         @Test
-        @DisplayName("CUSTOM scope → 调 getMergedScope 并用真实 roleId (非 paramOffset)")
-        void customScopeUsesRealRoleId() {
+        @DisplayName("CUSTOM_ORG → 委托 evaluator emit tree_path 子查询 (subtree)")
+        void customScopeDelegatesToEvaluator() {
             UserContext ctx = userWithScopedRoles(List.of(scopedRole(7L, ScopeType.ALL, 0L, null)));
-            when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(7L), anyString()))
-                    .thenReturn(DataScope.CUSTOM.getCode());
-
-            MergedDataScope merged = MergedDataScope.builder()
-                    .moduleCode("student")
-                    .effectiveScope(DataScope.CUSTOM)
+            ScopeSpec spec = ScopeSpec.builder()
+                    .orgAnchor(OrgAnchor.CUSTOM_ORG)
+                    .customOrgIds(new HashSet<>(Set.of(901L)))
+                    .includeSubtree(true)
                     .build();
-            merged.getMergedScopeItems().put("ORG_UNIT", new HashSet<>(Set.of(901L, 902L)));
-            when(dataPermissionPolicyService.getMergedScope(eq(1L), eq(Collections.singletonList(7L)), anyString()))
-                    .thenReturn(merged);
+            when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(7L), anyString(), anyString()))
+                    .thenReturn(spec);
 
-            Object cond = build(stubAnnotation(), moduleConfig(true, ""), ctx, 1L);
+            ScopeCondition cond = build(stubAnnotation(), moduleConfig(true, ""), ctx, 1L);
             assertThat(cond).isNotNull();
-            assertThat(sqlOf(cond)).contains("org_unit_id IN");
-            // verify it used the real roleId, not a param offset
-            verify(dataPermissionPolicyService)
-                    .getMergedScope(eq(1L), eq(Collections.singletonList(7L)), anyString());
+            assertThat(sqlOf(cond)).contains("org_unit_id IN").contains("tree_path LIKE");
         }
 
         @Test
-        @DisplayName("插件维度 scope (BY_MAJOR) → 路由 PluginDataScopeRouter, id IN (...)")
+        @DisplayName("插件维度 scope (PLUGIN_DIM) → 委托 router, id IN (...); resourceType 兜底 moduleCode")
         void pluginDimScopeBuildsInClause() {
             UserContext ctx = userWithScopedRoles(List.of(scopedRole(8L, ScopeType.ALL, 0L, null)));
-            when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(8L), anyString()))
-                    .thenReturn("BY_MAJOR");
-            when(pluginDataScopeRouter.resolve(eq("BY_MAJOR"), anyLong(), anyString()))
+            ScopeSpec spec = ScopeSpec.builder()
+                    .orgAnchor(OrgAnchor.PLUGIN_DIM).anchorParam("BY_MAJOR").build();
+            when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(8L), anyString(), anyString()))
+                    .thenReturn(spec);
+            // moduleConfig resourceType="" → 兜底 moduleCode "student" 作为 resolve 资源类型
+            when(pluginDataScopeRouter.resolve(eq("BY_MAJOR"), anyLong(), eq("student")))
                     .thenReturn(List.of(11L, 22L, 33L));
 
-            Object cond = build(stubAnnotation(), moduleConfig(true, "student"), ctx, 1L);
+            ScopeCondition cond = build(stubAnnotation(), moduleConfig(true, ""), ctx, 1L);
             assertThat(cond).isNotNull();
             assertThat(sqlOf(cond)).isEqualTo("s.id IN (11,22,33)");
         }
@@ -509,12 +517,13 @@ class DataPermissionInterceptorTest {
         @DisplayName("插件维度 resolver 返回 null → 安全降级 SELF (creator 过滤)")
         void pluginDimNullResolverDegradesToSelf() {
             UserContext ctx = userWithScopedRoles(List.of(scopedRole(9L, ScopeType.ALL, 0L, null)));
-            when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(9L), anyString()))
-                    .thenReturn("BY_MAJOR");
-            when(pluginDataScopeRouter.resolve(anyString(), anyLong(), anyString()))
-                    .thenReturn(null);
+            ScopeSpec spec = ScopeSpec.builder()
+                    .orgAnchor(OrgAnchor.PLUGIN_DIM).anchorParam("BY_MAJOR").build();
+            when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(9L), anyString(), anyString()))
+                    .thenReturn(spec);
+            when(pluginDataScopeRouter.resolve(anyString(), anyLong(), anyString())).thenReturn(null);
 
-            Object cond = build(stubAnnotation(), moduleConfig(true, "student"), ctx, 1L);
+            ScopeCondition cond = build(stubAnnotation(), moduleConfig(true, ""), ctx, 1L);
             assertThat(cond).isNotNull();
             assertThat(sqlOf(cond)).isEqualTo("s.created_by = ?");
         }
@@ -523,66 +532,81 @@ class DataPermissionInterceptorTest {
         @DisplayName("插件维度 resolver 返回空列表 → 拒绝所有 '1 = 0'")
         void pluginDimEmptyResolverDeniesAll() {
             UserContext ctx = userWithScopedRoles(List.of(scopedRole(10L, ScopeType.ALL, 0L, null)));
-            when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(10L), anyString()))
-                    .thenReturn("BY_MAJOR");
+            ScopeSpec spec = ScopeSpec.builder()
+                    .orgAnchor(OrgAnchor.PLUGIN_DIM).anchorParam("BY_MAJOR").build();
+            when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(10L), anyString(), anyString()))
+                    .thenReturn(spec);
             when(pluginDataScopeRouter.resolve(anyString(), anyLong(), anyString()))
                     .thenReturn(Collections.emptyList());
 
-            Object cond = build(stubAnnotation(), moduleConfig(true, "student"), ctx, 1L);
+            ScopeCondition cond = build(stubAnnotation(), moduleConfig(true, "student"), ctx, 1L);
             assertThat(cond).isNotNull();
             assertThat(sqlOf(cond)).isEqualTo("1 = 0");
         }
 
         @Test
-        @DisplayName("resourceType 非空 → 走 access_relations 子查询")
+        @DisplayName("resourceType 非空 + PRIMARY_ORG → 委托 evaluator 走 access_relations 子查询")
         void resourceTypeBuildsAccessRelationSubquery() {
             UserContext ctx = userWithScopedRoles(List.of(scopedRole(11L, ScopeType.ORG_UNIT, 400L, "1.10.400.")));
-            when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(11L), anyString()))
-                    .thenReturn(DataScope.DEPARTMENT.getCode());
+            when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(11L), anyString(), anyString()))
+                    .thenReturn(specOf(OrgAnchor.PRIMARY_ORG, false));
 
-            Object cond = build(stubAnnotation(), moduleConfig(true, "student"), ctx, 1L);
+            ScopeCondition cond = build(stubAnnotation(), moduleConfig(true, "student"), ctx, 1L);
             assertThat(cond).isNotNull();
             assertThat(sqlOf(cond)).contains("access_relations").contains("ar.resource_type = ?");
         }
 
         @Test
-        @DisplayName("多角色 → 各自条件 OR 组合")
+        @DisplayName("viaMembership + PRIMARY_ORG → 委托 evaluator 走 member 关系子查询")
+        void membershipDelegatesToEvaluator() {
+            UserContext ctx = userWithScopedRoles(List.of(scopedRole(12L, ScopeType.ORG_UNIT, 200L, "1.10.200.")));
+            when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(12L), anyString(), anyString()))
+                    .thenReturn(specOf(OrgAnchor.PRIMARY_ORG, false));
+
+            ScopeCondition cond = build(membershipAnnotation(), moduleConfig(true, "user"), ctx, 1L);
+            assertThat(cond).isNotNull();
+            assertThat(sqlOf(cond))
+                    .startsWith("u.id IN (")
+                    .contains("ar.relation = 'member'")
+                    .contains("ar.resource_id = ?");
+        }
+
+        @Test
+        @DisplayName("多角色 → 各自条件 OR 组合, 参数序拼接")
         void multipleRolesAreOrCombined() {
             UserContext ctx = userWithScopedRoles(List.of(
                     scopedRole(20L, ScopeType.ORG_UNIT, 500L, "1.10.500."),
                     scopedRole(21L, ScopeType.ALL, 0L, null)));
-            when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(20L), anyString()))
-                    .thenReturn(DataScope.DEPARTMENT.getCode());
-            when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(21L), anyString()))
-                    .thenReturn(DataScope.SELF.getCode());
+            when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(20L), anyString(), anyString()))
+                    .thenReturn(specOf(OrgAnchor.PRIMARY_ORG, false));
+            when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(21L), anyString(), anyString()))
+                    .thenReturn(specOf(OrgAnchor.SELF, false));
 
-            Object cond = build(stubAnnotation(), moduleConfig(true, ""), ctx, 1L);
+            ScopeCondition cond = build(stubAnnotation(), moduleConfig(true, ""), ctx, 1L);
             assertThat(cond).isNotNull();
             assertThat(sqlOf(cond)).startsWith("(").contains(" OR ").endsWith(")");
-            assertThat(paramsOf(cond)).hasSize(2);
+            assertThat(cond.params).hasSize(2);
         }
 
         @Test
-        @DisplayName("无有效条件 → 拒绝所有 '1 = 0'")
+        @DisplayName("无有效条件 (org 解析失败的退化空) → 拒绝所有 '1 = 0'")
         void noValidConditionDeniesAll() {
-            UserContext ctx = userWithScopedRoles(List.of(scopedRole(30L, ScopeType.ALL, 0L, null)));
-            // ALL scopeType + ALL DataScope would short-circuit; use a role that yields no SQL:
-            // DEPARTMENT scope with null orgId (ALL scopeType, user has no orgUnitId)
+            // PRIMARY_ORG 但用户无 orgId/orgPath → evaluator 产空 cond (predicate==null) → skip → deny
             UserContext noOrgCtx = UserContext.builder()
                     .userId(42L).orgUnitId(null).orgUnitPath(null)
                     .tenantId(1L)
                     .scopedRoles(List.of(scopedRole(30L, ScopeType.ALL, 0L, null)))
                     .build();
-            when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(30L), anyString()))
-                    .thenReturn(DataScope.DEPARTMENT.getCode());
+            when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(30L), anyString(), anyString()))
+                    .thenReturn(specOf(OrgAnchor.PRIMARY_ORG, false));
 
-            Object cond = build(stubAnnotation(), moduleConfig(true, ""), noOrgCtx, 1L);
+            ScopeCondition cond = build(stubAnnotation(), moduleConfig(true, ""), noOrgCtx, 1L);
             assertThat(cond).isNotNull();
             assertThat(sqlOf(cond)).isEqualTo("1 = 0");
         }
 
         @Test
-        @DisplayName("无 scopedRoles → 走 legacy 路径 (getMergedScope)")
+        @DisplayName("无 scopedRoles → 走 legacy 路径 (按 roleIds 委托 evaluator)")
         void emptyScopedRolesFallsBackToLegacy() {
             UserContext ctx = UserContext.builder()
                     .userId(42L).orgUnitId(100L).orgUnitPath("1.10.100.")
@@ -590,42 +614,31 @@ class DataPermissionInterceptorTest {
                     .tenantId(1L)
                     .scopedRoles(Collections.emptyList())
                     .build();
-            MergedDataScope merged = MergedDataScope.builder()
-                    .moduleCode("student")
-                    .effectiveScope(DataScope.DEPARTMENT)
-                    .build();
-            when(dataPermissionPolicyService.getMergedScope(eq(1L), eq(List.of(99L)), anyString()))
-                    .thenReturn(merged);
+            when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(99L), anyString(), anyString()))
+                    .thenReturn(specOf(OrgAnchor.PRIMARY_ORG, false));
 
-            Object cond = build(stubAnnotation(), moduleConfig(true, ""), ctx, 1L);
+            ScopeCondition cond = build(stubAnnotation(), moduleConfig(true, ""), ctx, 1L);
             assertThat(cond).isNotNull();
             assertThat(sqlOf(cond)).isEqualTo("s.org_unit_id = ?");
+            // legacy 锚点 = 用户主组织 100
+            assertThat(cond.params.get(0).value).isEqualTo(100L);
         }
 
         @Test
-        @DisplayName("legacy 路径 mergedScope 为 ALL → 返回 null (不过滤)")
+        @DisplayName("legacy 路径 ALL anchor → 返回 null (不过滤)")
         void legacyAllScopeReturnsNull() {
             UserContext ctx = UserContext.builder()
                     .userId(42L).orgUnitId(100L).roleIds(List.of(99L)).tenantId(1L)
                     .scopedRoles(null)
                     .build();
-            MergedDataScope merged = MergedDataScope.builder()
-                    .moduleCode("student").effectiveScope(DataScope.ALL).build();
-            when(dataPermissionPolicyService.getMergedScope(anyLong(), any(), anyString()))
-                    .thenReturn(merged);
+            when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(99L), anyString(), anyString()))
+                    .thenReturn(specOf(OrgAnchor.ALL, false));
 
-            Object cond = build(stubAnnotation(), moduleConfig(true, ""), ctx, 1L);
+            ScopeCondition cond = build(stubAnnotation(), moduleConfig(true, ""), ctx, 1L);
             assertThat(cond).isNull();
         }
-    }
 
-    // ==================================================================
-    // buildMembershipCondition — user 资源按 member 关系派生归属过滤
-    // ==================================================================
-    @Nested
-    @DisplayName("buildMembershipCondition — viaMembership 用户归属子查询")
-    class BuildMembershipCondition {
-
+        // membership 注解 (供 membershipDelegatesToEvaluator 用)
         @DataPermission(module = "user", tableAlias = "u", viaMembership = true)
         interface MembershipMapper {
             List<Object> selectList();
@@ -633,247 +646,6 @@ class DataPermissionInterceptorTest {
 
         private DataPermission membershipAnnotation() {
             return MembershipMapper.class.getAnnotation(DataPermission.class);
-        }
-
-        private Object build(DataPermission ann, DataModulePO module, UserContext ctx, Long tenantId) {
-            return ReflectionTestUtils.invokeMethod(interceptor, "buildScopedCondition",
-                    ann, module, ctx, tenantId);
-        }
-
-        private String sqlOf(Object cond) {
-            return (String) ReflectionTestUtils.getField(cond, "sql");
-        }
-
-        @SuppressWarnings("unchecked")
-        private List<Object> paramsOf(Object cond) {
-            return (List<Object>) ReflectionTestUtils.getField(cond, "params");
-        }
-
-        @Test
-        @DisplayName("ALL scope → 短路 null,不过滤")
-        void allScopeShortCircuits() {
-            UserContext ctx = userWithScopedRoles(List.of(scopedRole(1L, ScopeType.ALL, 0L, null)));
-            when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(1L), anyString()))
-                    .thenReturn(DataScope.ALL.getCode());
-            Object cond = build(membershipAnnotation(), moduleConfig(true, "user"), ctx, 1L);
-            assertThat(cond).isNull();
-        }
-
-        @Test
-        @DisplayName("DEPARTMENT → u.id IN (SELECT ar.subject_id ... member ... ar.resource_id = ?)")
-        void departmentBuildsMembershipSubquery() {
-            UserContext ctx = userWithScopedRoles(List.of(scopedRole(2L, ScopeType.ORG_UNIT, 200L, "1.10.200.")));
-            when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(2L), anyString()))
-                    .thenReturn(DataScope.DEPARTMENT.getCode());
-            Object cond = build(membershipAnnotation(), moduleConfig(true, "user"), ctx, 1L);
-            assertThat(cond).isNotNull();
-            assertThat(sqlOf(cond))
-                    .startsWith("u.id IN (")
-                    .contains("SELECT ar.subject_id FROM access_relations ar")
-                    .contains("ar.relation = 'member'")
-                    .contains("ar.resource_type = 'org_unit'")
-                    .contains("ar.subject_type = 'user'")
-                    .contains("ar.resource_id = ?");
-            // positional params: [ar.tenant_id, ar.resource_id]
-            assertThat(paramsOf(cond)).hasSize(2);
-        }
-
-        @Test
-        @DisplayName("DEPARTMENT_AND_BELOW → ar.resource_id IN (org_units tree_path 子查询)")
-        void departmentAndBelowBuildsTreePathSubquery() {
-            UserContext ctx = userWithScopedRoles(List.of(scopedRole(3L, ScopeType.ORG_UNIT, 300L, "1.10.300.")));
-            when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(3L), anyString()))
-                    .thenReturn(DataScope.DEPARTMENT_AND_BELOW.getCode());
-            Object cond = build(membershipAnnotation(), moduleConfig(true, "user"), ctx, 1L);
-            assertThat(cond).isNotNull();
-            assertThat(sqlOf(cond))
-                    .contains("SELECT ar.subject_id FROM access_relations ar")
-                    .contains("ar.resource_id IN (")
-                    .contains("tree_path LIKE ?");
-            // positional params: [ar.tenant_id, org tenant, org path]
-            assertThat(paramsOf(cond)).hasSize(3);
-        }
-
-        @Test
-        @DisplayName("SELF → u.id = ? (用户本人)")
-        void selfScopeFiltersToSelf() {
-            UserContext ctx = userWithScopedRoles(List.of(scopedRole(4L, ScopeType.ALL, 0L, null)));
-            when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(4L), anyString()))
-                    .thenReturn(DataScope.SELF.getCode());
-            Object cond = build(membershipAnnotation(), moduleConfig(true, "user"), ctx, 1L);
-            assertThat(cond).isNotNull();
-            assertThat(sqlOf(cond)).isEqualTo("u.id = ?");
-            assertThat(paramsOf(cond)).hasSize(1);
-        }
-
-        @Test
-        @DisplayName("CUSTOM 无配置组织 → 拒绝所有 1 = 0")
-        void customWithoutOrgsDeniesAll() {
-            UserContext ctx = userWithScopedRoles(List.of(scopedRole(5L, ScopeType.ALL, 0L, null)));
-            when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(5L), anyString()))
-                    .thenReturn(DataScope.CUSTOM.getCode());
-            MergedDataScope merged = MergedDataScope.builder()
-                    .moduleCode("user").effectiveScope(DataScope.CUSTOM).build();
-            when(dataPermissionPolicyService.getMergedScope(eq(1L), eq(Collections.singletonList(5L)), anyString()))
-                    .thenReturn(merged);
-            Object cond = build(membershipAnnotation(), moduleConfig(true, "user"), ctx, 1L);
-            assertThat(cond).isNotNull();
-            assertThat(sqlOf(cond)).isEqualTo("1 = 0");
-        }
-
-        @Test
-        @DisplayName("CUSTOM 含组织 → ar.resource_id IN (子树展开 org ids: org + 后代)")
-        void customWithOrgsInlinesIds() {
-            UserContext ctx = userWithScopedRoles(List.of(scopedRole(6L, ScopeType.ALL, 0L, null)));
-            when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(6L), anyString()))
-                    .thenReturn(DataScope.CUSTOM.getCode());
-            MergedDataScope merged = MergedDataScope.builder()
-                    .moduleCode("user").effectiveScope(DataScope.CUSTOM).build();
-            merged.getMergedScopeItems().put("ORG_UNIT", new HashSet<>(Set.of(77L)));
-            when(dataPermissionPolicyService.getMergedScope(eq(1L), eq(Collections.singletonList(6L)), anyString()))
-                    .thenReturn(merged);
-            Object cond = build(membershipAnnotation(), moduleConfig(true, "user"), ctx, 1L);
-            assertThat(cond).isNotNull();
-            // Granted org ids are subtree-expanded so a granted GRADE/dept reaches its
-            // descendant CLASS members (members are tied to the leaf class, not the ancestor).
-            assertThat(sqlOf(cond))
-                    .contains("SELECT ar.subject_id FROM access_relations ar")
-                    .contains("ar.resource_id IN (")
-                    .contains("g.id IN (77)")
-                    .contains("tree_path LIKE CONCAT(g.tree_path, '%')")
-                    .doesNotContain("ar.resource_id IN (77)");
-            // [outer ar.tenant_id, inner subquery o.tenant_id]
-            assertThat(paramsOf(cond)).hasSize(2);
-        }
-
-        // ── membershipSubjectColumn=user_id: 学生档案表 user_student (主表行不是用户) ──
-        // 主表是挂在用户上的档案, 真正的 subject 是 s.user_id, 被过滤列必须是 s.user_id 而非 s.id。
-        @DataPermission(module = "student", tableAlias = "s",
-                viaMembership = true, membershipSubjectColumn = "user_id")
-        interface StudentMembershipMapper {
-            List<Object> selectList();
-        }
-
-        private DataPermission studentAnnotation() {
-            return StudentMembershipMapper.class.getAnnotation(DataPermission.class);
-        }
-
-        @Test
-        @DisplayName("membershipSubjectColumn=user_id + DEPARTMENT → s.user_id IN (SELECT ar.subject_id ...)")
-        void studentDepartmentFiltersByUserIdColumn() {
-            UserContext ctx = userWithScopedRoles(List.of(scopedRole(2L, ScopeType.ORG_UNIT, 200L, "1.10.200.")));
-            when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(2L), anyString()))
-                    .thenReturn(DataScope.DEPARTMENT.getCode());
-            Object cond = build(studentAnnotation(), moduleConfig(true, "student"), ctx, 1L);
-            assertThat(cond).isNotNull();
-            assertThat(sqlOf(cond))
-                    .startsWith("s.user_id IN (")
-                    .contains("SELECT ar.subject_id FROM access_relations ar")
-                    .contains("ar.relation = 'member'")
-                    .contains("ar.resource_id = ?")
-                    // must NOT collapse to the main-table id column
-                    .doesNotContain("s.id IN (");
-            assertThat(paramsOf(cond)).hasSize(2);
-        }
-
-        @Test
-        @DisplayName("membershipSubjectColumn=user_id + SELF → s.user_id = ? (学生本人)")
-        void studentSelfFiltersByUserIdColumn() {
-            UserContext ctx = userWithScopedRoles(List.of(scopedRole(4L, ScopeType.ALL, 0L, null)));
-            when(dataPermissionPolicyService.getScopeCodeForRole(eq(1L), eq(4L), anyString()))
-                    .thenReturn(DataScope.SELF.getCode());
-            Object cond = build(studentAnnotation(), moduleConfig(true, "student"), ctx, 1L);
-            assertThat(cond).isNotNull();
-            assertThat(sqlOf(cond)).isEqualTo("s.user_id = ?");
-            assertThat(paramsOf(cond)).hasSize(1);
-        }
-    }
-
-    // ==================================================================
-    // buildCustomCondition (legacy custom builder, exercised directly)
-    // ==================================================================
-    @Nested
-    @DisplayName("buildCustomCondition — CUSTOM 范围条件构建")
-    class BuildCustomCondition {
-
-        private Object buildCustom(MergedDataScope merged) {
-            return ReflectionTestUtils.invokeMethod(interceptor, "buildCustomCondition",
-                    merged, "s.", "org_unit_id", 1L, 0);
-        }
-
-        private String sqlOf(Object cond) {
-            return (String) ReflectionTestUtils.getField(cond, "sql");
-        }
-
-        @Test
-        @DisplayName("无组织单元 → 拒绝所有 '1 = 0'")
-        void emptyOrgUnitsDeniesAll() {
-            MergedDataScope merged = MergedDataScope.builder()
-                    .moduleCode("student").effectiveScope(DataScope.CUSTOM).build();
-            Object cond = buildCustom(merged);
-            assertThat(sqlOf(cond)).isEqualTo("1 = 0");
-        }
-
-        @Test
-        @DisplayName("不含子级的组织 → IN (?, ?) 占位符")
-        void orgUnitsWithoutChildrenBuildInClause() {
-            MergedDataScope merged = MergedDataScope.builder()
-                    .moduleCode("student").effectiveScope(DataScope.CUSTOM).build();
-            merged.getMergedScopeItems().put("ORG_UNIT", new HashSet<>(Set.of(11L, 22L)));
-            Object cond = buildCustom(merged);
-            assertThat(sqlOf(cond)).contains("org_unit_id IN (").startsWith("(").endsWith(")");
-        }
-
-        @Test
-        @DisplayName("含子级的组织 → tree_path 递归子查询")
-        void orgUnitsWithChildrenBuildTreePathSubquery() {
-            MergedDataScope merged = MergedDataScope.builder()
-                    .moduleCode("student").effectiveScope(DataScope.CUSTOM).build();
-            merged.getMergedScopeItems().put("ORG_UNIT", new HashSet<>(Set.of(33L)));
-            merged.getOrgUnitsWithChildren().add(33L);
-            Object cond = buildCustom(merged);
-            assertThat(sqlOf(cond)).contains("tree_path LIKE").contains("org_units");
-        }
-    }
-
-    // ==================================================================
-    // buildLegacyOrgFilterCondition — hasSelfScope OR creator
-    // ==================================================================
-    @Nested
-    @DisplayName("buildLegacyOrgFilterCondition — legacy org 过滤 + hasSelfScope")
-    class BuildLegacyOrgFilterCondition {
-
-        private Object build(MergedDataScope merged, UserContext ctx) {
-            return ReflectionTestUtils.invokeMethod(interceptor, "buildLegacyOrgFilterCondition",
-                    merged, stubAnnotation(), moduleConfig(true, ""), ctx, 1L);
-        }
-
-        private String sqlOf(Object cond) {
-            return (String) ReflectionTestUtils.getField(cond, "sql");
-        }
-
-        @Test
-        @DisplayName("DEPARTMENT + hasSelfScope → OR 创建者条件")
-        void departmentWithSelfScopeOrsCreator() {
-            UserContext ctx = UserContext.builder()
-                    .userId(42L).orgUnitId(100L).tenantId(1L).build();
-            MergedDataScope merged = MergedDataScope.builder()
-                    .moduleCode("student").effectiveScope(DataScope.DEPARTMENT)
-                    .hasSelfScope(true).build();
-            Object cond = build(merged, ctx);
-            assertThat(sqlOf(cond))
-                    .isEqualTo("(s.org_unit_id = ? OR s.created_by = ?)");
-        }
-
-        @Test
-        @DisplayName("SELF scope → creator 等值条件")
-        void selfScopeBuildsCreator() {
-            UserContext ctx = UserContext.builder()
-                    .userId(42L).orgUnitId(100L).tenantId(1L).build();
-            MergedDataScope merged = MergedDataScope.builder()
-                    .moduleCode("student").effectiveScope(DataScope.SELF).build();
-            Object cond = build(merged, ctx);
-            assertThat(sqlOf(cond)).isEqualTo("s.created_by = ?");
         }
     }
 
@@ -984,7 +756,7 @@ class DataPermissionInterceptorTest {
 
             assertThat(result).isEqualTo("ok");
             verify(dataPermissionPolicyService, never())
-                    .getScopeCodeForRole(anyLong(), anyLong(), anyString());
+                    .getScopeSpec(anyLong(), anyLong(), anyString(), anyString());
         }
 
         @Test
@@ -1015,8 +787,8 @@ class DataPermissionInterceptorTest {
             when(mappedStatement.getSqlCommandType()).thenReturn(SqlCommandType.SELECT);
             when(dynamicModuleService.getModuleConfig(anyLong(), anyString()))
                     .thenReturn(moduleConfig(true, ""));
-            when(dataPermissionPolicyService.getScopeCodeForRole(anyLong(), anyLong(), anyString()))
-                    .thenReturn(DataScope.ALL.getCode());
+            when(dataPermissionPolicyService.getScopeSpec(anyLong(), anyLong(), anyString(), anyString()))
+                    .thenReturn(specOf(OrgAnchor.ALL, false));
             when(invocation.proceed()).thenReturn("ok");
 
             Object result = interceptor.intercept(invocation);
@@ -1037,8 +809,8 @@ class DataPermissionInterceptorTest {
             when(mappedStatement.getConfiguration()).thenReturn(configuration);
             when(dynamicModuleService.getModuleConfig(anyLong(), anyString()))
                     .thenReturn(moduleConfig(true, ""));
-            when(dataPermissionPolicyService.getScopeCodeForRole(anyLong(), anyLong(), anyString()))
-                    .thenReturn(DataScope.DEPARTMENT.getCode());
+            when(dataPermissionPolicyService.getScopeSpec(anyLong(), anyLong(), anyString(), anyString()))
+                    .thenReturn(specOf(OrgAnchor.PRIMARY_ORG, false));
 
             BoundSql realBoundSql = new BoundSql(
                     configuration, "SELECT s.id FROM user_student s WHERE s.deleted = 0",
