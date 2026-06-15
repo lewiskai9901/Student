@@ -7,9 +7,12 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import com.school.management.domain.access.model.OrgAnchor;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 角色数据权限实体 (V5)
@@ -55,6 +58,30 @@ public class RoleDataPermission implements Entity<Long> {
      * null/空 = 不做类型过滤。仅对配置了 type_field 的资源(如 user)生效。
      */
     private List<String> typeFilter;
+
+    // ── 可组合数据范围轴 (composable ScopeSpec axes) ──
+    // 上层 (T8) 迁移后会直接填这些轴; 在此之前 saveRolePermission 从 scopeCode 翻译填充。
+
+    /** apply_to: 该规格治理的动作类 ("READ"/"WRITE"/"BOTH")。null → 默认 BOTH。 */
+    private String applyTo;
+
+    /** 轴① org anchor (可见组织派生方式)。null → 由 scopeCode 翻译。 */
+    private OrgAnchor orgAnchor;
+
+    /** 轴① 参数: RELATION 时为关系码, PLUGIN_DIM 时为维度码。 */
+    private String anchorParam;
+
+    /** 轴① 是否含子树。 */
+    private boolean includeSubtree;
+
+    /** 轴① CUSTOM_ORG 时的指定组织 id 集合。 */
+    private Set<Long> customOrgIds;
+
+    /** 轴② subject-relation include。 */
+    private Set<String> subjectRelInclude;
+
+    /** 轴② subject-relation exclude。 */
+    private Set<String> subjectRelExclude;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

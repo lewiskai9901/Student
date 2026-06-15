@@ -1,0 +1,106 @@
+package com.school.management.infrastructure.access;
+
+import com.school.management.domain.access.model.OrgAnchor;
+import com.school.management.domain.access.model.valueobject.ScopeSpec;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+import org.springframework.jdbc.core.JdbcTemplate;
+
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+
+/**
+ * Unit tests for {@link DataPermissionPolicyService#getScopeSpec}.
+ *
+ * <p>Mocks {@link JdbcTemplate}; asserts the new composable {@link ScopeSpec} read path
+ * builds the spec from the new axis columns (org_anchor / anchor_param / include_subtree /
+ * type_filter / subject_rel_exclude / apply_to).
+ */
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
+class DataPermissionPolicyServiceTest {
+
+    @Mock
+    private JdbcTemplate jdbcTemplate;
+
+    private DataPermissionPolicyService service;
+
+    @BeforeEach
+    void setUp() {
+        service = new DataPermissionPolicyService(jdbcTemplate);
+    }
+
+    @Test
+    @DisplayName("getScopeSpec: builds ScopeSpec from new axis columns")
+    void getScopeSpec_buildsFromNewColumns() {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("apply_to", "BOTH");
+        row.put("org_anchor", "RELATION");
+        row.put("anchor_param", "admin");
+        row.put("include_subtree", 1);
+        row.put("custom_org_ids", null);
+        row.put("subject_rel_include", null);
+        row.put("subject_rel_exclude", "[\"admin\"]");
+        row.put("type_filter", "[\"STUDENT\"]");
+        row.put("scope_type", "MANAGED_ORGS_AND_BELOW");
+
+        when(jdbcTemplate.queryForList(any(String.class), any(Object[].class)))
+                .thenReturn(List.of(row));
+
+        ScopeSpec spec = service.getScopeSpec(1L, 9L, "user", "READ");
+
+        assertThat(spec).isNotNull();
+        assertThat(spec.getOrgAnchor()).isEqualTo(OrgAnchor.RELATION);
+        assertThat(spec.getAnchorParam()).isEqualTo("admin");
+        assertThat(spec.isIncludeSubtree()).isTrue();
+        assertThat(spec.getTypeFilter()).containsExactly("STUDENT");
+        assertThat(spec.getSubjectRelExclude()).containsExactly("admin");
+        assertThat(spec.getSubjectRelInclude()).isNull();
+        assertThat(spec.getCustomOrgIds()).isNull();
+        assertThat(spec.getApplyTo()).isEqualTo("BOTH");
+    }
+
+    @Test
+    @DisplayName("getScopeSpec: no row → null")
+    void getScopeSpec_noRow_returnsNull() {
+        when(jdbcTemplate.queryForList(any(String.class), any(Object[].class)))
+                .thenReturn(Collections.emptyList());
+
+        ScopeSpec spec = service.getScopeSpec(1L, 9L, "user", "READ");
+
+        assertThat(spec).isNull();
+    }
+
+    @Test
+    @DisplayName("getScopeSpec: null org_anchor falls back to legacy scope_type translation")
+    void getScopeSpec_nullAnchor_legacyFallback() {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("apply_to", "BOTH");
+        row.put("org_anchor", null);
+        row.put("anchor_param", null);
+        row.put("include_subtree", 0);
+        row.put("scope_type", "DEPARTMENT_AND_BELOW");
+
+        when(jdbcTemplate.queryForList(any(String.class), any(Object[].class)))
+                .thenReturn(List.of(row));
+
+        ScopeSpec spec = service.getScopeSpec(1L, 9L, "user", "READ");
+
+        assertThat(spec).isNotNull();
+        assertThat(spec.getOrgAnchor()).isEqualTo(OrgAnchor.PRIMARY_ORG);
+        assertThat(spec.isIncludeSubtree()).isTrue();
+        assertThat(spec.getApplyTo()).isEqualTo("BOTH");
+    }
+}

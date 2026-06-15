@@ -3,9 +3,12 @@ package com.school.management.infrastructure.access;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.domain.access.model.DataScope;
+import com.school.management.domain.access.model.OrgAnchor;
+import com.school.management.domain.access.model.ScopePreset;
 import com.school.management.domain.access.model.entity.DataScopeItem;
 import com.school.management.domain.access.model.entity.RoleDataPermission;
 import com.school.management.domain.access.model.valueobject.MergedDataScope;
+import com.school.management.domain.access.model.valueobject.ScopeSpec;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
@@ -96,6 +99,68 @@ public class DataPermissionPolicyService {
         return MergedDataScope.merge(moduleCode, permissions);
     }
 
+    /**
+     * 读取可组合数据范围规格 (ScopeSpec) —— 单角色×资源×动作类的一行配置。
+     *
+     * <p>从新轴列 (org_anchor / anchor_param / include_subtree / custom_org_ids /
+     * subject_rel_include / subject_rel_exclude / type_filter / apply_to) 构造 {@link ScopeSpec}。
+     *
+     * @param actionClass "READ" 或 "WRITE"。命中 {@code apply_to IN (actionClass, 'BOTH')},
+     *                    精确动作类优先于 BOTH。
+     * @return 该规格; 无配置行 → {@code null} (调用方视为"无配置 → 默认 SELF")。
+     */
+    public ScopeSpec getScopeSpec(Long tenantId, Long roleId, String resourceCode, String actionClass) {
+        // apply_to IN (actionClass, 'BOTH'), 精确动作类优先 (apply_to='BOTH' ASC → 非 BOTH 排前)
+        String sql = "SELECT apply_to, org_anchor, anchor_param, include_subtree, " +
+                "custom_org_ids, subject_rel_include, subject_rel_exclude, type_filter, scope_type " +
+                "FROM role_data_scopes " +
+                "WHERE tenant_id = ? AND role_id = ? AND resource_code = ? " +
+                "AND apply_to IN (?, 'BOTH') AND deleted = 0 " +
+                "ORDER BY (apply_to = 'BOTH') ASC LIMIT 1";
+
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                sql, tenantId, roleId, resourceCode, actionClass);
+        if (rows == null || rows.isEmpty()) {
+            return null;
+        }
+        return mapToScopeSpec(rows.get(0));
+    }
+
+    /** 把 role_data_scopes 一行 (新轴列) 映射为 {@link ScopeSpec}。 */
+    private ScopeSpec mapToScopeSpec(Map<String, Object> row) {
+        String applyTo = (String) row.get("apply_to");
+        OrgAnchor anchor = OrgAnchor.fromCode((String) row.get("org_anchor"));
+        String anchorParam = (String) row.get("anchor_param");
+        boolean includeSubtree = getIntValue(row.get("include_subtree")) == 1;
+
+        if (anchor == null) {
+            // 防御: org_anchor 为 NULL (迁移后不应出现) → 用旧 scope_type 翻译
+            String scopeType = (String) row.get("scope_type");
+            ScopePreset preset = ScopePreset.fromLegacyScopeType(scopeType);
+            if (preset != null) {
+                ScopeSpec base = preset.toSpec();
+                anchor = base.getOrgAnchor();
+                anchorParam = base.getAnchorParam();
+                includeSubtree = base.isIncludeSubtree();
+            } else {
+                // 仍未知 → 当作插件维度, anchorParam = scope_type
+                anchor = OrgAnchor.PLUGIN_DIM;
+                anchorParam = scopeType;
+            }
+        }
+
+        return ScopeSpec.builder()
+                .applyTo(applyTo)
+                .orgAnchor(anchor)
+                .anchorParam(anchorParam)
+                .includeSubtree(includeSubtree)
+                .customOrgIds(parseLongSet(row.get("custom_org_ids")))
+                .subjectRelInclude(parseStringSet(row.get("subject_rel_include")))
+                .subjectRelExclude(parseStringSet(row.get("subject_rel_exclude")))
+                .typeFilter(parseStringSet(row.get("type_filter")))
+                .build();
+    }
+
     /** 保存单条角色数据权限配置 */
     @CacheEvict(value = CACHE_NAME, allEntries = true)
     public void saveRolePermission(Long tenantId, RoleDataPermission permission) {
@@ -130,19 +195,44 @@ public class DataPermissionPolicyService {
             }
         }
 
-        // uk_role_res (role_id, resource_code, tenant_id) 不含 deleted, 软删后再 INSERT 会撞 unique.
-        // 用 ON DUPLICATE KEY 覆盖同一行, 顺便把 deleted 翻回 0.
+        // ── 可组合轴列 ──
+        // 优先用 permission 已显式带的轴 (T8 迁移后上层会填); 否则从 scopeCode 翻译,
+        // 这样仍传 scopeCode 的旧调用方也能落到新列。
+        ScopeSpec spec = deriveSpecForSave(permission);
+        String applyTo = (spec.getApplyTo() != null) ? spec.getApplyTo() : "BOTH";
+        String orgAnchor = (spec.getOrgAnchor() != null) ? spec.getOrgAnchor().name() : null;
+        String anchorParam = spec.getAnchorParam();
+        int includeSubtree = spec.isIncludeSubtree() ? 1 : 0;
+        // custom_org_ids: 优先 spec.customOrgIds, 否则复用上面从 scopeItems 派生的 customJson
+        String customOrgIdsJson = (spec.getCustomOrgIds() != null && !spec.getCustomOrgIds().isEmpty())
+                ? toJson(spec.getCustomOrgIds()) : customJson;
+        String subjectRelIncludeJson = toJson(spec.getSubjectRelInclude());
+        String subjectRelExcludeJson = toJson(spec.getSubjectRelExclude());
+        // type_filter 优先 spec.typeFilter, 否则复用上面从 permission.typeFilter 派生的 typeFilterJson
+        String typeFilterFinal = (spec.getTypeFilter() != null && !spec.getTypeFilter().isEmpty())
+                ? toJson(spec.getTypeFilter()) : typeFilterJson;
+
+        // UK (role_id, resource_code, apply_to, tenant_id) 不含 deleted, 软删后再 INSERT 会撞 unique.
+        // 用 ON DUPLICATE KEY 覆盖同一行, 顺便把 deleted 翻回 0。
+        // 同时写新轴列 + 旧 scope_type (T9 删除前保持双写)。
         jdbcTemplate.update(
-                "INSERT INTO role_data_scopes (tenant_id, role_id, resource_code, scope_type, custom_org_unit_ids, type_filter, priority, created_at, deleted) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), 0) " +
-                "ON DUPLICATE KEY UPDATE scope_type=VALUES(scope_type), custom_org_unit_ids=VALUES(custom_org_unit_ids), " +
+                "INSERT INTO role_data_scopes (tenant_id, role_id, resource_code, apply_to, scope_type, " +
+                "org_anchor, anchor_param, include_subtree, custom_org_ids, subject_rel_include, subject_rel_exclude, " +
+                "custom_org_unit_ids, type_filter, priority, created_at, deleted) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 0) " +
+                "ON DUPLICATE KEY UPDATE scope_type=VALUES(scope_type), " +
+                "org_anchor=VALUES(org_anchor), anchor_param=VALUES(anchor_param), include_subtree=VALUES(include_subtree), " +
+                "custom_org_ids=VALUES(custom_org_ids), subject_rel_include=VALUES(subject_rel_include), " +
+                "subject_rel_exclude=VALUES(subject_rel_exclude), custom_org_unit_ids=VALUES(custom_org_unit_ids), " +
                 "type_filter=VALUES(type_filter), priority=VALUES(priority), updated_at=NOW(), deleted=0",
-                tenantId, permission.getRoleId(), permission.getModuleCode(),
-                permission.getScopeCode(), customJson, typeFilterJson,
+                tenantId, permission.getRoleId(), permission.getModuleCode(), applyTo,
+                permission.getScopeCode(),
+                orgAnchor, anchorParam, includeSubtree, customOrgIdsJson, subjectRelIncludeJson, subjectRelExcludeJson,
+                customJson, typeFilterFinal,
                 0);
 
-        log.info("Saved role data scope: tenantId={}, roleId={}, resourceCode={}, scopeType={}",
-                tenantId, permission.getRoleId(), permission.getModuleCode(), permission.getScopeCode());
+        log.info("Saved role data scope: tenantId={}, roleId={}, resourceCode={}, scopeType={}, anchor={}, applyTo={}",
+                tenantId, permission.getRoleId(), permission.getModuleCode(), permission.getScopeCode(), orgAnchor, applyTo);
     }
 
     /** 批量保存角色的所有数据权限 */
@@ -241,6 +331,96 @@ public class DataPermissionPolicyService {
                 .typeFilter(parseTypeFilter(row.get("type_filter")))
                 .description(null)  // v3 无 description 字段
                 .build();
+    }
+
+    /**
+     * 为 save 派生 ScopeSpec: 优先用 permission 已显式带的轴; 任一轴缺失时从 scopeCode 翻译补齐。
+     * 这样 T8 迁移前仍只传 scopeCode 的旧调用方也能落到新列。
+     */
+    private ScopeSpec deriveSpecForSave(RoleDataPermission permission) {
+        OrgAnchor anchor = permission.getOrgAnchor();
+        String anchorParam = permission.getAnchorParam();
+        boolean includeSubtree = permission.isIncludeSubtree();
+
+        if (anchor == null) {
+            // 从 scopeCode 翻译轴①
+            ScopePreset preset = ScopePreset.fromLegacyScopeType(permission.getScopeCode());
+            if (preset != null) {
+                ScopeSpec base = preset.toSpec();
+                anchor = base.getOrgAnchor();
+                anchorParam = base.getAnchorParam();
+                includeSubtree = base.isIncludeSubtree();
+            } else if (permission.getScopeCode() != null) {
+                // 非预设 → 插件维度 (BY_CLASS/BY_MAJOR/...), anchorParam = scopeCode
+                anchor = OrgAnchor.PLUGIN_DIM;
+                anchorParam = permission.getScopeCode();
+            }
+        }
+
+        Set<String> typeFilterSet = (permission.getTypeFilter() != null)
+                ? new LinkedHashSet<>(permission.getTypeFilter()) : null;
+
+        return ScopeSpec.builder()
+                .applyTo(permission.getApplyTo())
+                .orgAnchor(anchor)
+                .anchorParam(anchorParam)
+                .includeSubtree(includeSubtree)
+                .customOrgIds(permission.getCustomOrgIds())
+                .subjectRelInclude(permission.getSubjectRelInclude())
+                .subjectRelExclude(permission.getSubjectRelExclude())
+                .typeFilter(typeFilterSet)
+                .build();
+    }
+
+    /** 序列化集合为 JSON; null/空 → null (列写 NULL)。 */
+    private String toJson(Set<?> set) {
+        if (set == null || set.isEmpty()) return null;
+        try {
+            return objectMapper.writeValueAsString(set);
+        } catch (Exception e) {
+            log.warn("Failed to serialize set to JSON: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /** 解析 JSON 数组列 → {@code Set<Long>}; null/空/解析失败 → null。 */
+    private Set<Long> parseLongSet(Object json) {
+        if (json == null) return null;
+        String raw = json.toString();
+        if (raw.isBlank()) return null;
+        try {
+            List<Long> list = objectMapper.readValue(raw, new TypeReference<List<Long>>() {});
+            return (list == null || list.isEmpty()) ? null : new LinkedHashSet<>(list);
+        } catch (Exception e) {
+            log.warn("Failed to parse Long set JSON: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /** 解析 JSON 数组列 → {@code Set<String>}; null/空/解析失败 → null。 */
+    private Set<String> parseStringSet(Object json) {
+        if (json == null) return null;
+        String raw = json.toString();
+        if (raw.isBlank()) return null;
+        try {
+            List<String> list = objectMapper.readValue(raw, new TypeReference<List<String>>() {});
+            return (list == null || list.isEmpty()) ? null : new LinkedHashSet<>(list);
+        } catch (Exception e) {
+            log.warn("Failed to parse String set JSON: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /** 取整数值 (列可能是 Boolean/Number/null)。null → 0。 */
+    private int getIntValue(Object value) {
+        if (value == null) return 0;
+        if (value instanceof Boolean) return ((Boolean) value) ? 1 : 0;
+        if (value instanceof Number) return ((Number) value).intValue();
+        try {
+            return Integer.parseInt(value.toString());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     /** 解析 type_filter JSON (闸2/2b) → 类型码列表; null/空/解析失败 → null (= 不过滤) */
