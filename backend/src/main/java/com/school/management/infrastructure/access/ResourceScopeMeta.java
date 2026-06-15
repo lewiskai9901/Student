@@ -1,0 +1,50 @@
+package com.school.management.infrastructure.access;
+
+/**
+ * 资源侧元数据 —— {@link ScopeEvaluator} compose SQL 所需的"这张表怎么过滤"配置。
+ *
+ * <p>由 {@code @DataPermission} 注解 + {@code DataModulePO moduleConfig} 合并而来
+ * (合并规则与 interceptor 现状一致: moduleConfig 优先, 注解兜底)。本任务 (T6) 只定义并消费
+ * 该结构; <b>T7</b> 负责在 interceptor 里从 annotation+moduleConfig 构建它。
+ *
+ * <p>三条互斥的资源路径 (与 {@code buildSingleRoleCondition} 的分支一致):
+ * <ul>
+ *   <li>{@code viaMembership=true} —— 主表行本身是 access_relations 的 subject(user),
+ *       按 {@code member} 关系的 org 归属过滤 (如 users / user_student)。</li>
+ *   <li>{@code resourceType} 非空 —— 走 access_relations 子查询 (resource 侧, 如 student)。</li>
+ *   <li>否则 —— org 字段直过滤 ({@code orgUnitField})。</li>
+ * </ul>
+ *
+ * @param tableAlias             主表别名 (空串表示无别名)。已 sanitize, 不含 "." 后缀。
+ * @param orgUnitField           org 字段列名 (org 字段路径用; access_relation 路径的直过滤 OR 也用)。
+ * @param creatorField           创建者列名 (SELF 在 org 字段路径用)。
+ * @param resourceType           access_relations 资源类型 (非空则走 access_relation 路径)。
+ * @param viaMembership          主表行即 member 关系 subject。
+ * @param membershipSubjectColumn 主表中作为 ar.subject_id 的列 (默认 id)。
+ * @param typeField              类型列 (轴③, 为空则不启用类型过滤)。
+ */
+public record ResourceScopeMeta(
+        String tableAlias,
+        String orgUnitField,
+        String creatorField,
+        String resourceType,
+        boolean viaMembership,
+        String membershipSubjectColumn,
+        String typeField
+) {
+
+    /** 别名前缀: 有别名时返回 {@code "alias."}, 否则空串 (与 interceptor 拼法一致)。 */
+    public String aliasPrefix() {
+        return tableAlias == null || tableAlias.isEmpty() ? "" : tableAlias + ".";
+    }
+
+    /** 是否走 access_relations 子查询路径 (resource 侧)。 */
+    public boolean hasResourceType() {
+        return resourceType != null && !resourceType.isEmpty();
+    }
+
+    /** 轴③是否可用 (声明了 type 列)。 */
+    public boolean hasTypeField() {
+        return typeField != null && !typeField.isEmpty();
+    }
+}
