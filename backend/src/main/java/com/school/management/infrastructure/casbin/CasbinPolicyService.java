@@ -122,6 +122,27 @@ public class CasbinPolicyService implements PolicyEnforcementService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public void syncUserRoles(Long userId) {
+        if (userId == null) return;
+        String uid = String.valueOf(userId);
+        // 先清掉该用户所有现存 grouping policy(任意租户/角色), 再按 user_roles 重建 ——
+        // 一次性处理新增/移除/替换, 幂等. removeFilteredGroupingPolicy(0, uid): 过滤第 0 列(user)。
+        enforcer.removeFilteredGroupingPolicy(0, uid);
+
+        // 与启动期 loadGroupings 同口径: 只认 status=1 / 未删 / 插件启用的角色
+        String sql = "SELECT r.role_code, r.tenant_id FROM user_roles ur " +
+                "JOIN roles r ON r.id = ur.role_id " +
+                "WHERE ur.user_id = ? AND r.status = 1 AND r.deleted = 0 AND r.plugin_enabled = 1";
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, userId);
+        for (Map<String, Object> row : rows) {
+            enforcer.addGroupingPolicy(uid, (String) row.get("role_code"),
+                    String.valueOf(row.get("tenant_id")));
+        }
+        log.info("[Casbin] synced grouping policies for user {}: {} active role(s)", userId, rows.size());
+    }
+
+    @Override
     public boolean checkAccess(Long userId, Long tenantId, String resource, String action) {
         return enforcer.enforce(
                 String.valueOf(userId),

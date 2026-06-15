@@ -15,6 +15,7 @@ import com.school.management.domain.place.repository.UniversalPlaceOccupantRepos
 import com.school.management.domain.place.repository.UniversalPlaceRepository;
 import com.school.management.domain.shared.model.EntityTypeConfig;
 import com.school.management.domain.shared.repository.EntityTypeConfigRepository;
+import com.school.management.domain.user.event.UserRolesChangedEvent;
 import com.school.management.domain.user.model.aggregate.User;
 import com.school.management.domain.user.repository.UserRepository;
 import com.school.management.exception.BusinessException;
@@ -172,6 +173,11 @@ public class UserApplicationService {
         // 发布领域事件
         publishEvents(user);
 
+        // 角色集已写 user_roles → 热同步 Casbin grouping policy (否则新建用户授权要等重启)
+        if (roleIds != null && !roleIds.isEmpty()) {
+            eventPublisher.publish(new UserRolesChangedEvent(user.getId()));
+        }
+
         // SPI: 插件 afterCreate 钩子
         fireUserLifecycle("afterCreate", user, command.getCreatedBy());
 
@@ -289,6 +295,11 @@ public class UserApplicationService {
 
         // 发布事件
         publishEvents(user);
+
+        // 角色被改动时热同步 Casbin grouping policy (含移除/替换)
+        if (command.getRoleIds() != null) {
+            eventPublisher.publish(new UserRolesChangedEvent(userId));
+        }
 
         // SPI: 插件 afterUpdate 钩子
         fireUserLifecycle("afterUpdate", user, command.getUpdatedBy());
@@ -426,6 +437,9 @@ public class UserApplicationService {
 
         userRepository.deleteById(userId);
 
+        // user_roles 已清 → 热同步移除该用户残留的 Casbin grouping policy
+        eventPublisher.publish(new UserRolesChangedEvent(userId));
+
         // SPI: 插件 afterDelete 钩子
         fireUserLifecycle("afterDelete", user, null);
     }
@@ -447,6 +461,9 @@ public class UserApplicationService {
             autoCheckOutByUser(userId);
         }
         userRepository.deleteByIds(userIds);
+
+        // user_roles 已清 → 逐个热同步移除残留 grouping policy
+        userIds.forEach(uid -> eventPublisher.publish(new UserRolesChangedEvent(uid)));
     }
 
     /**
@@ -591,6 +608,9 @@ public class UserApplicationService {
 
         user.assignRoles(roleIds);
         userRepository.save(user);
+
+        // 热同步 Casbin grouping policy (这条路径原本不发任何事件, 是新建用户授权不生效的同源缺口)
+        eventPublisher.publish(new UserRolesChangedEvent(userId));
     }
 
     /**

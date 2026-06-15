@@ -82,6 +82,10 @@ class UserApplicationServiceTest {
     @Mock
     private com.school.management.application.organization.MembershipResolver membershipResolver;
 
+    // 闸3 授权护栏 (commit d59911fa 引入): void 方法, mock 默认 no-op → 不拦截
+    @Mock
+    private com.school.management.infrastructure.access.policy.UserManagementGuard userManagementGuard;
+
     @InjectMocks
     private UserApplicationService service;
 

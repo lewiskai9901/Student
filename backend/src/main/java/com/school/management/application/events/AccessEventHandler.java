@@ -1,6 +1,7 @@
 package com.school.management.application.events;
 
 import com.school.management.domain.access.event.*;
+import com.school.management.domain.user.event.UserRolesChangedEvent;
 import com.school.management.domain.access.repository.AccessRelationRepository;
 import com.school.management.domain.access.repository.RoleRepository;
 import com.school.management.domain.access.service.PolicyEnforcementService;
@@ -92,6 +93,24 @@ public class AccessEventHandler {
 
         // 刷新权限缓存
         handlePermissionsChanged(event);
+    }
+
+    /**
+     * 处理用户角色集合变更事件 (创建带角色 / 改角色 / 删用户清空)。
+     * 全量重算该用户的 Casbin grouping policy —— 否则新建用户/改角色后授权要等重启才生效
+     * (CasbinConfig 仅启动时从 user_roles 重建)。与角色权限/状态变更的 reload 机制对称。
+     */
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void handle(UserRolesChangedEvent event) {
+        log.info("Handling UserRolesChangedEvent: userId={}", event.getUserId());
+        try {
+            policyEnforcementService.syncUserRoles(event.getUserId());
+            log.debug("[Casbin] grouping policy synced for user {}", event.getUserId());
+        } catch (Exception e) {
+            log.error("[Casbin] failed to sync grouping policy for user {}: {}",
+                event.getUserId(), e.getMessage(), e);
+        }
     }
 
     /**
