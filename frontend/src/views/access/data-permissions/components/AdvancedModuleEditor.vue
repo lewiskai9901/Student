@@ -125,16 +125,18 @@
                   />
                 </el-select>
                 <button
-                  v-if="getScope(module.code) === 'CUSTOM'"
                   class="flex h-7 items-center gap-1 rounded px-2 text-[11px] font-medium transition"
                   :class="
                     expandedModule === module.code
                       ? 'bg-blue-600 text-white'
-                      : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                      : 'bg-gray-50 text-gray-500 hover:bg-blue-50 hover:text-blue-600'
                   "
+                  :title="'展开高级范围生成器 (组织锚点 / 关系过滤 / 类型过滤)'"
                   @click="toggleExpand(module.code)"
                 >
-                  <span>{{ getCustomCount(module.code) }} 项</span>
+                  <span v-if="getScope(module.code) === 'CUSTOM'">{{ getCustomCount(module.code) }} 项</span>
+                  <span v-else-if="axisSummary(module)">{{ axisSummary(module) }}</span>
+                  <span v-else>展开</span>
                   <ChevronDown
                     class="h-3 w-3 transition-transform"
                     :class="{ 'rotate-180': expandedModule === module.code }"
@@ -143,14 +145,142 @@
               </div>
             </div>
 
+            <!-- ▸ 展开: 可组合三轴范围生成器 (设计 §6) -->
             <div
-              v-if="expandedModule === module.code && getScope(module.code) === 'CUSTOM'"
-              class="border-t border-gray-100 p-3"
+              v-if="expandedModule === module.code"
+              class="space-y-3 border-t border-gray-100 bg-gray-50/40 p-3"
             >
-              <CustomScopeTreePicker
-                :org-ids="getScopeItems(module.code)"
-                @update:org-ids="v => onScopeItemsChange(module.code, v)"
-              />
+              <!-- ① 组织锚点 -->
+              <div class="space-y-1.5">
+                <div class="flex items-center gap-1.5 text-[11px] font-semibold text-gray-600">
+                  <span class="inline-flex h-4 w-4 items-center justify-center rounded-full bg-blue-100 text-[9px] text-blue-600">1</span>
+                  组织锚点
+                </div>
+                <div class="flex flex-wrap items-center gap-2 pl-5">
+                  <span class="text-[11px] text-gray-500">从</span>
+                  <el-select
+                    :model-value="getOrgAnchor(module.code)"
+                    size="small"
+                    :disabled="module.pluginEnabled === false"
+                    style="width: 168px"
+                    @update:model-value="(v: any) => onOrgAnchorChange(module.code, v as string)"
+                  >
+                    <el-option label="全部组织" value="ALL" />
+                    <el-option label="不锚定组织 (仅本人)" value="SELF" />
+                    <el-option label="我的主属组织" value="PRIMARY_ORG" />
+                    <el-option label="按关系派生的组织" value="RELATION" />
+                    <el-option label="指定组织" value="CUSTOM_ORG" />
+                  </el-select>
+                  <!-- RELATION: 选关系 -->
+                  <template v-if="getOrgAnchor(module.code) === 'RELATION'">
+                    <span class="text-[11px] text-gray-500">我</span>
+                    <el-select
+                      :model-value="getAnchorParam(module.code)"
+                      size="small"
+                      placeholder="选择关系"
+                      :disabled="module.pluginEnabled === false"
+                      style="width: 140px"
+                      @update:model-value="(v: any) => onAnchorParamChange(module.code, v as string)"
+                    >
+                      <el-option
+                        v-for="r in orgAnchorRelations"
+                        :key="r.relationCode"
+                        :label="r.relationName"
+                        :value="r.relationCode"
+                      />
+                    </el-select>
+                    <span class="text-[11px] text-gray-500">的组织</span>
+                  </template>
+                  <!-- 含下级 子树 (锚定到组织时才有意义) -->
+                  <el-checkbox
+                    v-if="['PRIMARY_ORG', 'RELATION', 'CUSTOM_ORG'].includes(getOrgAnchor(module.code))"
+                    :model-value="getIncludeSubtree(module.code)"
+                    size="small"
+                    :disabled="module.pluginEnabled === false"
+                    @update:model-value="(v: any) => onIncludeSubtreeChange(module.code, !!v)"
+                  >
+                    <span class="text-[11px]">含下级</span>
+                  </el-checkbox>
+                </div>
+                <!-- CUSTOM_ORG: 组织树选择器 -->
+                <div v-if="getOrgAnchor(module.code) === 'CUSTOM_ORG'" class="pl-5">
+                  <CustomScopeTreePicker
+                    :org-ids="getCustomOrgIds(module.code)"
+                    @update:org-ids="v => onCustomOrgIdsChange(module.code, v)"
+                  />
+                </div>
+              </div>
+
+              <!-- ② 关系过滤 (仅 relationFilterable 资源) -->
+              <div v-if="module.relationFilterable" class="space-y-1.5">
+                <div class="flex items-center gap-1.5 text-[11px] font-semibold text-gray-600">
+                  <span class="inline-flex h-4 w-4 items-center justify-center rounded-full bg-amber-100 text-[9px] text-amber-600">2</span>
+                  关系过滤
+                  <span class="font-normal text-gray-400">— 按主体与组织的关系再次收窄</span>
+                </div>
+                <div class="flex flex-wrap items-center gap-3 pl-5">
+                  <el-radio-group
+                    :model-value="getRelFilterMode(module.code)"
+                    size="small"
+                    :disabled="module.pluginEnabled === false"
+                    @update:model-value="(v: any) => onRelFilterModeChange(module.code, v as string)"
+                  >
+                    <el-radio-button value="NONE">不限</el-radio-button>
+                    <el-radio-button value="INCLUDE">仅</el-radio-button>
+                    <el-radio-button value="EXCLUDE">排除</el-radio-button>
+                  </el-radio-group>
+                  <el-select
+                    v-if="getRelFilterMode(module.code) !== 'NONE'"
+                    :model-value="getRelFilterValues(module.code)"
+                    multiple
+                    collapse-tags
+                    collapse-tags-tooltip
+                    size="small"
+                    placeholder="选择关系"
+                    :disabled="module.pluginEnabled === false"
+                    style="width: 200px"
+                    @update:model-value="(v: any) => onRelFilterValuesChange(module.code, v as string[])"
+                  >
+                    <el-option
+                      v-for="r in subjectFilterRelations(module)"
+                      :key="r.relationCode"
+                      :label="r.relationName"
+                      :value="r.relationCode"
+                    />
+                  </el-select>
+                  <span class="text-[11px] text-gray-400">关系的主体</span>
+                </div>
+              </div>
+
+              <!-- ③ 类型过滤 (仅 typeEntity 资源) — 与上方紧凑控件等价, 展开态完整展示 -->
+              <div v-if="module.typeEntity" class="space-y-1.5">
+                <div class="flex items-center gap-1.5 text-[11px] font-semibold text-gray-600">
+                  <span class="inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-100 text-[9px] text-emerald-600">3</span>
+                  类型过滤
+                  <span class="font-normal text-gray-400">— 不选=不限类型</span>
+                </div>
+                <div class="pl-5">
+                  <el-select
+                    :model-value="getTypeFilter(module.code)"
+                    multiple
+                    collapse-tags
+                    collapse-tags-tooltip
+                    clearable
+                    size="small"
+                    placeholder="全部类型"
+                    :disabled="module.pluginEnabled === false"
+                    style="width: 260px"
+                    @update:model-value="(v: any) => onTypeFilterChange(module.code, v as string[])"
+                  >
+                    <el-option
+                      v-for="t in (typeOptions[module.typeEntity] || [])"
+                      :key="t.code"
+                      :label="t.name"
+                      :value="t.code"
+                    />
+                  </el-select>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -236,6 +366,7 @@ import { AlertTriangle, Settings, ChevronDown, Lock, Sparkles } from 'lucide-vue
 import CustomScopeTreePicker from './CustomScopeTreePicker.vue'
 import type { ModulePermission, ScopeItem, DataScopeOption } from '@/types/access'
 import { entityTypeApi } from '@/api/entityType'
+import { relationTypeApi, type RelationTypeDef } from '@/api/relationType'
 
 export interface ModuleGroupItem {
   code: string
@@ -248,6 +379,8 @@ export interface ModuleGroupItem {
   typeField?: string | null
   /** 类型选项来源实体 USER/PLACE/ORG_UNIT — 决定类型多选的候选项 */
   typeEntity?: string | null
+  /** 轴② 关系过滤能力: true 表示该资源支持"按主体关系过滤"(如 user 资源排除管理者) */
+  relationFilterable?: boolean
 }
 
 interface FilterMeta {
@@ -337,11 +470,6 @@ function getCustomCount(code: string): number {
   return props.modulePermissions.find(p => p.moduleCode === code)?.scopeItems?.length || 0
 }
 
-function getScopeItems(code: string): (number | string)[] {
-  const mp = props.modulePermissions.find(p => p.moduleCode === code)
-  return mp?.scopeItems?.map(i => i.scopeId) || []
-}
-
 function updateModulePermission(code: string, patch: Partial<ModulePermission>) {
   const next = [...props.modulePermissions]
   const idx = next.findIndex(p => p.moduleCode === code)
@@ -354,10 +482,15 @@ function updateModulePermission(code: string, patch: Partial<ModulePermission>) 
 }
 
 function onScopeChange(code: string, scopeCode: string) {
-  const patch: Partial<ModulePermission> = { scopeCode }
+  // preset 是快捷路径: 选定后派生隐含三轴, 让展开视图与之一致 (用户随后可在展开里覆盖)
+  const patch: Partial<ModulePermission> = {
+    scopeCode,
+    orgAnchor: presetToAnchor(scopeCode) as ModulePermission['orgAnchor'],
+    includeSubtree: scopeCode === 'DEPARTMENT_AND_BELOW',
+  }
   if (scopeCode !== 'CUSTOM') {
     patch.scopeItems = []
-    if (expandedModule.value === code) expandedModule.value = ''
+    patch.customOrgIds = []
   } else {
     expandedModule.value = code
   }
@@ -405,15 +538,148 @@ function onTypeFilterChange(code: string, vals: string[]) {
   updateModulePermission(code, { typeFilter: vals })
 }
 
-function onScopeItemsChange(code: string, ids: (number | string)[]) {
-  // 自定义项都是 org_unit, CUSTOM 范围项统一为 ORG_UNIT
+// ── 关系字典 (轴①锚点 + 轴②过滤): 从 relation_types 数据驱动, 无任何行业硬编码 ──
+const allRelations = ref<RelationTypeDef[]>([])
+
+async function loadRelations() {
+  try {
+    allRelations.value = (await relationTypeApi.list()) || []
+  } catch {
+    allRelations.value = []
+  }
+}
+loadRelations()
+
+/** 轴① "我[关系]的组织" 候选: 指向组织单元的关系 (如 admin/member 等 user→ORG_UNIT) */
+const orgAnchorRelations = computed<RelationTypeDef[]>(() =>
+  allRelations.value.filter(r => (r.toType || '').toUpperCase() === 'ORG_UNIT')
+)
+
+/** 轴② 主体关系过滤候选: 指向本模块类型实体的关系; 无匹配时回退全部 (后端解释关系码) */
+function subjectFilterRelations(module: ModuleGroupItem): RelationTypeDef[] {
+  const entity = (module.typeEntity || '').toUpperCase()
+  if (!entity) return allRelations.value
+  const matched = allRelations.value.filter(r => (r.toType || '').toUpperCase() === entity)
+  return matched.length ? matched : allRelations.value
+}
+
+// ── 轴① 组织锚点 getter/setter ──
+function getOrgAnchor(code: string): string {
+  const mp = props.modulePermissions.find(p => p.moduleCode === code)
+  if (mp?.orgAnchor) return mp.orgAnchor
+  // 无显式轴① → 由 scopeCode (preset) 推导, 保证回显一致
+  return presetToAnchor(mp?.scopeCode || getScope(code))
+}
+
+/** preset scopeCode → 隐含的组织锚点 (preset 是快捷路径, 展开后映射到三轴) */
+function presetToAnchor(scope: string): string {
+  switch (scope) {
+    case 'ALL':
+      return 'ALL'
+    case 'SELF':
+      return 'SELF'
+    case 'DEPARTMENT':
+    case 'DEPARTMENT_AND_BELOW':
+      return 'PRIMARY_ORG'
+    case 'CUSTOM':
+      return 'CUSTOM_ORG'
+    default:
+      return 'SELF'
+  }
+}
+
+function getAnchorParam(code: string): string {
+  return props.modulePermissions.find(p => p.moduleCode === code)?.anchorParam || ''
+}
+
+function getIncludeSubtree(code: string): boolean {
+  const mp = props.modulePermissions.find(p => p.moduleCode === code)
+  if (mp?.includeSubtree != null) return mp.includeSubtree
+  // 无显式值 → 从 preset 推导 (DEPARTMENT_AND_BELOW 含子树)
+  return (mp?.scopeCode || getScope(code)) === 'DEPARTMENT_AND_BELOW'
+}
+
+function getCustomOrgIds(code: string): (number | string)[] {
+  const mp = props.modulePermissions.find(p => p.moduleCode === code)
+  if (mp?.customOrgIds?.length) return mp.customOrgIds
+  // 回退: 兼容旧 CUSTOM scopeItems
+  return mp?.scopeItems?.map(i => i.scopeId) || []
+}
+
+function onOrgAnchorChange(code: string, anchor: string) {
+  const patch: Partial<ModulePermission> = { orgAnchor: anchor as ModulePermission['orgAnchor'] }
+  // 维持 scopeCode (preset) 与轴① 大致一致, 后端有轴①时优先用轴①
+  if (anchor === 'ALL') patch.scopeCode = 'ALL'
+  else if (anchor === 'SELF') patch.scopeCode = 'SELF'
+  else if (anchor === 'CUSTOM_ORG') patch.scopeCode = 'CUSTOM'
+  else patch.scopeCode = 'DEPARTMENT'
+  if (anchor !== 'RELATION' && anchor !== 'PLUGIN_DIM') patch.anchorParam = undefined
+  if (anchor !== 'CUSTOM_ORG') patch.customOrgIds = []
+  if (anchor === 'SELF' || anchor === 'ALL') patch.includeSubtree = false
+  updateModulePermission(code, patch)
+}
+
+function onAnchorParamChange(code: string, param: string) {
+  updateModulePermission(code, { anchorParam: param })
+}
+
+function onIncludeSubtreeChange(code: string, val: boolean) {
+  updateModulePermission(code, { includeSubtree: val })
+}
+
+function onCustomOrgIdsChange(code: string, ids: (number | string)[]) {
+  // 同时维持 scopeItems (preset CUSTOM 向后兼容) 与 customOrgIds (轴①)
   const items: ScopeItem[] = ids.map(id => ({
     itemTypeCode: 'ORG_UNIT',
     scopeId: String(id),
     scopeName: '',
     includeChildren: true,
   }))
-  updateModulePermission(code, { scopeItems: items })
+  updateModulePermission(code, { customOrgIds: ids, scopeItems: items, orgAnchor: 'CUSTOM_ORG', scopeCode: 'CUSTOM' })
+}
+
+// ── 轴② 关系过滤 (include / exclude 互斥三态) ──
+function getRelFilterMode(code: string): 'NONE' | 'INCLUDE' | 'EXCLUDE' {
+  const mp = props.modulePermissions.find(p => p.moduleCode === code)
+  if (mp?.subjectRelExclude?.length) return 'EXCLUDE'
+  if (mp?.subjectRelInclude?.length) return 'INCLUDE'
+  return 'NONE'
+}
+
+function getRelFilterValues(code: string): string[] {
+  const mp = props.modulePermissions.find(p => p.moduleCode === code)
+  if (mp?.subjectRelExclude?.length) return mp.subjectRelExclude
+  if (mp?.subjectRelInclude?.length) return mp.subjectRelInclude
+  return []
+}
+
+function onRelFilterModeChange(code: string, mode: string) {
+  if (mode === 'NONE') {
+    updateModulePermission(code, { subjectRelInclude: [], subjectRelExclude: [] })
+  } else if (mode === 'INCLUDE') {
+    const vals = getRelFilterValues(code)
+    updateModulePermission(code, { subjectRelInclude: vals, subjectRelExclude: [] })
+  } else {
+    const vals = getRelFilterValues(code)
+    updateModulePermission(code, { subjectRelExclude: vals, subjectRelInclude: [] })
+  }
+}
+
+function onRelFilterValuesChange(code: string, vals: string[]) {
+  const mode = getRelFilterMode(code)
+  if (mode === 'INCLUDE') updateModulePermission(code, { subjectRelInclude: vals, subjectRelExclude: [] })
+  else if (mode === 'EXCLUDE') updateModulePermission(code, { subjectRelExclude: vals, subjectRelInclude: [] })
+}
+
+/** 行头摘要徽标: 显示已配置的高级轴数量 (有别于 preset 默认) */
+function axisSummary(module: ModuleGroupItem): string {
+  const mp = props.modulePermissions.find(p => p.moduleCode === module.code)
+  if (!mp) return ''
+  const parts: string[] = []
+  if (mp.typeFilter?.length) parts.push(`类型${mp.typeFilter.length}`)
+  if (mp.subjectRelInclude?.length || mp.subjectRelExclude?.length) parts.push('关系')
+  if (mp.orgAnchor === 'RELATION' && mp.anchorParam) parts.push('锚点')
+  return parts.join('·')
 }
 
 function toggleExpand(code: string) {

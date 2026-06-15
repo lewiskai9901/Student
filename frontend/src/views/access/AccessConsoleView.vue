@@ -286,6 +286,7 @@ function groupByIndustry(mods: any[]): Record<string, ModuleGroupItem[]> {
       allowedScopes: (m as any).allowedScopes ?? null,
       typeField: (m as any).typeField ?? null,
       typeEntity: (m as any).typeEntity ?? null,
+      relationFilterable: (m as any).relationFilterable ?? false,
     })
   }
   const order = ['CORE', 'EDU', 'HEALTH', 'CARE', 'CUSTOM']

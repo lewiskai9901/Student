@@ -220,14 +220,42 @@ export interface ScopeItem {
 }
 
 /**
- * 模块权限配置
+ * 组织锚点 (轴①) — 与后端 OrgAnchor 枚举严格往返
+ *  - ALL: 全部组织
+ *  - SELF: 仅本人 (不锚定组织)
+ *  - PRIMARY_ORG: 用户主属组织 (member 关系所在 org)
+ *  - RELATION: 由关系派生的组织集 (如 admin 关系=我管理的组织), anchorParam=relationCode
+ *  - CUSTOM_ORG: 管理员显式指定的组织集 (customOrgIds)
+ *  - PLUGIN_DIM: 插件动态维度派生, anchorParam=dimCode
+ */
+export type OrgAnchor = 'ALL' | 'SELF' | 'PRIMARY_ORG' | 'RELATION' | 'CUSTOM_ORG' | 'PLUGIN_DIM'
+
+/**
+ * 模块权限配置 — 可组合三轴 (T10 READ 侧)
+ *  - 轴① 组织锚点: orgAnchor / anchorParam / includeSubtree / customOrgIds
+ *  - 轴② 关系过滤: subjectRelInclude / subjectRelExclude (仅 relationFilterable 资源)
+ *  - 轴③ 类型过滤: typeFilter (仅声明了 typeField/typeEntity 的资源)
+ * scopeCode 仍保留 (preset 回退/向后兼容); 后端有三轴时优先用三轴。
  */
 export interface ModulePermission {
   moduleCode: string
   scopeCode: string
   scopeItems?: ScopeItem[]
-  /** 类型过滤(闸2/2b): 类型码集, 与组织范围 AND 组合; 空/缺省=不限。仅对声明了 typeField 的资源生效 */
+  /** 类型过滤(轴③/闸2/2b): 类型码集, 与组织范围 AND 组合; 空/缺省=不限。仅对声明了 typeField 的资源生效 */
   typeFilter?: string[]
+  // ── 可组合三轴 (T10): 前端显式配置时下发, 后端优先采用 ──
+  /** 轴① 组织锚点 */
+  orgAnchor?: OrgAnchor
+  /** 轴① 锚点参数: RELATION 时=关系码; PLUGIN_DIM 时=维度码 */
+  anchorParam?: string
+  /** 轴① 是否含锚定组织的下级 (子树) */
+  includeSubtree?: boolean
+  /** 轴① CUSTOM_ORG 时的组织单元 id 列表 */
+  customOrgIds?: (number | string)[]
+  /** 轴② 关系过滤-包含: 仅这些关系的主体 (关系码集) */
+  subjectRelInclude?: string[]
+  /** 轴② 关系过滤-排除: 排除这些关系的主体 (如"排除管理者") */
+  subjectRelExclude?: string[]
 }
 
 /**

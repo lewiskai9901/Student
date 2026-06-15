@@ -159,15 +159,21 @@
           <div
             v-for="mp in displayModulePermissions"
             :key="mp.moduleCode"
-            class="flex items-center justify-between border-b border-gray-50 py-1 last:border-0"
+            class="border-b border-gray-50 py-1 last:border-0"
           >
-            <span class="truncate text-xs text-gray-700">{{ moduleLabel(mp.moduleCode) }}</span>
-            <span
-              class="ml-2 flex-shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium"
-              :class="scopeBadge(mp.scopeCode)"
-            >
-              {{ scopeName(mp.scopeCode) }}
-            </span>
+            <div class="flex items-center justify-between">
+              <span class="truncate text-xs text-gray-700">{{ moduleLabel(mp.moduleCode) }}</span>
+              <span
+                class="ml-2 flex-shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium"
+                :class="scopeBadge(mp.scopeCode)"
+              >
+                {{ scopeName(mp.scopeCode) }}
+              </span>
+            </div>
+            <!-- 组合范围自然语言描述 (含三轴) -->
+            <div v-if="composeAxisLine(mp)" class="mt-0.5 truncate text-[10px] text-gray-400">
+              {{ composeAxisLine(mp) }}
+            </div>
           </div>
           <div v-if="modulePermissions.length === 0" class="py-4 text-center text-xs text-gray-400">
             无模块配置
@@ -198,6 +204,8 @@ import { ElMessage } from 'element-plus'
 import type { ModulePermission, DataScopeOption } from '@/types/access'
 import type { SceneDecision, ScopeFallbackInfo } from '../composables/useSceneTemplate'
 import { dataPermissionSimulateApi, type SimulateResult } from '@/api/access'
+import { relationTypeApi, type RelationTypeDef } from '@/api/relationType'
+import { entityTypeApi } from '@/api/entityType'
 import { usePluginsStore } from '@/stores/plugins'
 import { enabledScopeSpecializations } from '../dataScopeSpecializations'
 
@@ -310,6 +318,72 @@ function moduleLabel(code: string): string {
 function scopeName(code: string): string {
   const found = props.dataScopeOptions.find(s => s.scopeCode === code)
   return found?.scopeName || code
+}
+
+// ── 关系 / 类型标签 (数据驱动, 无任何行业硬编码; 标签来自 API) ──
+const relationLabels = ref<Record<string, string>>({})
+const typeLabels = ref<Record<string, string>>({})
+
+async function loadDicts() {
+  try {
+    const rels = (await relationTypeApi.list()) || []
+    const rmap: Record<string, string> = {}
+    rels.forEach((r: RelationTypeDef) => (rmap[r.relationCode] = r.relationName || r.relationCode))
+    relationLabels.value = rmap
+  } catch {
+    /* 失败 → 用 code 占位 */
+  }
+  // 类型标签: 拉取三类实体的类型配置, 合并为 code->name (够覆盖 typeFilter 显示)
+  for (const entity of ['USER', 'PLACE', 'ORG_UNIT']) {
+    try {
+      const list = await entityTypeApi.list(entity)
+      const tmap = { ...typeLabels.value }
+      ;(list || []).forEach(t => (tmap[t.typeCode] = t.typeName || t.typeCode))
+      typeLabels.value = tmap
+    } catch {
+      /* 忽略 */
+    }
+  }
+}
+loadDicts()
+
+function relLabel(code: string): string {
+  return relationLabels.value[code] || code
+}
+function typeLabel(code: string): string {
+  return typeLabels.value[code] || code
+}
+
+/**
+ * 把单模块的可组合三轴拼成自然语言 (通用措辞, 标签全来自 API):
+ *   "我[关系]的组织 · 含下级 · 排除[关系]关系 · 仅[类型]类型"
+ * 只在该模块配置了高级轴 (相对 preset 默认有附加信息) 时返回, 否则空串。
+ */
+function composeAxisLine(mp: ModulePermission): string {
+  const parts: string[] = []
+  // 轴① 仅当显式 RELATION/PLUGIN_DIM 锚点时补充措辞 (其余 preset badge 已表达)
+  if (mp.orgAnchor === 'RELATION' && mp.anchorParam) {
+    parts.push(`我「${relLabel(mp.anchorParam)}」的组织`)
+  } else if (mp.orgAnchor === 'PLUGIN_DIM' && mp.anchorParam) {
+    parts.push(`维度「${mp.anchorParam}」`)
+  }
+  if (
+    mp.includeSubtree &&
+    (mp.orgAnchor === 'RELATION' || mp.orgAnchor === 'PRIMARY_ORG' || mp.orgAnchor === 'CUSTOM_ORG')
+  ) {
+    parts.push('含下级')
+  }
+  // 轴② 关系过滤
+  if (mp.subjectRelExclude?.length) {
+    parts.push(`排除「${mp.subjectRelExclude.map(relLabel).join('、')}」关系`)
+  } else if (mp.subjectRelInclude?.length) {
+    parts.push(`仅「${mp.subjectRelInclude.map(relLabel).join('、')}」关系`)
+  }
+  // 轴③ 类型过滤
+  if (mp.typeFilter?.length) {
+    parts.push(`仅「${mp.typeFilter.map(typeLabel).join('、')}」类型`)
+  }
+  return parts.join(' · ')
 }
 
 // ==================== 模拟用户预览 ====================

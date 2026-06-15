@@ -213,21 +213,37 @@ export function applySceneToModules(
   const { scopes, fallbacks } = sceneToModuleScopes(decision, modules, specs, relevantCodes)
   const result: ModulePermission[] = []
   const seen = new Set<string>()
-  // 类型过滤(闸2/2b)是 scene 之外的正交维度 — 场景只改组织范围, 不应抹掉已配的类型过滤
-  const typeFilterByCode = new Map<string, string[] | undefined>(
-    existing.map(e => [e.moduleCode, e.typeFilter])
+  // 高级配置的轴 (类型过滤②③ + 组织锚点①) 是 scene 之外的正交维度 —
+  // 场景只设主决策的组织范围, 不应抹掉已手工配置的高级轴。
+  const advancedByCode = new Map<string, Partial<ModulePermission>>(
+    existing.map(e => [
+      e.moduleCode,
+      {
+        ...(e.typeFilter && e.typeFilter.length ? { typeFilter: e.typeFilter } : {}),
+        ...(e.orgAnchor ? { orgAnchor: e.orgAnchor } : {}),
+        ...(e.anchorParam ? { anchorParam: e.anchorParam } : {}),
+        ...(e.includeSubtree != null ? { includeSubtree: e.includeSubtree } : {}),
+        ...(e.customOrgIds && e.customOrgIds.length ? { customOrgIds: e.customOrgIds } : {}),
+        ...(e.subjectRelInclude && e.subjectRelInclude.length
+          ? { subjectRelInclude: e.subjectRelInclude }
+          : {}),
+        ...(e.subjectRelExclude && e.subjectRelExclude.length
+          ? { subjectRelExclude: e.subjectRelExclude }
+          : {}),
+      },
+    ])
   )
 
   for (const mod of modules) {
     const m = scopes[mod.code]
     if (!m) continue
     seen.add(mod.code)
-    const tf = typeFilterByCode.get(mod.code)
+    const adv = advancedByCode.get(mod.code) ?? {}
     result.push({
       moduleCode: mod.code,
       scopeCode: m.scopeCode,
       scopeItems: m.scopeItems,
-      ...(tf && tf.length ? { typeFilter: tf } : {}),
+      ...adv,
     })
   }
 
