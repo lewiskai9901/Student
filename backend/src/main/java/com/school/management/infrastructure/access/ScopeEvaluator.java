@@ -271,7 +271,7 @@ public class ScopeEvaluator {
         }
 
         if (meta.viaMembership()) {
-            return membershipSelect(orgSet, meta, ctx, tenantId, paramOffset);
+            return membershipSelect(orgSet, spec, meta, ctx, tenantId, paramOffset);
         }
         if (meta.hasResourceType()) {
             return accessRelationSelect(orgSet, spec, meta, ctx, tenantId, paramOffset);
@@ -306,7 +306,7 @@ public class ScopeEvaluator {
      * 端口自 buildMembershipCondition。主表行即 member 关系 subject; 按 org 锚定集过滤
      * ar.resource_id。SELF → subjectCol = ?。
      */
-    private ScopeCondition membershipSelect(OrgSet orgSet, ResourceScopeMeta meta,
+    private ScopeCondition membershipSelect(OrgSet orgSet, ScopeSpec spec, ResourceScopeMeta meta,
                                             UserContext ctx, Long tenantId, int paramOffset) {
         String alias = meta.aliasPrefix();
         String subjectCol = meta.membershipSubjectColumn() == null || meta.membershipSubjectColumn().isEmpty()
@@ -327,7 +327,22 @@ public class ScopeEvaluator {
         // ar.tenant_id 必须排在 org 谓词参数之前 (位置绑定) —— interceptor 通过把 tenant param
         // 插到 list 头部实现。这里我们顺序天然正确: 先 add ar.tenant_id, 再 emit org predicate。
         cond.addParam("_dp_memArTenant_" + paramOffset, tenantId, Long.class, JdbcType.BIGINT);
-        String orgPredicate = orgSet.predicate.emit("ar.resource_id", cond, tenantId, paramOffset);
+
+        // CUSTOM_ORG 在 membership 路径必须<b>无条件子树展开</b> (端口自 buildMembershipCondition CUSTOM)。
+        // 成员挂在叶子组织 (学生是其 CLASS 的 member, 非祖先 GRADE), 授某祖先 org 必须触达其后代叶子
+        // 的成员, 故忽略 includeSubtree 一律展开。org-field 路径仍 honor includeSubtree (不变)。
+        String orgPredicate;
+        if (spec.getOrgAnchor() == OrgAnchor.CUSTOM_ORG) {
+            String csv = spec.getCustomOrgIds().stream().map(String::valueOf).collect(Collectors.joining(","));
+            orgPredicate = "ar.resource_id IN ("
+                    + "SELECT o.id FROM org_units o "
+                    + "JOIN org_units g ON g.id IN (" + csv + ") "
+                    + "WHERE o.tenant_id = ? AND o.deleted = 0 "
+                    + "AND o.tree_path LIKE CONCAT(g.tree_path, '%'))";
+            cond.addParam("_dp_memCustomTenant_" + paramOffset, tenantId, Long.class, JdbcType.BIGINT);
+        } else {
+            orgPredicate = orgSet.predicate.emit("ar.resource_id", cond, tenantId, paramOffset);
+        }
 
         cond.sql = alias + subjectCol + " IN ("
                 + "SELECT ar.subject_id FROM access_relations ar "
@@ -338,9 +353,26 @@ public class ScopeEvaluator {
     }
 
     /**
-     * 端口自 buildAccessRelationCondition。
-     * {@code alias.id IN (SELECT ar.resource_id ... (subject=me) OR (subject_org IN orgSet))}
-     * + 对 PRIMARY_ORG(±subtree) 追加 orgField 直过滤的 OR (端口自 DEPARTMENT* 分支)。
+     * 端口自 {@code buildAccessRelationCondition} —— <b>逐字节等价</b>。
+     *
+     * <p>interceptor 把 access_relation 资源 (resourceType 非空, 非 membership) 的<b>所有</b> scope
+     * (含 SELF / 未配置降级 SELF / ALL / PRIMARY_ORG / CUSTOM_ORG / RELATION) 一律路由到此方法,
+     * 并由 caller 传入"该角色的有效 org"作为 org-subject-OR / orgField-direct-OR 的锚点:
+     * ALL-scope-type 走 {@code ctx.getOrgUnitId()/getOrgUnitPath()} (用户主组织)。
+     *
+     * <p>因此本方法<b>不</b>对 SELF 特判 (不能丢掉 org-OR), 也<b>不</b>用 subtree 去 gate
+     * org-subject-OR (那会收窄 DEPARTMENT 可见性 → 回归)。结构:
+     * <pre>
+     * alias.id IN (SELECT ar.resource_id FROM access_relations ar
+     *   WHERE ar.resource_type=? AND ar.tenant_id=? AND ar.deleted=0
+     *     AND ( (ar.subject_type='user' AND ar.subject_id=?)
+     *           &lt;org-subject-OR: orgPath!=null → subtree 子查询; else orgId → =?&gt; ))
+     * + 仅 PRIMARY_ORG: OR orgField &lt;subtree||single&gt;  (端口自 DEPARTMENT/DEPARTMENT_AND_BELOW)
+     * </pre>
+     *
+     * <p>org 锚点来源 = interceptor caller 的口径: PRIMARY_ORG / SELF / ALL 用 {@code ctx} 的主组织;
+     * CUSTOM_ORG 在 access_relation 路径今天不被 interceptor 走到 (CUSTOM 仅在 org-field/membership
+     * 路径分流), 这里保持一致仍用 ctx org —— 不过度设计 (见类注释末)。
      */
     private ScopeCondition accessRelationSelect(OrgSet orgSet, ScopeSpec spec, ResourceScopeMeta meta,
                                                 UserContext ctx, Long tenantId, int paramOffset) {
@@ -348,18 +380,8 @@ public class ScopeEvaluator {
         String resourceType = meta.resourceType();
         ScopeCondition cond = new ScopeCondition();
 
-        if (orgSet.self) {
-            // SELF on access_relation 资源 → 仅本人 (subject=me) 命中。沿用 access_relation
-            // 的 (subject_type='user' AND subject_id=?) 单边。
-            cond.sql = alias + "id IN (SELECT ar.resource_id FROM access_relations ar "
-                    + "WHERE ar.resource_type = ? AND ar.tenant_id = ? AND ar.deleted = 0 "
-                    + "AND ar.subject_type = 'user' AND ar.subject_id = ?)";
-            cond.addParam("_dp_resType_" + paramOffset, resourceType, String.class, JdbcType.VARCHAR);
-            cond.addParam("_dp_tenantId_" + paramOffset, tenantId, Long.class, JdbcType.BIGINT);
-            cond.addParam("_dp_userId_" + paramOffset, ctx.getUserId(), Long.class, JdbcType.BIGINT);
-            return cond;
-        }
-
+        // 锚点 org = interceptor caller 口径 (该角色的有效 org; ALL-scope-type 用主组织)。
+        // SELF/PRIMARY_ORG/ALL/(CUSTOM_ORG 不被走到) 一律取 ctx 主组织, 与 interceptor 一致。
         Long orgId = ctx.getOrgUnitId();
         String orgPath = ctx.getOrgUnitPath();
 
@@ -371,8 +393,8 @@ public class ScopeEvaluator {
         cond.addParam("_dp_tenantId_" + paramOffset, tenantId, Long.class, JdbcType.BIGINT);
         cond.addParam("_dp_userId_" + paramOffset, ctx.getUserId(), Long.class, JdbcType.BIGINT);
 
-        boolean subtree = spec.isIncludeSubtree();
-        if (orgPath != null && (spec.getOrgAnchor() == OrgAnchor.PRIMARY_ORG ? subtree : true) && usesPathBranch(spec)) {
+        // org-subject-OR: 端口自 interceptor 行 ~532 —— 无条件以 orgPath != null 为键 (NOT subtree-gated)。
+        if (orgPath != null) {
             sb.append(" OR (ar.subject_type = 'org_unit' AND ar.subject_id IN (")
               .append("SELECT id FROM org_units WHERE tenant_id = ? AND tree_path LIKE ? AND deleted = 0))");
             cond.addParam("_dp_tenantId2_" + paramOffset, tenantId, Long.class, JdbcType.BIGINT);
@@ -383,12 +405,13 @@ public class ScopeEvaluator {
         }
         sb.append("))");
 
-        // orgField 直过滤 OR —— 端口自 DEPARTMENT / DEPARTMENT_AND_BELOW (即 PRIMARY_ORG)。
+        // orgField 直过滤 OR —— 仅 PRIMARY_ORG (端口自 interceptor 的 scope==DEPARTMENT||DEPARTMENT_AND_BELOW gate)。
         String orgField = meta.orgUnitField();
         boolean isPrimaryOrg = spec.getOrgAnchor() == OrgAnchor.PRIMARY_ORG;
         if (orgField != null && orgId != null && isPrimaryOrg) {
             sb.insert(0, "(");
-            if (subtree && orgPath != null) {
+            // 内层 subtree/single split: DEPARTMENT_AND_BELOW(=subtree) && orgPath → tree_path 子查询; else = ?。
+            if (spec.isIncludeSubtree() && orgPath != null) {
                 sb.append(" OR ").append(alias).append(orgField)
                   .append(" IN (SELECT id FROM org_units WHERE tenant_id = ? AND tree_path LIKE ?)");
                 cond.addParam("_dp_tenantId3_" + paramOffset, tenantId, Long.class, JdbcType.BIGINT);
@@ -402,14 +425,6 @@ public class ScopeEvaluator {
 
         cond.sql = sb.toString();
         return cond;
-    }
-
-    /** access_relation 路径里 org-unit subtree 子查询分支是否启用 (PRIMARY_ORG 之外, 沿用 orgPath 分支)。 */
-    private boolean usesPathBranch(ScopeSpec spec) {
-        // 端口自 interceptor: orgPath != null 时优先走 subtree 子查询。
-        // 对 PRIMARY_ORG 区分 subtree; 对 RELATION/CUSTOM_ORG 等当前 access_relation 路径未覆盖,
-        // 保守地按 orgPath 分支 (与 interceptor 的"orgPath != null"无条件分支一致)。
-        return true;
     }
 
     // ====================================================================
