@@ -30,6 +30,8 @@ public class DataModulePO {
     private String typeField;
     /** 类型选项来源实体 USER/PLACE/ORG_UNIT — 供配置 UI 拉取可选类型 */
     private String typeEntity;
+    /** 是否支持②结果关系过滤(成员型资源, 如 user) — 从 data_resources.subject_relation_filterable 透传 */
+    private Boolean subjectRelationFilterable;
     private Integer sortOrder;
     private Boolean enabled;
     /** 所属插件是否启用 — 从 data_resources.plugin_enabled 透传 */

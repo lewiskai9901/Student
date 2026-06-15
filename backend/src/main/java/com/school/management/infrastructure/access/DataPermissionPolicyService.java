@@ -249,7 +249,9 @@ public class DataPermissionPolicyService {
 
     /** 获取角色的所有权限配置 */
     public List<RoleDataPermission> getRolePermissions(Long tenantId, Long roleId) {
-        String sql = "SELECT id, role_id, resource_code, scope_type, custom_org_unit_ids, type_filter " +
+        String sql = "SELECT id, role_id, resource_code, scope_type, custom_org_unit_ids, type_filter, " +
+                "apply_to, org_anchor, anchor_param, include_subtree, custom_org_ids, " +
+                "subject_rel_include, subject_rel_exclude " +
                 "FROM role_data_scopes WHERE tenant_id = ? AND role_id = ? AND deleted = 0";
 
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, tenantId, roleId);
@@ -323,6 +325,7 @@ public class DataPermissionPolicyService {
     // ══════════════════════════════════════════════════════════════
 
     private RoleDataPermission mapToPermission(Map<String, Object> row) {
+        // 轴列 (getRolePermissions 的 SELECT 带; getMergedScope 的精简 SELECT 不带 → row.get 返 null, 安全)
         return RoleDataPermission.builder()
                 .id(getLongValue(row, "id"))
                 .roleId(getLongValue(row, "role_id"))
@@ -330,6 +333,13 @@ public class DataPermissionPolicyService {
                 .scopeCode((String) row.get("scope_type"))      // v3 字段映射
                 .typeFilter(parseTypeFilter(row.get("type_filter")))
                 .description(null)  // v3 无 description 字段
+                .applyTo((String) row.get("apply_to"))
+                .orgAnchor(OrgAnchor.fromCode((String) row.get("org_anchor")))
+                .anchorParam((String) row.get("anchor_param"))
+                .includeSubtree(getIntValue(row.get("include_subtree")) == 1)
+                .customOrgIds(parseLongSet(row.get("custom_org_ids")))
+                .subjectRelInclude(parseStringSet(row.get("subject_rel_include")))
+                .subjectRelExclude(parseStringSet(row.get("subject_rel_exclude")))
                 .build();
     }
 

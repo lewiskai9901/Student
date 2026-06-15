@@ -134,6 +134,9 @@ public class DynamicModuleService {
         po.setCreatorField(resource.getCreatorField());
         po.setTypeField(resource.getTypeField());
         po.setTypeEntity(resource.getTypeEntity());
+        // 轴②结果关系过滤能力: null → false
+        po.setSubjectRelationFilterable(resource.getSubjectRelationFilterable() != null
+                && resource.getSubjectRelationFilterable() == 1);
         po.setSortOrder(resource.getSortOrder());
         po.setEnabled(resource.getEnabled() != null && resource.getEnabled() == 1);
         // null 视为启用 (DB 默认 1)

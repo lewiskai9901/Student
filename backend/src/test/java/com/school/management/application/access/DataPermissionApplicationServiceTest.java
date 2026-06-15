@@ -181,6 +181,29 @@ class DataPermissionApplicationServiceTest {
             assertThat(result).hasSize(7);
             assertThat(result).allMatch(s -> "CORE".equals(s.getSource()));
         }
+
+        @Test
+        @DisplayName("T8: core 范围目录源自 ScopePreset — 7 种, code=预设名, ALL 首 SELF 末, level 倒序")
+        void shouldSourceFromScopePreset() {
+            when(jdbcTemplate.query(anyString(), any(RowMapper.class)))
+                    .thenReturn(Collections.emptyList());
+
+            List<DataPermissionApplicationService.ScopeTypeDTO> result = service.getAllScopeTypes();
+
+            // 7 个 ScopePreset (ALL/DEPARTMENT_AND_BELOW/MANAGED_ORGS_AND_BELOW/MANAGED_ORGS/
+            // DEPARTMENT/CUSTOM/SELF), 与旧 DataScope 等价
+            assertThat(result).hasSize(7);
+            assertThat(result).extracting(DataPermissionApplicationService.ScopeTypeDTO::getCode)
+                    .containsExactlyInAnyOrder(
+                            "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW",
+                            "MANAGED_ORGS", "DEPARTMENT", "CUSTOM", "SELF");
+            // level 倒序: ALL(100) 首, SELF(20) 末
+            assertThat(result.get(0).getCode()).isEqualTo("ALL");
+            assertThat(result.get(6).getCode()).isEqualTo("SELF");
+            assertThat(result).allMatch(s -> "CORE".equals(s.getSource()));
+            // ScopePreset 无 description → displayName 充当, 非空
+            assertThat(result).allMatch(s -> s.getDescription() != null && !s.getDescription().isBlank());
+        }
     }
 
     // ============================================================
@@ -347,6 +370,119 @@ class DataPermissionApplicationServiceTest {
             ArgumentCaptor<List<RoleDataPermission>> captor = ArgumentCaptor.forClass(List.class);
             verify(dataPermissionPolicyService).saveRolePermissions(eq(1L), eq(9L), captor.capture());
             assertThat(captor.getValue().get(0).getScopeItems().get(0).getIncludeChildren()).isFalse();
+        }
+
+        @Test
+        @DisplayName("T8: 显式三轴 (orgAnchor=RELATION/anchorParam=admin/includeSubtree/subjectRelExclude/typeFilter) 落到 RoleDataPermission")
+        void shouldPersistExplicitThreeAxes() {
+            when(dynamicModuleService.listModules(1L, true)).thenReturn(Collections.emptyList());
+
+            DataPermissionApplicationService.SavePermissionCommand cmd =
+                    new DataPermissionApplicationService.SavePermissionCommand(
+                            "user", "MANAGED_ORGS_AND_BELOW", null, List.of("STUDENT"));
+            cmd.setOrgAnchor("RELATION");
+            cmd.setAnchorParam("admin");
+            cmd.setIncludeSubtree(true);
+            cmd.setSubjectRelExclude(List.of("admin"));
+
+            service.saveRoleDataPermissions(9L, List.of(cmd));
+
+            ArgumentCaptor<List<RoleDataPermission>> captor = ArgumentCaptor.forClass(List.class);
+            verify(dataPermissionPolicyService).saveRolePermissions(eq(1L), eq(9L), captor.capture());
+            RoleDataPermission p = captor.getValue().get(0);
+            assertThat(p.getModuleCode()).isEqualTo("user");
+            assertThat(p.getOrgAnchor())
+                    .isEqualTo(com.school.management.domain.access.model.OrgAnchor.RELATION);
+            assertThat(p.getAnchorParam()).isEqualTo("admin");
+            assertThat(p.isIncludeSubtree()).isTrue();
+            assertThat(p.getSubjectRelExclude()).containsExactly("admin");
+            assertThat(p.getTypeFilter()).containsExactly("STUDENT");
+        }
+    }
+
+    // ============================================================
+    @Nested
+    @DisplayName("T8: 三轴 save→read 往返 + 资源关系过滤能力")
+    class ThreeAxisRoundTripTests {
+
+        @Test
+        @DisplayName("save 显式三轴 → read 回带相同三轴 (mock PolicyService 边界)")
+        void shouldRoundTripThreeAxes() {
+            // ── save 侧 ──
+            when(dynamicModuleService.listModules(1L, true)).thenReturn(Collections.emptyList());
+            DataPermissionApplicationService.SavePermissionCommand cmd =
+                    new DataPermissionApplicationService.SavePermissionCommand(
+                            "user", "MANAGED_ORGS_AND_BELOW", null, List.of("STUDENT"));
+            cmd.setOrgAnchor("RELATION");
+            cmd.setAnchorParam("admin");
+            cmd.setIncludeSubtree(true);
+            cmd.setSubjectRelExclude(List.of("admin"));
+            service.saveRoleDataPermissions(9L, List.of(cmd));
+
+            // ── read 侧: mock PolicyService 返回带三轴的 RoleDataPermission ──
+            RoleDataPermission stored = RoleDataPermission.builder()
+                    .roleId(9L).moduleCode("user").scopeCode("MANAGED_ORGS_AND_BELOW")
+                    .typeFilter(List.of("STUDENT"))
+                    .orgAnchor(com.school.management.domain.access.model.OrgAnchor.RELATION)
+                    .anchorParam("admin")
+                    .includeSubtree(true)
+                    .subjectRelExclude(new java.util.LinkedHashSet<>(List.of("admin")))
+                    .build();
+            when(dataPermissionPolicyService.getRolePermissions(1L, 9L)).thenReturn(List.of(stored));
+            when(dynamicModuleService.listModules(1L))
+                    .thenReturn(List.of(module("user", "用户", "CORE", "核心", "CORE", true)));
+
+            List<DataPermissionApplicationService.RoleModulePermissionDTO> dtos =
+                    service.getRoleDataPermissions(9L);
+
+            assertThat(dtos).hasSize(1);
+            DataPermissionApplicationService.RoleModulePermissionDTO dto = dtos.get(0);
+            assertThat(dto.getModuleCode()).isEqualTo("user");
+            assertThat(dto.getOrgAnchor()).isEqualTo("RELATION");
+            assertThat(dto.getAnchorParam()).isEqualTo("admin");
+            assertThat(dto.getIncludeSubtree()).isTrue();
+            assertThat(dto.getSubjectRelExclude()).containsExactly("admin");
+            assertThat(dto.getTypeFilter()).containsExactly("STUDENT");
+        }
+
+        @Test
+        @DisplayName("无存储配置的模块 → 默认 orgAnchor=SELF (镜像 scopeCode=SELF 默认)")
+        void shouldDefaultOrgAnchorSelfWhenNoPermission() {
+            when(dataPermissionPolicyService.getRolePermissions(1L, 9L))
+                    .thenReturn(Collections.emptyList());
+            when(dynamicModuleService.listModules(1L))
+                    .thenReturn(List.of(module("org_unit", "组织", "CORE", "核心", "CORE", true)));
+
+            List<DataPermissionApplicationService.RoleModulePermissionDTO> dtos =
+                    service.getRoleDataPermissions(9L);
+
+            assertThat(dtos).hasSize(1);
+            assertThat(dtos.get(0).getScopeCode()).isEqualTo(DataScope.SELF.getCode());
+            assertThat(dtos.get(0).getOrgAnchor()).isEqualTo("SELF");
+        }
+
+        @Test
+        @DisplayName("subjectRelationFilterable=true 的模块 → toFlatMap 输出 relationFilterable=true")
+        void shouldExposeRelationFilterableCapability() {
+            DataModulePO userMod = module("user", "用户", "CORE", "核心", "CORE", true);
+            userMod.setSubjectRelationFilterable(true);
+            DataModulePO orgMod = module("org_unit", "组织", "CORE", "核心", "CORE", true);
+            // orgMod 未设置 → null → 应为 false
+            when(dynamicModuleService.listModules(1L, false)).thenReturn(List.of(userMod, orgMod));
+
+            // roleId=null 走兼容路径, relevant 即全部经 toFlatMap 的模块
+            Map<String, Object> result = service.getModulesForRole(null, false);
+            List<?> relevant = (List<?>) result.get("relevant");
+
+            assertThat(relevant).hasSize(2);
+            Map<?, ?> userFlat = (Map<?, ?>) relevant.stream()
+                    .filter(m -> "user".equals(((Map<?, ?>) m).get("moduleCode")))
+                    .findFirst().orElseThrow();
+            Map<?, ?> orgFlat = (Map<?, ?>) relevant.stream()
+                    .filter(m -> "org_unit".equals(((Map<?, ?>) m).get("moduleCode")))
+                    .findFirst().orElseThrow();
+            assertThat(userFlat.get("relationFilterable")).isEqualTo(true);
+            assertThat(orgFlat.get("relationFilterable")).isEqualTo(false);
         }
     }
 

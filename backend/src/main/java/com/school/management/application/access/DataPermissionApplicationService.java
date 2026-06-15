@@ -1,6 +1,8 @@
 package com.school.management.application.access;
 
 import com.school.management.domain.access.model.DataScope;
+import com.school.management.domain.access.model.OrgAnchor;
+import com.school.management.domain.access.model.ScopePreset;
 import com.school.management.domain.access.model.entity.DataScopeItem;
 import com.school.management.domain.access.model.entity.RoleDataPermission;
 import com.school.management.exception.BusinessException;
@@ -77,9 +79,11 @@ public class DataPermissionApplicationService {
      * ScopeTypeDTO 新增 source 字段, 前端 Vue 对未知字段宽容, 不会 break 现有调用方.
      */
     public List<ScopeTypeDTO> getAllScopeTypes() {
-        List<ScopeTypeDTO> hardcoded = Arrays.stream(DataScope.values())
-                .sorted(Comparator.comparingInt(DataScope::getLevel).reversed())
-                .map(s -> new ScopeTypeDTO(s.getCode(), s.getDisplayName(), s.getDescription(), "CORE"))
+        // T8: 范围目录改源自 ScopePreset (与 DataScope 同名同 level, 解耦 T9 将删的 DataScope enum)。
+        // ScopePreset 无 description 字段 → 用 displayName 充当描述, 不杜撰逐项文案。
+        List<ScopeTypeDTO> hardcoded = Arrays.stream(ScopePreset.values())
+                .sorted(Comparator.comparingInt(ScopePreset::getLevel).reversed())
+                .map(s -> new ScopeTypeDTO(s.name(), s.getDisplayName(), s.getDisplayName(), "CORE"))
                 .collect(Collectors.toList());
 
         List<ScopeTypeDTO> dynamic;
@@ -134,23 +138,36 @@ public class DataPermissionApplicationService {
                                         ))
                                         .collect(Collectors.toList()) :
                                 Collections.emptyList();
-                        return new RoleModulePermissionDTO(
-                                module.getModuleCode(),
-                                module.getModuleName(),
-                                module.getDomainCode(),
-                                permission.getScopeCode(),
-                                scopeItems,
-                                permission.getTypeFilter()
-                        );
+                        return RoleModulePermissionDTO.builder()
+                                .moduleCode(module.getModuleCode())
+                                .moduleName(module.getModuleName())
+                                .domainCode(module.getDomainCode())
+                                .scopeCode(permission.getScopeCode())
+                                .scopeItems(scopeItems)
+                                .typeFilter(permission.getTypeFilter())
+                                // 可组合三轴 (T8): 从 RoleDataPermission 透传当前态
+                                .orgAnchor(permission.getOrgAnchor() != null ? permission.getOrgAnchor().name() : null)
+                                .anchorParam(permission.getAnchorParam())
+                                .includeSubtree(permission.isIncludeSubtree())
+                                .customOrgIds(permission.getCustomOrgIds() != null
+                                        ? new ArrayList<>(permission.getCustomOrgIds()) : null)
+                                .subjectRelInclude(permission.getSubjectRelInclude() != null
+                                        ? new ArrayList<>(permission.getSubjectRelInclude()) : null)
+                                .subjectRelExclude(permission.getSubjectRelExclude() != null
+                                        ? new ArrayList<>(permission.getSubjectRelExclude()) : null)
+                                .build();
                     } else {
-                        return new RoleModulePermissionDTO(
-                                module.getModuleCode(),
-                                module.getModuleName(),
-                                module.getDomainCode(),
-                                DataScope.SELF.getCode(),
-                                Collections.emptyList(),
-                                null
-                        );
+                        return RoleModulePermissionDTO.builder()
+                                .moduleCode(module.getModuleCode())
+                                .moduleName(module.getModuleName())
+                                .domainCode(module.getDomainCode())
+                                .scopeCode(DataScope.SELF.getCode())
+                                .scopeItems(Collections.emptyList())
+                                .typeFilter(null)
+                                // 无存储配置 → 轴① 默认 SELF (镜像 scopeCode=SELF 默认)
+                                .orgAnchor(OrgAnchor.SELF.name())
+                                .includeSubtree(false)
+                                .build();
                     }
                 })
                 .collect(Collectors.toList());
@@ -187,12 +204,33 @@ public class DataPermissionApplicationService {
 
         List<RoleDataPermission> permissions = commands.stream()
                 .map(cmd -> {
-                    RoleDataPermission permission = RoleDataPermission.builder()
+                    RoleDataPermission.RoleDataPermissionBuilder builder = RoleDataPermission.builder()
                             .roleId(roleId)
                             .moduleCode(cmd.getModuleCode())
                             .scopeCode(cmd.getScopeCode())
-                            .typeFilter(cmd.getTypeFilter())
-                            .build();
+                            .typeFilter(cmd.getTypeFilter());
+
+                    // ── 可组合三轴 (T8): 前端显式传入时填充; 缺省 → 由 saveRolePermission 从 scopeCode 翻译 ──
+                    if (cmd.getOrgAnchor() != null) {
+                        builder.orgAnchor(OrgAnchor.fromCode(cmd.getOrgAnchor()));
+                    }
+                    if (cmd.getAnchorParam() != null) {
+                        builder.anchorParam(cmd.getAnchorParam());
+                    }
+                    if (cmd.getIncludeSubtree() != null) {
+                        builder.includeSubtree(cmd.getIncludeSubtree());
+                    }
+                    if (cmd.getCustomOrgIds() != null) {
+                        builder.customOrgIds(new LinkedHashSet<>(cmd.getCustomOrgIds()));
+                    }
+                    if (cmd.getSubjectRelInclude() != null) {
+                        builder.subjectRelInclude(new LinkedHashSet<>(cmd.getSubjectRelInclude()));
+                    }
+                    if (cmd.getSubjectRelExclude() != null) {
+                        builder.subjectRelExclude(new LinkedHashSet<>(cmd.getSubjectRelExclude()));
+                    }
+
+                    RoleDataPermission permission = builder.build();
 
                     if (DataScope.CUSTOM.getCode().equals(cmd.getScopeCode()) && cmd.getScopeItems() != null) {
                         List<DataScopeItem> items = cmd.getScopeItems().stream()
@@ -408,6 +446,8 @@ public class DataPermissionApplicationService {
         // 类型过滤(闸2/2b): 非空表示该资源支持"按类型过滤", typeEntity 指明可选类型来源
         map.put("typeField", m.getTypeField());
         map.put("typeEntity", m.getTypeEntity());
+        // 轴②结果关系过滤能力: true 表示该资源(成员型, 如 user)支持"按结果与用户的关系过滤"
+        map.put("relationFilterable", Boolean.TRUE.equals(m.getSubjectRelationFilterable()));
         map.put("sortOrder", m.getSortOrder());
         map.put("enabled", Boolean.TRUE.equals(m.getEnabled()));
         map.put("pluginEnabled", m.getPluginEnabled() == null || m.getPluginEnabled());
@@ -420,11 +460,12 @@ public class DataPermissionApplicationService {
      * Get all data scope options
      */
     public List<Map<String, String>> getAllScopes() {
-        return Arrays.stream(DataScope.values())
-                .sorted(Comparator.comparingInt(DataScope::getLevel).reversed())
+        // T8: 源自 ScopePreset (解耦 DataScope)
+        return Arrays.stream(ScopePreset.values())
+                .sorted(Comparator.comparingInt(ScopePreset::getLevel).reversed())
                 .map(s -> {
                     Map<String, String> map = new LinkedHashMap<>();
-                    map.put("code", s.getCode());
+                    map.put("code", s.name());
                     map.put("name", s.getDisplayName());
                     map.put("level", String.valueOf(s.getLevel()));
                     return map;
@@ -506,15 +547,32 @@ public class DataPermissionApplicationService {
     }
 
     @lombok.Data
+    @lombok.Builder
+    @lombok.NoArgsConstructor
     @lombok.AllArgsConstructor
     public static class RoleModulePermissionDTO {
         private String moduleCode;
         private String moduleName;
         private String domainCode;
+        /** 旧预设码 (向后兼容前端旧渲染路径)。 */
         private String scopeCode;
         private List<ScopeItemDTO> scopeItems;
-        /** 类型过滤(闸2/2b): 已配置的类型码集; null/空=不限 */
+        /** 类型过滤(闸2/2b)=轴③: 已配置的类型码集; null/空=不限 */
         private List<String> typeFilter;
+
+        // ── 可组合三轴 (T8): 供前端范围生成器渲染当前态 ──
+        /** 轴① org anchor 名 (ALL/SELF/PRIMARY_ORG/RELATION/CUSTOM_ORG/PLUGIN_DIM); 无配置默认 SELF。 */
+        private String orgAnchor;
+        /** 轴① 参数: RELATION 时为关系码, PLUGIN_DIM 时为维度码。 */
+        private String anchorParam;
+        /** 轴① 是否含子树。 */
+        private Boolean includeSubtree;
+        /** 轴① CUSTOM_ORG 时的指定组织 id 集合。 */
+        private List<Long> customOrgIds;
+        /** 轴② 结果关系 include。 */
+        private List<String> subjectRelInclude;
+        /** 轴② 结果关系 exclude。 */
+        private List<String> subjectRelExclude;
     }
 
     @lombok.Data
@@ -522,13 +580,36 @@ public class DataPermissionApplicationService {
     @lombok.AllArgsConstructor
     public static class SavePermissionCommand {
         private String moduleCode;
+        /** 旧预设码 (ALL/SELF/DEPARTMENT/.../CUSTOM); 仍兼容接收, 未显式带三轴时由其翻译。 */
         private String scopeCode;
         private List<ScopeItemDTO> scopeItems;
-        /** 类型过滤(闸2/2b): 类型码集, 与组织范围 AND 组合; null/空=不限 */
+        /** 类型过滤(闸2/2b)=轴③: 类型码集, 与组织范围 AND 组合; null/空=不限 */
         private List<String> typeFilter;
+
+        // ── 可组合三轴 (T8): 前端显式传入时持久化; 缺省时由 scopeCode 翻译 (T5 saveRolePermission) ──
+        /** 轴① org anchor 名 (ALL/SELF/PRIMARY_ORG/RELATION/CUSTOM_ORG/PLUGIN_DIM)。 */
+        private String orgAnchor;
+        /** 轴① 参数: RELATION 时为关系码, PLUGIN_DIM 时为维度码。 */
+        private String anchorParam;
+        /** 轴① 是否含子树。 */
+        private Boolean includeSubtree;
+        /** 轴① CUSTOM_ORG 时的指定组织 id 集合。 */
+        private List<Long> customOrgIds;
+        /** 轴② 结果关系 include。 */
+        private List<String> subjectRelInclude;
+        /** 轴② 结果关系 exclude。 */
+        private List<String> subjectRelExclude;
 
         public SavePermissionCommand(String moduleCode, String scopeCode, List<ScopeItemDTO> scopeItems) {
             this(moduleCode, scopeCode, scopeItems, null);
+        }
+
+        public SavePermissionCommand(String moduleCode, String scopeCode, List<ScopeItemDTO> scopeItems,
+                                     List<String> typeFilter) {
+            this.moduleCode = moduleCode;
+            this.scopeCode = scopeCode;
+            this.scopeItems = scopeItems;
+            this.typeFilter = typeFilter;
         }
     }
 }

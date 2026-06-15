@@ -77,6 +77,13 @@ public class RoleDataPermissionController {
                     mp.setScopeCode(m.getScopeCode());
                     mp.setScopeItems(m.getScopeItems());
                     mp.setTypeFilter(m.getTypeFilter());
+                    // 可组合三轴 (T8): 回带当前态
+                    mp.setOrgAnchor(m.getOrgAnchor());
+                    mp.setAnchorParam(m.getAnchorParam());
+                    mp.setIncludeSubtree(m.getIncludeSubtree());
+                    mp.setCustomOrgIds(m.getCustomOrgIds());
+                    mp.setSubjectRelInclude(m.getSubjectRelInclude());
+                    mp.setSubjectRelExclude(m.getSubjectRelExclude());
                     return mp;
                 })
                 .collect(java.util.stream.Collectors.toList()));
@@ -90,7 +97,18 @@ public class RoleDataPermissionController {
             @PathVariable Long roleId,
             @RequestBody RolePermissionConfigDTO config) {
         List<SavePermissionCommand> commands = config.getModulePermissions().stream()
-                .map(mp -> new SavePermissionCommand(mp.getModuleCode(), mp.getScopeCode(), mp.getScopeItems(), mp.getTypeFilter()))
+                .map(mp -> {
+                    // 4-arg: moduleCode/scopeCode/scopeItems/typeFilter; 三轴用 setter 透传
+                    SavePermissionCommand cmd = new SavePermissionCommand(
+                            mp.getModuleCode(), mp.getScopeCode(), mp.getScopeItems(), mp.getTypeFilter());
+                    cmd.setOrgAnchor(mp.getOrgAnchor());
+                    cmd.setAnchorParam(mp.getAnchorParam());
+                    cmd.setIncludeSubtree(mp.getIncludeSubtree());
+                    cmd.setCustomOrgIds(mp.getCustomOrgIds());
+                    cmd.setSubjectRelInclude(mp.getSubjectRelInclude());
+                    cmd.setSubjectRelExclude(mp.getSubjectRelExclude());
+                    return cmd;
+                })
                 .collect(java.util.stream.Collectors.toList());
         dataPermissionService.saveRoleDataPermissions(roleId, commands);
         return Result.success(null);
@@ -125,10 +143,25 @@ public class RoleDataPermissionController {
     @lombok.Data
     public static class ModulePermissionDTO {
         private String moduleCode;
+        /** 旧预设码 (向后兼容); 未带三轴时由其翻译。 */
         private String scopeCode;
         private List<DataPermissionApplicationService.ScopeItemDTO> scopeItems;
-        /** 类型过滤(闸2/2b): 类型码集, 与组织范围 AND 组合; null/空=不限 */
+        /** 类型过滤(闸2/2b)=轴③: 类型码集, 与组织范围 AND 组合; null/空=不限 */
         private List<String> typeFilter;
+
+        // ── 可组合三轴 (T8) ──
+        /** 轴① org anchor 名。 */
+        private String orgAnchor;
+        /** 轴① 参数: RELATION 时为关系码, PLUGIN_DIM 时为维度码。 */
+        private String anchorParam;
+        /** 轴① 是否含子树。 */
+        private Boolean includeSubtree;
+        /** 轴① CUSTOM_ORG 时的指定组织 id 集合。 */
+        private List<Long> customOrgIds;
+        /** 轴② 结果关系 include。 */
+        private List<String> subjectRelInclude;
+        /** 轴② 结果关系 exclude。 */
+        private List<String> subjectRelExclude;
     }
 
     @lombok.Data

@@ -33,6 +33,10 @@ public class DataResourcePO {
     /** 类型选项取自 entity_type_configs 的 entity_type(USER/PLACE/ORG_UNIT) — 供配置 UI 拉取可选类型 */
     private String typeEntity;
 
+    /** 是否支持②结果关系过滤(成员型资源, 如 user — 通过 access_relations 与用户挂钩); 0/1 */
+    @TableField("subject_relation_filterable")
+    private Integer subjectRelationFilterable;
+
     private String registeredBy;
     private Integer sortOrder;
     private Integer enabled;
