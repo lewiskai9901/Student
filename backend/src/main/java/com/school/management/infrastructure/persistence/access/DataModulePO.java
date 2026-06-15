@@ -26,6 +26,10 @@ public class DataModulePO {
     private String resourceType;
     private String orgUnitField;
     private String creatorField;
+    /** 类型过滤字段, 如 user→user_type_code; NULL=该资源不支持类型过滤 */
+    private String typeField;
+    /** 类型选项来源实体 USER/PLACE/ORG_UNIT — 供配置 UI 拉取可选类型 */
+    private String typeEntity;
     private Integer sortOrder;
     private Boolean enabled;
     /** 所属插件是否启用 — 从 data_resources.plugin_enabled 透传 */

@@ -103,6 +103,27 @@
                   <Lock class="h-3 w-3 text-gray-400" />
                   {{ availableScopesFor(module)[0]?.scopeName || '—' }}
                 </span>
+                <el-select
+                  v-if="module.typeEntity"
+                  :model-value="getTypeFilter(module.code)"
+                  multiple
+                  collapse-tags
+                  collapse-tags-tooltip
+                  clearable
+                  size="small"
+                  placeholder="全部类型"
+                  :disabled="module.pluginEnabled === false"
+                  style="width: 132px"
+                  title="按类型过滤 (与组织范围 AND 组合); 不选=不限类型"
+                  @update:model-value="(v: any) => onTypeFilterChange(module.code, v as string[])"
+                >
+                  <el-option
+                    v-for="t in (typeOptions[module.typeEntity] || [])"
+                    :key="t.code"
+                    :label="t.name"
+                    :value="t.code"
+                  />
+                </el-select>
                 <button
                   v-if="getScope(module.code) === 'CUSTOM'"
                   class="flex h-7 items-center gap-1 rounded px-2 text-[11px] font-medium transition"
@@ -210,10 +231,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { AlertTriangle, Settings, ChevronDown, Lock, Sparkles } from 'lucide-vue-next'
 import CustomScopeTreePicker from './CustomScopeTreePicker.vue'
 import type { ModulePermission, ScopeItem, DataScopeOption } from '@/types/access'
+import { entityTypeApi } from '@/api/entityType'
 
 export interface ModuleGroupItem {
   code: string
@@ -222,6 +244,10 @@ export interface ModuleGroupItem {
   pluginEnabled: boolean
   /** 本模块支持的 scope 代码数组; null/undefined 表示默认全集 */
   allowedScopes?: string[] | null
+  /** 类型过滤字段(后端 SQL 用); 非空表示该资源支持"按类型过滤" */
+  typeField?: string | null
+  /** 类型选项来源实体 USER/PLACE/ORG_UNIT — 决定类型多选的候选项 */
+  typeEntity?: string | null
 }
 
 interface FilterMeta {
@@ -336,6 +362,47 @@ function onScopeChange(code: string, scopeCode: string) {
     expandedModule.value = code
   }
   updateModulePermission(code, patch)
+}
+
+// ── 类型过滤(闸2/2b): 候选类型按 typeEntity 懒加载, 与组织范围 AND 组合 ──
+const typeOptions = ref<Record<string, { code: string; name: string }[]>>({})
+
+async function ensureTypeOptions(entity: string | null | undefined) {
+  if (!entity || typeOptions.value[entity]) return
+  // 占位避免并发重复请求
+  typeOptions.value = { ...typeOptions.value, [entity]: [] }
+  try {
+    const list = await entityTypeApi.list(entity)
+    typeOptions.value = {
+      ...typeOptions.value,
+      [entity]: (list || []).map(t => ({ code: t.typeCode, name: t.typeName || t.typeCode })),
+    }
+  } catch {
+    /* 拉取失败 → 保持空, 控件显示"全部类型"占位 */
+  }
+}
+
+watch(
+  () => [props.groupedModules, props.advancedGroupedModules] as const,
+  () => {
+    const entities = new Set<string>()
+    for (const list of Object.values(props.groupedModules)) {
+      for (const m of list) if (m.typeEntity) entities.add(m.typeEntity)
+    }
+    for (const list of Object.values(props.advancedGroupedModules ?? {})) {
+      for (const m of list) if (m.typeEntity) entities.add(m.typeEntity)
+    }
+    entities.forEach(ensureTypeOptions)
+  },
+  { immediate: true }
+)
+
+function getTypeFilter(code: string): string[] {
+  return props.modulePermissions.find(p => p.moduleCode === code)?.typeFilter ?? []
+}
+
+function onTypeFilterChange(code: string, vals: string[]) {
+  updateModulePermission(code, { typeFilter: vals })
 }
 
 function onScopeItemsChange(code: string, ids: (number | string)[]) {

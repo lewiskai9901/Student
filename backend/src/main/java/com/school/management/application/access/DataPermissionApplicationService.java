@@ -139,7 +139,8 @@ public class DataPermissionApplicationService {
                                 module.getModuleName(),
                                 module.getDomainCode(),
                                 permission.getScopeCode(),
-                                scopeItems
+                                scopeItems,
+                                permission.getTypeFilter()
                         );
                     } else {
                         return new RoleModulePermissionDTO(
@@ -147,7 +148,8 @@ public class DataPermissionApplicationService {
                                 module.getModuleName(),
                                 module.getDomainCode(),
                                 DataScope.SELF.getCode(),
-                                Collections.emptyList()
+                                Collections.emptyList(),
+                                null
                         );
                     }
                 })
@@ -189,6 +191,7 @@ public class DataPermissionApplicationService {
                             .roleId(roleId)
                             .moduleCode(cmd.getModuleCode())
                             .scopeCode(cmd.getScopeCode())
+                            .typeFilter(cmd.getTypeFilter())
                             .build();
 
                     if (DataScope.CUSTOM.getCode().equals(cmd.getScopeCode()) && cmd.getScopeItems() != null) {
@@ -402,6 +405,9 @@ public class DataPermissionApplicationService {
         map.put("resourceType", m.getResourceType());
         map.put("orgUnitField", m.getOrgUnitField());
         map.put("creatorField", m.getCreatorField());
+        // 类型过滤(闸2/2b): 非空表示该资源支持"按类型过滤", typeEntity 指明可选类型来源
+        map.put("typeField", m.getTypeField());
+        map.put("typeEntity", m.getTypeEntity());
         map.put("sortOrder", m.getSortOrder());
         map.put("enabled", Boolean.TRUE.equals(m.getEnabled()));
         map.put("pluginEnabled", m.getPluginEnabled() == null || m.getPluginEnabled());
@@ -507,6 +513,8 @@ public class DataPermissionApplicationService {
         private String domainCode;
         private String scopeCode;
         private List<ScopeItemDTO> scopeItems;
+        /** 类型过滤(闸2/2b): 已配置的类型码集; null/空=不限 */
+        private List<String> typeFilter;
     }
 
     @lombok.Data
@@ -516,5 +524,11 @@ public class DataPermissionApplicationService {
         private String moduleCode;
         private String scopeCode;
         private List<ScopeItemDTO> scopeItems;
+        /** 类型过滤(闸2/2b): 类型码集, 与组织范围 AND 组合; null/空=不限 */
+        private List<String> typeFilter;
+
+        public SavePermissionCommand(String moduleCode, String scopeCode, List<ScopeItemDTO> scopeItems) {
+            this(moduleCode, scopeCode, scopeItems, null);
+        }
     }
 }

@@ -76,6 +76,7 @@ public class RoleDataPermissionController {
                     mp.setModuleCode(m.getModuleCode());
                     mp.setScopeCode(m.getScopeCode());
                     mp.setScopeItems(m.getScopeItems());
+                    mp.setTypeFilter(m.getTypeFilter());
                     return mp;
                 })
                 .collect(java.util.stream.Collectors.toList()));
@@ -89,7 +90,7 @@ public class RoleDataPermissionController {
             @PathVariable Long roleId,
             @RequestBody RolePermissionConfigDTO config) {
         List<SavePermissionCommand> commands = config.getModulePermissions().stream()
-                .map(mp -> new SavePermissionCommand(mp.getModuleCode(), mp.getScopeCode(), mp.getScopeItems()))
+                .map(mp -> new SavePermissionCommand(mp.getModuleCode(), mp.getScopeCode(), mp.getScopeItems(), mp.getTypeFilter()))
                 .collect(java.util.stream.Collectors.toList());
         dataPermissionService.saveRoleDataPermissions(roleId, commands);
         return Result.success(null);
@@ -126,6 +127,8 @@ public class RoleDataPermissionController {
         private String moduleCode;
         private String scopeCode;
         private List<DataPermissionApplicationService.ScopeItemDTO> scopeItems;
+        /** 类型过滤(闸2/2b): 类型码集, 与组织范围 AND 组合; null/空=不限 */
+        private List<String> typeFilter;
     }
 
     @lombok.Data

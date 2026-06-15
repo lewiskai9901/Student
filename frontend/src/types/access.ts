@@ -226,6 +226,8 @@ export interface ModulePermission {
   moduleCode: string
   scopeCode: string
   scopeItems?: ScopeItem[]
+  /** 类型过滤(闸2/2b): 类型码集, 与组织范围 AND 组合; 空/缺省=不限。仅对声明了 typeField 的资源生效 */
+  typeFilter?: string[]
 }
 
 /**

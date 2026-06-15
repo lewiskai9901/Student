@@ -58,9 +58,9 @@ public class DataPermissionPolicyService {
                     .build();
         }
 
-        // v3: role_data_scopes (resource_code / scope_type / custom_org_unit_ids)
+        // v3: role_data_scopes (resource_code / scope_type / custom_org_unit_ids / type_filter)
         String placeholders = roleIds.stream().map(id -> "?").collect(Collectors.joining(","));
-        String sql = "SELECT id, role_id, resource_code, scope_type, custom_org_unit_ids " +
+        String sql = "SELECT id, role_id, resource_code, scope_type, custom_org_unit_ids, type_filter " +
                 "FROM role_data_scopes WHERE tenant_id = ? AND role_id IN (" +
                 placeholders + ") AND resource_code = ? AND deleted = 0";
 
@@ -120,15 +120,25 @@ public class DataPermissionPolicyService {
             }
         }
 
+        // 构造 type_filter JSON (闸2/2b): 空集 → NULL (不过滤)
+        String typeFilterJson = null;
+        if (permission.getTypeFilter() != null && !permission.getTypeFilter().isEmpty()) {
+            try {
+                typeFilterJson = objectMapper.writeValueAsString(permission.getTypeFilter());
+            } catch (Exception e) {
+                log.warn("Failed to serialize type_filter: {}", e.getMessage());
+            }
+        }
+
         // uk_role_res (role_id, resource_code, tenant_id) 不含 deleted, 软删后再 INSERT 会撞 unique.
         // 用 ON DUPLICATE KEY 覆盖同一行, 顺便把 deleted 翻回 0.
         jdbcTemplate.update(
-                "INSERT INTO role_data_scopes (tenant_id, role_id, resource_code, scope_type, custom_org_unit_ids, priority, created_at, deleted) " +
-                "VALUES (?, ?, ?, ?, ?, ?, NOW(), 0) " +
+                "INSERT INTO role_data_scopes (tenant_id, role_id, resource_code, scope_type, custom_org_unit_ids, type_filter, priority, created_at, deleted) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), 0) " +
                 "ON DUPLICATE KEY UPDATE scope_type=VALUES(scope_type), custom_org_unit_ids=VALUES(custom_org_unit_ids), " +
-                "priority=VALUES(priority), updated_at=NOW(), deleted=0",
+                "type_filter=VALUES(type_filter), priority=VALUES(priority), updated_at=NOW(), deleted=0",
                 tenantId, permission.getRoleId(), permission.getModuleCode(),
-                permission.getScopeCode(), customJson,
+                permission.getScopeCode(), customJson, typeFilterJson,
                 0);
 
         log.info("Saved role data scope: tenantId={}, roleId={}, resourceCode={}, scopeType={}",
@@ -149,7 +159,7 @@ public class DataPermissionPolicyService {
 
     /** 获取角色的所有权限配置 */
     public List<RoleDataPermission> getRolePermissions(Long tenantId, Long roleId) {
-        String sql = "SELECT id, role_id, resource_code, scope_type, custom_org_unit_ids " +
+        String sql = "SELECT id, role_id, resource_code, scope_type, custom_org_unit_ids, type_filter " +
                 "FROM role_data_scopes WHERE tenant_id = ? AND role_id = ? AND deleted = 0";
 
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, tenantId, roleId);
@@ -195,6 +205,24 @@ public class DataPermissionPolicyService {
         }
     }
 
+    /**
+     * 获取单角色在某资源上的类型过滤集 (闸2/2b).
+     *
+     * 仅在该资源配置了 type_field 时由拦截器调用 (大多数资源无 type_field → 拦截器根本不调,
+     * 零额外开销)。返回的类型码集与组织范围 AND 组合。null/空 = 不做类型过滤。
+     */
+    public List<String> getTypeFilterForRole(Long tenantId, Long roleId, String moduleCode) {
+        String sql = "SELECT type_filter FROM role_data_scopes " +
+                "WHERE tenant_id = ? AND role_id = ? AND resource_code = ? AND deleted = 0 LIMIT 1";
+        try {
+            String json = jdbcTemplate.queryForObject(sql, String.class, tenantId, roleId, moduleCode);
+            return parseTypeFilter(json);
+        } catch (Exception e) {
+            // 无配置 / 查询失败 → 不过滤
+            return null;
+        }
+    }
+
     @CacheEvict(value = CACHE_NAME, allEntries = true)
     public void clearCache() {
         log.info("Data permission policy cache cleared");
@@ -210,8 +238,23 @@ public class DataPermissionPolicyService {
                 .roleId(getLongValue(row, "role_id"))
                 .moduleCode((String) row.get("resource_code"))  // v3 字段映射
                 .scopeCode((String) row.get("scope_type"))      // v3 字段映射
+                .typeFilter(parseTypeFilter(row.get("type_filter")))
                 .description(null)  // v3 无 description 字段
                 .build();
+    }
+
+    /** 解析 type_filter JSON (闸2/2b) → 类型码列表; null/空/解析失败 → null (= 不过滤) */
+    private List<String> parseTypeFilter(Object json) {
+        if (json == null) return null;
+        String raw = json.toString();
+        if (raw.isBlank()) return null;
+        try {
+            List<String> codes = objectMapper.readValue(raw, new TypeReference<List<String>>() {});
+            return (codes == null || codes.isEmpty()) ? null : codes;
+        } catch (Exception e) {
+            log.warn("Failed to parse type_filter: {}", e.getMessage());
+            return null;
+        }
     }
 
     /** 从 custom_org_unit_ids JSON 构造 scopeItems 列表 */

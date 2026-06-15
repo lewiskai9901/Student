@@ -213,15 +213,21 @@ export function applySceneToModules(
   const { scopes, fallbacks } = sceneToModuleScopes(decision, modules, specs, relevantCodes)
   const result: ModulePermission[] = []
   const seen = new Set<string>()
+  // 类型过滤(闸2/2b)是 scene 之外的正交维度 — 场景只改组织范围, 不应抹掉已配的类型过滤
+  const typeFilterByCode = new Map<string, string[] | undefined>(
+    existing.map(e => [e.moduleCode, e.typeFilter])
+  )
 
   for (const mod of modules) {
     const m = scopes[mod.code]
     if (!m) continue
     seen.add(mod.code)
+    const tf = typeFilterByCode.get(mod.code)
     result.push({
       moduleCode: mod.code,
       scopeCode: m.scopeCode,
       scopeItems: m.scopeItems,
+      ...(tf && tf.length ? { typeFilter: tf } : {}),
     })
   }
 

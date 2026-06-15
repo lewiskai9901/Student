@@ -49,6 +49,13 @@ public class RoleDataPermission implements Entity<Long> {
     @Builder.Default
     private List<DataScopeItem> scopeItems = new ArrayList<>();
 
+    /**
+     * 类型过滤（闸2/2b）：与组织范围 AND 组合的类型码集合。
+     * 例：scope=MANAGED_ORGS + typeFilter=[STUDENT] → "我管理的组织里、只看学生类型的用户"。
+     * null/空 = 不做类型过滤。仅对配置了 type_field 的资源(如 user)生效。
+     */
+    private List<String> typeFilter;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

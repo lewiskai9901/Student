@@ -27,6 +27,12 @@ public class DataResourcePO {
     private String orgUnitField;
     private String creatorField;
 
+    /** 业务表里指向类型码的字段(类型过滤用), 如 user→user_type_code; NULL=该资源不支持类型过滤 */
+    private String typeField;
+
+    /** 类型选项取自 entity_type_configs 的 entity_type(USER/PLACE/ORG_UNIT) — 供配置 UI 拉取可选类型 */
+    private String typeEntity;
+
     private String registeredBy;
     private Integer sortOrder;
     private Integer enabled;

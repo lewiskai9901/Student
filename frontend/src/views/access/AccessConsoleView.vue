@@ -284,6 +284,8 @@ function groupByIndustry(mods: any[]): Record<string, ModuleGroupItem[]> {
       industry,
       pluginEnabled: (m as any).pluginEnabled !== false,
       allowedScopes: (m as any).allowedScopes ?? null,
+      typeField: (m as any).typeField ?? null,
+      typeEntity: (m as any).typeEntity ?? null,
     })
   }
   const order = ['CORE', 'EDU', 'HEALTH', 'CARE', 'CUSTOM']

@@ -132,6 +132,8 @@ public class DynamicModuleService {
         po.setResourceType(resource.getAccessResourceType());
         po.setOrgUnitField(resource.getOrgUnitField());
         po.setCreatorField(resource.getCreatorField());
+        po.setTypeField(resource.getTypeField());
+        po.setTypeEntity(resource.getTypeEntity());
         po.setSortOrder(resource.getSortOrder());
         po.setEnabled(resource.getEnabled() != null && resource.getEnabled() == 1);
         // null 视为启用 (DB 默认 1)

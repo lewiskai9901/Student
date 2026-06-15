@@ -150,7 +150,7 @@ class DataPermissionApplicationServiceTest {
     class ScopeTypesTests {
 
         @Test
-        @DisplayName("core 5 种按 level 倒序 + 插件维度拼接在后")
+        @DisplayName("core 7 种按 level 倒序 + 插件维度拼接在后")
         void shouldCombineCoreAndDynamic() {
             DataPermissionApplicationService.ScopeTypeDTO plugin =
                     new DataPermissionApplicationService.ScopeTypeDTO(
@@ -160,25 +160,25 @@ class DataPermissionApplicationServiceTest {
 
             List<DataPermissionApplicationService.ScopeTypeDTO> result = service.getAllScopeTypes();
 
-            // 5 hardcoded + 1 plugin
-            assertThat(result).hasSize(6);
+            // 7 hardcoded (含 2a 的 MANAGED_ORGS / MANAGED_ORGS_AND_BELOW) + 1 plugin
+            assertThat(result).hasSize(8);
             // 倒序: ALL(100) 先于 SELF(20)
             assertThat(result.get(0).getCode()).isEqualTo("ALL");
             assertThat(result.get(0).getSource()).isEqualTo("CORE");
-            assertThat(result.get(4).getCode()).isEqualTo("SELF");
-            assertThat(result.get(5).getCode()).isEqualTo("BY_MAJOR");
-            assertThat(result.get(5).getSource()).isEqualTo("PLUGIN:education");
+            assertThat(result.get(6).getCode()).isEqualTo("SELF");
+            assertThat(result.get(7).getCode()).isEqualTo("BY_MAJOR");
+            assertThat(result.get(7).getSource()).isEqualTo("PLUGIN:education");
         }
 
         @Test
-        @DisplayName("data_scope_dims 查询失败时只返 core 5 种, 不抛异常")
+        @DisplayName("data_scope_dims 查询失败时只返 core 7 种, 不抛异常")
         void shouldFallbackToCoreWhenQueryFails() {
             when(jdbcTemplate.query(anyString(), any(RowMapper.class)))
                     .thenThrow(new RuntimeException("table not found"));
 
             List<DataPermissionApplicationService.ScopeTypeDTO> result = service.getAllScopeTypes();
 
-            assertThat(result).hasSize(5);
+            assertThat(result).hasSize(7);
             assertThat(result).allMatch(s -> "CORE".equals(s.getSource()));
         }
     }
@@ -392,15 +392,15 @@ class DataPermissionApplicationServiceTest {
     class GetAllScopesTests {
 
         @Test
-        @DisplayName("返回 5 种 core scope, 按 level 倒序, 含 level 字段")
+        @DisplayName("返回 7 种 core scope, 按 level 倒序, 含 level 字段")
         void shouldReturnSortedScopes() {
             List<Map<String, String>> result = service.getAllScopes();
 
-            assertThat(result).hasSize(5);
+            assertThat(result).hasSize(7);
             assertThat(result.get(0).get("code")).isEqualTo("ALL");
             assertThat(result.get(0).get("level")).isEqualTo("100");
-            assertThat(result.get(4).get("code")).isEqualTo("SELF");
-            assertThat(result.get(4).get("level")).isEqualTo("20");
+            assertThat(result.get(6).get("code")).isEqualTo("SELF");
+            assertThat(result.get(6).get("level")).isEqualTo("20");
         }
     }
 

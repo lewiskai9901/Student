@@ -203,16 +203,30 @@ public class DataPermissionInterceptor implements Interceptor {
         }
 
         String moduleCode = annotation.module();
+        // 类型过滤(闸2/2b): 资源声明了 type_field 才启用 — 大多数资源 type_field=NULL,
+        // 此时 typeFilterable=false, 整个流程零额外开销 (不查 type_filter)。
+        String typeField = sanitizeIdentifier(moduleConfig.getTypeField());
+        boolean typeFilterable = typeField != null && !typeField.isEmpty();
+        String mainAlias = annotation.tableAlias().isEmpty() ? "" : sanitizeIdentifier(annotation.tableAlias()) + ".";
         List<String> roleSqls = new ArrayList<>();
         ParameterizedCondition combinedCond = new ParameterizedCondition();
         int globalParamIdx = 0;
 
         for (UserContext.ScopedRoleInfo sr : scopedRoles) {
+            // 该角色在本资源上的类型过滤集 (仅 typeFilterable 时查)
+            List<String> typeValues = typeFilterable
+                    ? dataPermissionPolicyService.getTypeFilterForRole(tenantId, sr.getRoleId(), moduleCode)
+                    : null;
+
             // Get this role's raw scope code (could be core enum OR plugin dim code like BY_MAJOR)
             String rawScopeCode = dataPermissionPolicyService.getScopeCodeForRole(
                     tenantId, sr.getRoleId(), moduleCode);
 
             DataScope coreScope = DataScope.fromCodeStrict(rawScopeCode);
+
+            // 各路径统一产出 roleCond, 然后在循环尾部叠加类型过滤 — 不再用 continue 提前跳过,
+            // 否则插件维度路径拿不到类型过滤。
+            ParameterizedCondition roleCond;
 
             // Plugin dim path: rawScopeCode is non-null but not a core enum
             if (rawScopeCode != null && coreScope == null) {
@@ -229,44 +243,46 @@ public class DataPermissionInterceptor implements Interceptor {
                 if (resourceType.isEmpty()) {
                     resourceType = moduleCode;
                 }
-                ParameterizedCondition pluginCond = buildPluginDimCondition(
+                roleCond = buildPluginDimCondition(
                         rawScopeCode, annotation, resourceType, userContext, globalParamIdx);
-                if (pluginCond != null && !pluginCond.sql.isEmpty()) {
-                    roleSqls.add(pluginCond.sql);
-                    combinedCond.params.addAll(pluginCond.params);
-                    globalParamIdx += pluginCond.params.size();
-                }
-                continue;
-            }
-
-            // Core path: rawScopeCode is null (unconfigured) OR a core enum
-            DataScope dataScope = coreScope;
-            if (dataScope == null) {
-                // No data permission configured for this role+module → default SELF
-                dataScope = DataScope.SELF;
-            }
-
-            // Short-circuit: ALL scope + ALL DataScope → no filter needed
-            if (ScopeType.ALL.equals(sr.getScopeType()) && dataScope == DataScope.ALL) {
-                return null; // No filter
-            }
-
-            // Determine the effective org root for this role
-            String effectiveOrgPath;
-            Long effectiveOrgId;
-            if (ScopeType.ORG_UNIT.equals(sr.getScopeType())) {
-                effectiveOrgPath = sr.getScopeOrgPath();
-                effectiveOrgId = sr.getScopeId();
             } else {
-                // ALL scope type - use user's primary org as fallback
-                effectiveOrgPath = userContext.getOrgUnitPath();
-                effectiveOrgId = userContext.getOrgUnitId();
+                // Core path: rawScopeCode is null (unconfigured) OR a core enum
+                DataScope dataScope = coreScope;
+                if (dataScope == null) {
+                    // No data permission configured for this role+module → default SELF
+                    dataScope = DataScope.SELF;
+                }
+
+                // Short-circuit: ALL scope + ALL DataScope → no filter needed —
+                // 但仅在无类型过滤时才整查询放行; 有类型过滤时退化为"仅类型条件"。
+                if (ScopeType.ALL.equals(sr.getScopeType()) && dataScope == DataScope.ALL) {
+                    if (typeValues == null || typeValues.isEmpty()) {
+                        return null; // No filter
+                    }
+                    roleCond = null; // 全组织无界 → 下方 applyTypeFilter 产出仅类型谓词
+                } else {
+                    // Determine the effective org root for this role
+                    String effectiveOrgPath;
+                    Long effectiveOrgId;
+                    if (ScopeType.ORG_UNIT.equals(sr.getScopeType())) {
+                        effectiveOrgPath = sr.getScopeOrgPath();
+                        effectiveOrgId = sr.getScopeId();
+                    } else {
+                        // ALL scope type - use user's primary org as fallback
+                        effectiveOrgPath = userContext.getOrgUnitPath();
+                        effectiveOrgId = userContext.getOrgUnitId();
+                    }
+
+                    // Build condition for this role
+                    roleCond = buildSingleRoleCondition(
+                            dataScope, annotation, moduleConfig, userContext, tenantId,
+                            effectiveOrgId, effectiveOrgPath, globalParamIdx, sr.getRoleId());
+                }
             }
 
-            // Build condition for this role
-            ParameterizedCondition roleCond = buildSingleRoleCondition(
-                    dataScope, annotation, moduleConfig, userContext, tenantId,
-                    effectiveOrgId, effectiveOrgPath, globalParamIdx, sr.getRoleId());
+            // 类型过滤 AND 组合 (闸2/2b) — 对任意路径(org字段/成员/access_relation/插件维度)统一生效。
+            // 类型谓词作用在主表别名列上, 与组织条件正交; 类型参数排在组织参数之后(位置绑定一致)。
+            roleCond = applyTypeFilter(roleCond, mainAlias, typeField, typeValues, globalParamIdx);
 
             if (roleCond != null && !roleCond.sql.isEmpty()) {
                 roleSqls.add(roleCond.sql);
@@ -288,6 +304,42 @@ public class DataPermissionInterceptor implements Interceptor {
         }
 
         return combinedCond;
+    }
+
+    /**
+     * 类型过滤 (闸2/2b): 把"主表类型列 ∈ 类型码集"作为 AND 谓词叠加到组织条件上。
+     *
+     * <p>语义边界 (避免误放宽/误收紧):
+     * <ul>
+     *   <li>typeValues 空 或 typeField 未配置 → 原样返回 (不过滤)。</li>
+     *   <li>cond == null (锚点为"全组织 ALL", 无 org 约束) → 产出"仅类型"谓词
+     *       {@code alias.typeField IN (...)}。</li>
+     *   <li>cond.sql 为空 (org 锚点解析失败的退化态) 或 "1 = 0" (已 deny) → 原样返回,
+     *       绝不因类型而放宽 deny 或给一个解析失败的范围补出数据。</li>
+     *   <li>其余 → {@code (orgSql AND alias.typeField IN (...))}。</li>
+     * </ul>
+     * 类型参数追加在 cond 既有参数(组织参数)之后, 与 SQL 中 `?` 顺序一致(位置绑定)。
+     */
+    private ParameterizedCondition applyTypeFilter(
+            ParameterizedCondition cond, String alias, String typeField,
+            List<String> typeValues, int paramOffset) {
+        if (typeValues == null || typeValues.isEmpty() || typeField == null || typeField.isEmpty()) {
+            return cond;
+        }
+        if (cond != null && (cond.sql.isEmpty() || "1 = 0".equals(cond.sql))) {
+            return cond;
+        }
+        String placeholders = typeValues.stream().map(v -> "?").collect(Collectors.joining(","));
+        String typeSql = alias + typeField + " IN (" + placeholders + ")";
+
+        ParameterizedCondition result = (cond == null) ? new ParameterizedCondition() : cond;
+        result.sql = (cond == null) ? typeSql : "(" + cond.sql + " AND " + typeSql + ")";
+
+        int i = 0;
+        for (String code : typeValues) {
+            result.addParam("_dp_type_" + paramOffset + "_" + (i++), code, String.class, JdbcType.VARCHAR);
+        }
+        return result;
     }
 
     /**
