@@ -29,10 +29,17 @@ import java.util.stream.Collectors;
  *
  * <p>参数顺序 = SQL 中 {@code ?} 顺序 (orgSet → ② → ③), 名字用 paramOffset 唯一化 (沿用
  * interceptor 的 {@code _dp_*_<offset>} 命名)。
+ *
+ * <p><b>单一 OrgSet 规则的有意例外</b>: access_relation 路径 (resourceType 非空、非 membership,
+ * 见 {@link #accessRelationSelect}) <b>不</b>消费 {@code OrgSet}, 而是从 {@code ctx} 重新派生
+ * org 过滤 —— 这是刻意为之, 以与 interceptor 的 {@code buildAccessRelationCondition} 逐字节等价。
  */
 @Slf4j
 @Component
 public class ScopeEvaluator {
+
+    /** deny-all 谓词常量 (emit + guard 检查统一用, 防字面量漂移)。 */
+    private static final String DENY = "1 = 0";
 
     private final PluginDataScopeRouter pluginDataScopeRouter;
 
@@ -241,18 +248,19 @@ public class ScopeEvaluator {
             log.warn("[DataPermission] plugin dim '{}' unavailable, degrading to SELF", dimCode);
             String selfField;
             if (meta.viaMembership()) {
+                // 注意: 此分支缺省为 "user_id" (端口自 interceptor 既有口径), 与 membershipSelect /
+                // subjectRelFilter 的 "id" 缺省不同 —— 有意保留差异, 不收敛到 membershipSubjectColumnOrDefault()。
                 selfField = meta.membershipSubjectColumn() == null || meta.membershipSubjectColumn().isEmpty()
                         ? "user_id" : meta.membershipSubjectColumn();
             } else {
-                selfField = meta.creatorField() == null || meta.creatorField().isEmpty()
-                        ? "created_by" : meta.creatorField();
+                selfField = meta.creatorFieldOrDefault();
             }
             cond.sql = alias + selfField + " = ?";
             cond.addParam("_dp_pluginSelf_" + paramOffset, ctx.getUserId(), Long.class, JdbcType.BIGINT);
             return cond;
         }
         if (ids.isEmpty()) {
-            cond.sql = "1 = 0";
+            cond.sql = DENY;
             return cond;
         }
         String csv = ids.stream().map(String::valueOf).collect(Collectors.joining(","));
@@ -309,8 +317,7 @@ public class ScopeEvaluator {
     private ScopeCondition membershipSelect(OrgSet orgSet, ScopeSpec spec, ResourceScopeMeta meta,
                                             UserContext ctx, Long tenantId, int paramOffset) {
         String alias = meta.aliasPrefix();
-        String subjectCol = meta.membershipSubjectColumn() == null || meta.membershipSubjectColumn().isEmpty()
-                ? "id" : meta.membershipSubjectColumn();
+        String subjectCol = meta.membershipSubjectColumnOrDefault();
         ScopeCondition cond = new ScopeCondition();
 
         if (orgSet.self) {
@@ -320,7 +327,7 @@ public class ScopeEvaluator {
         }
         if (orgSet.predicate == null) {
             // 无可锚定 org → deny all (避免泄露全表, 与 interceptor membership else 分支一致)
-            cond.sql = "1 = 0";
+            cond.sql = DENY;
             return cond;
         }
 
@@ -439,13 +446,12 @@ public class ScopeEvaluator {
             return cond;
         }
         // deny / 空 cond 不再叠加 (不放宽 deny)
-        if (cond.sql.isEmpty() || "1 = 0".equals(cond.sql)) {
+        if (cond.sql.isEmpty() || DENY.equals(cond.sql)) {
             return cond;
         }
 
         String alias = meta.aliasPrefix();
-        String subjectCol = meta.membershipSubjectColumn() == null || meta.membershipSubjectColumn().isEmpty()
-                ? "id" : meta.membershipSubjectColumn();
+        String subjectCol = meta.membershipSubjectColumnOrDefault();
 
         StringBuilder sb = new StringBuilder(cond.sql);
 
@@ -489,7 +495,8 @@ public class ScopeEvaluator {
             cond.addParam(prefix + paramOffset + "_" + (i++), rel, String.class, JdbcType.VARCHAR);
         }
 
-        // org 锚定: 与 subjectSelect 同集 (re-derive)。unbounded → 无 org 约束; self → 不应到此(membership self 已 deny 叠加跳过)。
+        // org 锚定: 与 subjectSelect 同集 (re-derive)。unbounded → 无 org 约束; self → 同样不追加 org 约束
+        // (membership SELF + relInclude 会走到此分支, 此时仅按关系码过滤, 不再叠加 org 锚定)。
         if (!orgSet.unbounded && !orgSet.self && orgSet.predicate != null) {
             String orgFrag = orgSet.predicate.emit("ar.resource_id", cond, tenantId, paramOffset + 1000);
             sub.append(" AND ").append(orgFrag);
@@ -512,7 +519,7 @@ public class ScopeEvaluator {
             // org 解析失败的退化空 cond (非 ALL) → 不补类型 (与 interceptor cond.sql.isEmpty() 分支一致)
             return cond;
         }
-        if ("1 = 0".equals(cond.sql)) {
+        if (DENY.equals(cond.sql)) {
             return cond;
         }
 
@@ -534,7 +541,7 @@ public class ScopeEvaluator {
 
     private ScopeCondition denyAll() {
         ScopeCondition c = new ScopeCondition();
-        c.sql = "1 = 0";
+        c.sql = DENY;
         return c;
     }
 }

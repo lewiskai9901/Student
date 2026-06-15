@@ -47,4 +47,18 @@ public record ResourceScopeMeta(
     public boolean hasTypeField() {
         return typeField != null && !typeField.isEmpty();
     }
+
+    /**
+     * membership 路径作为 {@code ar.subject_id} 的列, 缺省 {@code "id"}。
+     * <p>用于 membershipSelect / subjectRelFilter 两处。注意 plugin-dim 自降级 SELF 的 membership
+     * 分支<b>不</b>用这个缺省 (那里缺省为 {@code "user_id"}, 端口自 interceptor 的既有口径), 故不收敛。
+     */
+    public String membershipSubjectColumnOrDefault() {
+        return membershipSubjectColumn == null || membershipSubjectColumn.isEmpty() ? "id" : membershipSubjectColumn;
+    }
+
+    /** 创建者列, 缺省 {@code "created_by"} (SELF 在 org 字段路径 / plugin-dim 降级用)。 */
+    public String creatorFieldOrDefault() {
+        return creatorField == null || creatorField.isEmpty() ? "created_by" : creatorField;
+    }
 }
