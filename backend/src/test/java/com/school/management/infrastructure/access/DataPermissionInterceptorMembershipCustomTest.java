@@ -27,14 +27,13 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 /**
- * Focused tests for the CUSTOM branch of {@code buildMembershipCondition}.
+ * Focused tests for the CUSTOM_ORG membership path (post-T7 cutover).
  *
- * <p>Mirrors the test infrastructure of {@link DataPermissionInterceptorTest}
- * ({@code BuildMembershipCondition} nested class): the interceptor is constructed
- * with reflectively-injected mocks, {@code getMergedScope} is stubbed, and
- * {@code buildScopedCondition} is invoked via reflection to drive the private
- * {@code buildMembershipCondition} indirectly (matching the sibling test's
- * indirection — no visibility change).
+ * <p>Drives the interceptor's {@code buildScopedCondition} (via reflection) with a
+ * reflectively-injected real {@link ScopeEvaluator}; {@code getScopeSpec} is stubbed to
+ * return a CUSTOM_ORG {@link ScopeSpec}, so the actual SQL is composed by the evaluator's
+ * membership path. (The old private {@code buildMembershipCondition} was deleted in T7 —
+ * its CUSTOM logic now lives in {@code ScopeEvaluator.membershipSelect}.)
  *
  * <p>Bug under test: granting CUSTOM scope = a GRADE (or department) org used to emit
  * {@code ar.resource_id IN (<rawGrantedIds>)}, which matches ZERO student members
