@@ -253,6 +253,13 @@ const saving = ref(false)
 const defaultSpec = ref<ScopeSpecVM>({ orgAnchor: 'SELF' })
 const exceptions = ref<ResourceException[]>([])
 
+/**
+ * 上次 getConfig 载入的原始 per-resource 列表 (含 props.modules 之外的码).
+ * 保存时用于"未托管模块直通保留" — 后端 saveRolePermissions 是 delete-all-then-insert,
+ * 不回传的码会被软删, 故 UI 不管理的码必须原样回传, 否则静默丢配.
+ */
+const loadedPermissions = ref<ModulePermission[]>([])
+
 const showFollowers = ref(false)
 const pickerOpen = ref(false)
 const pickerSearch = ref('')
@@ -348,7 +355,9 @@ async function load() {
   loading.value = true
   try {
     const config = await dataPermissionApi.getConfig(props.currentRole.id)
-    const inferred = inferDefaultAndExceptions(config.modulePermissions || [])
+    const loaded = config.modulePermissions || []
+    loadedPermissions.value = loaded
+    const inferred = inferDefaultAndExceptions(loaded)
     defaultSpec.value = inferred.defaultSpec
     exceptions.value = inferred.exceptions
   } catch (e: any) {
@@ -365,6 +374,7 @@ watch(
     else {
       defaultSpec.value = { orgAnchor: 'SELF' }
       exceptions.value = []
+      loadedPermissions.value = []
     }
   },
   { immediate: true }
@@ -384,9 +394,27 @@ async function handleReset() {
 // ── 保存: 默认 + 例外 → per-resource commands (默认按各资源 allowedScopes 钳制) ──
 async function handleSave() {
   if (!props.currentRole) return
-  const allCodes = props.modules.map(m => m.code)
+  const managedCodes = props.modules.map(m => m.code)
+
+  // 防呆: 无托管资源宇宙时, 后端 delete-all-then-insert 会把整个角色配置清空.
+  // 绝不下发 [] — 此时大概率是 props.modules 尚未到位, 直接中止.
+  if (managedCodes.length === 0) {
+    ElMessage.warning('当前无可配置的资源, 已取消保存以避免误删已有配置')
+    return
+  }
+
   const allowedByCode = Object.fromEntries(props.modules.map(m => [m.code, m.allowedScopes]))
-  const cmds = expandToCommands(defaultSpec.value, exceptions.value, allCodes, allowedByCode)
+  const cmds = expandToCommands(defaultSpec.value, exceptions.value, managedCodes, allowedByCode)
+
+  // 保留未托管模块: 后端 saveRolePermissions 是 delete-all-then-insert, 不回传的码会被软删.
+  // 凡 loadedPermissions 里、本 UI 宇宙 (managedCodes) 之外的码, 原样直通保留, 防静默丢配.
+  const managedSet = new Set(managedCodes)
+  for (const mp of loadedPermissions.value) {
+    if (!managedSet.has(mp.moduleCode)) {
+      cmds.push({ ...mp })
+      managedSet.add(mp.moduleCode) // 去重: 同码只保留一次
+    }
+  }
 
   // Guard: 禁用插件的资源不允许配置非 SELF (镜像 PermissionConfigurator)
   const violators = cmds.filter(c => {

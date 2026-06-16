@@ -201,6 +201,65 @@ describe('DataScopeStudio — 保存展开+钳制', () => {
     expect(wrapper.emitted('saved')).toBeTruthy()
   })
 
+  it('保存保留未托管模块: getConfig 返回 props.modules 之外的码 (legacy_x) → payload 原样下发不丢', async () => {
+    // 后端 saveRolePermissions 是 delete-all-then-insert: 不下发的码会被软删。
+    // legacy_x 不在 props.modules 里 → 不被 expandToCommands 覆盖 → 必须以"未托管 pass-through"形式保留。
+    getConfigMock.mockResolvedValue({
+      modulePermissions: [
+        ...SAVED_CONFIG.modulePermissions,
+        {
+          moduleCode: 'legacy_x',
+          scopeCode: 'DEPARTMENT',
+          orgAnchor: 'PRIMARY_ORG',
+          includeSubtree: false,
+          typeFilter: ['FOO'],
+        },
+      ],
+    })
+    const wrapper = mountStudio()
+    await flushPromises()
+    const vm: any = wrapper.vm
+
+    await vm.handleSave()
+    await flushPromises()
+
+    expect(saveConfigMock).toHaveBeenCalledTimes(1)
+    const cmds: any[] = saveConfigMock.mock.calls.at(-1)![1].modulePermissions
+
+    // legacy_x 仍在 payload (未被删配)
+    const legacy = cmds.find(c => c.moduleCode === 'legacy_x')
+    expect(legacy).toBeTruthy()
+    // 原样保留: 既不默认化也不钳制
+    expect(legacy.scopeCode).toBe('DEPARTMENT')
+    expect(legacy.orgAnchor).toBe('PRIMARY_ORG')
+    expect(legacy.includeSubtree).toBe(false)
+    expect(legacy.typeFilter).toEqual(['FOO'])
+
+    // 托管的 4 个码仍正常展开 (de-dup: legacy_x 只出现一次)
+    const counts = cmds.reduce((acc: Record<string, number>, c) => {
+      acc[c.moduleCode] = (acc[c.moduleCode] || 0) + 1
+      return acc
+    }, {})
+    expect(counts['legacy_x']).toBe(1)
+    expect(cmds.map(c => c.moduleCode).sort()).toEqual(
+      ['inspection_record', 'legacy_x', 'org_unit', 'place', 'user'].sort()
+    )
+  })
+
+  it('props.modules 为空 → 防呆: 不调用 saveConfig (不下发 [] 防全删配)', async () => {
+    const wrapper = mount(DataScopeStudio, {
+      props: { currentRole: ROLE, modules: [] },
+      global: { stubs: localStubs },
+    })
+    await flushPromises()
+    const vm: any = wrapper.vm
+
+    await vm.handleSave()
+    await flushPromises()
+
+    expect(saveConfigMock).not.toHaveBeenCalled()
+  })
+
   it('默认范围被某资源 allowedScopes 钳制 (ALL 默认 → 只允许 SELF 的资源降到 SELF)', async () => {
     // 配置: 全部 ALL → 默认 ALL; inspection_record 仅允许 [SELF]
     getConfigMock.mockResolvedValue({
