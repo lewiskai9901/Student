@@ -111,6 +111,79 @@ export function scopeCodeFromAxis1(spec: ScopeSpecVM): string {
   }
 }
 
+/**
+ * preset scopeCode → 完整轴① spec (scopeCodeFromAxis1 的逆).
+ * 七个核心预设各自的轴① 投影 (②③ 留空):
+ *   ALL→{ALL}, SELF→{SELF},
+ *   DEPARTMENT→{PRIMARY_ORG}, DEPARTMENT_AND_BELOW→{PRIMARY_ORG,subtree},
+ *   MANAGED_ORGS→{RELATION,admin}, MANAGED_ORGS_AND_BELOW→{RELATION,admin,subtree},
+ *   CUSTOM→{CUSTOM_ORG}.
+ * 未知码 (如 PLUGIN_DIM 维度码) → 兜底 {SELF}.
+ */
+export function presetCodeToSpec(code: string): ScopeSpecVM {
+  switch (code) {
+    case 'ALL':
+      return { orgAnchor: 'ALL' }
+    case 'DEPARTMENT':
+      return { orgAnchor: 'PRIMARY_ORG' }
+    case 'DEPARTMENT_AND_BELOW':
+      return { orgAnchor: 'PRIMARY_ORG', includeSubtree: true }
+    case 'MANAGED_ORGS':
+      return { orgAnchor: 'RELATION', anchorParam: 'admin' }
+    case 'MANAGED_ORGS_AND_BELOW':
+      return { orgAnchor: 'RELATION', anchorParam: 'admin', includeSubtree: true }
+    case 'CUSTOM':
+      return { orgAnchor: 'CUSTOM_ORG', customOrgIds: [] }
+    case 'SELF':
+    default:
+      return { orgAnchor: 'SELF' }
+  }
+}
+
+/**
+ * 把一个轴① spec 钳制到资源 `allowedScopes` 允许的范围内.
+ *
+ * 安全属性: 返回 spec 的 preset 码恒 ∈ allowed (当 allowed 非空), 且
+ * "永不放宽" — 选出的范围 anchorLevel 永不超过原默认的 anchorLevel.
+ *
+ * 规则:
+ *  - allowed 为 null/undefined/空 → 无限制, 原样返回 spec.
+ *  - 默认码 ∈ allowed → 原样返回 spec.
+ *  - 否则回落到"最宽但不宽于默认"的允许码; 若全部都比默认宽, 取最窄的允许码;
+ *    最终兜底 = 第一个允许码.
+ */
+export function clampSpecToAllowed(
+  spec: ScopeSpecVM,
+  allowed?: string[] | null
+): ScopeSpecVM {
+  if (!allowed || !allowed.length) return spec
+
+  const code = scopeCodeFromAxis1(spec)
+  if (allowed.includes(code)) return spec
+
+  const defLevel = anchorLevel(spec)
+  // 每个允许码 → 其 spec + level, 用于挑选.
+  const candidates = allowed.map(c => {
+    const s = presetCodeToSpec(c)
+    return { code: c, level: anchorLevel(s) }
+  })
+
+  // 1) 最宽但不宽于默认 (level ≤ defLevel, level 最大).
+  let pick: { code: string; level: number } | null = null
+  for (const c of candidates) {
+    if (c.level <= defLevel && (!pick || c.level > pick.level)) pick = c
+  }
+  // 2) 全部比默认宽 → 取最窄 (level 最小).
+  if (!pick) {
+    for (const c of candidates) {
+      if (!pick || c.level < pick.level) pick = c
+    }
+  }
+  // 3) 兜底 (理论不可达, candidates 非空).
+  const chosen = pick ? pick.code : allowed[0]
+  return presetCodeToSpec(chosen)
+}
+
 /** spec 是否带有轴②③ (关系过滤 / 类型过滤). */
 function hasAxis23(spec: ScopeSpecVM): boolean {
   return (
@@ -215,20 +288,31 @@ function specToCommand(moduleCode: string, spec: ScopeSpecVM): ModulePermission 
 /**
  * 把「默认范围 + 资源例外」展开回 per-resource 列表 (一次 PUT 下发).
  *
- * - 例外资源 → 用该例外的完整三轴 spec.
- * - 其余资源 → 用默认 spec (仅轴①, ②③ 留空).
+ * - 例外资源 → 用该例外的完整三轴 spec, **原样下发不钳制**
+ *   (per-resource ScopeBuilder 已按能力门控过例外, 必然合法).
+ * - 其余资源 → 取默认 spec (仅轴①), 再**按该资源 `allowedScopes` 钳制**:
+ *   保证下发的 scopeCode ∈ 该资源允许集 (非空时), 且轴① 字段与之一致 ——
+ *   既防后端校验 400, 又防"对无 org 字段资源套 DEPARTMENT 生成坏 SQL", 且永不放宽.
  * - 每条命令携带派生 scopeCode (legacy preset) + 三轴字段, 后端优先采用三轴.
+ *
+ * @param allowedScopesByCode  每资源允许的 preset 码 (来自 M1 能力声明);
+ *   缺省 / null / 空 = 不限制该资源, 默认原样透传.
  */
 export function expandToCommands(
   defaultSpec: ScopeSpecVM,
   exceptions: ResourceException[],
-  allModuleCodes: string[]
+  allModuleCodes: string[],
+  allowedScopesByCode?: Record<string, string[] | null | undefined>
 ): ModulePermission[] {
   const exMap = new Map(exceptions.map(e => [e.moduleCode, e.spec]))
   const defOnly = axis1Only(defaultSpec)
 
   return allModuleCodes.map(code => {
     const ex = exMap.get(code)
-    return ex ? specToCommand(code, ex) : specToCommand(code, defOnly)
+    if (ex) return specToCommand(code, ex)
+    // 非例外资源: 默认范围按本资源 allowedScopes 钳制后下发.
+    const allowed = allowedScopesByCode?.[code]
+    const clamped = clampSpecToAllowed(defOnly, allowed)
+    return specToCommand(code, clamped)
   })
 }

@@ -7,6 +7,8 @@ import {
   scopeCodeFromAxis1,
   axis1Signature,
   anchorLevel,
+  presetCodeToSpec,
+  clampSpecToAllowed,
   type ResourceException,
 } from '../scopePolicy'
 
@@ -219,6 +221,155 @@ describe('expandToCommands', () => {
   it('derives scopeCode on every command', () => {
     const cmds = expandToCommands(SPEC.all(), [], ['a', 'b'])
     expect(cmds.every(c => c.scopeCode === 'ALL')).toBe(true)
+  })
+})
+
+describe('presetCodeToSpec', () => {
+  it('round-trips with scopeCodeFromAxis1 for the 7 presets', () => {
+    const presets = [
+      'ALL',
+      'SELF',
+      'DEPARTMENT',
+      'DEPARTMENT_AND_BELOW',
+      'MANAGED_ORGS',
+      'MANAGED_ORGS_AND_BELOW',
+      'CUSTOM',
+    ]
+    for (const code of presets) {
+      expect(scopeCodeFromAxis1(presetCodeToSpec(code))).toBe(code)
+    }
+  })
+
+  it('maps each preset to the expected axis① anchor', () => {
+    expect(presetCodeToSpec('ALL').orgAnchor).toBe('ALL')
+    expect(presetCodeToSpec('SELF').orgAnchor).toBe('SELF')
+    expect(presetCodeToSpec('DEPARTMENT')).toMatchObject({
+      orgAnchor: 'PRIMARY_ORG',
+    })
+    expect(presetCodeToSpec('DEPARTMENT')).not.toMatchObject({ includeSubtree: true })
+    expect(presetCodeToSpec('DEPARTMENT_AND_BELOW')).toMatchObject({
+      orgAnchor: 'PRIMARY_ORG',
+      includeSubtree: true,
+    })
+    expect(presetCodeToSpec('MANAGED_ORGS')).toMatchObject({
+      orgAnchor: 'RELATION',
+      anchorParam: 'admin',
+    })
+    expect(presetCodeToSpec('MANAGED_ORGS_AND_BELOW')).toMatchObject({
+      orgAnchor: 'RELATION',
+      anchorParam: 'admin',
+      includeSubtree: true,
+    })
+    expect(presetCodeToSpec('CUSTOM').orgAnchor).toBe('CUSTOM_ORG')
+  })
+})
+
+describe('clampSpecToAllowed', () => {
+  it('null/undefined/empty allowed → no restriction (default unchanged)', () => {
+    const def = SPEC.deptAndBelow()
+    expect(clampSpecToAllowed(def, null)).toEqual(def)
+    expect(clampSpecToAllowed(def, undefined)).toEqual(def)
+    expect(clampSpecToAllowed(def, [])).toEqual(def)
+  })
+
+  it('default code already allowed → unchanged', () => {
+    const def = SPEC.deptAndBelow()
+    expect(clampSpecToAllowed(def, ['SELF', 'DEPARTMENT_AND_BELOW'])).toEqual(def)
+  })
+
+  it('default code excluded → falls back to allowed scope, never wider than default', () => {
+    // default=DEPARTMENT_AND_BELOW (level 80), allowed only [SELF] → SELF
+    const clamped = clampSpecToAllowed(SPEC.deptAndBelow(), ['SELF'])
+    expect(scopeCodeFromAxis1(clamped)).toBe('SELF')
+    expect(clamped.orgAnchor).toBe('SELF')
+  })
+
+  it('never widens beyond default: default=DEPARTMENT, allowed=[ALL,SELF] → SELF', () => {
+    // DEPARTMENT level=60. ALL=100 (wider, forbidden), SELF=20 (≤60) → SELF
+    const clamped = clampSpecToAllowed(SPEC.dept(), ['ALL', 'SELF'])
+    expect(scopeCodeFromAxis1(clamped)).toBe('SELF')
+  })
+
+  it('picks the WIDEST allowed scope no wider than default', () => {
+    // default=DEPARTMENT_AND_BELOW level=80. allowed=[SELF, DEPARTMENT] →
+    // DEPARTMENT (60) is widest ≤80 → DEPARTMENT, not SELF
+    const clamped = clampSpecToAllowed(SPEC.deptAndBelow(), ['SELF', 'DEPARTMENT'])
+    expect(scopeCodeFromAxis1(clamped)).toBe('DEPARTMENT')
+  })
+
+  it('all allowed wider than default → pick the NARROWEST allowed', () => {
+    // default=SELF level=20. allowed=[ALL, DEPARTMENT_AND_BELOW] both wider →
+    // narrowest = DEPARTMENT_AND_BELOW (80) over ALL (100)
+    const clamped = clampSpecToAllowed(SPEC.self(), ['ALL', 'DEPARTMENT_AND_BELOW'])
+    expect(scopeCodeFromAxis1(clamped)).toBe('DEPARTMENT_AND_BELOW')
+  })
+})
+
+describe('expandToCommands with allowed_scopes clamping', () => {
+  const codes = ['user', 'org_unit', 'announcement']
+
+  it('clamps a non-exception resource whose allowedScopes excludes the default code', () => {
+    // default=DEPARTMENT_AND_BELOW; announcement allows only [SELF]
+    const def = SPEC.deptAndBelow()
+    const allowed: Record<string, string[] | null | undefined> = {
+      user: null, // unrestricted
+      org_unit: ['DEPARTMENT_AND_BELOW', 'DEPARTMENT'], // honors default
+      announcement: ['SELF'], // cannot honor org scope
+    }
+    const cmds = expandToCommands(def, [], codes, allowed)
+
+    const ann = cmds.find(c => c.moduleCode === 'announcement')!
+    expect(ann.scopeCode).toBe('SELF')
+    expect(ann.orgAnchor).toBe('SELF') // axis① matches the clamped scopeCode
+
+    // unrestricted + honoring resources keep the default
+    expect(cmds.find(c => c.moduleCode === 'user')!.scopeCode).toBe('DEPARTMENT_AND_BELOW')
+    expect(cmds.find(c => c.moduleCode === 'org_unit')!.scopeCode).toBe('DEPARTMENT_AND_BELOW')
+    expect(cmds.find(c => c.moduleCode === 'org_unit')!.orgAnchor).toBe('PRIMARY_ORG')
+  })
+
+  it('emitted scopeCode is ALWAYS ∈ allowedScopes when non-empty', () => {
+    const def = SPEC.all()
+    const allowed: Record<string, string[] | null | undefined> = {
+      user: ['SELF', 'DEPARTMENT'],
+      org_unit: ['MANAGED_ORGS'],
+      announcement: null,
+    }
+    const cmds = expandToCommands(def, [], codes, allowed)
+    for (const c of cmds) {
+      const a = allowed[c.moduleCode]
+      if (a && a.length) {
+        expect(a).toContain(c.scopeCode)
+      }
+    }
+  })
+
+  it('allowedScopesByCode omitted → behaves exactly like before (no clamping)', () => {
+    const def = SPEC.deptAndBelow()
+    const cmds = expandToCommands(def, [], codes)
+    expect(cmds.every(c => c.scopeCode === 'DEPARTMENT_AND_BELOW')).toBe(true)
+  })
+
+  it('exceptions are emitted UNCHANGED regardless of allowedScopes', () => {
+    const def = SPEC.deptAndBelow()
+    const exc: ResourceException[] = [
+      {
+        moduleCode: 'user',
+        spec: {
+          orgAnchor: 'RELATION',
+          anchorParam: 'admin',
+          subjectRelExclude: ['admin'],
+          typeFilter: ['STUDENT'],
+        },
+      },
+    ]
+    // even though we pretend user only allows SELF, the exception is left as-is
+    const allowed = { user: ['SELF'], org_unit: null, announcement: null }
+    const cmds = expandToCommands(def, exc, codes, allowed)
+    const userCmd = cmds.find(c => c.moduleCode === 'user')!
+    expect(userCmd.orgAnchor).toBe('RELATION')
+    expect(userCmd.scopeCode).toBe('MANAGED_ORGS')
+    expect(userCmd.typeFilter).toEqual(['STUDENT'])
   })
 })
 
