@@ -1,28 +1,54 @@
 <template>
   <div class="space-y-3">
-    <!-- ① 组织锚点 -->
+    <!-- ① 看哪些组织的数据 -->
     <div class="space-y-1.5">
       <div class="flex items-center gap-1.5 text-[11px] font-semibold text-gray-600">
         <span
           class="inline-flex h-4 w-4 items-center justify-center rounded-full bg-blue-100 text-[9px] text-blue-600"
           >1</span
         >
-        组织锚点
+        看哪些组织的数据
       </div>
+      <p class="pl-5 text-[11px] text-gray-400">这个角色能看到哪些组织范围内的数据</p>
       <div class="flex flex-wrap items-center gap-2 pl-5">
         <span class="text-[11px] text-gray-500">从</span>
         <el-select
           :model-value="orgAnchor"
           size="small"
           :disabled="disabled"
-          style="width: 168px"
+          style="width: 188px"
           @update:model-value="(v: any) => onOrgAnchorChange(v as string)"
         >
-          <el-option v-if="anchorOffered('ALL')" label="全部组织" value="ALL" />
-          <el-option v-if="anchorOffered('SELF')" label="不锚定组织 (仅本人)" value="SELF" />
-          <el-option v-if="anchorOffered('PRIMARY_ORG')" label="我的主属组织" value="PRIMARY_ORG" />
-          <el-option v-if="anchorOffered('RELATION')" label="按关系派生的组织" value="RELATION" />
-          <el-option v-if="anchorOffered('CUSTOM_ORG')" label="指定组织" value="CUSTOM_ORG" />
+          <el-option
+            v-if="anchorOffered('ALL')"
+            label="全部（不限组织）"
+            value="ALL"
+            title="不限组织，可看到系统里的全部数据"
+          />
+          <el-option
+            v-if="anchorOffered('SELF')"
+            label="仅本人（只看自己负责的）"
+            value="SELF"
+            title="只看与自己直接相关的数据"
+          />
+          <el-option
+            v-if="anchorOffered('PRIMARY_ORG')"
+            label="本部门"
+            value="PRIMARY_ORG"
+            title="只看自己所在部门范围内的数据"
+          />
+          <el-option
+            v-if="anchorOffered('RELATION')"
+            label="我负责的组织（按关系）"
+            value="RELATION"
+            title="例如：我管理的组织 → 只看我作为管理者的那些组织"
+          />
+          <el-option
+            v-if="anchorOffered('CUSTOM_ORG')"
+            label="指定组织"
+            value="CUSTOM_ORG"
+            title="手动勾选要看的组织"
+          />
         </el-select>
         <!-- RELATION: 选关系 -->
         <template v-if="orgAnchor === 'RELATION'">
@@ -44,15 +70,16 @@
           </el-select>
           <span class="text-[11px] text-gray-500">的组织</span>
         </template>
-        <!-- 含下级 子树 (锚定到组织时才有意义, 且 allowedScopes 允许时) -->
+        <!-- 含下级部门 子树 (锚定到组织时才有意义, 且 allowedScopes 允许时) -->
         <el-checkbox
           v-if="subtreeRelevant"
           :model-value="includeSubtree"
           size="small"
           :disabled="disabled"
+          title="勾选后，该组织下面的子部门数据也一并能看到"
           @update:model-value="(v: any) => onIncludeSubtreeChange(!!v)"
         >
-          <span class="text-[11px]">含下级</span>
+          <span class="text-[11px]">含下级部门</span>
         </el-checkbox>
       </div>
       <!-- CUSTOM_ORG: 组织树选择器 -->
@@ -71,8 +98,8 @@
           class="inline-flex h-4 w-4 items-center justify-center rounded-full bg-amber-100 text-[9px] text-amber-600"
           >2</span
         >
-        关系过滤
-        <span class="font-normal text-gray-400">— 按主体与组织的关系再次收窄</span>
+        按与组织的关系再筛选（可选）
+        <span class="font-normal text-gray-400">— 在上面的组织范围里，再按人与组织的关系筛一遍</span>
       </div>
       <div class="flex flex-wrap items-center gap-3 pl-5">
         <el-radio-group
@@ -81,9 +108,9 @@
           :disabled="disabled"
           @update:model-value="(v: any) => onRelFilterModeChange(v as string)"
         >
-          <el-radio-button value="NONE">不限</el-radio-button>
-          <el-radio-button value="INCLUDE">仅</el-radio-button>
-          <el-radio-button value="EXCLUDE">排除</el-radio-button>
+          <el-radio-button value="NONE" title="不按关系筛选">不限</el-radio-button>
+          <el-radio-button value="INCLUDE" title="只看有指定关系的人">仅</el-radio-button>
+          <el-radio-button value="EXCLUDE" title="把有指定关系的人排除掉">排除</el-radio-button>
         </el-radio-group>
         <el-select
           v-if="relFilterMode !== 'NONE'"
@@ -104,7 +131,9 @@
             :value="r.relationCode"
           />
         </el-select>
-        <span class="text-[11px] text-gray-400">关系的主体</span>
+        <span v-if="relFilterMode !== 'NONE'" class="text-[11px] text-gray-400">
+          {{ relFilterMode === 'EXCLUDE' ? '关系的人（排除这些人）' : '关系的人（只看这些人）' }}
+        </span>
       </div>
     </div>
 
@@ -115,7 +144,7 @@
           class="inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-100 text-[9px] text-emerald-600"
           >3</span
         >
-        类型过滤
+        限定类型（可选）
         <span class="font-normal text-gray-400">— 不选=不限类型</span>
       </div>
       <div class="pl-5">

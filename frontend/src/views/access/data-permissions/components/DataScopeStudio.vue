@@ -49,12 +49,14 @@
     <div v-else class="flex flex-1 overflow-hidden">
       <!-- 配置区 -->
       <div class="flex-1 overflow-y-auto px-5 py-4 space-y-5">
-        <!-- ① 默认范围 (仅轴① 组织锚点, 适用所有资源) -->
+        <!-- ① 默认范围 (仅轴① 看哪些组织的数据, 适用所有资源) -->
         <section class="rounded-lg border border-gray-200 bg-white p-4">
-          <div class="mb-2 flex items-center gap-2">
+          <div class="mb-1 flex items-center gap-2">
             <h3 class="text-sm font-semibold text-gray-900">默认范围</h3>
-            <span class="text-[11px] text-gray-400">— 组织锚点, 适用所有资源</span>
           </div>
+          <p class="mb-2 text-[11px] leading-relaxed text-gray-500">
+            先设一个对所有功能都生效的范围；个别功能要不一样，在下面「添加例外」单独设。
+          </p>
           <ScopeBuilder
             :model-value="defaultSpec"
             axis-only-org
@@ -68,7 +70,7 @@
           <div class="mb-3 flex items-center justify-between">
             <div class="flex items-center gap-2">
               <h3 class="text-sm font-semibold text-gray-900">资源例外</h3>
-              <span class="text-[11px] text-gray-400">— 只列与默认不同的资源</span>
+              <span class="text-[11px] text-gray-400">— 个别功能想和默认不同，在这里单独配（只列出与默认不同的）</span>
             </div>
             <button
               class="flex h-7 items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2.5 text-[11px] font-medium text-blue-600 hover:bg-blue-100 disabled:opacity-40"

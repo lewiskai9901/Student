@@ -117,9 +117,9 @@ describe('ScopeBuilder — axis gating', () => {
     })
     await flushPromises()
     // 仅轴① — 不渲染 轴② (radio-group) / 轴③ (类型标题文本)
-    expect(visibleHtml(wrapper)).toContain('组织锚点')
+    expect(visibleHtml(wrapper)).toContain('看哪些组织的数据')
     expect(hasRelationAxis(wrapper)).toBe(false)
-    expect(visibleHtml(wrapper)).not.toContain('类型过滤')
+    expect(visibleHtml(wrapper)).not.toContain('限定类型（可选）')
   })
 
   it('relationFilterable=false → 轴② 不渲染', async () => {
@@ -130,7 +130,7 @@ describe('ScopeBuilder — axis gating', () => {
     await flushPromises()
     expect(hasRelationAxis(wrapper)).toBe(false)
     // 轴③ 仍在 (typeEntity 非空)
-    expect(visibleHtml(wrapper)).toContain('类型过滤')
+    expect(visibleHtml(wrapper)).toContain('限定类型（可选）')
   })
 
   it('typeEntity=null → 轴③ 不渲染', async () => {
@@ -140,7 +140,7 @@ describe('ScopeBuilder — axis gating', () => {
     })
     await flushPromises()
     expect(hasRelationAxis(wrapper)).toBe(true)
-    expect(visibleHtml(wrapper)).not.toContain('类型过滤')
+    expect(visibleHtml(wrapper)).not.toContain('限定类型（可选）')
   })
 })
 
@@ -250,7 +250,7 @@ describe('ScopeBuilder — allowedScopes gating', () => {
     const html = wrapper.html()
     expect(html).toContain('仅本人')
     // 其它锚点 option 不出现
-    expect(html).not.toContain('全部组织')
+    expect(html).not.toContain('全部（不限组织）')
     expect(html).not.toContain('指定组织')
   })
 
@@ -261,7 +261,7 @@ describe('ScopeBuilder — allowedScopes gating', () => {
     })
     await flushPromises()
     const html = wrapper.html()
-    expect(html).toContain('全部组织')
+    expect(html).toContain('全部（不限组织）')
     expect(html).toContain('指定组织')
   })
 })
