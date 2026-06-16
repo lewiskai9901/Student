@@ -25,6 +25,11 @@ vi.mock('@/api/organization', () => ({
   getOrgUnitTree: vi.fn().mockResolvedValue([]),
 }))
 
+// plugins store — 仅暴露 codes (无插件启用 → 模板只用核心 scope), 免装 pinia
+vi.mock('@/stores/plugins', () => ({
+  usePluginsStore: () => ({ codes: [] }),
+}))
+
 // ElMessage / ElMessageBox 无副作用 stub
 vi.mock('element-plus', () => ({
   ElMessage: { success: vi.fn(), warning: vi.fn(), error: vi.fn(), info: vi.fn() },
@@ -91,6 +96,8 @@ const localStubs = {
   'el-dropdown': { template: '<div><slot /><slot name="dropdown" /></div>' },
   'el-dropdown-menu': { template: '<div><slot /></div>' },
   'el-dropdown-item': { template: '<div><slot /></div>' },
+  // 模板库子组件 — 仅透传 apply 事件, 不渲染内部
+  TemplateLibraryDialog: { template: '<div class="tpl-dialog-stub" />' },
 }
 
 function mountStudio() {
@@ -158,6 +165,56 @@ describe('DataScopeStudio — 例外增删', () => {
     vm.removeException(0)
     await flushPromises()
     expect(vm.exceptions).toHaveLength(0)
+  })
+})
+
+describe('DataScopeStudio — 模板载入', () => {
+  it('应用"本部门及以下"模板 → defaultSpec 变为 PRIMARY_ORG+subtree, 不自动保存', async () => {
+    const wrapper = mountStudio()
+    await flushPromises()
+    const vm: any = wrapper.vm
+
+    // 模板携带 SceneDecision: primary=DEPARTMENT_AND_BELOW, 业务跟随
+    vm.applyTemplate({
+      id: 'dept-manager',
+      name: '部门经理',
+      icon: 'Users',
+      industry: 'CORE',
+      description: '',
+      scene: { primary: 'DEPARTMENT_AND_BELOW', bizAutoFollow: true },
+    })
+    await flushPromises()
+
+    // 模板主决策落成默认范围: PRIMARY_ORG + 含子树
+    expect(vm.defaultSpec.orgAnchor).toBe('PRIMARY_ORG')
+    expect(vm.defaultSpec.includeSubtree).toBe(true)
+    // 全资源同一范围 → 无例外
+    expect(vm.exceptions).toHaveLength(0)
+    // 不自动保存 — 用户复核后手动保存
+    expect(saveConfigMock).not.toHaveBeenCalled()
+  })
+
+  it('应用"全部数据"模板 + 受限资源 → 默认 ALL, 受限资源因 allowedScopes 沦为例外', async () => {
+    // inspection_record 仅允许 [SELF,DEPARTMENT,DEPARTMENT_AND_BELOW] → ALL 经 fallback 降级 → 成例外
+    const wrapper = mountStudio()
+    await flushPromises()
+    const vm: any = wrapper.vm
+
+    vm.applyTemplate({
+      id: 'super-admin',
+      name: '超级管理员',
+      icon: 'Crown',
+      industry: 'CORE',
+      description: '',
+      scene: { primary: 'ALL', bizAutoFollow: true },
+    })
+    await flushPromises()
+
+    // 多数资源 ALL → 默认 ALL
+    expect(vm.defaultSpec.orgAnchor).toBe('ALL')
+    // inspection_record 不允许 ALL → fallback 到 DEPARTMENT_AND_BELOW → 轴① 不同 → 成例外
+    expect(vm.exceptions.map((e: any) => e.moduleCode)).toContain('inspection_record')
+    expect(saveConfigMock).not.toHaveBeenCalled()
   })
 })
 

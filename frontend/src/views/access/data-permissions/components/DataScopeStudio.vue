@@ -11,21 +11,15 @@
         </p>
       </div>
       <div v-if="currentRole" class="flex items-center gap-2">
-        <!-- 模板下拉 (P2 占位, P4 接线) -->
-        <el-dropdown trigger="click" :disabled="roleDisabled">
-          <button
-            class="flex h-8 items-center gap-1 rounded-md border border-gray-200 bg-white px-3 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40"
-            :disabled="roleDisabled"
-          >
-            模板
-            <ChevronDown class="h-3 w-3" />
-          </button>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item disabled>模板库 (P4 接入)</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
+        <!-- 模板库: 选模板 → 载入为 默认+例外 (不自动保存) -->
+        <button
+          class="flex h-8 items-center gap-1 rounded-md border border-gray-200 bg-white px-3 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40"
+          :disabled="roleDisabled"
+          @click="templateDialogOpen = true"
+        >
+          模板
+          <ChevronDown class="h-3 w-3" />
+        </button>
         <button
           class="flex h-8 items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40"
           :disabled="roleDisabled"
@@ -203,6 +197,13 @@
         </div>
       </div>
     </el-dialog>
+
+    <!-- 模板库 -->
+    <TemplateLibraryDialog
+      :visible="templateDialogOpen"
+      @update:visible="templateDialogOpen = $event"
+      @apply="applyTemplate"
+    />
   </div>
 </template>
 
@@ -211,6 +212,7 @@ import { ref, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ChevronDown, Plus, X } from 'lucide-vue-next'
 import ScopeBuilder, { type ScopeSpecVM, type ScopeCapabilities } from './ScopeBuilder.vue'
+import TemplateLibraryDialog from './TemplateLibraryDialog.vue'
 import { dataPermissionApi, type RoleResponse } from '@/api/access'
 import type { ModulePermission } from '@/types/access'
 import {
@@ -218,8 +220,13 @@ import {
   expandToCommands,
   clampSpecToAllowed,
   scopeCodeFromAxis1,
+  presetCodeToSpec,
   type ResourceException,
 } from '../composables/scopePolicy'
+import { sceneToModuleScopes } from '../composables/useSceneTemplate'
+import type { RoleTemplate } from '../composables/useTemplateLibrary'
+import { enabledScopeSpecializations } from '../dataScopeSpecializations'
+import { usePluginsStore } from '@/stores/plugins'
 import { useScopeLabels } from '../composables/useScopeLabels'
 
 /**
@@ -263,6 +270,9 @@ const loadedPermissions = ref<ModulePermission[]>([])
 const showFollowers = ref(false)
 const pickerOpen = ref(false)
 const pickerSearch = ref('')
+const templateDialogOpen = ref(false)
+
+const pluginsStore = usePluginsStore()
 
 const roleDisabled = computed(() => props.currentRole?.pluginEnabled === false)
 
@@ -347,6 +357,49 @@ function removeException(i: number) {
 }
 function updateException(i: number, spec: ScopeSpecVM) {
   exceptions.value[i] = { ...exceptions.value[i], spec }
+}
+
+// ── 模板载入 ────────────────────────────────────────────────
+/**
+ * 应用模板: 模板的 SceneDecision → 每资源 scope → ModulePermission[] → 推断回「默认 + 例外」.
+ *
+ * 复用旧 PermissionConfigurator.applyTemplateScene 的 sceneToModuleScopes/specs/relevantCodes 链路,
+ * 但终点不再是扁平 modulePermissions, 而是过 inferDefaultAndExceptions 落成本 UI 的默认+例外模型,
+ * 与 getConfig 载入路径完全一致. 仅载入不保存 — 用户复核后手动点保存.
+ */
+function applyTemplate(tpl: RoleTemplate) {
+  // props.modules → sceneToModuleScopes 需要的 SimpleModule[] 形状
+  const simpleModules = props.modules.map(m => ({
+    code: m.code,
+    industry: m.industry || 'CORE',
+    allowedScopes: m.allowedScopes ?? null,
+  }))
+  // 本视图不区分 relevant/advanced — 所有托管资源都视作"相关", 模板主决策对其全量生效
+  const relevantCodes = new Set(props.modules.map(m => m.code))
+  const specs = enabledScopeSpecializations(pluginsStore.codes)
+
+  const { scopes } = sceneToModuleScopes(tpl.scene, simpleModules, specs, relevantCodes)
+
+  // scope 映射 → ModulePermission[]. preset scopeCode → 轴① spec 字段 (orgAnchor/includeSubtree...),
+  // 否则 inferDefaultAndExceptions 的 toSpec 会因缺 orgAnchor 一律退化成 SELF.
+  const mps: ModulePermission[] = props.modules.map(m => {
+    const code = scopes[m.code]?.scopeCode || 'SELF'
+    const axis1 = presetCodeToSpec(code)
+    return {
+      moduleCode: m.code,
+      scopeCode: code,
+      orgAnchor: axis1.orgAnchor,
+      anchorParam: axis1.anchorParam,
+      includeSubtree: axis1.includeSubtree,
+      customOrgIds: axis1.customOrgIds,
+      scopeItems: scopes[m.code]?.scopeItems,
+    }
+  })
+
+  const inferred = inferDefaultAndExceptions(mps)
+  defaultSpec.value = inferred.defaultSpec
+  exceptions.value = inferred.exceptions
+  ElMessage.info('模板已载入, 点击保存生效')
 }
 
 // ── 加载 / 重置 ─────────────────────────────────────────────
