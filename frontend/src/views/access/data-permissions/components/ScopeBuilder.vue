@@ -242,7 +242,9 @@ const offeredAnchors = computed<Set<OrgAnchor>>(() => {
 })
 
 function anchorOffered(a: OrgAnchor): boolean {
-  return offeredAnchors.value.has(a)
+  // 当前值始终有对应选项 — 否则 el-select 命中不到 option 会退显原始枚举值(如 "PRIMARY_ORG"),
+  // 即使该锚点被 allowedScopes 门控掉(常见: 既有配置的锚点不在资源 allowed_scopes 内)。
+  return offeredAnchors.value.has(a) || orgAnchor.value === a
 }
 
 /** 含下级(子树)是否相关: 锚定到组织 + allowedScopes 允许子树 (或无门控). */
