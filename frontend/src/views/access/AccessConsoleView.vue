@@ -11,16 +11,6 @@
           <button :class="segCls('catalog')" @click="mode = 'catalog'">权限目录</button>
         </div>
       </div>
-      <div class="flex items-center gap-2">
-        <button
-          v-if="mode === 'role' && activeTab === 'data'"
-          class="flex h-8 items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 text-xs font-medium text-gray-600 hover:bg-gray-50"
-          @click="showTemplates = true"
-        >
-          <Library class="h-3.5 w-3.5" />
-          模板库
-        </button>
-      </div>
     </div>
 
     <!-- ═══════════ 角色权限模式 ═══════════ -->
@@ -72,31 +62,12 @@
                 :readonly="currentRole.pluginEnabled === false"
                 @saved="onRoleSaved"
               />
-              <PermissionConfigurator
+              <DataScopeStudio
                 v-else
-                ref="configuratorRef"
+                :key="'data-' + currentRole.id"
                 :current-role="currentRole"
-                :grouped-modules="groupedModules"
-                :advanced-grouped-modules="advancedGroupedModules"
-                :filter-meta="filterMeta"
-                :data-scope-options="dataScopeOptions"
-                :module-name-map="moduleNameMap"
-                @open-templates="showTemplates = true"
-                @config-loaded="onConfigLoaded"
-                @config-changed="onConfigChanged"
+                :modules="studioModules"
                 @saved="onSaved"
-                @enable-industry="onEnableIndustry"
-              />
-            </div>
-            <!-- 右栏: 预览 (仅数据权限 tab) -->
-            <div v-if="activeTab === 'data'" class="w-80 flex-shrink-0 border-l border-gray-200">
-              <PreviewPanel
-                :decision="currentDecision"
-                :module-permissions="currentModulePermissions"
-                :data-scope-options="dataScopeOptions"
-                :module-name-map="moduleNameMap"
-                :total-modules="totalModules"
-                :fallbacks="currentFallbacks"
               />
             </div>
           </div>
@@ -108,9 +79,6 @@
     <div v-else class="min-h-0 flex-1 overflow-y-auto">
       <PermissionCatalog />
     </div>
-
-    <!-- 模板库 -->
-    <TemplateLibraryDialog v-model:visible="showTemplates" @apply="onApplyTemplate" />
 
     <!-- 新建角色 -->
     <Teleport to="body">
@@ -194,25 +162,20 @@
 import type { LongId } from '@/types/common'
 import { ref, computed, onMounted, reactive, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { pluginPlatformApi } from '@/api/pluginPlatform'
-import { ShieldCheck, Shield, Library, X, Loader2, Users } from 'lucide-vue-next'
+import { ElMessage } from 'element-plus'
+import { ShieldCheck, Shield, X, Loader2, Users } from 'lucide-vue-next'
 import RoleExplorer from './data-permissions/components/RoleExplorer.vue'
-import PermissionConfigurator from './data-permissions/components/PermissionConfigurator.vue'
-import PreviewPanel from './data-permissions/components/PreviewPanel.vue'
-import TemplateLibraryDialog from './data-permissions/components/TemplateLibraryDialog.vue'
+import DataScopeStudio, { type ModuleCapability } from './data-permissions/components/DataScopeStudio.vue'
 import RoleBasicInfoPanel from './components/RoleBasicInfoPanel.vue'
 import RolePermissionGrantPanel from './components/RolePermissionGrantPanel.vue'
 import PermissionCatalog from '@/views/system/PermissionsView.vue'
-import type { ModuleGroupItem } from './data-permissions/components/AdvancedModuleEditor.vue'
 import { dataPermissionApi, getRolesPage, createRole, type RoleResponse } from '@/api/access'
 import type { CreateRoleRequest } from '@/types'
 import type { DataScopeOption, ModulePermission } from '@/types/access'
-import type { SceneDecision, ScopeFallbackInfo } from './data-permissions/composables/useSceneTemplate'
+import type { SceneDecision } from './data-permissions/composables/useSceneTemplate'
 import { moduleScopesToScene } from './data-permissions/composables/useSceneTemplate'
 import { enabledScopeSpecializations } from './data-permissions/dataScopeSpecializations'
 import { usePluginsStore } from '@/stores/plugins'
-import type { RoleTemplate } from './data-permissions/composables/useTemplateLibrary'
 
 const route = useRoute()
 const router = useRouter()
@@ -233,16 +196,12 @@ function tabCls(t: string) {
   ]
 }
 
-const configuratorRef = ref<InstanceType<typeof PermissionConfigurator> | null>(null)
 const roleExplorerRef = ref<InstanceType<typeof RoleExplorer> | null>(null)
-const showTemplates = ref(false)
 const showCompareDialog = ref(false)
 const compareLoading = ref(false)
 
-const groupedModules = ref<Record<string, ModuleGroupItem[]>>({})
-const advancedGroupedModules = ref<Record<string, ModuleGroupItem[]>>({})
-const filterMeta = ref<{ filtered: boolean; filterRule?: string; totalRelevant?: number; totalAdvanced?: number; roleIndustry?: string; rolePermModules?: string[] }>({ filtered: false })
-const moduleNameMap = ref<Record<string, string>>({})
+/** 当前角色的完整资源宇宙 (relevant ∪ advanced), 映射为 DataScopeStudio 的能力声明. */
+const studioModules = ref<ModuleCapability[]>([])
 const pluginsStore = usePluginsStore()
 const dataScopeOptions = ref<DataScopeOption[]>([])
 const allRoles = ref<RoleResponse[]>([])
@@ -268,32 +227,20 @@ const currentRole = computed<RoleResponse | null>(() => {
   return allRoles.value.find((r) => String(r.id) === String(id)) || null
 })
 
-const currentModulePermissions = ref<ModulePermission[]>([])
-const currentDecision = ref<SceneDecision>({ primary: 'SELF', bizAutoFollow: true })
-const currentFallbacks = ref<ScopeFallbackInfo[]>([])
-const totalModules = computed(() => Object.values(groupedModules.value).reduce((s, l) => s + l.length, 0))
-
-function groupByIndustry(mods: any[]): Record<string, ModuleGroupItem[]> {
-  const byIndustry: Record<string, ModuleGroupItem[]> = {}
-  for (const m of mods) {
-    const industry = (m as any).industry || inferIndustry(m.domainCode)
-    if (!byIndustry[industry]) byIndustry[industry] = []
-    byIndustry[industry].push({
-      code: m.moduleCode,
-      name: m.moduleName,
-      industry,
-      pluginEnabled: (m as any).pluginEnabled !== false,
-      allowedScopes: (m as any).allowedScopes ?? null,
-      typeField: (m as any).typeField ?? null,
-      typeEntity: (m as any).typeEntity ?? null,
-      relationFilterable: (m as any).relationFilterable ?? false,
-    })
+/**
+ * 把 getModulesForRole 的一条 module item 映射为 DataScopeStudio 的 ModuleCapability.
+ * industry 优先用后端回传, 缺失时按 domainCode 兜底推断.
+ */
+function toCapability(m: any): ModuleCapability {
+  return {
+    code: m.moduleCode,
+    name: m.moduleName,
+    industry: m.industry || inferIndustry(m.domainCode),
+    allowedScopes: m.allowedScopes ?? null,
+    relationFilterable: m.relationFilterable ?? false,
+    typeEntity: m.typeEntity ?? null,
+    pluginEnabled: m.pluginEnabled !== false,
   }
-  const order = ['CORE', 'EDU', 'HEALTH', 'CARE', 'CUSTOM']
-  const ordered: Record<string, ModuleGroupItem[]> = {}
-  for (const ind of order) if (byIndustry[ind]?.length) ordered[ind] = byIndustry[ind]
-  for (const [ind, list] of Object.entries(byIndustry)) if (!(ind in ordered)) ordered[ind] = list
-  return ordered
 }
 
 async function loadMeta() {
@@ -305,15 +252,14 @@ async function loadMeta() {
   }
 }
 
+/**
+ * 关键: 把 relevant ∪ advanced 完整宇宙都喂给 DataScopeStudio.
+ * 后端 saveRolePermissions 是 delete-all-then-insert, 宇宙不完整会丢未托管模块的配置.
+ */
 async function loadModulesForRole(roleId: LongId | null) {
   try {
     const data = await dataPermissionApi.getModulesForRole({ roleId: roleId ?? undefined, includeDisabled: true })
-    groupedModules.value = groupByIndustry(data.relevant)
-    advancedGroupedModules.value = groupByIndustry(data.advanced)
-    filterMeta.value = data.meta
-    const nameMap: Record<string, string> = {}
-    for (const m of [...data.relevant, ...data.advanced]) nameMap[m.moduleCode] = m.moduleName
-    moduleNameMap.value = nameMap
+    studioModules.value = [...data.relevant, ...data.advanced].map(toCapability)
   } catch (e) {
     ElMessage.error('加载模块失败')
   }
@@ -339,37 +285,8 @@ async function loadRoles() {
   }
 }
 
-function onConfigLoaded(mps: ModulePermission[], d: SceneDecision, fbs: ScopeFallbackInfo[]) {
-  currentModulePermissions.value = mps
-  currentDecision.value = d
-  currentFallbacks.value = fbs
-}
-function onConfigChanged(mps: ModulePermission[], d: SceneDecision, fbs: ScopeFallbackInfo[]) {
-  currentModulePermissions.value = mps
-  currentDecision.value = d
-  currentFallbacks.value = fbs
-}
-function onSaved() { /* no-op */ }
-
-async function onEnableIndustry(industry: string) {
-  if (!industry || industry === 'CORE' || industry === 'CUSTOM') return
-  try {
-    await ElMessageBox.confirm(`启用 ${industry} 插件? 其所有角色/权限/类型等贡献将级联恢复.`, '确认', { type: 'info' })
-    await pluginPlatformApi.enable(industry)
-    ElMessage.success(`${industry} 已启用`)
-    await refreshRoles()
-  } catch (e: any) {
-    if (e !== 'cancel') ElMessage.error('启用失败: ' + (e?.message || e))
-  }
-}
-
-function onApplyTemplate(tpl: RoleTemplate) {
-  if (!currentRole.value) {
-    ElMessage.warning('请先选择角色')
-    return
-  }
-  configuratorRef.value?.applyTemplateScene(tpl.scene)
-}
+// DataScopeStudio 保存成功后刷新角色列表 (插件启停/范围变更不影响列表, 但保持一致刷新).
+function onSaved() { /* no-op — DataScopeStudio 自行 toast + reload */ }
 
 // ---- 角色 CRUD ----
 const showCreate = ref(false)
