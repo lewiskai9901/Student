@@ -33,9 +33,9 @@
           />
           <el-option
             v-if="anchorOffered('PRIMARY_ORG')"
-            label="本部门"
+            label="本组织"
             value="PRIMARY_ORG"
-            title="只看自己所在部门范围内的数据"
+            title="只看自己所在组织范围内的数据（即与该组织有成员/归属关系的数据）"
           />
           <el-option
             v-if="anchorOffered('RELATION')"
@@ -70,16 +70,16 @@
           </el-select>
           <span class="text-[11px] text-gray-500">的组织</span>
         </template>
-        <!-- 含下级部门 子树 (锚定到组织时才有意义, 且 allowedScopes 允许时) -->
+        <!-- 含下级组织 子树 (锚定到组织时才有意义, 且 allowedScopes 允许时) -->
         <el-checkbox
           v-if="subtreeRelevant"
           :model-value="includeSubtree"
           size="small"
           :disabled="disabled"
-          title="勾选后，该组织下面的子部门数据也一并能看到"
+          title="勾选后，该组织下面的子组织数据也一并能看到"
           @update:model-value="(v: any) => onIncludeSubtreeChange(!!v)"
         >
-          <span class="text-[11px]">含下级部门</span>
+          <span class="text-[11px]">含下级组织</span>
         </el-checkbox>
       </div>
       <!-- CUSTOM_ORG: 组织树选择器 -->

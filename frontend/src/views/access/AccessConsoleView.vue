@@ -361,7 +361,7 @@ function diffClass(cd: CompareItem, field: keyof SceneDecision): string {
 function scopeLabel(code: string): string {
   const fromDict = dataScopeOptions.value.find((s) => s.scopeCode === code)?.scopeName
   if (fromDict) return fromDict
-  const m: Record<string, string> = { ALL: '全部', DEPARTMENT_AND_BELOW: '部门及以下', DEPARTMENT: '仅本部门', SELF: '仅本人', CUSTOM: '自定义' }
+  const m: Record<string, string> = { ALL: '全部', DEPARTMENT_AND_BELOW: '本组织及下级', DEPARTMENT: '本组织', SELF: '仅本人', CUSTOM: '自定义' }
   return m[code] || code
 }
 
