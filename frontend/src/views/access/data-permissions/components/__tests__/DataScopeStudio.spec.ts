@@ -4,10 +4,14 @@ import { mount, flushPromises } from '@vue/test-utils'
 // ── Mock 数据权限 API (getConfig / saveConfig) ──────────────────────
 const getConfigMock = vi.fn()
 const saveConfigMock = vi.fn()
+const simulateMock = vi.fn()
 vi.mock('@/api/access', () => ({
   dataPermissionApi: {
     getConfig: (...a: any[]) => getConfigMock(...a),
     saveConfig: (...a: any[]) => saveConfigMock(...a),
+  },
+  dataPermissionSimulateApi: {
+    simulate: (...a: any[]) => simulateMock(...a),
   },
 }))
 
@@ -110,6 +114,7 @@ function mountStudio() {
 beforeEach(() => {
   getConfigMock.mockResolvedValue(SAVED_CONFIG)
   saveConfigMock.mockResolvedValue(undefined)
+  simulateMock.mockReset()
   relationListMock.mockResolvedValue([
     { relationCode: 'admin', relationName: '管理', toType: 'ORG_UNIT', fromType: 'USER' },
   ])
@@ -345,5 +350,74 @@ describe('DataScopeStudio — 保存展开+钳制', () => {
     expect(insp.scopeCode).toBe('SELF')
     // 其它无限制资源仍 ALL
     expect(cmds.find(c => c.moduleCode === 'user').scopeCode).toBe('ALL')
+  })
+})
+
+describe('DataScopeStudio — 模拟用户', () => {
+  it('输入用户 ID + 点击模拟 → 用 (userId + 当前范围快照) 调 simulate 并渲染结果', async () => {
+    simulateMock.mockResolvedValue({
+      userId: '42',
+      results: [
+        { moduleCode: 'org_unit', scopeCode: 'DEPARTMENT_AND_BELOW', accessibleCount: 5 },
+        {
+          moduleCode: 'user',
+          scopeCode: 'MANAGED_ORGS',
+          accessibleCount: 3,
+          samples: [{ id: '9', name: '张三' }],
+        },
+      ],
+    })
+    const wrapper = mountStudio()
+    await flushPromises()
+    const vm: any = wrapper.vm
+
+    vm.simulateUserId = 42
+    await vm.runSimulate()
+    await flushPromises()
+
+    // 用 userId + per-resource 快照 (默认+例外 展开) 调用
+    expect(simulateMock).toHaveBeenCalledTimes(1)
+    const req = simulateMock.mock.calls[0][0]
+    expect(req.userId).toBe('42')
+    expect(req.modulePermissions.map((m: any) => m.moduleCode).sort()).toEqual(
+      ['inspection_record', 'org_unit', 'place', 'user'].sort()
+    )
+    // 例外 user 的范围进了快照
+    const userSnap = req.modulePermissions.find((m: any) => m.moduleCode === 'user')
+    expect(userSnap.scopeCode).toBe('MANAGED_ORGS')
+
+    // 结果渲染: 资源名 + 条数 + 样本
+    expect(vm.simulateResults).toHaveLength(2)
+    const html = wrapper.html()
+    expect(html).toContain('5 条')
+    expect(html).toContain('3 条')
+    expect(html).toContain('张三')
+    expect(vm.simulateError).toBe('')
+  })
+
+  it('模拟失败 → 显示错误信息, 不抛出', async () => {
+    simulateMock.mockRejectedValue({ message: '服务器错误' })
+    const wrapper = mountStudio()
+    await flushPromises()
+    const vm: any = wrapper.vm
+
+    vm.simulateUserId = 7
+    await vm.runSimulate()
+    await flushPromises()
+
+    expect(simulateMock).toHaveBeenCalledTimes(1)
+    expect(vm.simulateResults).toHaveLength(0)
+    expect(vm.simulateError).toContain('服务器错误')
+    expect(wrapper.html()).toContain('模拟失败')
+  })
+
+  it('未输入用户 ID → 不调用 simulate', async () => {
+    const wrapper = mountStudio()
+    await flushPromises()
+    const vm: any = wrapper.vm
+
+    await vm.runSimulate()
+    await flushPromises()
+    expect(simulateMock).not.toHaveBeenCalled()
   })
 })

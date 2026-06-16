@@ -165,6 +165,83 @@
             <div class="text-xs text-gray-600">→ {{ defaultPreviewLine }}</div>
           </div>
         </div>
+
+        <!-- 模拟用户: 输入用户 ID → 看此角色下该用户实际能访问的数据 -->
+        <div class="mt-4 rounded-md border border-blue-200 bg-blue-50 px-3 py-3">
+          <div class="mb-2 flex items-center justify-between">
+            <span class="flex items-center gap-1 text-[11px] font-medium text-blue-700">
+              <User class="h-3 w-3" />
+              模拟用户
+            </span>
+            <button
+              v-if="simulateResults.length"
+              class="text-[10px] text-blue-500 hover:underline"
+              @click="resetSimulation"
+            >
+              清空
+            </button>
+          </div>
+
+          <div class="mb-2 flex items-center gap-2">
+            <input
+              v-model.number="simulateUserId"
+              type="number"
+              placeholder="输入用户 ID (如 1)"
+              class="h-7 flex-1 rounded border border-gray-300 px-2 text-[11px] outline-none focus:border-blue-500"
+              @keyup.enter="runSimulate"
+            />
+            <button
+              class="h-7 rounded bg-blue-600 px-3 text-[11px] font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              :disabled="!simulateUserId || simulating"
+              @click="runSimulate"
+            >
+              <Loader2 v-if="simulating" class="inline h-2.5 w-2.5 animate-spin" />
+              <span v-else>模拟</span>
+            </button>
+          </div>
+
+          <p class="mb-1.5 text-[10px] text-blue-600">
+            按当前编辑中的范围模拟 — 保存后才会真正生效
+          </p>
+
+          <div v-if="simulateError" class="text-[10.5px] text-red-600">
+            {{ simulateError }}
+          </div>
+
+          <div v-else-if="simulateResults.length" class="space-y-1">
+            <div
+              v-for="r in topResults"
+              :key="r.moduleCode"
+              class="flex items-start gap-1 text-[10.5px]"
+            >
+              <span class="w-20 flex-shrink-0 truncate font-medium text-blue-900">
+                {{ moduleName(r.moduleCode) }}
+              </span>
+              <span class="flex-1">
+                <span v-if="r.accessibleCount >= 0" class="font-semibold text-blue-800">
+                  {{ r.accessibleCount }} 条
+                </span>
+                <span v-else class="italic text-amber-600">
+                  {{ r.note || '未支持' }}
+                </span>
+                <span v-if="r.samples?.length" class="ml-1 text-[10px] text-gray-500">
+                  · {{ r.samples.map(s => s.name || s.id).join(', ') }}
+                </span>
+              </span>
+            </div>
+            <button
+              v-if="simulateResults.length > 5"
+              class="mt-1 w-full text-[10px] text-blue-500 hover:underline"
+              @click="expandAll = !expandAll"
+            >
+              {{ expandAll ? '收起' : `展开全部 ${simulateResults.length} 个资源` }}
+            </button>
+          </div>
+
+          <div v-else class="text-[10px] text-blue-600">
+            输入用户 ID 预览此角色下该用户实际能访问的数据
+          </div>
+        </div>
       </aside>
     </div>
 
@@ -210,10 +287,15 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ChevronDown, Plus, X } from 'lucide-vue-next'
+import { ChevronDown, Plus, X, User, Loader2 } from 'lucide-vue-next'
 import ScopeBuilder, { type ScopeSpecVM, type ScopeCapabilities } from './ScopeBuilder.vue'
 import TemplateLibraryDialog from './TemplateLibraryDialog.vue'
-import { dataPermissionApi, type RoleResponse } from '@/api/access'
+import {
+  dataPermissionApi,
+  dataPermissionSimulateApi,
+  type RoleResponse,
+  type SimulateResult,
+} from '@/api/access'
 import type { ModulePermission } from '@/types/access'
 import {
   inferDefaultAndExceptions,
@@ -494,6 +576,60 @@ async function handleSave() {
     ElMessage.error(e?.message || '保存失败')
   } finally {
     saving.value = false
+  }
+}
+
+// ── 模拟用户: 给定 userId, 按当前编辑中的范围算该用户实际可见数据 ──────
+// 后端 simulate 接受 (userId + modulePermissions 快照), 逐资源 COUNT + 取样;
+// 这里用 expandToCommands 把"默认+例外"展开成与保存一致的 per-resource 快照,
+// 故无需先保存即可预览未落库的配置.
+const simulateUserId = ref<number | null>(null)
+const simulating = ref(false)
+const simulateResults = ref<SimulateResult[]>([])
+const simulateError = ref('')
+const expandAll = ref(false)
+
+const topResults = computed(() =>
+  expandAll.value ? simulateResults.value : simulateResults.value.slice(0, 5)
+)
+
+function resetSimulation() {
+  simulateResults.value = []
+  simulateError.value = ''
+  expandAll.value = false
+}
+
+async function runSimulate() {
+  if (!simulateUserId.value) return
+  const managedCodes = props.modules.map(m => m.code)
+  if (managedCodes.length === 0) {
+    simulateError.value = '当前无可配置的资源, 无法模拟'
+    return
+  }
+  const allowedByCode = Object.fromEntries(props.modules.map(m => [m.code, m.allowedScopes]))
+  const snapshot = expandToCommands(
+    defaultSpec.value,
+    exceptions.value,
+    managedCodes,
+    allowedByCode
+  )
+  simulating.value = true
+  simulateError.value = ''
+  try {
+    const res = await dataPermissionSimulateApi.simulate({
+      userId: String(simulateUserId.value),
+      modulePermissions: snapshot.map(mp => ({
+        moduleCode: mp.moduleCode,
+        scopeCode: mp.scopeCode,
+        scopeItems: mp.scopeItems as any,
+      })),
+    })
+    simulateResults.value = res?.results || []
+    if (res?.error) simulateError.value = res.error
+  } catch (e: any) {
+    simulateError.value = '模拟失败: ' + (e?.response?.data?.message || e?.message || String(e))
+  } finally {
+    simulating.value = false
   }
 }
 
