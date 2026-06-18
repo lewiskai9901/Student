@@ -2,6 +2,8 @@ package com.school.management.infrastructure.extension.plugins.education;
 
 import com.school.management.infrastructure.extension.Contribution;
 import com.school.management.infrastructure.extension.DataResourceDef;
+import com.school.management.infrastructure.extension.ResourceRelationDef;
+import com.school.management.domain.access.model.Cardinality;
 import com.school.management.infrastructure.extension.DataScopeDimensionDef;
 import com.school.management.infrastructure.extension.MenuItemDef;
 import com.school.management.infrastructure.extension.RolePresetDef;
@@ -67,6 +69,7 @@ public class EducationManifest implements PluginPackage {
                 roleScopeBindings(),
                 rolePermissionBindings(),
                 dataResources(),
+                resourceRelations(),
                 dataScopeDims(),
                 eduRoles(),
                 eduMenus(),
@@ -192,6 +195,45 @@ public class EducationManifest implements PluginPackage {
     /** 主体型资源 (student=user_student, 记录本身是 user): 归属走 access_relations member, 非列。 */
     private static Contribution.DataResourceContribution drSubject(String code, String... scopes) {
         return new Contribution.DataResourceContribution(DataResourceDef.of(code, scopes).asSubject());
+    }
+
+    /**
+     * 教育资源关系声明 (统一锚定模型 R2.1) —— 冻结现状有效锚点 (注解 ⊕ data_resources)。
+     * ⚠ TODO(R2-post): {@code school_class} orgField=id 走 org-field 路径 (class.id IN orgSet) 语义存疑;
+     *   membershipSubjectColumn(student=user_id) 仍留注解, 由 R2.2 处理。
+     */
+    private Stream<Contribution> resourceRelations() {
+        return Stream.of(
+            // 学生 = user_student, 归属走 access_relations member
+            Stream.<Contribution>of(rr(ResourceRelationDef.subjectGraph(
+                "student", "owner_org", "所属组织", "ORG_UNIT", Cardinality.SINGLE, "member").withGrantsByDefault())),
+            // 普通记录: org_unit_id + created_by
+            orgCreator("teaching_task", "org_unit_id", "created_by"),
+            orgCreator("grade_batch", "org_unit_id", "created_by"),
+            // 学生成绩: 仅 org 锚, 无 creator 维度
+            Stream.<Contribution>of(rr(ResourceRelationDef.column(
+                "student_grade", "owner_org", "所属组织", "ORG_UNIT", "org_unit_id").withAutoFill().withGrantsByDefault())),
+            // 班级: 列锚 id (⚠ 语义存疑, 冻结现状), 无 creator
+            Stream.<Contribution>of(rr(ResourceRelationDef.column(
+                "school_class", "owner_org", "所属组织", "ORG_UNIT", "id").withGrantsByDefault())),
+            // 考试批次: 无 org 维度, 仅 creator
+            Stream.<Contribution>of(rr(ResourceRelationDef.column(
+                "exam_batch", "creator", "创建者", "USER", "created_by").withAutoFill()))
+        ).flatMap(s -> s);
+    }
+
+    /** 普通记录标准锚点: owner_org(默认参与可见性) + creator, 均写入自动填。 */
+    private static Stream<Contribution> orgCreator(String resource, String orgCol, String creatorCol) {
+        return Stream.of(
+            rr(ResourceRelationDef.column(resource, "owner_org", "所属组织", "ORG_UNIT", orgCol)
+                .withAutoFill().withGrantsByDefault()),
+            rr(ResourceRelationDef.column(resource, "creator", "创建者", "USER", creatorCol)
+                .withAutoFill())
+        );
+    }
+
+    private static Contribution.ResourceRelationContribution rr(ResourceRelationDef def) {
+        return new Contribution.ResourceRelationContribution("EDU", def);
     }
 
     private Stream<Contribution> relationTypes() {

@@ -8,6 +8,7 @@ import com.school.management.infrastructure.extension.RolePresetDef;
 import com.school.management.infrastructure.extension.PluginPackage;
 import com.school.management.infrastructure.extension.RelationTypeDef;
 import com.school.management.infrastructure.extension.RelationTypeDef.Implied;
+import com.school.management.domain.access.model.Cardinality;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -330,16 +331,39 @@ public class CoreManifest implements PluginPackage {
     }
 
     /**
-     * 通用核心资源关系声明 (统一锚定模型 R1)。
-     * 先以检查记录为样板证明"注册→引擎"管线: creator(创建者)/owner_org(所属组织) 落列且自动填,
-     * owner_org 默认参与可见性。其余关系 (inspector/inspected/reviewer 等) 后续 phase 增量补齐。
+     * 通用核心资源关系声明 (统一锚定模型 R2.1)。
+     * 按各资源当前"有效锚点"(@DataPermission 注解 ⊕ data_resources, 后者优先)登记 —— 纯字节等价
+     * 冻结现状: 本阶段引擎仍走注解, 注册表为 R2.2 切换备料。
+     * ⚠ TODO(R2-post): {@code org_unit} 有效 orgField=parent_id (data_resources seed 覆盖注解 id),
+     *   疑似旧 bug, 此处照现状冻结待 R2 跑通后单独修。
      */
     private Stream<Contribution> coreResourceRelations() {
         return Stream.of(
-            rr(ResourceRelationDef.column("inspection_record", "creator", "创建者", "USER", "created_by")
-                .withAutoFill()),
-            rr(ResourceRelationDef.column("inspection_record", "owner_org", "所属组织", "ORG_UNIT", "org_unit_id")
-                .withAutoFill().withGrantsByDefault())
+            // 成员主体: 用户归属走 access_relations member (user_student.org_unit_id 列已删, users 同)
+            Stream.<Contribution>of(rr(ResourceRelationDef.subjectGraph(
+                "user", "owner_org", "所属组织", "ORG_UNIT", Cardinality.SINGLE, "member").withGrantsByDefault())),
+            // 主体但列锚: org_unit/place 的组织是内在列 (非成员图)
+            orgCreator("org_unit", "parent_id", "created_by"),       // ⚠ parent_id 系冻结现状
+            orgCreator("place", "effective_org_unit_id", "created_by"),
+            // 普通记录: org_unit_id + created_by
+            orgCreator("inspection_record", "org_unit_id", "created_by"),
+            orgCreator("inspection_project", "org_unit_id", "created_by"),
+            orgCreator("inspection_alert", "org_unit_id", "created_by"),
+            orgCreator("inspection_summary", "org_unit_id", "created_by"),
+            orgCreator("inspection_observation", "org_unit_id", "created_by"),
+            orgCreator("inspection_violation", "org_unit_id", "created_by"),
+            orgCreator("inspection_corrective", "org_unit_id", "created_by"),
+            orgCreator("inspection_appeal", "org_unit_id", "submitter_user_id")  // 创建者列特例
+        ).flatMap(s -> s);
+    }
+
+    /** 普通记录标准锚点: owner_org(默认参与可见性) + creator, 均写入自动填。 */
+    private static Stream<Contribution> orgCreator(String resource, String orgCol, String creatorCol) {
+        return Stream.of(
+            rr(ResourceRelationDef.column(resource, "owner_org", "所属组织", "ORG_UNIT", orgCol)
+                .withAutoFill().withGrantsByDefault()),
+            rr(ResourceRelationDef.column(resource, "creator", "创建者", "USER", creatorCol)
+                .withAutoFill())
         );
     }
 
