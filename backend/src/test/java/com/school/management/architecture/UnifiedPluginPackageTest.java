@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * 保证:
  *  - {@link PluginPackage} 作为顶层接口, 继承 PluginManifest
- *  - {@link Contribution} sealed, permits 恰好 15 种 (双轨收敛收官)
+ *  - {@link Contribution} sealed, permits 恰好 16 种 (统一锚定模型 R1: +resource-relation)
  *  - 每种 permitted Contribution 都实现 uniqueKey()
  *  - 已无 @Deprecated 声明型 SPI; EntityTypePlugin 是合法保留的扩展 SPI
  *  - CoreManifest / EducationManifest 现在都是 PluginPackage 实例
@@ -54,14 +54,13 @@ class UnifiedPluginPackageTest {
     }
 
     @Test
-    @DisplayName("Contribution 恰好有 15 个 permitted 子类型")
-    void contributionPermitsExactly15Subtypes() {
+    @DisplayName("Contribution 恰好有 16 个 permitted 子类型")
+    void contributionPermitsExactly16Subtypes() {
         Class<?>[] permitted = Contribution.class.getPermittedSubclasses();
-        assertEquals(15, permitted.length,
-            "双轨收敛收官 (2026-06-13): 删 EntityTypeContribution (EntityTypePlugin 走 bean 注册不经 contribute()) " +
-            "+ 删 RouteContribution (前端路由单一真相源在 router/plugins/{code}.ts). 共 15 种: " +
+        assertEquals(16, permitted.length,
+            "15 (双轨收敛收官) + 1 ResourceRelationContribution (统一锚定模型 R1). 共 16 种: " +
             "relation/event-domain/trigger-point/event-type/perm/role/role-scope/role-perm/" +
-            "menu/data-scope/data-resource/policy/target-mode/domain/workflow. " +
+            "menu/data-scope/data-resource/resource-relation/policy/target-mode/domain/workflow. " +
             "实际=" + permitted.length);
     }
 
@@ -122,7 +121,7 @@ class UnifiedPluginPackageTest {
     }
 
     @Test
-    @DisplayName("PluginPackage 默认 metadata() 非 null; CoreManifest.contribute() 含 63 个 contribution (Phase1: +19 data-resource)")
+    @DisplayName("PluginPackage 默认 metadata() 非 null; CoreManifest.contribute() 含 299 个 contribution (R1: +2 resource-relation)")
     void pluginPackageDefaultMethods() {
         PluginPackage core = new CoreManifest();
         // Phase 2 W2.2: CoreManifest 已覆盖 contribute() 声明 9 个核心关系 (CoreRelationsPlugin 已删).
@@ -137,7 +136,7 @@ class UnifiedPluginPackageTest {
         // Permission 双轨收敛: 加 223 个 PermissionContribution (聚合 CorePermissionCatalog) → 74+223=297.
         // 旧测试期望"默认空流"已不再适用; 改为校验内容契约.
         long count = core.contribute().count();
-        assertEquals(297, count, "CoreManifest 应贡献 297 个 contribution (15 关系 + 3 workflow + 26 TENANT_ADMIN + 19 data-resource + 3 role + 8 menu + 223 permission)");
+        assertEquals(299, count, "CoreManifest 应贡献 299 个 contribution (15 关系 + 3 workflow + 26 TENANT_ADMIN + 19 data-resource + 2 resource-relation + 3 role + 8 menu + 223 permission)");
         long rolePermCount = new CoreManifest().contribute()
             .filter(c -> c instanceof Contribution.RolePermissionBindingContribution)
             .count();

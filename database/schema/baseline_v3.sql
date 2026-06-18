@@ -4315,6 +4315,7 @@ CREATE TABLE `data_resources` (
   `plugin_enabled` tinyint NOT NULL DEFAULT '1',
   `allowed_scopes` json DEFAULT NULL COMMENT '本模块支持的 scope 代码数组',
   `access_resource_type` varchar(255) DEFAULT NULL,
+  `resource_kind` varchar(10) NOT NULL DEFAULT 'PLAIN' COMMENT '资源种类 SUBJECT/PLAIN (统一锚定模型第一根轴: 记录本身是否主体)',
   PRIMARY KEY (`resource_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='数据资源注册';
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -4330,8 +4331,41 @@ INSERT INTO `data_resources` (`resource_code`,`resource_name`,`domain_code`,`ind
 UPDATE `data_resources` SET `type_field`='user_type_code', `type_entity`='USER' WHERE `resource_code` IN ('user','system_user');
 -- 结果关系过滤(轴②): 成员型资源 (user/system_user) 支持按 access_relations 关系过滤
 UPDATE `data_resources` SET `subject_relation_filterable`=1 WHERE `resource_code` IN ('user','system_user');
+-- 统一锚定模型 (R1): 主体型资源 — 记录本身是 user/org_unit/place, 归属走 access_relations 非列 (org_unit_id 不重建)
+UPDATE `data_resources` SET `resource_kind`='SUBJECT' WHERE `resource_code` IN ('user','system_user','org_unit','place','student');
 /*!40000 ALTER TABLE `data_resources` ENABLE KEYS */;
 UNLOCK TABLES;
+
+--
+-- Table structure for table `resource_relations` (统一锚定模型 R1: 资源关系注册表)
+-- 行由 PluginPackage.contribute() 的 ResourceRelationContribution 在启动期 UPSERT, 故无 seed。
+--
+
+DROP TABLE IF EXISTS `resource_relations`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `resource_relations` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `resource_code` varchar(50) NOT NULL COMMENT 'FK -> data_resources.resource_code',
+  `relation_code` varchar(50) NOT NULL COMMENT '关系码: creator/owner_org/inspector/inspected/reviewer',
+  `relation_name` varchar(50) NOT NULL COMMENT '人话显示名(UI)',
+  `subject_type` varchar(20) NOT NULL COMMENT '指向主体: USER/ORG_UNIT/PLACE/ASSET/ANY',
+  `cardinality` varchar(10) NOT NULL COMMENT 'SINGLE/MULTI',
+  `storage_kind` varchar(20) NOT NULL COMMENT 'SUBJECT_GRAPH/COLUMN/RECORD_RELATION (MATERIALIZED 叠加不在此声明)',
+  `column_name` varchar(50) DEFAULT NULL COMMENT 'COLUMN: 业务表列名',
+  `type_column` varchar(50) DEFAULT NULL COMMENT '多态主体的类型列 (配 column_name)',
+  `ar_relation` varchar(30) DEFAULT NULL COMMENT 'SUBJECT_GRAPH/RECORD_RELATION: relation 值',
+  `auto_fill` tinyint(1) NOT NULL DEFAULT '0' COMMENT '写入是否自动填列',
+  `grants_by_default` tinyint(1) NOT NULL DEFAULT '0' COMMENT '无显式授予时默认参与可见性',
+  `industry` varchar(20) DEFAULT NULL COMMENT '贡献插件 CORE/EDU/...',
+  `enabled` tinyint(1) NOT NULL DEFAULT '1',
+  `tenant_id` bigint NOT NULL DEFAULT '1',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_resource_relation` (`resource_code`,`relation_code`,`tenant_id`),
+  KEY `idx_resource` (`resource_code`,`enabled`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='资源关系注册表 — 统一锚定模型唯一真相';
+/*!40101 SET character_set_client = @saved_cs_client */;
 
 --
 -- Table structure for table `data_scope_dims`

@@ -41,8 +41,8 @@ public class DataResourceUpserter {
             throw new IllegalStateException("allowed_scopes 序列化失败: " + def.resourceCode(), e);
         }
         jdbc.update(
-            "UPDATE data_resources SET allowed_scopes=? WHERE resource_code=?",
-            allowedScopesJson, def.resourceCode());
+            "UPDATE data_resources SET allowed_scopes=?, resource_kind=? WHERE resource_code=?",
+            allowedScopesJson, def.resourceKind().name(), def.resourceCode());
         return Result.UPDATED;
     }
 

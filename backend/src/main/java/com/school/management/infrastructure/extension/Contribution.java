@@ -6,8 +6,8 @@ import java.util.List;
  * 统一贡献契约 — 插件通过 {@link PluginPackage#contribute()} 返回 Stream&lt;Contribution&gt;
  * 声明本包向平台贡献的所有内容.
  *
- * sealed 限定 15 个 permitted subtype: 声明型 (relation/permission/role/role-scope/
- * role-perm/menu/data-scope/data-resource/event-domain/trigger-point/event-type) +
+ * sealed 限定 16 个 permitted subtype: 声明型 (relation/permission/role/role-scope/
+ * role-perm/menu/data-scope/data-resource/resource-relation/event-domain/trigger-point/event-type) +
  * DI 登记型 (policy/target-mode) + 占位 (domain/workflow). 每种 Contribution 封装一条
  * def 记录, 在 ContributionDispatcher 里通过 instanceof 链分发到对应 Registrar 的 upsert 方法.
  *
@@ -28,6 +28,7 @@ public sealed interface Contribution permits
     Contribution.MenuContribution,
     Contribution.DataScopeContribution,
     Contribution.DataResourceContribution,
+    Contribution.ResourceRelationContribution,
     Contribution.PolicyContribution,
     Contribution.TargetModeResolverContribution,
     Contribution.DomainContribution,
@@ -187,6 +188,16 @@ public sealed interface Contribution permits
      */
     record DataResourceContribution(DataResourceDef def) implements Contribution {
         @Override public String uniqueKey() { return "data-resource:" + def.resourceCode(); }
+    }
+
+    /**
+     * 资源关系贡献 (统一锚定模型 R1) — 声明某资源的一条具名关系及其存储映射 (列 / 记录关系 / 主体图)。
+     * 启动期 {@link ResourceRelationUpserter} UPSERT 到 {@code resource_relations}。
+     */
+    record ResourceRelationContribution(String industry, ResourceRelationDef def) implements Contribution {
+        @Override public String uniqueKey() {
+            return "resource-relation:" + def.resourceCode() + "/" + def.relationCode();
+        }
     }
 
     /**

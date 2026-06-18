@@ -41,6 +41,7 @@ public class ContributionDispatcher implements ApplicationRunner {
     private final RelationTypeUpserter relationTypeUpserter;
     private final RoleScopeBindingRegistrar roleScopeBindingRegistrar;
     private final DataResourceUpserter dataResourceUpserter;
+    private final ResourceRelationUpserter resourceRelationUpserter;
     private final DataScopeUpserter dataScopeUpserter;
     private final PluginPackageRegistrar packageRegistrar;
 
@@ -65,6 +66,7 @@ public class ContributionDispatcher implements ApplicationRunner {
         AtomicInteger domains = new AtomicInteger();
         AtomicInteger workflows = new AtomicInteger();
         AtomicInteger dataResources = new AtomicInteger();
+        AtomicInteger resourceRelations = new AtomicInteger();
         AtomicInteger roleScopes = new AtomicInteger();
         AtomicInteger rolePerms = new AtomicInteger();
 
@@ -178,6 +180,16 @@ public class ContributionDispatcher implements ApplicationRunner {
                             drc.def().resourceCode(), e.getMessage());
                     }
                 }
+                else if (c instanceof Contribution.ResourceRelationContribution rrc) {
+                    // 统一锚定模型 R1: 无依赖类型, dispatcher @Order(60) 直接 UPSERT resource_relations
+                    resourceRelations.incrementAndGet();
+                    try {
+                        resourceRelationUpserter.upsert(rrc.def(), rrc.industry());
+                    } catch (Exception e) {
+                        log.error("[ContributionDispatcher] 资源关系写入失败 {}: {}",
+                            rrc.uniqueKey(), e.getMessage());
+                    }
+                }
                 else if (c instanceof Contribution.PolicyContribution pc) {
                     policies.incrementAndGet();
                     log.info("[ContributionDispatcher] registered Policy: {} ({})",
@@ -200,11 +212,11 @@ public class ContributionDispatcher implements ApplicationRunner {
         }
 
         log.info("[ContributionDispatcher] 扫描 {} 个包, 收到 {} 条 Contribution " +
-                "(relation {}, event-domain {}, trigger-point {}, event-type {}, perm {}, role {}, role-scope {}, role-perm {}, menu {}, scope {}, data-resource {}, policy {}, target-mode {}, domain {}, workflow {})",
+                "(relation {}, event-domain {}, trigger-point {}, event-type {}, perm {}, role {}, role-scope {}, role-perm {}, menu {}, scope {}, data-resource {}, resource-relation {}, policy {}, target-mode {}, domain {}, workflow {})",
             packages.size(), total.get(),
             relations.get(), events.get(),
             triggerPoints.get(), eventTypes.get(),
-            perms.get(), roles.get(), roleScopes.get(), rolePerms.get(), menus.get(), scopes.get(), dataResources.get(),
+            perms.get(), roles.get(), roleScopes.get(), rolePerms.get(), menus.get(), scopes.get(), dataResources.get(), resourceRelations.get(),
             policies.get(), targetModes.get(), domains.get(), workflows.get());
     }
 }

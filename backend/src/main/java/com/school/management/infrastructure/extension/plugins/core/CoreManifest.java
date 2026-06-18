@@ -2,6 +2,7 @@ package com.school.management.infrastructure.extension.plugins.core;
 
 import com.school.management.infrastructure.extension.Contribution;
 import com.school.management.infrastructure.extension.DataResourceDef;
+import com.school.management.infrastructure.extension.ResourceRelationDef;
 import com.school.management.infrastructure.extension.MenuItemDef;
 import com.school.management.infrastructure.extension.RolePresetDef;
 import com.school.management.infrastructure.extension.PluginPackage;
@@ -51,6 +52,7 @@ public class CoreManifest implements PluginPackage {
                 coreWorkflows(),
                 tenantAdminPermissionBindings(),
                 coreDataResources(),
+                coreResourceRelations(),
                 coreRoles(),
                 coreMenus(),
                 corePermissions()
@@ -294,12 +296,12 @@ public class CoreManifest implements PluginPackage {
     private Stream<Contribution> coreDataResources() {
         return Stream.of(
             // 组织向: 5 种常规 scope
-            dr("user",        "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),
-            dr("org_unit",    "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),
+            drSubject("user",      "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),
+            drSubject("org_unit",  "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),
             dr("role",        "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),
-            dr("place",       "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),
+            drSubject("place",     "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),
             dr("system_role", "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),
-            dr("system_user", "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),
+            drSubject("system_user", "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),
             // 个人向: 只能 SELF
             dr("notification", "SELF"),
             dr("dashboard",    "SELF"),
@@ -320,6 +322,29 @@ public class CoreManifest implements PluginPackage {
 
     private static Contribution.DataResourceContribution dr(String code, String... scopes) {
         return new Contribution.DataResourceContribution(DataResourceDef.of(code, scopes));
+    }
+
+    /** 主体型资源 (记录本身是 user/org_unit/place): 归属走 access_relations, resource_kind=SUBJECT。 */
+    private static Contribution.DataResourceContribution drSubject(String code, String... scopes) {
+        return new Contribution.DataResourceContribution(DataResourceDef.of(code, scopes).asSubject());
+    }
+
+    /**
+     * 通用核心资源关系声明 (统一锚定模型 R1)。
+     * 先以检查记录为样板证明"注册→引擎"管线: creator(创建者)/owner_org(所属组织) 落列且自动填,
+     * owner_org 默认参与可见性。其余关系 (inspector/inspected/reviewer 等) 后续 phase 增量补齐。
+     */
+    private Stream<Contribution> coreResourceRelations() {
+        return Stream.of(
+            rr(ResourceRelationDef.column("inspection_record", "creator", "创建者", "USER", "created_by")
+                .withAutoFill()),
+            rr(ResourceRelationDef.column("inspection_record", "owner_org", "所属组织", "ORG_UNIT", "org_unit_id")
+                .withAutoFill().withGrantsByDefault())
+        );
+    }
+
+    private static Contribution.ResourceRelationContribution rr(ResourceRelationDef def) {
+        return new Contribution.ResourceRelationContribution("CORE", def);
     }
 
     /**

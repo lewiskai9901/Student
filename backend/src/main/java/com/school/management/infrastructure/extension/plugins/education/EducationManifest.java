@@ -172,7 +172,7 @@ public class EducationManifest implements PluginPackage {
      */
     private Stream<Contribution> dataResources() {
         return Stream.of(
-            dr("student",    "ALL", "BY_GRADE", "BY_CLASS", "BY_MAJOR", "SELF", "CUSTOM"),
+            drSubject("student", "ALL", "BY_GRADE", "BY_CLASS", "BY_MAJOR", "SELF", "CUSTOM"),
             dr("attendance", "ALL", "BY_GRADE", "BY_CLASS", "BY_MAJOR", "SELF", "CUSTOM"),
             dr("grade_batch",   "ALL", "BY_CLASS", "SELF", "CUSTOM"),
             dr("student_grade", "ALL", "BY_CLASS", "SELF", "CUSTOM"),
@@ -187,6 +187,11 @@ public class EducationManifest implements PluginPackage {
 
     private static Contribution.DataResourceContribution dr(String code, String... scopes) {
         return new Contribution.DataResourceContribution(DataResourceDef.of(code, scopes));
+    }
+
+    /** 主体型资源 (student=user_student, 记录本身是 user): 归属走 access_relations member, 非列。 */
+    private static Contribution.DataResourceContribution drSubject(String code, String... scopes) {
+        return new Contribution.DataResourceContribution(DataResourceDef.of(code, scopes).asSubject());
     }
 
     private Stream<Contribution> relationTypes() {
