@@ -219,12 +219,16 @@ public class EducationManifest implements PluginPackage {
             // 普通记录: org_unit_id + created_by
             orgCreator("teaching_task", "org_unit_id", "created_by"),
             orgCreator("grade_batch", "org_unit_id", "created_by"),
-            // 学生成绩: 仅 org 锚, 无 creator 维度
-            Stream.<Contribution>of(rr(ResourceRelationDef.column(
-                "student_grade", "owner_org", "所属组织", "ORG_UNIT", "org_unit_id").withAutoFill().withGrantsByDefault())),
-            // 班级: 列锚 id (⚠ 语义存疑, 冻结现状), 无 creator
+            // 学生成绩: org 锚 org_unit_id + creator created_by (审计 P1: 非成员 SELF 路径消费 creatorField,
+            // 注册表须登 creator 否则与 legacy 注解默认 created_by 发散; ⚠ student_grades 暂无 created_by 列,
+            // SELF 仍坏 = 既有问题, 与 legacy 同样 500, 字节等价)
+            orgCreator("student_grade", "org_unit_id", "created_by"),
+            // 班级(本就是 org_unit, id 即组织 id, orgField=id 正确): owner_org=id + creator created_by
+            // (审计"应改 org_unit_id"已驳回: school_classes 无该列, 且班级即组织)
             Stream.<Contribution>of(rr(ResourceRelationDef.column(
                 "school_class", "owner_org", "所属组织", "ORG_UNIT", "id").withGrantsByDefault())),
+            Stream.<Contribution>of(rr(ResourceRelationDef.column(
+                "school_class", "creator", "创建者", "USER", "created_by").withAutoFill())),
             // 考试批次: 无 org 维度, 仅 creator
             Stream.<Contribution>of(rr(ResourceRelationDef.column(
                 "exam_batch", "creator", "创建者", "USER", "created_by").withAutoFill())),
@@ -326,7 +330,7 @@ public class EducationManifest implements PluginPackage {
             Contribution.RoleScopeBindingContribution.bind("TEACHER", "teacher_preference", "SELF"),
             Contribution.RoleScopeBindingContribution.bind("CLASS_TEACHER", "teacher_preference", "SELF"),
             Contribution.RoleScopeBindingContribution.bind("SUBJECT_TEACHER", "teacher_preference", "SELF"),
-            Contribution.RoleScopeBindingContribution.bind("DEPT_ADMIN", "teacher_preference", "DEPARTMENT_AND_BELOW"),
+            Contribution.RoleScopeBindingContribution.bind("DEPT_ADMIN", "teacher_preference", "SELF"),  // 审计 P0.1: teacher_preferences 无 org 列, org 类范围致 SQL 500 → SELF
             Contribution.RoleScopeBindingContribution.bind("ACADEMIC_DIRECTOR", "teacher_preference", "ALL"),
             Contribution.RoleScopeBindingContribution.bind("SCHOOL_ADMIN", "teacher_preference", "ALL")
         );

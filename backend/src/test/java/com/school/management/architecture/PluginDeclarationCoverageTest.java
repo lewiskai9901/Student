@@ -258,4 +258,42 @@ class PluginDeclarationCoverageTest {
             String.format("%n以下 %d 处代码用字符串匹配了实体类型码 — 违反 memory 约定 (应该用 user.hasFeature(\"isLearner\") 等):%n  %s",
                 hits.size(), String.join("%n  ", hits)));
     }
+
+    // =============================================================
+    // Test 6: 数据权限注册覆盖度 (统一锚定模型 R2.2) — 每个 @DataPermission(module=X) 必须在
+    //   manifest 注册了 X 的 resource_relations 锚点行。
+    //   后果: 漏登记 → ResourceRelationRegistry.forResource 返回 empty。当前走注解兜底尚安全,
+    //   但 R2.4 删兜底+删 data_resources 锚点列后, 漏登记资源拿到空锚点 → 该端点查询 500 或
+    //   (视角色 scope) 全表泄露。本守护把"引用 @DataPermission 但没注册"固化为构建期失败。
+    // =============================================================
+    @Test
+    @DisplayName("每个 @DataPermission(module=X) 都必须在 manifest 注册了 X 的 resource_relations 锚点")
+    void every_data_permission_module_must_be_registered_in_resource_relations() {
+        // 引用: @DataPermission(module = "X" ...) — module 恒为首属性
+        Pattern refPattern = Pattern.compile(
+            "@DataPermission\\s*\\(\\s*module\\s*=\\s*\"([a-z_][a-zA-Z0-9_]*)\"");
+        Set<String> referenced = new TreeSet<>();
+        for (String src : allJavaSource) {
+            Matcher m = refPattern.matcher(src);
+            while (m.find()) referenced.add(m.group(1));
+        }
+
+        // 声明: manifest 里的 orgCreator("X"...) 或 ResourceRelationDef.column/subjectGraph/recordRelation("X"...)
+        Pattern declPattern = Pattern.compile(
+            "(?:orgCreator|ResourceRelationDef\\s*\\.\\s*(?:column|subjectGraph|recordRelation))\\s*\\(\\s*\"([a-z_][a-zA-Z0-9_]*)\"");
+        Set<String> declared = new TreeSet<>();
+        for (String src : allJavaSource) {
+            Matcher m = declPattern.matcher(src);
+            while (m.find()) declared.add(m.group(1));
+        }
+
+        Set<String> missing = new TreeSet<>(referenced);
+        missing.removeAll(declared);
+        assertTrue(missing.isEmpty(),
+            String.format("%n以下 %d 个 @DataPermission 模块被 mapper 引用, 但没在 manifest 注册 resource_relations 锚点:%n  %s%n" +
+                "后果: ResourceRelationRegistry 不为其派生锚点; R2.4 删兜底后该资源查询将 500 或泄露。%n" +
+                "修复: 在 CoreManifest.coreResourceRelations() 或 EducationManifest.resourceRelations() 加 " +
+                "orgCreator(\"X\",...) / ResourceRelationDef.column(\"X\",...) 注册其锚点。",
+                missing.size(), String.join("%n  ", missing)));
+    }
 }

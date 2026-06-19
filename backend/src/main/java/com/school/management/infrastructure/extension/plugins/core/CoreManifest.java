@@ -344,7 +344,7 @@ public class CoreManifest implements PluginPackage {
             Stream.<Contribution>of(rr(ResourceRelationDef.subjectGraph(
                 "user", "owner_org", "所属组织", "ORG_UNIT", Cardinality.SINGLE, "member").withGrantsByDefault())),
             // 主体但列锚: org_unit/place 的组织是内在列 (非成员图)
-            orgCreator("org_unit", "parent_id", "created_by"),       // ⚠ parent_id 系冻结现状
+            orgCreator("org_unit", "id", "created_by"),              // 审计 P2.4: 修 parent_id→id (恢复注解本意; data_resources seed 误置 parent_id 致"按父组织过滤")
             orgCreator("place", "effective_org_unit_id", "created_by"),
             // 普通记录: org_unit_id + created_by
             orgCreator("inspection_record", "org_unit_id", "created_by"),

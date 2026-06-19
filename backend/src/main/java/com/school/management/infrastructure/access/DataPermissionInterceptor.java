@@ -364,10 +364,13 @@ public class DataPermissionInterceptor implements Interceptor {
 
         // R2.2: 锚点 (orgUnitField / creatorField / viaMembership) 优先来自 resource_relations 注册表
         // (owner_org → 列锚 / SUBJECT_GRAPH 成员图; creator → 列); 无注册行则注解 ⊕ moduleConfig 兜底
-        // (复刻旧 moduleConfig 优先语义)。null → "" 对齐旧注解默认 (@DataPermission orgUnitField/creatorField
-        // 缺省即空串), 使有列锚资源逐字节一致; 成员主体 creatorField 的差异是成员路径不消费的死字段 (见
-        // BuildMetaRegistryEquivalenceTest)。tableAlias / membershipSubjectColumn / typeField / resourceType
-        // 仍来自注解/data_resources, 注册表不驱动。
+        // (复刻旧 moduleConfig 优先语义)。registry 缺该关系行 → null → coerce 成 ""。
+        // ⚠ 审计 P1: @DataPermission 的 orgUnitField/creatorField 默认值是 "org_unit_id"/"created_by" 而非 "",
+        // 故"注册表无该关系行"会让 registry("") 与 legacy(注解默认非空) 发散 (非成员 SELF 路径消费 creatorField)。
+        // 等价靠 PluginDeclarationCoverageTest 守护"每个 @DataPermission 模块都注册了对应锚点关系"保证:
+        // 凡 mapper 实际用到的 org/creator 锚点, manifest 必须登记同名列 → registry 即与 legacy 逐字节一致。
+        // 成员主体 creatorField 差异是成员路径不消费的死字段 (BuildMetaRegistryEquivalenceTest)。
+        // tableAlias / membershipSubjectColumn / typeField / resourceType 仍来自注解/data_resources, 注册表不驱动。
         String orgField;
         String creatorField;
         boolean viaMembership;
