@@ -1,6 +1,8 @@
 package com.school.management.infrastructure.access;
 
 import com.school.management.domain.access.model.OrgAnchor;
+import com.school.management.domain.access.model.SubjectScope;
+import com.school.management.domain.access.model.valueobject.RelationGrant;
 import com.school.management.domain.access.model.valueobject.ScopeSpec;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.type.JdbcType;
@@ -48,7 +50,89 @@ public class ScopeEvaluator {
     }
 
     /**
-     * compose 一个 spec → 一个 ScopeCondition。
+     * compose 一个 spec → 一个 ScopeCondition (R3: 多 grant OR 入口)。
+     *
+     * <p>可见性来源: {@code relation_grants} (非空) 各 grant 子条件 <b>OR</b> 叠加 (多锚点);
+     * 为空时由轴① ({@code orgAnchor}) bridge 派生<b>单</b> grant (R3a 过渡, 与 M1 逐字节等价)。
+     * 每条 grant 转等价单锚点 sub-spec, 复用 {@link #composeAnchorCondition} (= 原单锚点 compose,
+     * 内部零改) 出子条件。
+     *
+     * <p>单 grant → 直接复用单锚点路径 (anchor→grant→sub-spec→anchor 往返恒等 ⇒ 字节等价);
+     * 多 grant → 各子条件 OR, 每 grant paramOffset 加大间隔避免参数名碰撞; 任一 grant unbounded(空)
+     * ⇒ 并集放行; 全 deny ⇒ deny。typeFilter 每-grant 应用, 因 (A∧T)∨(B∧T)=(A∨B)∧T 逻辑等价。
+     */
+    public ScopeCondition toSqlCondition(ScopeSpec spec, ResourceScopeMeta meta,
+                                         UserContext ctx, Long effectiveOrgId, String effectiveOrgPath,
+                                         Long tenantId, int paramOffset) {
+        List<RelationGrant> grants = grantsOf(spec, meta);
+
+        if (grants.size() == 1) {
+            return composeAnchorCondition(toSubSpec(grants.get(0), spec), meta, ctx,
+                    effectiveOrgId, effectiveOrgPath, tenantId, paramOffset);
+        }
+
+        List<String> parts = new ArrayList<>();
+        ScopeCondition combined = new ScopeCondition();
+        int i = 0;
+        for (RelationGrant g : grants) {
+            ScopeCondition sub = composeAnchorCondition(toSubSpec(g, spec), meta, ctx,
+                    effectiveOrgId, effectiveOrgPath, tenantId, paramOffset + i * 10000);
+            i++;
+            if (sub.sql.isEmpty()) {
+                return new ScopeCondition(); // 一条 grant unbounded → 并集 unbounded (放行)
+            }
+            if (DENY.equals(sub.sql)) {
+                continue; // deny grant 不贡献 OR
+            }
+            parts.add(sub.sql);
+            combined.params.addAll(sub.params);
+        }
+        if (parts.isEmpty()) {
+            combined.sql = DENY; // 全 deny
+            return combined;
+        }
+        combined.sql = parts.size() == 1 ? parts.get(0) : "(" + String.join(" OR ", parts) + ")";
+        return combined;
+    }
+
+    /** spec 的 grant 列表: relation_grants 非空则用; 否则由轴① bridge 派生单 grant (R3a 过渡)。 */
+    private List<RelationGrant> grantsOf(ScopeSpec spec, ResourceScopeMeta meta) {
+        if (spec.hasRelationGrants()) {
+            return spec.getRelationGrants();
+        }
+        OrgAnchor anchor = spec.getOrgAnchor() != null ? spec.getOrgAnchor() : OrgAnchor.SELF;
+        return RelationGrant.fromM1Axes(anchor, spec.getAnchorParam(), spec.isIncludeSubtree(),
+                spec.getCustomOrgIds(), meta.viaMembership());
+    }
+
+    /** 一条 grant → 等价单锚点 sub-spec (轴① from grant; 轴②③ 从父 spec 透传)。 */
+    private ScopeSpec toSubSpec(RelationGrant g, ScopeSpec parent) {
+        return ScopeSpec.builder()
+                .applyTo(parent.getApplyTo())
+                .orgAnchor(anchorFromSubject(g.subject()))
+                .anchorParam(g.subjectParam())
+                .includeSubtree(g.subtree())
+                .customOrgIds(g.orgIds())
+                .subjectRelInclude(parent.getSubjectRelInclude())
+                .subjectRelExclude(parent.getSubjectRelExclude())
+                .typeFilter(parent.getTypeFilter())
+                .build();
+    }
+
+    /** SubjectScope → 等价 OrgAnchor (供复用单锚点 compose)。 */
+    private OrgAnchor anchorFromSubject(SubjectScope s) {
+        return switch (s) {
+            case SELF -> OrgAnchor.SELF;
+            case MY_ORG -> OrgAnchor.PRIMARY_ORG;
+            case RELATION -> OrgAnchor.RELATION;
+            case CUSTOM -> OrgAnchor.CUSTOM_ORG;
+            case PLUGIN_DIM -> OrgAnchor.PLUGIN_DIM;
+            case ALL -> OrgAnchor.ALL;
+        };
+    }
+
+    /**
+     * compose 一个单锚点 spec → 一个 ScopeCondition。
      *
      * <p><b>per-role effective org (T7 关键)</b>: 锚点 org 由调用方<b>显式</b>传入
      * ({@code effectiveOrgId} / {@code effectiveOrgPath}), 而非从 {@code ctx} 直接读取。
@@ -65,7 +149,7 @@ public class ScopeEvaluator {
      * @param tenantId        租户
      * @param paramOffset     参数名唯一化偏移 (多角色时每角色递增)
      */
-    public ScopeCondition toSqlCondition(ScopeSpec spec, ResourceScopeMeta meta,
+    private ScopeCondition composeAnchorCondition(ScopeSpec spec, ResourceScopeMeta meta,
                                          UserContext ctx, Long effectiveOrgId, String effectiveOrgPath,
                                          Long tenantId, int paramOffset) {
         // 轴① 解析 org id 集合 (单一真相)

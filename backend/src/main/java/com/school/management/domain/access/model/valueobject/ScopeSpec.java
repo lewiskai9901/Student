@@ -4,6 +4,7 @@ import com.school.management.domain.access.model.OrgAnchor;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -52,9 +53,20 @@ public class ScopeSpec {
     /** 轴③ type filter: 允许的类型码集合。 */
     private Set<String> typeFilter;
 
+    /**
+     * R3: 关系授予数组 (relation_grants)。非空时取代轴①(orgAnchor) 作为可见性来源 —— 各 grant
+     * 子条件 OR 叠加 (多锚点)。为空 (R3a 过渡期 / 旧 spec) 时引擎由轴① bridge 派生单 grant。
+     */
+    private List<RelationGrant> relationGrants;
+
     /** 轴①为 ALL —— 不做组织过滤 (unbounded)。 */
     public boolean isOrgUnbounded() {
         return orgAnchor == OrgAnchor.ALL;
+    }
+
+    /** R3: relation_grants 是否生效 (非空)。null-safe。 */
+    public boolean hasRelationGrants() {
+        return relationGrants != null && !relationGrants.isEmpty();
     }
 
     /** 轴③是否生效 (type filter 非空)。null-safe。 */

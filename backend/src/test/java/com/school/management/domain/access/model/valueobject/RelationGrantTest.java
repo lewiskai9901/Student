@@ -83,12 +83,13 @@ class RelationGrantTest {
     }
 
     @Test
-    @DisplayName("CUSTOM_ORG → {owner_org, CUSTOM, orgIds} (现零数据, 映射须完整)")
+    @DisplayName("CUSTOM_ORG + subtree → {owner_org, CUSTOM, orgIds, subtree} (subtree 须透传, 现零数据映射须完整)")
     void customOrg() {
         Set<Long> ids = Set.of(77L, 88L);
-        RelationGrant g = only(RelationGrant.fromM1Axes(OrgAnchor.CUSTOM_ORG, null, false, ids, false));
+        RelationGrant g = only(RelationGrant.fromM1Axes(OrgAnchor.CUSTOM_ORG, null, true, ids, false));
         assertEquals("owner_org", g.relation());
         assertEquals(SubjectScope.CUSTOM, g.subject());
         assertEquals(ids, g.orgIds());
+        assertTrue(g.subtree(), "CUSTOM_ORG 须透传 subtree (否则 CUSTOM+子树退化成裸 IN)");
     }
 }

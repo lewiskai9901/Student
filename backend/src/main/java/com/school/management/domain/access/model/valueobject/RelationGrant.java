@@ -52,7 +52,7 @@ public record RelationGrant(
                     : List.of(new RelationGrant(CREATOR, SubjectScope.SELF, null, false, null));
             case PRIMARY_ORG -> List.of(new RelationGrant(OWNER_ORG, SubjectScope.MY_ORG, null, subtree, null));
             case RELATION -> List.of(new RelationGrant(OWNER_ORG, SubjectScope.RELATION, anchorParam, subtree, null));
-            case CUSTOM_ORG -> List.of(new RelationGrant(OWNER_ORG, SubjectScope.CUSTOM, null, false, customOrgIds));
+            case CUSTOM_ORG -> List.of(new RelationGrant(OWNER_ORG, SubjectScope.CUSTOM, null, subtree, customOrgIds));
             case PLUGIN_DIM -> List.of(new RelationGrant(OWNER_ORG, SubjectScope.PLUGIN_DIM, anchorParam, false, null));
         };
     }

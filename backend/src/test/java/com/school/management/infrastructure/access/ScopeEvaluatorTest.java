@@ -1,6 +1,8 @@
 package com.school.management.infrastructure.access;
 
 import com.school.management.domain.access.model.OrgAnchor;
+import com.school.management.domain.access.model.SubjectScope;
+import com.school.management.domain.access.model.valueobject.RelationGrant;
 import com.school.management.domain.access.model.valueobject.ScopeSpec;
 import org.apache.ibatis.type.JdbcType;
 import org.junit.jupiter.api.DisplayName;
@@ -360,5 +362,45 @@ class ScopeEvaluatorTest {
         assertThat(c.params).hasSize(2);
         assertThat(c.params.get(0).value).isEqualTo(TENANT);
         assertThat(c.params.get(1).value).isEqualTo(TENANT);
+    }
+
+    // ---- 13. R3 多 grant OR: relation_grants 非空 → 各 grant 子条件 OR (多锚点) ----
+    @Test
+    @DisplayName("R3 多 grant: {creator,SELF} ∨ {owner_org,MY_ORG+subtree} → (created_by=? OR org_unit_id IN(子树))")
+    void multiGrantOr() {
+        ScopeSpec spec = ScopeSpec.builder()
+                .relationGrants(List.of(
+                        new RelationGrant("creator", SubjectScope.SELF, null, false, null),
+                        new RelationGrant("owner_org", SubjectScope.MY_ORG, null, true, null)))
+                .build();
+
+        ScopeCondition c = evaluator().toSqlCondition(spec, orgFieldMeta(), ctx(), 100L, "/1/100/", TENANT, 0);
+
+        // 两条 grant OR 叠加, 整体加括号
+        assertThat(c.sql).startsWith("(").endsWith(")");
+        assertThat(c.sql).contains("t.created_by = ?");
+        assertThat(c.sql).contains(" OR ");
+        assertThat(c.sql).contains(
+                "t.org_unit_id IN (SELECT id FROM org_units WHERE tenant_id = ? AND tree_path LIKE ?)");
+        // 参数顺序 (位置绑定): [creator userId=7, MY_ORG tenant=1, path=/1/100/%]
+        assertThat(c.params).hasSize(3);
+        assertThat(c.params.get(0).value).isEqualTo(7L);
+        assertThat(c.params.get(1).value).isEqualTo(TENANT);
+        assertThat(c.params.get(2).value).isEqualTo("/1/100/%");
+    }
+
+    @Test
+    @DisplayName("R3 多 grant: 任一 grant unbounded(ALL) → 并集放行 (空 SQL)")
+    void multiGrantUnboundedShortCircuits() {
+        ScopeSpec spec = ScopeSpec.builder()
+                .relationGrants(List.of(
+                        new RelationGrant("creator", SubjectScope.SELF, null, false, null),
+                        new RelationGrant("owner_org", SubjectScope.ALL, null, false, null)))
+                .build();
+
+        ScopeCondition c = evaluator().toSqlCondition(spec, orgFieldMeta(), ctx(), 100L, "/1/100/", TENANT, 0);
+
+        assertThat(c.sql).isEmpty(); // ALL grant 使并集无界 → 放行
+        assertThat(c.params).isEmpty();
     }
 }
