@@ -94,12 +94,13 @@ public class RoleScopeBindingRegistrar {
                 roleCode, resourceCode, e.getMessage());
         }
 
+        // R3a-2b Step B: 轴① 只写 relation_grants (org_anchor 等列已删)。
         // INSERT IGNORE (依赖 uk_role_res 唯一键: role_id + resource_code + apply_to + tenant_id)
         int affected = jdbc.update(
             "INSERT IGNORE INTO role_data_scopes (role_id, resource_code, apply_to, " +
-            "org_anchor, anchor_param, include_subtree, relation_grants, priority, tenant_id, deleted) " +
-            "VALUES (?, ?, 'BOTH', ?, ?, ?, ?, ?, ?, 0)",
-            roleId, resourceCode, anchorEnum.name(), anchorParam, includeSubtree, relationGrantsJson, 0, actualTenantId);
+            "relation_grants, priority, tenant_id, deleted) " +
+            "VALUES (?, ?, 'BOTH', ?, ?, ?, 0)",
+            roleId, resourceCode, relationGrantsJson, 0, actualTenantId);
 
         if (affected > 0) {
             log.info("[RoleScopeBinding] CREATED: {} × {} = {} (role_id={}, tenant={})",

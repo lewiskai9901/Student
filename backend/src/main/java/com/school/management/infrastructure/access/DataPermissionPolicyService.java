@@ -154,18 +154,18 @@ public class DataPermissionPolicyService {
         // UK (role_id, resource_code, apply_to, tenant_id) 不含 deleted, 软删后再 INSERT 会撞 unique.
         // 用 ON DUPLICATE KEY 覆盖同一行, 顺便把 deleted 翻回 0。
         // T9: 只写可组合轴列 (scope_type/custom_org_unit_ids 列已删)。
+        // R3a-2b Step B: 轴① 只写 relation_grants (org_anchor 等 4 列已删); 轴②③ 仍列。
         jdbcTemplate.update(
                 "INSERT INTO role_data_scopes (tenant_id, role_id, resource_code, apply_to, " +
-                "org_anchor, anchor_param, include_subtree, custom_org_ids, subject_rel_include, subject_rel_exclude, " +
+                "subject_rel_include, subject_rel_exclude, " +
                 "type_filter, relation_grants, priority, created_at, deleted) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 0) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 0) " +
                 "ON DUPLICATE KEY UPDATE " +
-                "org_anchor=VALUES(org_anchor), anchor_param=VALUES(anchor_param), include_subtree=VALUES(include_subtree), " +
-                "custom_org_ids=VALUES(custom_org_ids), subject_rel_include=VALUES(subject_rel_include), " +
+                "subject_rel_include=VALUES(subject_rel_include), " +
                 "subject_rel_exclude=VALUES(subject_rel_exclude), " +
                 "type_filter=VALUES(type_filter), relation_grants=VALUES(relation_grants), priority=VALUES(priority), updated_at=NOW(), deleted=0",
                 tenantId, permission.getRoleId(), permission.getModuleCode(), applyTo,
-                orgAnchor, anchorParam, includeSubtree, customOrgIdsJson, subjectRelIncludeJson, subjectRelExcludeJson,
+                subjectRelIncludeJson, subjectRelExcludeJson,
                 typeFilterFinal, relationGrantsJson,
                 0);
 
