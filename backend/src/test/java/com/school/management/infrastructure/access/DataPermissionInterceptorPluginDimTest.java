@@ -16,10 +16,12 @@ import org.mockito.quality.Strictness;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -63,6 +65,10 @@ class DataPermissionInterceptorPluginDimTest {
         ReflectionTestUtils.setField(interceptor, "dataPermissionPolicyService", dataPermissionPolicyService);
         // T7: 插件维度 compose 已下沉 ScopeEvaluator (持 router); 拦截器只编排。
         ReflectionTestUtils.setField(interceptor, "scopeEvaluator", new ScopeEvaluator(pluginDataScopeRouter));
+        // R2.2b 起 buildMeta 读 resourceRelationRegistry; 注入返回 empty 的 mock (R2.2b 漏注入 → 此前 NPE)。
+        ResourceRelationRegistry resourceRelationRegistry = mock(ResourceRelationRegistry.class);
+        when(resourceRelationRegistry.forResource(anyString())).thenReturn(Optional.empty());
+        ReflectionTestUtils.setField(interceptor, "resourceRelationRegistry", resourceRelationRegistry);
         UserContextHolder.clear();
         UserContextHolder.enableDataPermission();
     }

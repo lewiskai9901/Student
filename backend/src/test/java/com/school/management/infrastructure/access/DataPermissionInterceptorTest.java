@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,6 +36,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -84,6 +86,12 @@ class DataPermissionInterceptorTest {
         ReflectionTestUtils.setField(interceptor, "dynamicModuleService", dynamicModuleService);
         ReflectionTestUtils.setField(interceptor, "dataPermissionPolicyService", dataPermissionPolicyService);
         ReflectionTestUtils.setField(interceptor, "scopeEvaluator", scopeEvaluator);
+        // R2.2b 起 buildMeta 读 resourceRelationRegistry; 本类单测验证「注册表无锚 → 注解兜底」路径,
+        // 故注入返回 empty 的 mock (R2.2b 漏注入此字段 → 此前 NPE)。registry 驱动路径由
+        // BuildMetaRegistryEquivalenceTest 覆盖。
+        ResourceRelationRegistry resourceRelationRegistry = mock(ResourceRelationRegistry.class);
+        when(resourceRelationRegistry.forResource(anyString())).thenReturn(Optional.empty());
+        ReflectionTestUtils.setField(interceptor, "resourceRelationRegistry", resourceRelationRegistry);
         UserContextHolder.clear();
         UserContextHolder.enableDataPermission();
     }
