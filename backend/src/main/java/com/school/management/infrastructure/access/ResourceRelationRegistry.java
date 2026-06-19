@@ -37,6 +37,10 @@ public class ResourceRelationRegistry {
     private final JdbcTemplate jdbc;
     private final Map<String, DerivedAnchor> cache = new ConcurrentHashMap<>();
 
+    /** 懒加载标志: 首次访问加载一次后置 true。volatile + loadLock 双检锁保证只加载一次。 */
+    private volatile boolean loaded = false;
+    private final Object loadLock = new Object();
+
     public ResourceRelationRegistry(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
     }
@@ -85,9 +89,11 @@ public class ResourceRelationRegistry {
 
     // ── DB 加载 + 缓存 ─────────────────────────────────────────────────────
 
-    /** 启动期全量加载 (ApplicationReady: 在 ContributionDispatcher 写完 resource_relations 之后)。 */
-    @EventListener(ApplicationReadyEvent.class)
-    public void load() {
+    /**
+     * DB 取数 + 按资源分组。抽成 protected 是测试 seam —— 单测可覆写返回 canned 行,
+     * 免去 ResultSet mock; 生产实现走 {@code resource_relations} 查询。
+     */
+    protected Map<String, List<AnchorRow>> fetchByResource() {
         Map<String, List<AnchorRow>> byResource = new HashMap<>();
         jdbc.query(
             "SELECT resource_code, relation_code, storage_kind, column_name " +
@@ -99,6 +105,23 @@ public class ResourceRelationRegistry {
                             StorageKind.fromCode(rs.getString("storage_kind")),
                             rs.getString("column_name")));
             });
+        return byResource;
+    }
+
+    /**
+     * 加载 resource_relations → 派生锚点 → 填缓存。
+     *
+     * <p><b>fail-fast</b> (统一锚定 P3): 取数为空 → 抛 {@link IllegalStateException}。
+     * resource_relations 由 contribution 启动期写入 (重启级); 空集只可能是写入失败。
+     * R2.4 删注解兜底后, 空注册表 = 数据权限全无锚点; 必须 fail-fast, 不得静默 fail-open。
+     */
+    private void doLoad() {
+        Map<String, List<AnchorRow>> byResource = fetchByResource();
+        if (byResource.isEmpty()) {
+            throw new IllegalStateException(
+                "resource_relations 注册表为空 — contribution 写入可能失败。" +
+                "数据权限锚点无兜底, 拒绝以 fail-open 状态服务 (统一锚定 P3 fail-fast)。");
+        }
         Map<String, DerivedAnchor> fresh = new HashMap<>();
         byResource.forEach((code, rows) -> fresh.put(code, deriveAnchor(rows)));
         cache.clear();
@@ -107,13 +130,36 @@ public class ResourceRelationRegistry {
                 fresh.size(), byResource.values().stream().mapToInt(List::size).sum());
     }
 
-    /** 资源的派生锚点; 未注册 → empty (调用方 buildMeta 走注解兜底)。 */
+    /**
+     * 懒加载: 首次访问同步加载一次。双检锁消除「Tomcat 接客早于启动钩子、缓存空」窗口 ——
+     * 任何请求都不会读到空缓存 (首个请求阻塞片刻完成加载)。
+     */
+    private void ensureLoaded() {
+        if (loaded) return;
+        synchronized (loadLock) {
+            if (loaded) return;
+            doLoad();
+            loaded = true;
+        }
+    }
+
+    /** 启动期全量加载 (ApplicationReady: 在 ContributionDispatcher 写完 resource_relations 之后)。 */
+    @EventListener(ApplicationReadyEvent.class)
+    public void load() {
+        ensureLoaded();
+    }
+
+    /** 资源的派生锚点; 未注册 → empty (调用方处理)。首次调用触发懒加载。 */
     public Optional<DerivedAnchor> forResource(String resourceCode) {
+        ensureLoaded();
         return Optional.ofNullable(cache.get(resourceCode));
     }
 
-    /** 配置变更后重载缓存。 */
+    /** 配置变更后强制重载缓存 (绕过 loaded 标志)。 */
     public void refresh() {
-        load();
+        synchronized (loadLock) {
+            doLoad();
+            loaded = true;
+        }
     }
 }

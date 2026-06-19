@@ -6,7 +6,11 @@ import com.school.management.infrastructure.access.ResourceRelationRegistry.Deri
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -73,5 +77,63 @@ class ResourceRelationRegistryTest {
         assertFalse(d.viaMembership());
         assertNull(d.orgUnitField());
         assertNull(d.creatorField());
+    }
+
+    // ── P3 健壮性: 懒加载 + load-once + 空注册表 fail-fast ──────────────────────
+    // 用覆写 fetchByResource() 的测试子类喂 canned 行 (免 ResultSet mock / 免真 DB)。
+
+    /** 测试 seam: 覆写 fetchByResource 返回 canned 行并计数, jdbc 不被使用 (传 null)。 */
+    private static ResourceRelationRegistry registryReturning(
+            Map<String, List<AnchorRow>> rows, AtomicInteger fetchCount) {
+        return new ResourceRelationRegistry(null) {
+            @Override
+            protected Map<String, List<AnchorRow>> fetchByResource() {
+                fetchCount.incrementAndGet();
+                return rows;
+            }
+        };
+    }
+
+    @Test
+    @DisplayName("懒加载: forResource 首次访问自行触发加载 (无需显式 load/run — 消除启动窗口)")
+    void forResource_lazilyLoadsOnFirstAccess() {
+        AtomicInteger fetches = new AtomicInteger();
+        ResourceRelationRegistry reg = registryReturning(
+                Map.of("inspection_record", List.of(
+                        new AnchorRow("owner_org", StorageKind.COLUMN, "org_unit_id"))),
+                fetches);
+
+        // 未调用 load()/run(); 直接 forResource 应自行加载
+        Optional<DerivedAnchor> d = reg.forResource("inspection_record");
+
+        assertTrue(d.isPresent(), "懒加载未触发: forResource 应在缓存空时自行加载");
+        assertEquals("org_unit_id", d.get().orgUnitField());
+        assertEquals(1, fetches.get(), "首次 forResource 应触发恰好一次加载");
+    }
+
+    @Test
+    @DisplayName("load-once: 多次 forResource 只加载一次 (缓存复用, 非每次查库)")
+    void forResource_loadsOnlyOnce() {
+        AtomicInteger fetches = new AtomicInteger();
+        ResourceRelationRegistry reg = registryReturning(
+                Map.of("inspection_record", List.of(
+                        new AnchorRow("creator", StorageKind.COLUMN, "created_by"))),
+                fetches);
+
+        reg.forResource("inspection_record");
+        reg.forResource("inspection_record");
+        reg.forResource("other");
+
+        assertEquals(1, fetches.get(), "加载应只发生一次, 后续走缓存");
+    }
+
+    @Test
+    @DisplayName("fail-fast: 注册表为空 (contribution 写入失败) → forResource 抛 IllegalStateException, 不静默 fail-open")
+    void emptyRegistry_failsFast() {
+        AtomicInteger fetches = new AtomicInteger();
+        ResourceRelationRegistry reg = registryReturning(new HashMap<>(), fetches);
+
+        assertThrows(IllegalStateException.class, () -> reg.forResource("anything"),
+                "空注册表删兜底后无锚点 → 必须 fail-fast, 不得静默放行");
     }
 }

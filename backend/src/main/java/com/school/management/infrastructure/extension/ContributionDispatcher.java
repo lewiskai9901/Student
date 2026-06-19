@@ -181,13 +181,17 @@ public class ContributionDispatcher implements ApplicationRunner {
                     }
                 }
                 else if (c instanceof Contribution.ResourceRelationContribution rrc) {
-                    // 统一锚定模型 R1: 无依赖类型, dispatcher @Order(60) 直接 UPSERT resource_relations
+                    // 统一锚定模型 R1: 无依赖类型, dispatcher @Order(60) 直接 UPSERT resource_relations。
+                    // 统一锚定 P3 fail-fast: resource_relations 是数据权限承重表 (R2.4 删注解兜底后无后备),
+                    // 单条写失败 = 该资源锚点缺失 = 裸奔。故此分支不吞异常, 抛出令启动失败
+                    // (与上方「跨包 uniqueKey 冲突」fail-fast 同策; 区别于其它声明型贡献的 log-继续韧性)。
                     resourceRelations.incrementAndGet();
                     try {
                         resourceRelationUpserter.upsert(rrc.def(), rrc.industry());
                     } catch (Exception e) {
-                        log.error("[ContributionDispatcher] 资源关系写入失败 {}: {}",
-                            rrc.uniqueKey(), e.getMessage());
+                        throw new IllegalStateException(String.format(
+                            "[ContributionDispatcher] 资源关系写入失败 %s — 数据权限锚点缺失, 拒绝启动 (统一锚定 P3 fail-fast)",
+                            rrc.uniqueKey()), e);
                     }
                 }
                 else if (c instanceof Contribution.PolicyContribution pc) {
