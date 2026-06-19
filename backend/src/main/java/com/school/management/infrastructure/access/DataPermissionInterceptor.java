@@ -1,6 +1,5 @@
 package com.school.management.infrastructure.access;
 
-import com.school.management.domain.access.model.OrgAnchor;
 import com.school.management.domain.access.model.ScopePreset;
 import com.school.management.domain.access.model.ScopeType;
 import com.school.management.domain.access.model.valueobject.ScopeSpec;
@@ -245,8 +244,14 @@ public class DataPermissionInterceptor implements Interceptor {
             // PLUGIN_DIM resolve 的 resourceType 需要 moduleCode 兜底 (端口自旧 plugin-dim 分支),
             // 但核心路径的 hasResourceType() 选择 *不可* 被 moduleCode 污染 (否则核心 scope 误走
             // access_relation)。故仅在 PLUGIN_DIM 时切换到带兜底的 meta 变体。
+            //
+            // ⚠ R3b 已知限制: roleMeta 是 meta 级 (整条 spec 共享), 多 grant 时若**混**有 PLUGIN_DIM
+            // 与非 PLUGIN_DIM grant, withResourceType 会污染同条非 PLUGIN_DIM grant (推去 access_relation
+            // → DENY 被丢)。即"PLUGIN_DIM ∨ MY_ORG"这类混配只剩 PLUGIN_DIM。真修需把 withResourceType
+            // 下沉到 evaluator 多 grant 循环按 grant 应用 (per-grant meta)。现单 grant 全部正确; 多 grant
+            // 仅"全非 PLUGIN_DIM"(creator∨org∨relation, 即 inspection 受检面用例) 正确。待 R3b 深化/R4。
             ResourceScopeMeta roleMeta = meta;
-            if (OrgAnchor.PLUGIN_DIM.equals(spec.getOrgAnchor())
+            if (spec.hasPluginDimGrant()
                     && (meta.resourceType() == null || meta.resourceType().isEmpty())) {
                 roleMeta = withResourceType(meta, moduleCode);
             }
@@ -320,7 +325,7 @@ public class DataPermissionInterceptor implements Interceptor {
             }
 
             ResourceScopeMeta roleMeta = meta;
-            if (OrgAnchor.PLUGIN_DIM.equals(spec.getOrgAnchor())
+            if (spec.hasPluginDimGrant()
                     && (meta.resourceType() == null || meta.resourceType().isEmpty())) {
                 roleMeta = withResourceType(meta, moduleCode);
             }

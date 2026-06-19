@@ -1,6 +1,7 @@
 package com.school.management.domain.access.model.valueobject;
 
 import com.school.management.domain.access.model.OrgAnchor;
+import com.school.management.domain.access.model.SubjectScope;
 import lombok.Builder;
 import lombok.Data;
 
@@ -59,9 +60,26 @@ public class ScopeSpec {
      */
     private List<RelationGrant> relationGrants;
 
-    /** 轴①为 ALL —— 不做组织过滤 (unbounded)。 */
+    /**
+     * 不做组织过滤 (unbounded)。R3 grant-aware: relation_grants 非空时 = <b>任一</b> grant subject 为 ALL
+     * (多锚点并集只要一条无界即整体无界); 否则 (旧 spec / sub-spec) 看 orgAnchor==ALL。
+     */
     public boolean isOrgUnbounded() {
+        if (hasRelationGrants()) {
+            return relationGrants.stream().anyMatch(g -> g.subject() == SubjectScope.ALL);
+        }
         return orgAnchor == OrgAnchor.ALL;
+    }
+
+    /**
+     * R3: 是否含 PLUGIN_DIM grant (拦截器据此为 plugin-dim resolve 注入 resourceType=moduleCode)。
+     * grant-aware: relation_grants 非空时 = 任一 grant subject 为 PLUGIN_DIM; 否则看 orgAnchor。
+     */
+    public boolean hasPluginDimGrant() {
+        if (hasRelationGrants()) {
+            return relationGrants.stream().anyMatch(g -> g.subject() == SubjectScope.PLUGIN_DIM);
+        }
+        return orgAnchor == OrgAnchor.PLUGIN_DIM;
     }
 
     /** R3: relation_grants 是否生效 (非空)。null-safe。 */

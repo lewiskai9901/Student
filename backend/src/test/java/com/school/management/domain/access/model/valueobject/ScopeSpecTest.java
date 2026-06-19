@@ -1,8 +1,10 @@
 package com.school.management.domain.access.model.valueobject;
 
 import com.school.management.domain.access.model.OrgAnchor;
+import com.school.management.domain.access.model.SubjectScope;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -66,5 +68,45 @@ class ScopeSpecTest {
     void hasRelExclude_falseWhenNullOrEmpty() {
         assertThat(ScopeSpec.builder().subjectRelExclude(null).build().hasRelExclude()).isFalse();
         assertThat(ScopeSpec.builder().subjectRelExclude(Set.of()).build().hasRelExclude()).isFalse();
+    }
+
+    // ── R3b grant-aware: 多 grant 须看全部 grant (任一命中), 非只首条 ──
+
+    private static RelationGrant grant(SubjectScope s) {
+        return new RelationGrant("owner_org", s, null, false, null);
+    }
+
+    @Test
+    void isOrgUnbounded_multiGrant_anyAll_evenNonFirst() {
+        assertThat(ScopeSpec.builder().relationGrants(List.of(grant(SubjectScope.ALL))).build()
+                .isOrgUnbounded()).isTrue();
+        // ALL 非首条 —— 修复点: 旧 deriveAxis 取首 grant 会漏判
+        assertThat(ScopeSpec.builder()
+                .relationGrants(List.of(grant(SubjectScope.SELF), grant(SubjectScope.ALL))).build()
+                .isOrgUnbounded()).isTrue();
+        assertThat(ScopeSpec.builder()
+                .relationGrants(List.of(grant(SubjectScope.SELF), grant(SubjectScope.MY_ORG))).build()
+                .isOrgUnbounded()).isFalse();
+    }
+
+    @Test
+    void hasPluginDimGrant_multiGrant_anyPluginDim_evenNonFirst() {
+        assertThat(ScopeSpec.builder().relationGrants(List.of(grant(SubjectScope.PLUGIN_DIM))).build()
+                .hasPluginDimGrant()).isTrue();
+        // PLUGIN_DIM 非首条 —— 否则 resourceType 注入漏 → plugin-dim resolve 失败
+        assertThat(ScopeSpec.builder()
+                .relationGrants(List.of(grant(SubjectScope.SELF), grant(SubjectScope.PLUGIN_DIM))).build()
+                .hasPluginDimGrant()).isTrue();
+        assertThat(ScopeSpec.builder()
+                .relationGrants(List.of(grant(SubjectScope.SELF))).build()
+                .hasPluginDimGrant()).isFalse();
+    }
+
+    @Test
+    void grantAware_falseToLegacyAnchor_whenNoGrants() {
+        // 无 relationGrants → 看 orgAnchor (旧 spec / sub-spec 行为不变)
+        assertThat(ScopeSpec.builder().orgAnchor(OrgAnchor.PLUGIN_DIM).build().hasPluginDimGrant()).isTrue();
+        assertThat(ScopeSpec.builder().orgAnchor(OrgAnchor.SELF).build().hasPluginDimGrant()).isFalse();
+        assertThat(ScopeSpec.builder().orgAnchor(OrgAnchor.ALL).build().isOrgUnbounded()).isTrue();
     }
 }
