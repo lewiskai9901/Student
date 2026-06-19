@@ -43,14 +43,13 @@ class DataPermissionPolicyServiceTest {
     }
 
     @Test
-    @DisplayName("getScopeSpec: builds ScopeSpec from new axis columns")
+    @DisplayName("getScopeSpec: 轴① 从 relation_grants 反推 (R3a-2b: org_anchor 等列已废)")
     void getScopeSpec_buildsFromNewColumns() {
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("apply_to", "BOTH");
-        row.put("org_anchor", "RELATION");
-        row.put("anchor_param", "admin");
-        row.put("include_subtree", 1);
-        row.put("custom_org_ids", null);
+        // R3a-2b: 轴① 唯一来源是 relation_grants; getScopeSpec 不再读 org_anchor 等列
+        row.put("relation_grants",
+                "[{\"relation\":\"owner_org\",\"subject\":\"RELATION\",\"subjectParam\":\"admin\",\"subtree\":true}]");
         row.put("subject_rel_include", null);
         row.put("subject_rel_exclude", "[\"admin\"]");
         row.put("type_filter", "[\"STUDENT\"]");

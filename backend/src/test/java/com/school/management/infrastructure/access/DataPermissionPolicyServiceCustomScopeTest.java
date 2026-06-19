@@ -49,10 +49,8 @@ class DataPermissionPolicyServiceCustomScopeTest {
         row.put("role_id", ROLE_ID);
         row.put("resource_code", MODULE_CODE);
         row.put("apply_to", "BOTH");
-        row.put("org_anchor", "CUSTOM_ORG");
-        row.put("anchor_param", null);
-        row.put("include_subtree", 0);
-        row.put("custom_org_ids", "[123]");
+        // R3a-2b: CUSTOM 轴① 唯一来源是 relation_grants (org_anchor/custom_org_ids 列已废)
+        row.put("relation_grants", "[{\"relation\":\"owner_org\",\"subject\":\"CUSTOM\",\"orgIds\":[123]}]");
         return row;
     }
 

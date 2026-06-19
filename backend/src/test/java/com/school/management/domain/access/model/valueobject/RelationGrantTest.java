@@ -95,6 +95,15 @@ class RelationGrantTest {
         assertTrue(g.subtree(), "CUSTOM_ORG 须透传 subtree (否则 CUSTOM+子树退化成裸 IN)");
     }
 
+    @Test
+    @DisplayName("anchorOf 是 fromM1Axes 的逆: 各 OrgAnchor 往返恢复 (R3a-2b 读路径派生依赖)")
+    void anchorOfRoundTrip() {
+        for (OrgAnchor a : OrgAnchor.values()) {
+            RelationGrant g = RelationGrant.fromM1Axes(a, "p", true, Set.of(1L), false).get(0);
+            assertEquals(a, g.anchorOf(), "anchorOf 须恢复 " + a);
+        }
+    }
+
     // ── Jackson JSON round-trip: relation_grants 列存取依赖 (R3a-2 getScopeSpec) ──
 
     @Test

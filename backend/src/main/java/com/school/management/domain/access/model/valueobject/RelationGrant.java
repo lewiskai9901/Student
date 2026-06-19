@@ -33,6 +33,24 @@ public record RelationGrant(
     public static final String CREATOR = "creator";
 
     /**
+     * subject → 等价 {@link OrgAnchor} ({@link #fromM1Axes} 的逆, 单 grant)。
+     *
+     * <p>R3a-2b 读路径用: 删 role_data_scopes 轴①列后, getScopeSpec/mapToPermission 由 grant 反推
+     * 轴① 喂拦截器既有检查 (isOrgUnbounded / PLUGIN_DIM), 避免改安全关键的拦截器。relation 字段
+     * (creator/owner_org) 不影响 anchor (SELF 的成员/列锚分流由 meta.viaMembership 决定, 非此处)。
+     */
+    public OrgAnchor anchorOf() {
+        return switch (subject) {
+            case SELF -> OrgAnchor.SELF;
+            case MY_ORG -> OrgAnchor.PRIMARY_ORG;
+            case RELATION -> OrgAnchor.RELATION;
+            case CUSTOM -> OrgAnchor.CUSTOM_ORG;
+            case PLUGIN_DIM -> OrgAnchor.PLUGIN_DIM;
+            case ALL -> OrgAnchor.ALL;
+        };
+    }
+
+    /**
      * M1 三轴 → relation_grants 迁移映射 (R3a 字节等价的核心)。
      *
      * <p>{@code isMembershipResource}: 资源是否成员型 (storage_kind=SUBJECT_GRAPH, 如 user/student) ——

@@ -55,8 +55,7 @@ public class DataPermissionPolicyService {
      */
     public ScopeSpec getScopeSpec(Long tenantId, Long roleId, String resourceCode, String actionClass) {
         // apply_to IN (actionClass, 'BOTH'), 精确动作类优先 (apply_to='BOTH' ASC → 非 BOTH 排前)
-        String sql = "SELECT apply_to, org_anchor, anchor_param, include_subtree, " +
-                "custom_org_ids, subject_rel_include, subject_rel_exclude, type_filter, relation_grants " +
+        String sql = "SELECT apply_to, subject_rel_include, subject_rel_exclude, type_filter, relation_grants " +
                 "FROM role_data_scopes " +
                 "WHERE tenant_id = ? AND role_id = ? AND resource_code = ? " +
                 "AND apply_to IN (?, 'BOTH') AND deleted = 0 " +
@@ -73,26 +72,21 @@ public class DataPermissionPolicyService {
     /** 把 role_data_scopes 一行 (新轴列) 映射为 {@link ScopeSpec}。 */
     private ScopeSpec mapToScopeSpec(Map<String, Object> row) {
         String applyTo = (String) row.get("apply_to");
-        OrgAnchor anchor = OrgAnchor.fromCode((String) row.get("org_anchor"));
-        String anchorParam = (String) row.get("anchor_param");
-        boolean includeSubtree = getIntValue(row.get("include_subtree")) == 1;
-
-        if (anchor == null) {
-            // 防御: org_anchor 为 NULL (T4 迁移后不应出现) → 收窄到 SELF, 不放宽。
-            log.warn("role_data_scopes row has NULL org_anchor — defaulting to SELF (data should have been migrated by T4)");
-            anchor = OrgAnchor.SELF;
-        }
+        List<RelationGrant> grants = parseRelationGrants(row.get("relation_grants"));
+        // R3a-2b: 轴① 从 relation_grants 反推 (删 org_anchor 等列后唯一来源)。引擎本身用 grants 出 SQL;
+        // 此处轴① 仅供拦截器既有检查 (isOrgUnbounded / PLUGIN_DIM withResourceType) 复用, 避免改拦截器。
+        DerivedAxis axis = deriveAxis(grants);
 
         return ScopeSpec.builder()
                 .applyTo(applyTo)
-                .orgAnchor(anchor)
-                .anchorParam(anchorParam)
-                .includeSubtree(includeSubtree)
-                .customOrgIds(parseLongSet(row.get("custom_org_ids")))
+                .orgAnchor(axis.anchor())
+                .anchorParam(axis.param())
+                .includeSubtree(axis.subtree())
+                .customOrgIds(axis.orgIds())
                 .subjectRelInclude(parseStringSet(row.get("subject_rel_include")))
                 .subjectRelExclude(parseStringSet(row.get("subject_rel_exclude")))
                 .typeFilter(parseStringSet(row.get("type_filter")))
-                .relationGrants(parseRelationGrants(row.get("relation_grants")))
+                .relationGrants(grants)
                 .build();
     }
 
@@ -147,22 +141,32 @@ public class DataPermissionPolicyService {
         String typeFilterFinal = (spec.getTypeFilter() != null && !spec.getTypeFilter().isEmpty())
                 ? toJson(spec.getTypeFilter()) : typeFilterJson;
 
+        // R3a-2b: 轴① → relation_grants JSON (写真相源; 与 anchor 列双写, Step B 删列后单写)。
+        // isMembership 决定 SELF 落 member-self (owner_org) 还是 creator —— 须与引擎 meta.viaMembership 一致。
+        Set<Long> customSet = (spec.getCustomOrgIds() != null && !spec.getCustomOrgIds().isEmpty())
+                ? spec.getCustomOrgIds() : parseLongSet(customOrgIdsJson);
+        List<RelationGrant> grants = RelationGrant.fromM1Axes(
+                spec.getOrgAnchor() != null ? spec.getOrgAnchor() : OrgAnchor.SELF,
+                anchorParam, includeSubtree == 1, customSet,
+                isMembershipResource(permission.getModuleCode()));
+        String relationGrantsJson = toJsonList(grants);
+
         // UK (role_id, resource_code, apply_to, tenant_id) 不含 deleted, 软删后再 INSERT 会撞 unique.
         // 用 ON DUPLICATE KEY 覆盖同一行, 顺便把 deleted 翻回 0。
         // T9: 只写可组合轴列 (scope_type/custom_org_unit_ids 列已删)。
         jdbcTemplate.update(
                 "INSERT INTO role_data_scopes (tenant_id, role_id, resource_code, apply_to, " +
                 "org_anchor, anchor_param, include_subtree, custom_org_ids, subject_rel_include, subject_rel_exclude, " +
-                "type_filter, priority, created_at, deleted) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 0) " +
+                "type_filter, relation_grants, priority, created_at, deleted) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), 0) " +
                 "ON DUPLICATE KEY UPDATE " +
                 "org_anchor=VALUES(org_anchor), anchor_param=VALUES(anchor_param), include_subtree=VALUES(include_subtree), " +
                 "custom_org_ids=VALUES(custom_org_ids), subject_rel_include=VALUES(subject_rel_include), " +
                 "subject_rel_exclude=VALUES(subject_rel_exclude), " +
-                "type_filter=VALUES(type_filter), priority=VALUES(priority), updated_at=NOW(), deleted=0",
+                "type_filter=VALUES(type_filter), relation_grants=VALUES(relation_grants), priority=VALUES(priority), updated_at=NOW(), deleted=0",
                 tenantId, permission.getRoleId(), permission.getModuleCode(), applyTo,
                 orgAnchor, anchorParam, includeSubtree, customOrgIdsJson, subjectRelIncludeJson, subjectRelExcludeJson,
-                typeFilterFinal,
+                typeFilterFinal, relationGrantsJson,
                 0);
 
         log.info("Saved role data scope: tenantId={}, roleId={}, resourceCode={}, scopeType={}, anchor={}, applyTo={}",
@@ -184,8 +188,7 @@ public class DataPermissionPolicyService {
     /** 获取角色的所有权限配置 */
     public List<RoleDataPermission> getRolePermissions(Long tenantId, Long roleId) {
         String sql = "SELECT id, role_id, resource_code, type_filter, " +
-                "apply_to, org_anchor, anchor_param, include_subtree, custom_org_ids, " +
-                "subject_rel_include, subject_rel_exclude " +
+                "apply_to, subject_rel_include, subject_rel_exclude, relation_grants " +
                 "FROM role_data_scopes WHERE tenant_id = ? AND role_id = ? AND deleted = 0";
 
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(sql, tenantId, roleId);
@@ -204,12 +207,15 @@ public class DataPermissionPolicyService {
     // ══════════════════════════════════════════════════════════════
 
     private RoleDataPermission mapToPermission(Map<String, Object> row) {
-        OrgAnchor anchor = OrgAnchor.fromCode((String) row.get("org_anchor"));
-        String anchorParam = (String) row.get("anchor_param");
-        boolean includeSubtree = getIntValue(row.get("include_subtree")) == 1;
-        Set<Long> customOrgIds = parseLongSet(row.get("custom_org_ids"));
+        // R3a-2b: 轴① 从 relation_grants 反推 (删 org_anchor 等列后唯一来源)。
+        List<RelationGrant> grants = parseRelationGrants(row.get("relation_grants"));
+        DerivedAxis axis = deriveAxis(grants);
+        OrgAnchor anchor = axis.anchor();
+        String anchorParam = axis.param();
+        boolean includeSubtree = axis.subtree();
+        Set<Long> customOrgIds = axis.orgIds();
 
-        // T9: scope_type 列已删 → 由轴① 反推面向 UI 的命名范围码 (回填前端)。
+        // scope_type 列已删 → 由轴① 反推面向 UI 的命名范围码 (回填前端)。
         // 预设命中 → 预设名 (ALL/SELF/DEPARTMENT/.../CUSTOM); 插件维度 → 维度码 (anchorParam)。
         String scopeCode = ScopePreset.scopeCodeFromAxes(anchor, anchorParam, includeSubtree);
         if (scopeCode == null && anchor == OrgAnchor.PLUGIN_DIM) {
@@ -340,6 +346,41 @@ public class DataPermissionPolicyService {
             return (list == null || list.isEmpty()) ? null : list;
         } catch (Exception e) {
             log.warn("Failed to parse relation_grants JSON: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /** 从 grants 反推的轴① 值 (R3a-2b: 删 org_anchor 等列后, 喂拦截器既有检查 + UI scopeCode)。 */
+    private record DerivedAxis(OrgAnchor anchor, String param, boolean subtree, Set<Long> orgIds) {}
+
+    /**
+     * 从 relation_grants 反推轴① (单 grant; R3a 现全单 grant, 多 grant 取第一条)。
+     * grants 空 → 收窄默认 SELF (不放宽)。供拦截器 isOrgUnbounded/PLUGIN_DIM 检查 + UI scopeCode 复用。
+     */
+    private DerivedAxis deriveAxis(List<RelationGrant> grants) {
+        if (grants == null || grants.isEmpty()) {
+            return new DerivedAxis(OrgAnchor.SELF, null, false, null);
+        }
+        RelationGrant g0 = grants.get(0);
+        return new DerivedAxis(g0.anchorOf(), g0.subjectParam(), g0.subtree(), g0.orgIds());
+    }
+
+    /** 资源是否成员型 (owner_org=SUBJECT_GRAPH, 如 student/user) —— 决 SELF 落 member-self/creator。 */
+    private boolean isMembershipResource(String resourceCode) {
+        Integer cnt = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM resource_relations WHERE resource_code = ? " +
+                "AND relation_code = 'owner_org' AND storage_kind = 'SUBJECT_GRAPH' AND enabled = 1",
+                Integer.class, resourceCode);
+        return cnt != null && cnt > 0;
+    }
+
+    /** 序列化 grants 列表为 JSON; null/空 → null (列写 NULL)。 */
+    private String toJsonList(List<RelationGrant> grants) {
+        if (grants == null || grants.isEmpty()) return null;
+        try {
+            return objectMapper.writeValueAsString(grants);
+        } catch (Exception e) {
+            log.warn("Failed to serialize relation_grants: {}", e.getMessage());
             return null;
         }
     }

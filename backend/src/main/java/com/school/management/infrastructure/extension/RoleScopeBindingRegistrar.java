@@ -1,7 +1,9 @@
 package com.school.management.infrastructure.extension;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.domain.access.model.OrgAnchor;
 import com.school.management.domain.access.model.ScopePreset;
+import com.school.management.domain.access.model.valueobject.RelationGrant;
 import com.school.management.domain.access.model.valueobject.ScopeSpec;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class RoleScopeBindingRegistrar {
 
     private final JdbcTemplate jdbc;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public enum Result { CREATED, SKIPPED_EXISTING, SKIPPED_NO_ROLE, SKIPPED_NO_RESOURCE }
 
@@ -65,27 +68,38 @@ public class RoleScopeBindingRegistrar {
 
         // 3. 把命名范围码 (scopeType) 翻译为可组合轴① (T9: scope_type 列已删)。
         //    预设命中 → 锚点/参数/子树; 非预设 (BY_CLASS/BY_MAJOR…) → PLUGIN_DIM + anchorParam=scopeType。
-        String orgAnchor;
+        OrgAnchor anchorEnum;
         String anchorParam;
         int includeSubtree;
         ScopePreset preset = ScopePreset.fromLegacyScopeType(scopeType);
         if (preset != null) {
             ScopeSpec spec = preset.toSpec();
-            orgAnchor = spec.getOrgAnchor().name();
+            anchorEnum = spec.getOrgAnchor();
             anchorParam = spec.getAnchorParam();
             includeSubtree = spec.isIncludeSubtree() ? 1 : 0;
         } else {
-            orgAnchor = OrgAnchor.PLUGIN_DIM.name();
+            anchorEnum = OrgAnchor.PLUGIN_DIM;
             anchorParam = scopeType;
             includeSubtree = 0;
+        }
+
+        // R3a-2b: 轴① → relation_grants JSON (写真相源; 与 org_anchor 列双写, Step B 删列后单写)。
+        // isMembership 决定 SELF 落 member-self (owner_org) 还是 creator —— 与引擎 meta.viaMembership 一致。
+        String relationGrantsJson = null;
+        try {
+            relationGrantsJson = objectMapper.writeValueAsString(RelationGrant.fromM1Axes(
+                anchorEnum, anchorParam, includeSubtree == 1, null, isMembershipResource(resourceCode)));
+        } catch (Exception e) {
+            log.warn("[RoleScopeBinding] serialize relation_grants failed ({} × {}): {}",
+                roleCode, resourceCode, e.getMessage());
         }
 
         // INSERT IGNORE (依赖 uk_role_res 唯一键: role_id + resource_code + apply_to + tenant_id)
         int affected = jdbc.update(
             "INSERT IGNORE INTO role_data_scopes (role_id, resource_code, apply_to, " +
-            "org_anchor, anchor_param, include_subtree, priority, tenant_id, deleted) " +
-            "VALUES (?, ?, 'BOTH', ?, ?, ?, ?, ?, 0)",
-            roleId, resourceCode, orgAnchor, anchorParam, includeSubtree, 0, actualTenantId);
+            "org_anchor, anchor_param, include_subtree, relation_grants, priority, tenant_id, deleted) " +
+            "VALUES (?, ?, 'BOTH', ?, ?, ?, ?, ?, ?, 0)",
+            roleId, resourceCode, anchorEnum.name(), anchorParam, includeSubtree, relationGrantsJson, 0, actualTenantId);
 
         if (affected > 0) {
             log.info("[RoleScopeBinding] CREATED: {} × {} = {} (role_id={}, tenant={})",
@@ -95,5 +109,14 @@ public class RoleScopeBindingRegistrar {
         log.debug("[RoleScopeBinding] SKIPPED (existing): {} × {} (admin manual config preserved)",
             roleCode, resourceCode);
         return Result.SKIPPED_EXISTING;
+    }
+
+    /** 资源是否成员型 (owner_org=SUBJECT_GRAPH, 如 student/user) —— 决 SELF 落 member-self/creator。 */
+    private boolean isMembershipResource(String resourceCode) {
+        Integer cnt = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM resource_relations WHERE resource_code = ? " +
+            "AND relation_code = 'owner_org' AND storage_kind = 'SUBJECT_GRAPH' AND enabled = 1",
+            Integer.class, resourceCode);
+        return cnt != null && cnt > 0;
     }
 }
