@@ -317,7 +317,8 @@ public class CoreManifest implements PluginPackage {
             dr("inspection_summary",     "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "CUSTOM"),
             dr("inspection_template",    "ALL", "SELF"),
             dr("inspection_appeal",      "SELF"),
-            dr("inspection_personal",    "SELF")
+            dr("inspection_personal",    "SELF"),
+            dr("entity_event",           "ALL", "SELF")   // R2.2 前置②: 审计事件独立码 (无 org 维度)
         );
     }
 
@@ -353,7 +354,9 @@ public class CoreManifest implements PluginPackage {
             orgCreator("inspection_observation", "org_unit_id", "created_by"),
             orgCreator("inspection_violation", "org_unit_id", "created_by"),
             orgCreator("inspection_corrective", "org_unit_id", "created_by"),
-            orgCreator("inspection_appeal", "org_unit_id", "submitter_user_id")  // 创建者列特例
+            orgCreator("inspection_appeal", "org_unit_id", "submitter_user_id"),  // 创建者列特例
+            // R2.2 前置②: entity_events 无 org_unit_id, owner_org/creator 均借 created_by (冻结 workaround, 见 TODO)
+            orgCreator("entity_event", "created_by", "created_by")
         ).flatMap(s -> s);
     }
 
