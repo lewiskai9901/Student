@@ -245,11 +245,14 @@ public class DataPermissionInterceptor implements Interceptor {
             // 但核心路径的 hasResourceType() 选择 *不可* 被 moduleCode 污染 (否则核心 scope 误走
             // access_relation)。故仅在 PLUGIN_DIM 时切换到带兜底的 meta 变体。
             //
-            // ⚠ R3b 已知限制: roleMeta 是 meta 级 (整条 spec 共享), 多 grant 时若**混**有 PLUGIN_DIM
-            // 与非 PLUGIN_DIM grant, withResourceType 会污染同条非 PLUGIN_DIM grant (推去 access_relation
-            // → DENY 被丢)。即"PLUGIN_DIM ∨ MY_ORG"这类混配只剩 PLUGIN_DIM。真修需把 withResourceType
-            // 下沉到 evaluator 多 grant 循环按 grant 应用 (per-grant meta)。现单 grant 全部正确; 多 grant
-            // 仅"全非 PLUGIN_DIM"(creator∨org∨relation, 即 inspection 受检面用例) 正确。待 R3b 深化/R4。
+            // ⚠ R3b 已知限制 (仅 COLUMN 资源): roleMeta 是 meta 级 (整条 spec 共享), COLUMN 资源
+            // (!viaMembership) 多 grant 混 PLUGIN_DIM 与非 PLUGIN_DIM 时, withResourceType 注入的
+            // moduleCode 会让同条非 PLUGIN_DIM grant 误走 accessRelationSelect → DENY 被丢。
+            // membership 资源不受影响 (subjectSelect viaMembership 优先于 hasResourceType)。
+            // ⚠ 简单"非 PLUGIN_DIM grant 剥 resourceType"修法**错**: 无法区分此 moduleCode 兜底与
+            // **原生** access_relation resourceType, 会破坏真 access_relation 资源 (字节等价测试已证)。
+            // 正解: 不把 moduleCode 注入共享 meta, plugin-dim resolve 另路拿 moduleCode (per-grant)。
+            // 现单 grant 全部正确; 多 grant 全非 PLUGIN_DIM 正确。无真消费者 (gated 于 R4)。待 R3b 深化。
             ResourceScopeMeta roleMeta = meta;
             if (spec.hasPluginDimGrant()
                     && (meta.resourceType() == null || meta.resourceType().isEmpty())) {
