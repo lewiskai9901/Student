@@ -1,5 +1,7 @@
 package com.school.management.domain.access.model.valueobject;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.domain.access.model.OrgAnchor;
 import com.school.management.domain.access.model.SubjectScope;
 import org.junit.jupiter.api.DisplayName;
@@ -91,5 +93,34 @@ class RelationGrantTest {
         assertEquals(SubjectScope.CUSTOM, g.subject());
         assertEquals(ids, g.orgIds());
         assertTrue(g.subtree(), "CUSTOM_ORG 须透传 subtree (否则 CUSTOM+子树退化成裸 IN)");
+    }
+
+    // ── Jackson JSON round-trip: relation_grants 列存取依赖 (R3a-2 getScopeSpec) ──
+
+    @Test
+    @DisplayName("Jackson round-trip: List<RelationGrant> 序列化↔反序列化 (含 CUSTOM orgIds)")
+    void jacksonRoundTrip() throws Exception {
+        ObjectMapper om = new ObjectMapper();
+        List<RelationGrant> grants = List.of(
+                new RelationGrant("owner_org", SubjectScope.MY_ORG, null, true, null),
+                new RelationGrant("owner_org", SubjectScope.CUSTOM, null, false, Set.of(7L, 8L)));
+        String json = om.writeValueAsString(grants);
+        List<RelationGrant> back = om.readValue(json, new TypeReference<List<RelationGrant>>() {});
+        assertEquals(grants, back, "relation_grants JSON 须无损往返 (record + -parameters)");
+    }
+
+    @Test
+    @DisplayName("Jackson 反序列化迁移最小 JSON (subject 枚举 + 缺省字段补 null/false)")
+    void jacksonDeserializeMinimalMigrationJson() throws Exception {
+        ObjectMapper om = new ObjectMapper();
+        String json = "[{\"relation\":\"owner_org\",\"subject\":\"PLUGIN_DIM\",\"subjectParam\":\"BY_CLASS\"}]";
+        List<RelationGrant> grants = om.readValue(json, new TypeReference<List<RelationGrant>>() {});
+        assertEquals(1, grants.size());
+        RelationGrant g = grants.get(0);
+        assertEquals("owner_org", g.relation());
+        assertEquals(SubjectScope.PLUGIN_DIM, g.subject());
+        assertEquals("BY_CLASS", g.subjectParam());
+        assertFalse(g.subtree());
+        assertNull(g.orgIds());
     }
 }

@@ -6,6 +6,7 @@ import com.school.management.domain.access.model.OrgAnchor;
 import com.school.management.domain.access.model.ScopePreset;
 import com.school.management.domain.access.model.entity.DataScopeItem;
 import com.school.management.domain.access.model.entity.RoleDataPermission;
+import com.school.management.domain.access.model.valueobject.RelationGrant;
 import com.school.management.domain.access.model.valueobject.ScopeSpec;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -55,7 +56,7 @@ public class DataPermissionPolicyService {
     public ScopeSpec getScopeSpec(Long tenantId, Long roleId, String resourceCode, String actionClass) {
         // apply_to IN (actionClass, 'BOTH'), 精确动作类优先 (apply_to='BOTH' ASC → 非 BOTH 排前)
         String sql = "SELECT apply_to, org_anchor, anchor_param, include_subtree, " +
-                "custom_org_ids, subject_rel_include, subject_rel_exclude, type_filter " +
+                "custom_org_ids, subject_rel_include, subject_rel_exclude, type_filter, relation_grants " +
                 "FROM role_data_scopes " +
                 "WHERE tenant_id = ? AND role_id = ? AND resource_code = ? " +
                 "AND apply_to IN (?, 'BOTH') AND deleted = 0 " +
@@ -91,6 +92,7 @@ public class DataPermissionPolicyService {
                 .subjectRelInclude(parseStringSet(row.get("subject_rel_include")))
                 .subjectRelExclude(parseStringSet(row.get("subject_rel_exclude")))
                 .typeFilter(parseStringSet(row.get("type_filter")))
+                .relationGrants(parseRelationGrants(row.get("relation_grants")))
                 .build();
     }
 
@@ -321,6 +323,23 @@ public class DataPermissionPolicyService {
             return (list == null || list.isEmpty()) ? null : new LinkedHashSet<>(list);
         } catch (Exception e) {
             log.warn("Failed to parse String set JSON: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 解析 relation_grants JSON 数组列 → {@code List<RelationGrant>} (R3)。
+     * null/空/解析失败 → null —— 调用方 (ScopeEvaluator) 由轴① bridge 兜底, fail-safe 不放宽。
+     */
+    private List<RelationGrant> parseRelationGrants(Object json) {
+        if (json == null) return null;
+        String raw = json.toString();
+        if (raw.isBlank()) return null;
+        try {
+            List<RelationGrant> list = objectMapper.readValue(raw, new TypeReference<List<RelationGrant>>() {});
+            return (list == null || list.isEmpty()) ? null : list;
+        } catch (Exception e) {
+            log.warn("Failed to parse relation_grants JSON: {}", e.getMessage());
             return null;
         }
     }

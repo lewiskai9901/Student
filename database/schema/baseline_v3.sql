@@ -10251,6 +10251,7 @@ CREATE TABLE `role_data_scopes` (
   `custom_org_ids` json DEFAULT NULL COMMENT 'axis① CUSTOM_ORG 时的组织 id 集',
   `subject_rel_include` json DEFAULT NULL COMMENT 'axis② 主体关系白名单(关系码集)',
   `subject_rel_exclude` json DEFAULT NULL COMMENT 'axis② 主体关系黑名单(关系码集)',
+  `relation_grants` json DEFAULT NULL COMMENT 'R3 关系授予 [{relation,subject,subjectParam?,subtree?,orgIds?}]; NULL=引擎轴① bridge 派生',
   `priority` int DEFAULT '0',
   `tenant_id` bigint NOT NULL DEFAULT '1',
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
