@@ -13,7 +13,7 @@ import java.util.List;
 @Mapper
 public interface PeriodSummaryMapper extends BaseMapper<PeriodSummaryPO> {
 
-    @DataPermission(module = "inspection_summary", orgUnitField = "org_unit_id", creatorField = "created_by")
+    @DataPermission(module = "inspection_summary")
     @Select("SELECT * FROM insp_period_summaries WHERE project_id = #{projectId} AND period_type = #{periodType} " +
             "AND period_start = #{periodStart} AND target_type = #{targetType} AND target_id = #{targetId} AND deleted = 0")
     PeriodSummaryPO findByProjectPeriodTarget(@Param("projectId") Long projectId,
@@ -22,14 +22,14 @@ public interface PeriodSummaryMapper extends BaseMapper<PeriodSummaryPO> {
                                                @Param("targetType") String targetType,
                                                @Param("targetId") Long targetId);
 
-    @DataPermission(module = "inspection_summary", orgUnitField = "org_unit_id", creatorField = "created_by")
+    @DataPermission(module = "inspection_summary")
     @Select("SELECT * FROM insp_period_summaries WHERE project_id = #{projectId} AND period_type = #{periodType} " +
             "AND period_start = #{periodStart} AND deleted = 0 ORDER BY ranking")
     List<PeriodSummaryPO> findByProjectAndPeriod(@Param("projectId") Long projectId,
                                                    @Param("periodType") String periodType,
                                                    @Param("periodStart") LocalDate periodStart);
 
-    @DataPermission(module = "inspection_summary", orgUnitField = "org_unit_id", creatorField = "created_by")
+    @DataPermission(module = "inspection_summary")
     @Select("SELECT * FROM insp_period_summaries WHERE target_type = #{targetType} AND target_id = #{targetId} " +
             "AND period_type = #{periodType} AND deleted = 0 ORDER BY period_start DESC")
     List<PeriodSummaryPO> findByTarget(@Param("targetType") String targetType,

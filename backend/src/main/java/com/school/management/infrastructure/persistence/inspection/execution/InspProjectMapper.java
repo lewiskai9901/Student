@@ -18,21 +18,21 @@ public interface InspProjectMapper extends BaseMapper<InspProjectPO> {
     /**
      * 按状态列举项目 — 应用数据权限过滤
      */
-    @DataPermission(module = "inspection_project", orgUnitField = "org_unit_id", creatorField = "created_by")
+    @DataPermission(module = "inspection_project")
     @Select("SELECT * FROM insp_projects WHERE status = #{status} AND deleted = 0")
     List<InspProjectPO> findByStatus(@Param("status") String status);
 
     /**
      * 按模板列举项目 — 应用数据权限过滤
      */
-    @DataPermission(module = "inspection_project", orgUnitField = "org_unit_id", creatorField = "created_by")
+    @DataPermission(module = "inspection_project")
     @Select("SELECT * FROM insp_projects WHERE template_id = #{templateId} AND deleted = 0")
     List<InspProjectPO> findByTemplateId(@Param("templateId") Long templateId);
 
     /**
      * 列举所有项目 — 应用数据权限过滤（最重要：列表页入口）
      */
-    @DataPermission(module = "inspection_project", orgUnitField = "org_unit_id", creatorField = "created_by")
+    @DataPermission(module = "inspection_project")
     @Select("SELECT * FROM insp_projects WHERE deleted = 0 ORDER BY created_at DESC")
     List<InspProjectPO> findAll();
 

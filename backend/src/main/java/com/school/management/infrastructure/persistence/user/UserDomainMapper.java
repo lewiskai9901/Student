@@ -56,7 +56,7 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
     /**
      * 根据组织单元ID查找用户（通过 access_relations member 派生归属）
      */
-    @DataPermission(module = "user", tableAlias = "u", viaMembership = true)
+    @DataPermission(module = "user", tableAlias = "u")
     @Select("SELECT u.* FROM users u " +
             "JOIN access_relations ar ON ar.subject_id = u.id " +
             "AND ar.relation = 'member' AND ar.resource_type = 'org_unit' " +
@@ -72,7 +72,7 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
      *   <li>keyword 非空 → 同时匹配 username / real_name / phone</li>
      * </ul>
      */
-    @DataPermission(module = "user", tableAlias = "u", viaMembership = true)
+    @DataPermission(module = "user", tableAlias = "u")
     @Select("<script>" +
             "SELECT DISTINCT u.* FROM users u " +
             "JOIN access_relations ar ON ar.subject_id = u.id " +
@@ -103,7 +103,7 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
     /**
      * 根据组织单元ID列表查找用户（通过 access_relations member 派生归属）
      */
-    @DataPermission(module = "user", tableAlias = "u", viaMembership = true)
+    @DataPermission(module = "user", tableAlias = "u")
     @Select("<script>" +
             "SELECT u.* FROM users u " +
             "JOIN access_relations ar ON ar.subject_id = u.id " +
@@ -120,14 +120,14 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
     /**
      * 根据用户类型编码查找所有用户
      */
-    @DataPermission(module = "user", tableAlias = "u", viaMembership = true)
+    @DataPermission(module = "user", tableAlias = "u")
     @Select("SELECT u.* FROM users u WHERE u.user_type_code = #{userTypeCode} AND u.deleted = 0")
     List<UserPO> findByUserTypeCode(@Param("userTypeCode") String userTypeCode);
 
     /**
      * 分页查询用户
      */
-    @DataPermission(module = "user", tableAlias = "u", viaMembership = true)
+    @DataPermission(module = "user", tableAlias = "u")
     @Select("SELECT u.* FROM users u WHERE u.deleted = 0 ORDER BY u.created_at DESC LIMIT #{offset}, #{size}")
     List<UserPO> findAllPaged(@Param("offset") int offset, @Param("size") int size);
 
@@ -156,7 +156,7 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
      * 条件分页查询用户（通过 access_relations member 派生归属关联组织）
      * 列表仍返回 org_unit_id / org_unit_name 字段以保持前端契约不变。
      */
-    @DataPermission(module = "user", tableAlias = "u", viaMembership = true)
+    @DataPermission(module = "user", tableAlias = "u")
     @Select("<script>" +
             "SELECT u.*, ar.resource_id AS org_unit_id, ou.unit_name AS org_unit_name " +
             "FROM users u " +
@@ -195,7 +195,7 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
     /**
      * 条件统计用户总数（通过 access_relations member 派生归属）
      */
-    @DataPermission(module = "user", tableAlias = "u", viaMembership = true)
+    @DataPermission(module = "user", tableAlias = "u")
     @Select("<script>" +
             "SELECT COUNT(1) FROM users u " +
             "<if test='orgUnitId != null'>" +
@@ -227,7 +227,7 @@ public interface UserDomainMapper extends BaseMapper<UserPO> {
     /**
      * 获取简单用户列表（用于选择器，access_relations member 派生归属）
      */
-    @DataPermission(module = "user", tableAlias = "u", viaMembership = true)
+    @DataPermission(module = "user", tableAlias = "u")
     @Select("<script>" +
             "SELECT u.id, u.username, u.real_name, u.gender, u.user_type_code, " +
             "ar.resource_id AS org_unit_id, o.unit_name AS org_unit_name " +

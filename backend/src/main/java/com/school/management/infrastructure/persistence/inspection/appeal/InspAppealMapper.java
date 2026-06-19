@@ -19,14 +19,14 @@ public interface InspAppealMapper extends BaseMapper<InspAppealPO> {
     List<InspAppealPO> findBySubmitterUserId(@Param("userId") Long userId);
 
     /** 按状态查 (审核员看待审清单) — 走数据权限 */
-    @DataPermission(module = "inspection_appeal", orgUnitField = "org_unit_id", creatorField = "submitter_user_id")
+    @DataPermission(module = "inspection_appeal")
     @Select("SELECT * FROM inspection_appeals WHERE status = #{status} AND deleted = 0 ORDER BY created_at")
     List<InspAppealPO> findByStatus(@Param("status") String status);
 
     @Select("SELECT * FROM inspection_appeals WHERE submission_detail_id = #{detailId} AND deleted = 0")
     List<InspAppealPO> findBySubmissionDetailId(@Param("detailId") Long detailId);
 
-    @DataPermission(module = "inspection_appeal", orgUnitField = "org_unit_id", creatorField = "submitter_user_id")
+    @DataPermission(module = "inspection_appeal")
     @Select("SELECT * FROM inspection_appeals WHERE project_id = #{projectId} AND deleted = 0 ORDER BY created_at DESC")
     List<InspAppealPO> findByProjectId(@Param("projectId") Long projectId);
 }

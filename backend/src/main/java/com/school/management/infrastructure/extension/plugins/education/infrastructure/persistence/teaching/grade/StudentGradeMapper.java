@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 @Mapper
-@DataPermission(module = "student_grade", orgUnitField = "org_unit_id")
+@DataPermission(module = "student_grade")
 public interface StudentGradeMapper extends BaseMapper<StudentGradePO> {
 
     @Select("SELECT g.id, g.batch_id AS batchId, g.semester_id AS semesterId, " +

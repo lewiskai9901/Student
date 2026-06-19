@@ -11,15 +11,15 @@ import java.util.List;
 @Mapper
 public interface SubmissionObservationMapper extends BaseMapper<SubmissionObservationPO> {
 
-    @DataPermission(module = "inspection_observation", orgUnitField = "org_unit_id", creatorField = "created_by")
+    @DataPermission(module = "inspection_observation")
     @Select("SELECT * FROM insp_submission_observations WHERE submission_id = #{submissionId} AND deleted = 0 ORDER BY id")
     List<SubmissionObservationPO> findBySubmissionId(@Param("submissionId") Long submissionId);
 
-    @DataPermission(module = "inspection_observation", orgUnitField = "org_unit_id", creatorField = "created_by")
+    @DataPermission(module = "inspection_observation")
     @Select("SELECT * FROM insp_submission_observations WHERE submission_id = #{submissionId} AND is_negative = 1 AND deleted = 0 ORDER BY id")
     List<SubmissionObservationPO> findNegativeBySubmissionId(@Param("submissionId") Long submissionId);
 
-    @DataPermission(module = "inspection_observation", orgUnitField = "org_unit_id", creatorField = "created_by")
+    @DataPermission(module = "inspection_observation")
     @Select("<script>" +
             "SELECT * FROM insp_submission_observations WHERE deleted = 0" +
             "<if test='projectId != null'> AND project_id = #{projectId}</if>" +
@@ -38,7 +38,7 @@ public interface SubmissionObservationMapper extends BaseMapper<SubmissionObserv
             @Param("limit") int limit,
             @Param("offset") int offset);
 
-    @DataPermission(module = "inspection_observation", orgUnitField = "org_unit_id", creatorField = "created_by")
+    @DataPermission(module = "inspection_observation")
     @Select("<script>" +
             "SELECT COUNT(*) FROM insp_submission_observations WHERE deleted = 0" +
             "<if test='projectId != null'> AND project_id = #{projectId}</if>" +

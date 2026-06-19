@@ -16,7 +16,7 @@ import java.util.List;
 // classes 是 org_units 视图: id=班级自身 org (member 挂它), org_unit_id=父年级。
 // 数据权限须按班级自身 org 过滤 (orgField IN 子树), 故 orgUnitField=id 不是 org_unit_id —
 // 否则 CUSTOM=某班看不到该班自身, 且 DEPARTMENT 被错当成"下一级"。详见 SchoolClassDataPermissionOrgFieldTest。
-@DataPermission(module = "school_class", orgUnitField = "id")
+@DataPermission(module = "school_class")
 public interface SchoolClassMapper extends BaseMapper<SchoolClassPO> {
 
     /**

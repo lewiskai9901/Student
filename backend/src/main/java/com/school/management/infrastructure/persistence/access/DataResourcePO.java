@@ -24,9 +24,6 @@ public class DataResourcePO {
     /** access_relations 表里对应的 resource_type(可为 NULL,表示不走关系子查询) */
     private String accessResourceType;
 
-    private String orgUnitField;
-    private String creatorField;
-
     /** 业务表里指向类型码的字段(类型过滤用), 如 user→user_type_code; NULL=该资源不支持类型过滤 */
     private String typeField;
 

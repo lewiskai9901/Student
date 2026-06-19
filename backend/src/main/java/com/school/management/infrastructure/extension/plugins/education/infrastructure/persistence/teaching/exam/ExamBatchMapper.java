@@ -5,6 +5,6 @@ import com.school.management.infrastructure.access.DataPermission;
 import org.apache.ibatis.annotations.Mapper;
 
 @Mapper
-@DataPermission(module = "exam_batch", orgUnitField = "", creatorField = "created_by")
+@DataPermission(module = "exam_batch")
 public interface ExamBatchMapper extends BaseMapper<ExamBatchPO> {
 }

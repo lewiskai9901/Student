@@ -5,6 +5,6 @@ import com.school.management.infrastructure.access.DataPermission;
 import org.apache.ibatis.annotations.Mapper;
 
 @Mapper
-@DataPermission(module = "schedule_conflict_record", orgUnitField = "org_unit_id", creatorField = "created_by")
+@DataPermission(module = "schedule_conflict_record")
 public interface ScheduleConflictRecordMapper extends BaseMapper<ScheduleConflictRecordPO> {
 }

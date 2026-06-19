@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 @Mapper
-@DataPermission(module = "teaching_task", orgUnitField = "org_unit_id", creatorField = "created_by")
+@DataPermission(module = "teaching_task")
 public interface TeachingTaskMapper extends BaseMapper<TeachingTaskPO> {
 
     @Select("SELECT course_id, weekly_hours, total_hours " +

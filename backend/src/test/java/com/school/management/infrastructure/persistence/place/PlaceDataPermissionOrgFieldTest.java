@@ -1,46 +1,38 @@
 package com.school.management.infrastructure.persistence.place;
 
-import com.school.management.infrastructure.access.DataPermission;
+import com.school.management.infrastructure.extension.Contribution;
+import com.school.management.infrastructure.extension.ResourceRelationDef;
+import com.school.management.infrastructure.extension.plugins.core.CoreManifest;
 import org.junit.jupiter.api.Test;
-
-import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * 守护: {@link UniversalPlaceMapper} 全部 {@code @DataPermission.orgUnitField}
- * 必须是 {@code effective_org_unit_id} (投影列), 不得回退旧列名 {@code org_unit_id}。
+ * 守护: {@code place} 资源的组织锚点 (resource_relations 的 owner_org 关系) 必须是投影列
+ * {@code effective_org_unit_id}, 不得回退旧列名 {@code org_unit_id}。
+ *
+ * <p>统一锚定 R2.4 起锚点真相在 {@link CoreManifest#contribute()} 的 {@link ResourceRelationDef}
+ * (写入 {@code resource_relations}), 不再是 {@code @DataPermission} 注解 (注解锚属性已删)。
+ * 故本守护从"断言注解"迁为"断言 manifest 声明"。
  *
  * <p>背景 (V20260612_2 场所归属关系化): 归属真相在 access_relations 的
- * {@code belongs_to|place|org_unit} 覆盖点关系, {@code places.effective_org_unit_id}
- * 是解析后含继承的投影列。数据权限过滤必须走投影列 —— 这同时修复了旧模型下
- * "NULL 继承场所匹配不到 scope 过滤" 的缺陷 (旧 org_unit_id 列 NULL=继承,
- * {@code org_unit_id IN (子树)} 永远排除继承态场所)。
- *
- * <p>另: {@code data_resources} 的 place 行 {@code org_unit_field} 必须保持 NULL
- * (拦截器优先 moduleConfig 列配置, 旧列名残留会压住注解 → "Unknown column" 500,
- * 同 V20260612_1 清洗的事故类别) — 该约束在迁移验证清单中以 SQL 断言, 此处守护注解侧。
+ * {@code belongs_to|place|org_unit} 覆盖点关系, {@code places.effective_org_unit_id} 是解析后
+ * 含继承的投影列。数据权限过滤必须走投影列 —— 旧 {@code org_unit_id} 列 NULL=继承,
+ * {@code org_unit_id IN (子树)} 永远排除继承态场所 (旧模型缺陷)。
  */
 class PlaceDataPermissionOrgFieldTest {
 
     @Test
-    void allDataPermissionMethods_useEffectiveProjectionColumn() {
-        List<Method> annotated = Arrays.stream(UniversalPlaceMapper.class.getMethods())
-            .filter(m -> m.isAnnotationPresent(DataPermission.class))
-            .toList();
+    void placeOwnerOrg_usesEffectiveProjectionColumn() {
+        String col = new CoreManifest().contribute()
+            .filter(c -> c instanceof Contribution.ResourceRelationContribution)
+            .map(c -> ((Contribution.ResourceRelationContribution) c).def())
+            .filter(d -> d.resourceCode().equals("place") && d.relationCode().equals("owner_org"))
+            .map(ResourceRelationDef::columnName)
+            .findFirst().orElse(null);
 
-        assertThat(annotated)
-            .as("UniversalPlaceMapper 应有带 @DataPermission 的查询方法")
-            .isNotEmpty();
-
-        for (Method m : annotated) {
-            DataPermission ann = m.getAnnotation(DataPermission.class);
-            assertThat(ann.orgUnitField())
-                .as("方法 %s 的 orgUnitField 必须是投影列 effective_org_unit_id (归属真相在 belongs_to 关系)",
-                    m.getName())
-                .isEqualTo("effective_org_unit_id");
-        }
+        assertThat(col)
+            .as("place 的 owner_org 锚点必须是投影列 effective_org_unit_id (归属真相在 belongs_to 关系)")
+            .isEqualTo("effective_org_unit_id");
     }
 }

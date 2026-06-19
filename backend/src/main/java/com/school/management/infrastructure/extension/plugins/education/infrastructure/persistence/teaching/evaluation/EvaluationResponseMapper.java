@@ -11,6 +11,6 @@ import org.apache.ibatis.annotations.Mapper;
  *   - 管理员: DEPARTMENT_AND_BELOW
  */
 @Mapper
-@DataPermission(module = "evaluation_response", orgUnitField = "org_unit_id", creatorField = "student_id")
+@DataPermission(module = "evaluation_response")
 public interface EvaluationResponseMapper extends BaseMapper<EvaluationResponsePO> {
 }

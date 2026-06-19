@@ -115,7 +115,7 @@ class DataPermissionInterceptorTest {
     // Test fixtures: mapper classes / annotations
     // ------------------------------------------------------------------
 
-    @DataPermission(module = "student", tableAlias = "s", orgUnitField = "org_unit_id", creatorField = "created_by")
+    @DataPermission(module = "student", tableAlias = "s")
     interface AnnotatedMapper {
         List<Object> selectList();
 
@@ -136,8 +136,6 @@ class DataPermissionInterceptorTest {
         po.setModuleCode("student");
         po.setEnabled(enabled);
         po.setResourceType(resourceType);
-        po.setOrgUnitField("org_unit_id");
-        po.setCreatorField("created_by");
         return po;
     }
 
@@ -665,7 +663,7 @@ class DataPermissionInterceptorTest {
         }
 
         // membership 注解 (供 membershipDelegatesToEvaluator 用)
-        @DataPermission(module = "user", tableAlias = "u", viaMembership = true)
+        @DataPermission(module = "user", tableAlias = "u")
         interface MembershipMapper {
             List<Object> selectList();
         }

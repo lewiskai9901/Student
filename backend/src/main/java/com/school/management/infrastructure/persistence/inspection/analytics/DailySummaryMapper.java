@@ -13,7 +13,7 @@ import java.util.List;
 @Mapper
 public interface DailySummaryMapper extends BaseMapper<DailySummaryPO> {
 
-    @DataPermission(module = "inspection_summary", orgUnitField = "org_unit_id", creatorField = "created_by")
+    @DataPermission(module = "inspection_summary")
     @Select("SELECT * FROM insp_daily_summaries WHERE project_id = #{projectId} AND summary_date = #{date} " +
             "AND target_type = #{targetType} AND target_id = #{targetId} AND deleted = 0")
     DailySummaryPO findByProjectDateTarget(@Param("projectId") Long projectId,
@@ -21,20 +21,20 @@ public interface DailySummaryMapper extends BaseMapper<DailySummaryPO> {
                                             @Param("targetType") String targetType,
                                             @Param("targetId") Long targetId);
 
-    @DataPermission(module = "inspection_summary", orgUnitField = "org_unit_id", creatorField = "created_by")
+    @DataPermission(module = "inspection_summary")
     @Select("SELECT * FROM insp_daily_summaries WHERE project_id = #{projectId} AND summary_date = #{date} " +
             "AND deleted = 0 ORDER BY ranking")
     List<DailySummaryPO> findByProjectAndDate(@Param("projectId") Long projectId,
                                                @Param("date") LocalDate date);
 
-    @DataPermission(module = "inspection_summary", orgUnitField = "org_unit_id", creatorField = "created_by")
+    @DataPermission(module = "inspection_summary")
     @Select("SELECT * FROM insp_daily_summaries WHERE project_id = #{projectId} " +
             "AND summary_date >= #{startDate} AND summary_date <= #{endDate} AND deleted = 0 ORDER BY summary_date, ranking")
     List<DailySummaryPO> findByProjectAndDateRange(@Param("projectId") Long projectId,
                                                      @Param("startDate") LocalDate startDate,
                                                      @Param("endDate") LocalDate endDate);
 
-    @DataPermission(module = "inspection_summary", orgUnitField = "org_unit_id", creatorField = "created_by")
+    @DataPermission(module = "inspection_summary")
     @Select("SELECT * FROM insp_daily_summaries WHERE target_type = #{targetType} AND target_id = #{targetId} " +
             "AND summary_date >= #{startDate} AND summary_date <= #{endDate} AND deleted = 0 ORDER BY summary_date")
     List<DailySummaryPO> findByTarget(@Param("targetType") String targetType,

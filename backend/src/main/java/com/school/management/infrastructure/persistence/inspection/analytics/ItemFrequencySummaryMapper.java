@@ -12,13 +12,13 @@ import java.util.List;
 @Mapper
 public interface ItemFrequencySummaryMapper extends BaseMapper<ItemFrequencySummaryPO> {
 
-    @DataPermission(module = "inspection_summary", orgUnitField = "org_unit_id", creatorField = "created_by")
+    @DataPermission(module = "inspection_summary")
     @Select("SELECT * FROM insp_item_frequency_summaries WHERE project_id = #{projectId} AND period_type = #{periodType} AND period_start = #{periodStart} AND deleted = 0 ORDER BY occurrence_count DESC")
     List<ItemFrequencySummaryPO> findByProjectAndPeriod(@Param("projectId") Long projectId,
                                                          @Param("periodType") String periodType,
                                                          @Param("periodStart") LocalDate periodStart);
 
-    @DataPermission(module = "inspection_summary", orgUnitField = "org_unit_id", creatorField = "created_by")
+    @DataPermission(module = "inspection_summary")
     @Select("SELECT * FROM insp_item_frequency_summaries WHERE project_id = #{projectId} AND period_type = #{periodType} AND period_start = #{periodStart} AND deleted = 0 ORDER BY total_deduction DESC LIMIT #{limit}")
     List<ItemFrequencySummaryPO> findTopNByDeduction(@Param("projectId") Long projectId,
                                                       @Param("periodType") String periodType,

@@ -23,7 +23,7 @@ public interface EntityEventMapper extends BaseMapper<EntityEventPO> {
      * 按主体查询事件时间线 — 应用数据权限过滤（基于 created_by）
      * TODO: entity_events 表暂无 org_unit_id，过滤效果有限；后续添加该字段后更新注解
      */
-    @DataPermission(module = "entity_event", orgUnitField = "created_by", creatorField = "created_by")
+    @DataPermission(module = "entity_event")
     @Select("SELECT * FROM entity_events WHERE subject_type = #{subjectType} AND subject_id = #{subjectId} " +
             "AND deleted = 0 ORDER BY occurred_at DESC LIMIT #{limit}")
     List<EntityEventPO> selectBySubject(@Param("subjectType") String subjectType,
@@ -33,7 +33,7 @@ public interface EntityEventMapper extends BaseMapper<EntityEventPO> {
     /**
      * 按关联主体查询事件时间线 — 应用数据权限过滤
      */
-    @DataPermission(module = "entity_event", orgUnitField = "created_by", creatorField = "created_by")
+    @DataPermission(module = "entity_event")
     @Select("SELECT e.* FROM entity_events e " +
             "INNER JOIN entity_event_relations r ON r.event_id = e.id " +
             "WHERE r.related_type = #{relatedType} AND r.related_id = #{relatedId} " +

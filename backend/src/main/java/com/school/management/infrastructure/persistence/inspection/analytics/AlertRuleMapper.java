@@ -10,7 +10,7 @@ import java.util.List;
 @Mapper
 public interface AlertRuleMapper extends BaseMapper<AlertRulePO> {
 
-    @DataPermission(module = "inspection_alert", orgUnitField = "org_unit_id", creatorField = "created_by")
+    @DataPermission(module = "inspection_alert")
     @Select("SELECT * FROM insp_alert_rules WHERE is_enabled = 1 AND deleted = 0 ORDER BY created_at DESC")
     List<AlertRulePO> findEnabled();
 }

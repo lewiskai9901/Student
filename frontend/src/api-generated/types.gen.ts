@@ -1357,7 +1357,6 @@ export type DashboardSummary = {
 
 export type DataModulePo = {
   allowedScopes?: Array<string>
-  creatorField?: string
   domainCode?: string
   domainName?: string
   enabled?: boolean
@@ -1365,7 +1364,6 @@ export type DataModulePo = {
   industry?: string
   moduleCode?: string
   moduleName?: string
-  orgUnitField?: string
   pluginEnabled?: boolean
   resourceType?: string
   sortOrder?: number

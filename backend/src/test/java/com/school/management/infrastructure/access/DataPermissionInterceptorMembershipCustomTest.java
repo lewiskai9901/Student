@@ -88,7 +88,7 @@ class DataPermissionInterceptorMembershipCustomTest {
     // ── fixtures (copied from sibling test to stay isolated) ──
 
     @DataPermission(module = "student", tableAlias = "s",
-            viaMembership = true, membershipSubjectColumn = "user_id")
+            membershipSubjectColumn = "user_id")
     interface StudentMembershipMapper {
         List<Object> selectList();
     }
@@ -102,8 +102,6 @@ class DataPermissionInterceptorMembershipCustomTest {
         po.setModuleCode("student");
         po.setEnabled(true);
         po.setResourceType(resourceType);
-        po.setOrgUnitField("org_unit_id");
-        po.setCreatorField("created_by");
         return po;
     }
 

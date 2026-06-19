@@ -5,6 +5,6 @@ import com.school.management.infrastructure.access.DataPermission;
 import org.apache.ibatis.annotations.Mapper;
 
 @Mapper
-@DataPermission(module = "teaching_progress", orgUnitField = "org_unit_id", creatorField = "recorded_by")
+@DataPermission(module = "teaching_progress")
 public interface TeachingProgressMapper extends BaseMapper<TeachingProgressPO> {
 }

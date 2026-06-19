@@ -441,8 +441,6 @@ public class DataPermissionApplicationService {
         map.put("domainName", m.getDomainName());
         map.put("industry", m.getIndustry() != null ? m.getIndustry() : "CORE");
         map.put("resourceType", m.getResourceType());
-        map.put("orgUnitField", m.getOrgUnitField());
-        map.put("creatorField", m.getCreatorField());
         // 类型过滤(闸2/2b): 非空表示该资源支持"按类型过滤", typeEntity 指明可选类型来源
         map.put("typeField", m.getTypeField());
         map.put("typeEntity", m.getTypeEntity());

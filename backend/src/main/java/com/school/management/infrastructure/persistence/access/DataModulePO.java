@@ -24,8 +24,6 @@ public class DataModulePO {
     /** 所属行业 CORE/EDU/CARE/CUSTOM — 从 data_resources.industry 透传 */
     private String industry;
     private String resourceType;
-    private String orgUnitField;
-    private String creatorField;
     /** 类型过滤字段, 如 user→user_type_code; NULL=该资源不支持类型过滤 */
     private String typeField;
     /** 类型选项来源实体 USER/PLACE/ORG_UNIT — 供配置 UI 拉取可选类型 */

@@ -11,11 +11,11 @@ import java.util.List;
 @Mapper
 public interface CorrectiveSubtaskMapper extends BaseMapper<CorrectiveSubtaskPO> {
 
-    @DataPermission(module = "inspection_corrective", orgUnitField = "org_unit_id", creatorField = "created_by")
+    @DataPermission(module = "inspection_corrective")
     @Select("SELECT * FROM insp_corrective_subtasks WHERE case_id = #{caseId} AND deleted = 0 ORDER BY sort_order, created_at")
     List<CorrectiveSubtaskPO> findByCaseId(@Param("caseId") Long caseId);
 
-    @DataPermission(module = "inspection_corrective", orgUnitField = "org_unit_id", creatorField = "created_by")
+    @DataPermission(module = "inspection_corrective")
     @Select("SELECT COUNT(*) FROM insp_corrective_subtasks WHERE case_id = #{caseId} AND status = #{status} AND deleted = 0")
     int countByCaseIdAndStatus(@Param("caseId") Long caseId, @Param("status") String status);
 }

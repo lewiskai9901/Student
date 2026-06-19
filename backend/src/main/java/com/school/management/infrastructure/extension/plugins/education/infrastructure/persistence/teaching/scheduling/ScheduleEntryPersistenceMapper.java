@@ -9,7 +9,7 @@ import org.apache.ibatis.annotations.Select;
 import java.util.List;
 
 @Mapper
-@DataPermission(module = "schedule_entry", orgUnitField = "org_unit_id", creatorField = "created_by")
+@DataPermission(module = "schedule_entry")
 public interface ScheduleEntryPersistenceMapper extends BaseMapper<ScheduleEntryPO> {
 
     @Select("SELECT * FROM schedule_entries WHERE semester_id = #{sid} AND teacher_id = #{tid} AND weekday = #{day} AND deleted = 0 AND entry_status = 1")

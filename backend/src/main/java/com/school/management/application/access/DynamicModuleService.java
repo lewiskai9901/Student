@@ -130,8 +130,6 @@ public class DynamicModuleService {
         po.setIndustry(resource.getIndustry());
         // accessResourceType 单独控制"是否走 access_relations 子查询"
         po.setResourceType(resource.getAccessResourceType());
-        po.setOrgUnitField(resource.getOrgUnitField());
-        po.setCreatorField(resource.getCreatorField());
         po.setTypeField(resource.getTypeField());
         po.setTypeEntity(resource.getTypeEntity());
         // 轴②结果关系过滤能力: null → false
@@ -160,8 +158,6 @@ public class DynamicModuleService {
         resource.setResourceName(module.getModuleName());
         resource.setDomainCode(module.getDomainCode());
         resource.setDomainName(module.getDomainName());
-        resource.setOrgUnitField(module.getOrgUnitField());
-        resource.setCreatorField(module.getCreatorField());
         resource.setSortOrder(module.getSortOrder() != null ? module.getSortOrder() : 0);
         resource.setEnabled(Boolean.TRUE.equals(module.getEnabled()) ? 1 : 0);
         resource.setTenantId(module.getTenantId() != null ? module.getTenantId() : 1L);

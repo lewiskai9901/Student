@@ -5,6 +5,6 @@ import com.school.management.infrastructure.access.DataPermission;
 import org.apache.ibatis.annotations.Mapper;
 
 @Mapper
-@DataPermission(module = "teacher_preference", orgUnitField = "", creatorField = "teacher_id")
+@DataPermission(module = "teacher_preference")
 public interface TeacherPreferenceMapper extends BaseMapper<TeacherPreferencePO> {
 }

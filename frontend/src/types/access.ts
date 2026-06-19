@@ -172,8 +172,6 @@ export interface DataModuleDTO {
   /** 所属行业 CORE / EDU / HEALTH / CARE / CUSTOM (插件架构一级分组) */
   industry?: string
   resourceType?: string
-  orgUnitField: string
-  creatorField: string
   sortOrder: number
   enabled: boolean
   /** 所属插件是否启用 — false 时前端灰显并提示启用插件 */

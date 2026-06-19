@@ -5,6 +5,6 @@ import com.school.management.infrastructure.access.DataPermission;
 import org.apache.ibatis.annotations.Mapper;
 
 @Mapper
-@DataPermission(module = "class_course_assignment", orgUnitField = "org_unit_id", creatorField = "created_by")
+@DataPermission(module = "class_course_assignment")
 public interface ClassCourseAssignmentMapper extends BaseMapper<ClassCourseAssignmentPO> {
 }

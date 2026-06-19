@@ -35,7 +35,6 @@ import java.util.List;
 @DataPermission(
     module = "student",
     tableAlias = "s",
-    viaMembership = true,
     membershipSubjectColumn = "user_id"
 )
 public interface DddStudentMapper extends BaseMapper<StudentPO> {

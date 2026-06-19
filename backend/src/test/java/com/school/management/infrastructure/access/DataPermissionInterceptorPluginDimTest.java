@@ -92,8 +92,7 @@ class DataPermissionInterceptorPluginDimTest {
     // ── fixtures ──
 
     @DataPermission(module = "student", tableAlias = "s",
-            viaMembership = true, membershipSubjectColumn = "user_id",
-            creatorField = "created_by")
+            membershipSubjectColumn = "user_id")
     interface StudentMembershipMapper {
         List<Object> selectList();
     }
@@ -108,8 +107,6 @@ class DataPermissionInterceptorPluginDimTest {
         po.setModuleCode("student");
         po.setEnabled(true);
         po.setResourceType(null);
-        po.setOrgUnitField("org_unit_id");
-        po.setCreatorField("created_by");
         return po;
     }
 
@@ -197,7 +194,7 @@ class DataPermissionInterceptorPluginDimTest {
         assertThat(sqlOf(cond)).contains("t.recorded_by = ?");
     }
 
-    @DataPermission(module = "attendance", tableAlias = "t", creatorField = "recorded_by")
+    @DataPermission(module = "attendance", tableAlias = "t")
     interface PlainMapper {
         List<Object> selectList();
     }
@@ -211,7 +208,6 @@ class DataPermissionInterceptorPluginDimTest {
         po.setModuleCode("attendance");
         po.setEnabled(true);
         po.setResourceType(null);
-        po.setCreatorField("recorded_by");
         return po;
     }
 }

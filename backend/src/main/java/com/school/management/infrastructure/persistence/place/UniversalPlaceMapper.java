@@ -25,42 +25,42 @@ public interface UniversalPlaceMapper extends BaseMapper<UniversalPlacePO> {
     /**
      * 查询所有根空间
      */
-    @DataPermission(module = "place", orgUnitField = "effective_org_unit_id")
+    @DataPermission(module = "place")
     @Select("SELECT * FROM places WHERE parent_id IS NULL AND deleted = 0 ORDER BY place_name")
     List<UniversalPlacePO> findAllRoots();
 
     /**
      * 查询子空间
      */
-    @DataPermission(module = "place", orgUnitField = "effective_org_unit_id")
+    @DataPermission(module = "place")
     @Select("SELECT * FROM places WHERE parent_id = #{parentId} AND deleted = 0 ORDER BY place_name")
     List<UniversalPlacePO> findChildren(@Param("parentId") Long parentId);
 
     /**
      * 根据路径前缀查询所有后代
      */
-    @DataPermission(module = "place", orgUnitField = "effective_org_unit_id")
+    @DataPermission(module = "place")
     @Select("SELECT * FROM places WHERE path LIKE CONCAT(#{pathPrefix}, '%') AND deleted = 0 ORDER BY level, place_name")
     List<UniversalPlacePO> findByPathPrefix(@Param("pathPrefix") String pathPrefix);
 
     /**
      * 根据类型查询
      */
-    @DataPermission(module = "place", orgUnitField = "effective_org_unit_id")
+    @DataPermission(module = "place")
     @Select("SELECT * FROM places WHERE type_code = #{typeCode} AND deleted = 0 ORDER BY place_name")
     List<UniversalPlacePO> findByTypeCode(@Param("typeCode") String typeCode);
 
     /**
      * 根据组织单元查询
      */
-    @DataPermission(module = "place", orgUnitField = "effective_org_unit_id")
+    @DataPermission(module = "place")
     @Select("SELECT * FROM places WHERE effective_org_unit_id = #{orgUnitId} AND deleted = 0 ORDER BY place_name")
     List<UniversalPlacePO> findByOrgUnitId(@Param("orgUnitId") Long orgUnitId);
 
     /**
      * 根据负责人查询 — 经 responsible_for 关系覆盖点 (语义等价旧列: 仅显式责任人, 不含继承)
      */
-    @DataPermission(module = "place", orgUnitField = "effective_org_unit_id")
+    @DataPermission(module = "place")
     @Select("SELECT p.* FROM places p " +
             "JOIN access_relations ar ON ar.resource_type = 'place' AND ar.resource_id = p.id " +
             "  AND ar.relation = 'responsible_for' AND ar.subject_type = 'user' " +

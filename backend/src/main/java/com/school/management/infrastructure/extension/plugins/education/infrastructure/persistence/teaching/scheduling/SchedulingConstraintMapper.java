@@ -5,6 +5,6 @@ import com.school.management.infrastructure.access.DataPermission;
 import org.apache.ibatis.annotations.Mapper;
 
 @Mapper
-@DataPermission(module = "scheduling_constraint", orgUnitField = "org_unit_id", creatorField = "created_by")
+@DataPermission(module = "scheduling_constraint")
 public interface SchedulingConstraintMapper extends BaseMapper<SchedulingConstraintPO> {
 }
