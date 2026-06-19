@@ -184,7 +184,16 @@ public class EducationManifest implements PluginPackage {
             dr("teaching_task", "ALL", "BY_CLASS", "BY_MAJOR", "SELF", "CUSTOM"),
             dr("school_class",  "ALL", "BY_CLASS", "BY_MAJOR", "SELF", "CUSTOM"),
             dr("dormitory",  "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "SELF", "CUSTOM"),
-            dr("enrollment", "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "SELF", "CUSTOM")
+            dr("enrollment", "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "SELF", "CUSTOM"),
+            // R2.2 前置①: 激活此前无 data_resources 行的教务/排课模块
+            dr("teaching_progress",        "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "SELF", "CUSTOM"),
+            dr("class_course_assignment",  "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "SELF", "CUSTOM"),
+            dr("course_evaluation",        "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "SELF", "CUSTOM"),
+            dr("evaluation_response",      "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "SELF", "CUSTOM"),
+            dr("scheduling_constraint",    "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "SELF", "CUSTOM"),
+            dr("schedule_entry",           "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "SELF", "CUSTOM"),
+            dr("schedule_conflict_record", "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "SELF", "CUSTOM"),
+            dr("teacher_preference",       "ALL", "SELF")
         );
     }
 
@@ -218,7 +227,18 @@ public class EducationManifest implements PluginPackage {
                 "school_class", "owner_org", "所属组织", "ORG_UNIT", "id").withGrantsByDefault())),
             // 考试批次: 无 org 维度, 仅 creator
             Stream.<Contribution>of(rr(ResourceRelationDef.column(
-                "exam_batch", "creator", "创建者", "USER", "created_by").withAutoFill()))
+                "exam_batch", "creator", "创建者", "USER", "created_by").withAutoFill())),
+            // R2.2 前置①: 激活的教务/排课模块 (org_unit_id + creator)
+            orgCreator("teaching_progress", "org_unit_id", "recorded_by"),
+            orgCreator("class_course_assignment", "org_unit_id", "created_by"),
+            orgCreator("course_evaluation", "org_unit_id", "created_by"),
+            orgCreator("evaluation_response", "org_unit_id", "student_id"),
+            orgCreator("scheduling_constraint", "org_unit_id", "created_by"),
+            orgCreator("schedule_entry", "org_unit_id", "created_by"),
+            orgCreator("schedule_conflict_record", "org_unit_id", "created_by"),
+            // 教师偏好: 无 org 维度, 仅 creator(teacher_id)
+            Stream.<Contribution>of(rr(ResourceRelationDef.column(
+                "teacher_preference", "creator", "创建者", "USER", "teacher_id").withAutoFill()))
         ).flatMap(s -> s);
     }
 

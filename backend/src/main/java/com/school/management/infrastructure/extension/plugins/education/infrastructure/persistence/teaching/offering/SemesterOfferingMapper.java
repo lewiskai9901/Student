@@ -1,10 +1,10 @@
 package com.school.management.infrastructure.extension.plugins.education.infrastructure.persistence.teaching.offering;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.school.management.infrastructure.access.DataPermission;
 import org.apache.ibatis.annotations.Mapper;
 
+// R2.2 前置①: 表 semester_offerings 不存在(半成品功能)→ 死 mapper, 移除空转的 @DataPermission。
+// 若将来补建该表/查询, 再按 data_resources 行 + @DataPermission 激活数据权限。
 @Mapper
-@DataPermission(module = "semester_offering", orgUnitField = "org_unit_id", creatorField = "created_by")
 public interface SemesterOfferingMapper extends BaseMapper<SemesterOfferingPO> {
 }
