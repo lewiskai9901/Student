@@ -55,6 +55,10 @@ public class DataPermissionInterceptor implements Interceptor {
     @org.springframework.context.annotation.Lazy
     private ScopeEvaluator scopeEvaluator;
 
+    @Autowired
+    @org.springframework.context.annotation.Lazy
+    private ResourceRelationRegistry resourceRelationRegistry;
+
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
         if (!UserContextHolder.isDataPermissionEnabled()) {
@@ -357,10 +361,30 @@ public class DataPermissionInterceptor implements Interceptor {
      */
     private ResourceScopeMeta buildMeta(DataPermission annotation, DataModulePO moduleConfig) {
         String tableAlias = annotation.tableAlias().isEmpty() ? "" : sanitizeIdentifier(annotation.tableAlias());
-        String orgField = sanitizeIdentifier(
-                moduleConfig.getOrgUnitField() != null ? moduleConfig.getOrgUnitField() : annotation.orgUnitField());
-        String creatorField = sanitizeIdentifier(
-                moduleConfig.getCreatorField() != null ? moduleConfig.getCreatorField() : annotation.creatorField());
+
+        // R2.2: 锚点 (orgUnitField / creatorField / viaMembership) 优先来自 resource_relations 注册表
+        // (owner_org → 列锚 / SUBJECT_GRAPH 成员图; creator → 列); 无注册行则注解 ⊕ moduleConfig 兜底
+        // (复刻旧 moduleConfig 优先语义)。null → "" 对齐旧注解默认 (@DataPermission orgUnitField/creatorField
+        // 缺省即空串), 使有列锚资源逐字节一致; 成员主体 creatorField 的差异是成员路径不消费的死字段 (见
+        // BuildMetaRegistryEquivalenceTest)。tableAlias / membershipSubjectColumn / typeField / resourceType
+        // 仍来自注解/data_resources, 注册表不驱动。
+        String orgField;
+        String creatorField;
+        boolean viaMembership;
+        java.util.Optional<ResourceRelationRegistry.DerivedAnchor> derived =
+                resourceRelationRegistry.forResource(annotation.module());
+        if (derived.isPresent()) {
+            ResourceRelationRegistry.DerivedAnchor a = derived.get();
+            orgField = a.orgUnitField() == null ? "" : sanitizeIdentifier(a.orgUnitField());
+            creatorField = a.creatorField() == null ? "" : sanitizeIdentifier(a.creatorField());
+            viaMembership = a.viaMembership();
+        } else {
+            orgField = sanitizeIdentifier(
+                    moduleConfig.getOrgUnitField() != null ? moduleConfig.getOrgUnitField() : annotation.orgUnitField());
+            creatorField = sanitizeIdentifier(
+                    moduleConfig.getCreatorField() != null ? moduleConfig.getCreatorField() : annotation.creatorField());
+            viaMembership = annotation.viaMembership();
+        }
 
         String resourceType = annotation.resourceType();
         if (resourceType.isEmpty() && moduleConfig.getResourceType() != null) {
@@ -373,7 +397,7 @@ public class DataPermissionInterceptor implements Interceptor {
 
         return new ResourceScopeMeta(
                 tableAlias, orgField, creatorField, resourceType,
-                annotation.viaMembership(), membershipSubjectColumn, typeField);
+                viaMembership, membershipSubjectColumn, typeField);
     }
 
     /** 复制一个 meta, 仅替换 resourceType (供 PLUGIN_DIM resolve 注入 moduleCode 兜底)。 */
