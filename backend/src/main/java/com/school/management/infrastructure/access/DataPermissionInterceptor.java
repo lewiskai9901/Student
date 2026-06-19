@@ -345,49 +345,36 @@ public class DataPermissionInterceptor implements Interceptor {
     }
 
     /**
-     * 从 {@code @DataPermission} 注解 ⊕ {@code moduleConfig} 构建 {@link ResourceScopeMeta}。
-     * 合并规则与旧 build* 一致 (moduleConfig 优先, 注解兜底):
+     * 从 {@code resource_relations} 注册表 ⊕ {@code @DataPermission} 注解 ⊕ {@code moduleConfig}
+     * 构建 {@link ResourceScopeMeta}。各字段来源 (Tier 1 R2.4 起):
      * <ul>
+     *   <li>orgUnitField / creatorField / viaMembership —— <b>resource_relations 注册表</b> (唯一真相源;
+     *       缺该模块 → fail-fast, 注解兜底已删)。</li>
      *   <li>tableAlias —— 注解 (sanitize)。</li>
-     *   <li>orgUnitField —— moduleConfig.orgUnitField ?? annotation.orgUnitField (sanitize)。</li>
-     *   <li>creatorField —— moduleConfig.creatorField ?? annotation.creatorField (sanitize)。</li>
      *   <li>resourceType —— annotation.resourceType (非空) ?? moduleConfig.resourceType。
      *       <b>不</b>兜底 moduleCode — 核心路径 hasResourceType() 选择必须与旧 buildSingleRoleCondition
      *       一致 (空→org-field, 非空→access_relation)。PLUGIN_DIM 的 moduleCode 兜底由调用方在
      *       per-role 切换 meta 变体 ({@link #withResourceType}) 实现, 不污染此处。</li>
-     *   <li>viaMembership / membershipSubjectColumn —— 注解。</li>
-     *   <li>typeField —— moduleConfig.typeField (sanitize; 为空则轴③禁用)。</li>
+     *   <li>membershipSubjectColumn —— 注解 (Tier 2 再迁注册表)。</li>
+     *   <li>typeField —— moduleConfig.typeField (sanitize; 为空则轴③禁用; Tier 2 再迁)。</li>
      * </ul>
      */
     private ResourceScopeMeta buildMeta(DataPermission annotation, DataModulePO moduleConfig) {
         String tableAlias = annotation.tableAlias().isEmpty() ? "" : sanitizeIdentifier(annotation.tableAlias());
 
-        // R2.2: 锚点 (orgUnitField / creatorField / viaMembership) 优先来自 resource_relations 注册表
-        // (owner_org → 列锚 / SUBJECT_GRAPH 成员图; creator → 列); 无注册行则注解 ⊕ moduleConfig 兜底
-        // (复刻旧 moduleConfig 优先语义)。registry 缺该关系行 → null → coerce 成 ""。
-        // ⚠ 审计 P1: @DataPermission 的 orgUnitField/creatorField 默认值是 "org_unit_id"/"created_by" 而非 "",
-        // 故"注册表无该关系行"会让 registry("") 与 legacy(注解默认非空) 发散 (非成员 SELF 路径消费 creatorField)。
-        // 等价靠 PluginDeclarationCoverageTest 守护"每个 @DataPermission 模块都注册了对应锚点关系"保证:
-        // 凡 mapper 实际用到的 org/creator 锚点, manifest 必须登记同名列 → registry 即与 legacy 逐字节一致。
-        // 成员主体 creatorField 差异是成员路径不消费的死字段 (BuildMetaRegistryEquivalenceTest)。
-        // tableAlias / membershipSubjectColumn / typeField / resourceType 仍来自注解/data_resources, 注册表不驱动。
-        String orgField;
-        String creatorField;
-        boolean viaMembership;
-        java.util.Optional<ResourceRelationRegistry.DerivedAnchor> derived =
-                resourceRelationRegistry.forResource(annotation.module());
-        if (derived.isPresent()) {
-            ResourceRelationRegistry.DerivedAnchor a = derived.get();
-            orgField = a.orgUnitField() == null ? "" : sanitizeIdentifier(a.orgUnitField());
-            creatorField = a.creatorField() == null ? "" : sanitizeIdentifier(a.creatorField());
-            viaMembership = a.viaMembership();
-        } else {
-            orgField = sanitizeIdentifier(
-                    moduleConfig.getOrgUnitField() != null ? moduleConfig.getOrgUnitField() : annotation.orgUnitField());
-            creatorField = sanitizeIdentifier(
-                    moduleConfig.getCreatorField() != null ? moduleConfig.getCreatorField() : annotation.creatorField());
-            viaMembership = annotation.viaMembership();
-        }
+        // Tier 1 (统一锚定 R2.4): 锚点 (orgUnitField / creatorField / viaMembership) 唯一来自
+        // resource_relations 注册表; @DataPermission 注解兜底已删。forResource 缺该模块 = 锚点缺失
+        // = 资源裸奔 → fail-fast。覆盖由 PluginDeclarationCoverageTest 构建期守护 (每个 @DataPermission
+        // 模块必登锚点) + P3 懒加载保证运行期注册表已载, 故此异常实际不可达 (防御 contribution 漏登/写失败)。
+        // null → coerce 成 "" (成员主体无列锚; 成员路径不消费 org/creator 列 — BuildMetaRegistryEquivalenceTest)。
+        // tableAlias / membershipSubjectColumn / typeField / resourceType 仍来自注解/data_resources (Tier 2 再迁)。
+        ResourceRelationRegistry.DerivedAnchor a = resourceRelationRegistry.forResource(annotation.module())
+                .orElseThrow(() -> new IllegalStateException(
+                        "模块 " + annotation.module() + " 未注册 resource_relations 锚点 — @DataPermission 无注解兜底 " +
+                        "(统一锚定 R2.4); 检查 PluginPackage.contribute() 是否登记该模块的 owner_org/creator 关系"));
+        String orgField = a.orgUnitField() == null ? "" : sanitizeIdentifier(a.orgUnitField());
+        String creatorField = a.creatorField() == null ? "" : sanitizeIdentifier(a.creatorField());
+        boolean viaMembership = a.viaMembership();
 
         String resourceType = annotation.resourceType();
         if (resourceType.isEmpty() && moduleConfig.getResourceType() != null) {

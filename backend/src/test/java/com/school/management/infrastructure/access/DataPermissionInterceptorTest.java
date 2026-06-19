@@ -32,6 +32,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -78,6 +79,7 @@ class DataPermissionInterceptorTest {
 
     private DataPermissionInterceptor interceptor;
     private ScopeEvaluator scopeEvaluator;
+    private ResourceRelationRegistry resourceRelationRegistry;
 
     @BeforeEach
     void setUp() {
@@ -86,11 +88,14 @@ class DataPermissionInterceptorTest {
         ReflectionTestUtils.setField(interceptor, "dynamicModuleService", dynamicModuleService);
         ReflectionTestUtils.setField(interceptor, "dataPermissionPolicyService", dataPermissionPolicyService);
         ReflectionTestUtils.setField(interceptor, "scopeEvaluator", scopeEvaluator);
-        // R2.2b 起 buildMeta 读 resourceRelationRegistry; 本类单测验证「注册表无锚 → 注解兜底」路径,
-        // 故注入返回 empty 的 mock (R2.2b 漏注入此字段 → 此前 NPE)。registry 驱动路径由
-        // BuildMetaRegistryEquivalenceTest 覆盖。
-        ResourceRelationRegistry resourceRelationRegistry = mock(ResourceRelationRegistry.class);
-        when(resourceRelationRegistry.forResource(anyString())).thenReturn(Optional.empty());
+        // Tier 1: buildMeta 锚点改由 resourceRelationRegistry 驱动 (注解锚兜底已删)。
+        // 桩 forResource → 各 module 的 DerivedAnchor: student=列锚, user=成员图。
+        // (字段, 便于个别测试覆写为 empty 验证 fail-fast)
+        resourceRelationRegistry = mock(ResourceRelationRegistry.class);
+        when(resourceRelationRegistry.forResource(anyString()))
+                .thenReturn(Optional.of(new ResourceRelationRegistry.DerivedAnchor(false, "org_unit_id", "created_by")));
+        when(resourceRelationRegistry.forResource("user"))
+                .thenReturn(Optional.of(new ResourceRelationRegistry.DerivedAnchor(true, null, null)));
         ReflectionTestUtils.setField(interceptor, "resourceRelationRegistry", resourceRelationRegistry);
         UserContextHolder.clear();
         UserContextHolder.enableDataPermission();
@@ -419,6 +424,19 @@ class DataPermissionInterceptorTest {
 
         private String sqlOf(ScopeCondition cond) {
             return cond.sql;
+        }
+
+        @Test
+        @DisplayName("Tier 1 fail-fast: 模块在注册表查无锚 (forResource empty) → 抛 IllegalStateException, 不再注解兜底")
+        void unregisteredModuleFailsFast() {
+            // 覆写: student 模块在注册表查无锚 (模拟 contribution 漏登/写失败); 删兜底后无后备
+            // → buildMeta fail-fast (在 per-role 循环前抛, 故无需 getScopeSpec 桩)
+            when(resourceRelationRegistry.forResource("student")).thenReturn(Optional.empty());
+            UserContext ctx = userWithScopedRoles(List.of(scopedRole(1L, ScopeType.ALL, 0L, null)));
+
+            assertThatThrownBy(() -> build(stubAnnotation(), moduleConfig(true, ""), ctx, 1L))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("student");
         }
 
         @Test
