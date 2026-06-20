@@ -141,14 +141,19 @@ public class DataPermissionPolicyService {
         String typeFilterFinal = (spec.getTypeFilter() != null && !spec.getTypeFilter().isEmpty())
                 ? toJson(spec.getTypeFilter()) : typeFilterJson;
 
-        // R3a-2b: 轴① → relation_grants JSON (写真相源; 与 anchor 列双写, Step B 删列后单写)。
+        // R3/R4: 显式 relation_grants (多锚点配置, R3c/API) 优先直存; 否则从 scopeCode 派生单 grant。
         // isMembership 决定 SELF 落 member-self (owner_org) 还是 creator —— 须与引擎 meta.viaMembership 一致。
-        Set<Long> customSet = (spec.getCustomOrgIds() != null && !spec.getCustomOrgIds().isEmpty())
-                ? spec.getCustomOrgIds() : parseLongSet(customOrgIdsJson);
-        List<RelationGrant> grants = RelationGrant.fromM1Axes(
-                spec.getOrgAnchor() != null ? spec.getOrgAnchor() : OrgAnchor.SELF,
-                anchorParam, includeSubtree == 1, customSet,
-                isMembershipResource(permission.getModuleCode()));
+        List<RelationGrant> grants;
+        if (permission.getRelationGrants() != null && !permission.getRelationGrants().isEmpty()) {
+            grants = permission.getRelationGrants();
+        } else {
+            Set<Long> customSet = (spec.getCustomOrgIds() != null && !spec.getCustomOrgIds().isEmpty())
+                    ? spec.getCustomOrgIds() : parseLongSet(customOrgIdsJson);
+            grants = RelationGrant.fromM1Axes(
+                    spec.getOrgAnchor() != null ? spec.getOrgAnchor() : OrgAnchor.SELF,
+                    anchorParam, includeSubtree == 1, customSet,
+                    isMembershipResource(permission.getModuleCode()));
+        }
         String relationGrantsJson = toJsonList(grants);
 
         // UK (role_id, resource_code, apply_to, tenant_id) 不含 deleted, 软删后再 INSERT 会撞 unique.

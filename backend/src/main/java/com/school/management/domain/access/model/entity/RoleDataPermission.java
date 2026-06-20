@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import com.school.management.domain.access.model.OrgAnchor;
+import com.school.management.domain.access.model.valueobject.RelationGrant;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -85,6 +86,12 @@ public class RoleDataPermission implements Entity<Long> {
 
     /** 轴② subject-relation exclude。 */
     private Set<String> subjectRelExclude;
+
+    /**
+     * R3/R4: 显式关系授予数组 (多锚点)。非空时 saveRolePermission 直接持久化为 relation_grants,
+     * 跳过"从 scopeCode 派生单 grant"。供多 grant 配置 (R3c UI / API)。
+     */
+    private List<RelationGrant> relationGrants;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

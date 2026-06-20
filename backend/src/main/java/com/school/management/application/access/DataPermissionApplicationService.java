@@ -188,6 +188,8 @@ public class DataPermissionApplicationService {
                 .collect(Collectors.toMap(DataModulePO::getModuleCode, DataModulePO::getAllowedScopes, (a, b) -> a));
 
         for (SavePermissionCommand cmd : commands) {
+            // R3/R4: 多 grant 配置无单一 scopeCode → 跳过 scopeCode 白名单校验
+            if (cmd.getRelationGrants() != null && !cmd.getRelationGrants().isEmpty()) continue;
             List<String> allowed = allowedByModule.get(cmd.getModuleCode());
             if (allowed == null || allowed.isEmpty()) continue;
             if (!allowed.contains(cmd.getScopeCode())) {
@@ -228,6 +230,10 @@ public class DataPermissionApplicationService {
                     }
                     if (cmd.getSubjectRelExclude() != null) {
                         builder.subjectRelExclude(new LinkedHashSet<>(cmd.getSubjectRelExclude()));
+                    }
+                    // R3/R4: 显式多 grant 配置 → 直存 (saveRolePermission 优先用之, 跳过 scopeCode 派生)
+                    if (cmd.getRelationGrants() != null && !cmd.getRelationGrants().isEmpty()) {
+                        builder.relationGrants(cmd.getRelationGrants());
                     }
 
                     RoleDataPermission permission = builder.build();
@@ -597,6 +603,8 @@ public class DataPermissionApplicationService {
         private List<String> subjectRelInclude;
         /** 轴② 结果关系 exclude。 */
         private List<String> subjectRelExclude;
+        /** R3/R4: 显式关系授予数组 (多锚点)。非空时直存为 relation_grants, 跳过 scopeCode 派生。 */
+        private List<com.school.management.domain.access.model.valueobject.RelationGrant> relationGrants;
 
         public SavePermissionCommand(String moduleCode, String scopeCode, List<ScopeItemDTO> scopeItems) {
             this(moduleCode, scopeCode, scopeItems, null);
