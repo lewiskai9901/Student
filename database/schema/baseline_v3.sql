@@ -4347,6 +4347,37 @@ UPDATE `data_resources` SET `resource_kind`='SUBJECT' WHERE `resource_code` IN (
 UNLOCK TABLES;
 
 --
+-- Table structure for table `record_relations` (统一锚定 R4: 记录↔主体一等表)
+-- 扁平、无传递; 与 access_relations 主体图分立。引擎尚未消费 (R4 地基, 无 seed)。
+--
+
+DROP TABLE IF EXISTS `record_relations`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `record_relations` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `resource_code` varchar(50) NOT NULL COMMENT '哪个资源, 对应 data_resources.resource_code',
+  `record_id` bigint NOT NULL COMMENT '业务记录 id (非主体)',
+  `relation_code` varchar(50) NOT NULL COMMENT '关系码: reviewer / inspected / shared_with ...',
+  `subject_type` varchar(20) NOT NULL COMMENT '主体类型: USER/ORG_UNIT/PLACE/ASSET',
+  `subject_id` bigint NOT NULL COMMENT '主体 id',
+  `access_level` varchar(20) NOT NULL DEFAULT 'READ_ONLY',
+  `valid_from` datetime DEFAULT CURRENT_TIMESTAMP,
+  `valid_to` datetime DEFAULT NULL,
+  `metadata` json DEFAULT NULL,
+  `created_by` bigint DEFAULT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` tinyint(1) NOT NULL DEFAULT '0',
+  `tenant_id` bigint NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_record_relation` (`resource_code`,`record_id`,`relation_code`,`subject_type`,`subject_id`,`tenant_id`,`deleted`),
+  KEY `idx_by_subject` (`subject_type`,`subject_id`,`relation_code`,`resource_code`,`deleted`),
+  KEY `idx_by_record` (`resource_code`,`record_id`,`relation_code`,`deleted`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='记录↔主体关系表 (扁平, 无传递; 与 access_relations 主体图分立)';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `resource_relations` (统一锚定模型 R1: 资源关系注册表)
 -- 行由 PluginPackage.contribute() 的 ResourceRelationContribution 在启动期 UPSERT, 故无 seed。
 --
