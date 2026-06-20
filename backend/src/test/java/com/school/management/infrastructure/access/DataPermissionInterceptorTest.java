@@ -570,18 +570,6 @@ class DataPermissionInterceptorTest {
         }
 
         @Test
-        @DisplayName("resourceType 非空 + PRIMARY_ORG → 委托 evaluator 走 access_relations 子查询")
-        void resourceTypeBuildsAccessRelationSubquery() {
-            UserContext ctx = userWithScopedRoles(List.of(scopedRole(11L, ScopeType.ORG_UNIT, 400L, "1.10.400.")));
-            when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(11L), anyString(), anyString()))
-                    .thenReturn(specOf(OrgAnchor.PRIMARY_ORG, false));
-
-            ScopeCondition cond = build(stubAnnotation(), moduleConfig(true, "student"), ctx, 1L);
-            assertThat(cond).isNotNull();
-            assertThat(sqlOf(cond)).contains("access_relations").contains("ar.resource_type = ?");
-        }
-
-        @Test
         @DisplayName("viaMembership + PRIMARY_ORG → 委托 evaluator 走 member 关系子查询")
         void membershipDelegatesToEvaluator() {
             UserContext ctx = userWithScopedRoles(List.of(scopedRole(12L, ScopeType.ORG_UNIT, 200L, "1.10.200.")));

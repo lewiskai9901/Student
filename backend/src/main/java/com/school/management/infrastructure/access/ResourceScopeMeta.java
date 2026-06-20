@@ -18,7 +18,8 @@ package com.school.management.infrastructure.access;
  * @param tableAlias             主表别名 (空串表示无别名)。已 sanitize, 不含 "." 后缀。
  * @param orgUnitField           org 字段列名 (org 字段路径用; access_relation 路径的直过滤 OR 也用)。
  * @param creatorField           创建者列名 (SELF 在 org 字段路径用)。
- * @param resourceType           access_relations 资源类型 (非空则走 access_relation 路径)。
+ * @param resourceType           [R4 后无读者] 旧 access_relation 路径 (accessRelationSelect) 已删; 来源恒空
+ *                               (无注解设, data_resources.access_resource_type 全 NULL, 经核实); 字段暂留待专项移除。
  * @param viaMembership          主表行即 member 关系 subject。
  * @param membershipSubjectColumn 主表中作为 ar.subject_id 的列 (默认 id)。
  * @param typeField              类型列 (轴③, 为空则不启用类型过滤)。
@@ -40,11 +41,6 @@ public record ResourceScopeMeta(
     /** 别名前缀: 有别名时返回 {@code "alias."}, 否则空串 (与 interceptor 拼法一致)。 */
     public String aliasPrefix() {
         return tableAlias == null || tableAlias.isEmpty() ? "" : tableAlias + ".";
-    }
-
-    /** 是否走 access_relations 子查询路径 (resource 侧)。 */
-    public boolean hasResourceType() {
-        return resourceType != null && !resourceType.isEmpty();
     }
 
     /** 轴③是否可用 (声明了 type 列)。 */

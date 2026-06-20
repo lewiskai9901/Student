@@ -33,9 +33,9 @@ import java.util.stream.Collectors;
  * <p>参数顺序 = SQL 中 {@code ?} 顺序 (orgSet → ② → ③), 名字用 paramOffset 唯一化 (沿用
  * interceptor 的 {@code _dp_*_<offset>} 命名)。
  *
- * <p><b>单一 OrgSet 规则的有意例外</b>: access_relation 路径 (resourceType 非空、非 membership,
- * 见 {@link #accessRelationSelect}) <b>不</b>消费 {@code OrgSet}, 而是从 {@code ctx} 重新派生
- * org 过滤 —— 这是刻意为之, 以与 interceptor 的 {@code buildAccessRelationCondition} 逐字节等价。
+ * <p>subjectSelect 三路曾含 access_relation 路径 (resourceType 非空); R4 后清理已删 —— resourceType
+ * 全无来源 (经核实) → 该路径 production 不可达, 是 registry 化 (viaMembership) 前的 legacy。现仅
+ * membership / org-field 两路 + RECORD_RELATION (composeGrant 分流)。
  */
 @Slf4j
 @Component
@@ -429,9 +429,9 @@ public class ScopeEvaluator {
         if (meta.viaMembership()) {
             return membershipSelect(orgSet, spec, meta, ctx, tenantId, paramOffset);
         }
-        if (meta.hasResourceType()) {
-            return accessRelationSelect(orgSet, spec, meta, ctx, effectiveOrgId, effectiveOrgPath, tenantId, paramOffset);
-        }
+        // R4 后清理: 旧 accessRelationSelect (resourceType 非空走 access_relations 子查询) 已删 —— resourceType
+        // 全无来源 (无注解设, data_resources.access_resource_type 全 NULL; 经核实) → 该分支 production 不可达,
+        // 是 registry 化 (viaMembership) 之前的 legacy 路径。effectiveOrgId/Path 此后仅 resolveOrgSet 用。
         return orgFieldSelect(orgSet, meta, ctx, tenantId, paramOffset);
     }
 
@@ -504,83 +504,6 @@ public class ScopeEvaluator {
                 + "WHERE ar.relation = 'member' AND ar.resource_type = 'org_unit' "
                 + "AND ar.subject_type = 'user' AND ar.deleted = 0 AND ar.tenant_id = ? "
                 + "AND " + orgPredicate + ")";
-        return cond;
-    }
-
-    /**
-     * 端口自 {@code buildAccessRelationCondition} —— <b>逐字节等价</b>。
-     *
-     * <p>interceptor 把 access_relation 资源 (resourceType 非空, 非 membership) 的<b>所有</b> scope
-     * (含 SELF / 未配置降级 SELF / ALL / PRIMARY_ORG / CUSTOM_ORG / RELATION) 一律路由到此方法,
-     * 并由 caller 传入"该角色的有效 org"作为 org-subject-OR / orgField-direct-OR 的锚点:
-     * ALL-scope-type 走 {@code ctx.getOrgUnitId()/getOrgUnitPath()} (用户主组织)。
-     *
-     * <p>因此本方法<b>不</b>对 SELF 特判 (不能丢掉 org-OR), 也<b>不</b>用 subtree 去 gate
-     * org-subject-OR (那会收窄 DEPARTMENT 可见性 → 回归)。结构:
-     * <pre>
-     * alias.id IN (SELECT ar.resource_id FROM access_relations ar
-     *   WHERE ar.resource_type=? AND ar.tenant_id=? AND ar.deleted=0
-     *     AND ( (ar.subject_type='user' AND ar.subject_id=?)
-     *           &lt;org-subject-OR: orgPath!=null → subtree 子查询; else orgId → =?&gt; ))
-     * + 仅 PRIMARY_ORG: OR orgField &lt;subtree||single&gt;  (端口自 DEPARTMENT/DEPARTMENT_AND_BELOW)
-     * </pre>
-     *
-     * <p>org 锚点来源 = interceptor caller 的口径: PRIMARY_ORG / SELF / ALL 用 {@code ctx} 的主组织;
-     * CUSTOM_ORG 在 access_relation 路径今天不被 interceptor 走到 (CUSTOM 仅在 org-field/membership
-     * 路径分流), 这里保持一致仍用 ctx org —— 不过度设计 (见类注释末)。
-     */
-    private ScopeCondition accessRelationSelect(OrgSet orgSet, ScopeSpec spec, ResourceScopeMeta meta,
-                                                UserContext ctx, Long effectiveOrgId, String effectiveOrgPath,
-                                                Long tenantId, int paramOffset) {
-        String alias = meta.aliasPrefix();
-        String resourceType = meta.resourceType();
-        ScopeCondition cond = new ScopeCondition();
-
-        // 锚点 org = interceptor caller 口径 (该角色的有效 org; ORG_UNIT scope → 角色 scope org,
-        // 否则用户主组织)。SELF/PRIMARY_ORG/ALL/(CUSTOM_ORG 不被走到) 一律取调用方传入的有效锚点,
-        // 与 interceptor buildScopedCondition 的 per-role effective org 一致。
-        Long orgId = effectiveOrgId;
-        String orgPath = effectiveOrgPath;
-
-        StringBuilder sb = new StringBuilder();
-        sb.append(alias).append("id IN (")
-          .append("SELECT ar.resource_id FROM access_relations ar WHERE ar.resource_type = ? AND ar.tenant_id = ? AND ar.deleted = 0 AND (")
-          .append("(ar.subject_type = 'user' AND ar.subject_id = ?)");
-        cond.addParam("_dp_resType_" + paramOffset, resourceType, String.class, JdbcType.VARCHAR);
-        cond.addParam("_dp_tenantId_" + paramOffset, tenantId, Long.class, JdbcType.BIGINT);
-        cond.addParam("_dp_userId_" + paramOffset, ctx.getUserId(), Long.class, JdbcType.BIGINT);
-
-        // org-subject-OR: 端口自 interceptor 行 ~532 —— 无条件以 orgPath != null 为键 (NOT subtree-gated)。
-        if (orgPath != null) {
-            sb.append(" OR (ar.subject_type = 'org_unit' AND ar.subject_id IN (")
-              .append("SELECT id FROM org_units WHERE tenant_id = ? AND tree_path LIKE ? AND deleted = 0))");
-            cond.addParam("_dp_tenantId2_" + paramOffset, tenantId, Long.class, JdbcType.BIGINT);
-            cond.addParam("_dp_orgPath_" + paramOffset, orgPath + "%", String.class, JdbcType.VARCHAR);
-        } else if (orgId != null) {
-            sb.append(" OR (ar.subject_type = 'org_unit' AND ar.subject_id = ?)");
-            cond.addParam("_dp_orgId_" + paramOffset, orgId, Long.class, JdbcType.BIGINT);
-        }
-        sb.append("))");
-
-        // orgField 直过滤 OR —— 仅 PRIMARY_ORG (端口自 interceptor 的 scope==DEPARTMENT||DEPARTMENT_AND_BELOW gate)。
-        String orgField = meta.orgUnitField();
-        boolean isPrimaryOrg = spec.getOrgAnchor() == OrgAnchor.PRIMARY_ORG;
-        if (orgField != null && orgId != null && isPrimaryOrg) {
-            sb.insert(0, "(");
-            // 内层 subtree/single split: DEPARTMENT_AND_BELOW(=subtree) && orgPath → tree_path 子查询; else = ?。
-            if (spec.isIncludeSubtree() && orgPath != null) {
-                sb.append(" OR ").append(alias).append(orgField)
-                  .append(" IN (SELECT id FROM org_units WHERE tenant_id = ? AND tree_path LIKE ?)");
-                cond.addParam("_dp_tenantId3_" + paramOffset, tenantId, Long.class, JdbcType.BIGINT);
-                cond.addParam("_dp_orgPath2_" + paramOffset, orgPath + "%", String.class, JdbcType.VARCHAR);
-            } else {
-                sb.append(" OR ").append(alias).append(orgField).append(" = ?");
-                cond.addParam("_dp_orgDirect_" + paramOffset, orgId, Long.class, JdbcType.BIGINT);
-            }
-            sb.append(")");
-        }
-
-        cond.sql = sb.toString();
         return cond;
     }
 
