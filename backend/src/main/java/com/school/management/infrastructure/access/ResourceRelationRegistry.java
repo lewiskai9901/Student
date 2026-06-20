@@ -36,6 +36,8 @@ public class ResourceRelationRegistry {
 
     private final JdbcTemplate jdbc;
     private final Map<String, DerivedAnchor> cache = new ConcurrentHashMap<>();
+    /** R4: 每资源 relationCode → AnchorRow (per-relation storage_kind 查询; 引擎 RECORD_RELATION 分支用)。 */
+    private final Map<String, Map<String, AnchorRow>> relationCache = new ConcurrentHashMap<>();
 
     /** 懒加载标志: 首次访问加载一次后置 true。volatile + loadLock 双检锁保证只加载一次。 */
     private volatile boolean loaded = false;
@@ -123,9 +125,17 @@ public class ResourceRelationRegistry {
                 "数据权限锚点无兜底, 拒绝以 fail-open 状态服务 (统一锚定 P3 fail-fast)。");
         }
         Map<String, DerivedAnchor> fresh = new HashMap<>();
-        byResource.forEach((code, rows) -> fresh.put(code, deriveAnchor(rows)));
+        Map<String, Map<String, AnchorRow>> freshRel = new HashMap<>();
+        byResource.forEach((code, rows) -> {
+            fresh.put(code, deriveAnchor(rows));
+            Map<String, AnchorRow> byRel = new HashMap<>();
+            for (AnchorRow r : rows) byRel.put(r.relationCode(), r);
+            freshRel.put(code, byRel);
+        });
         cache.clear();
         cache.putAll(fresh);
+        relationCache.clear();
+        relationCache.putAll(freshRel);
         log.info("[ResourceRelationRegistry] 加载 {} 个资源的锚点 (来自 resource_relations {} 行)",
                 fresh.size(), byResource.values().stream().mapToInt(List::size).sum());
     }
@@ -153,6 +163,19 @@ public class ResourceRelationRegistry {
     public Optional<DerivedAnchor> forResource(String resourceCode) {
         ensureLoaded();
         return Optional.ofNullable(cache.get(resourceCode));
+    }
+
+    /**
+     * 某资源某关系的注册行 (R4: per-relation storage_kind 查询)。未注册 → empty。
+     *
+     * <p>引擎将来据 {@code storageKind()==RECORD_RELATION} 决定走 {@code record_relations} 子查询
+     * (而非 owner_org/creator 的列/成员图路径)。{@link #forResource} 派生的 DerivedAnchor 只汇总
+     * owner_org/creator 两关系; 本方法暴露<b>任意</b>关系 (reviewer/inspected/...) 的原始注册行。
+     */
+    public Optional<AnchorRow> relationOf(String resourceCode, String relationCode) {
+        ensureLoaded();
+        Map<String, AnchorRow> byRel = relationCache.get(resourceCode);
+        return byRel == null ? Optional.empty() : Optional.ofNullable(byRel.get(relationCode));
     }
 
     /** 配置变更后强制重载缓存 (绕过 loaded 标志)。 */

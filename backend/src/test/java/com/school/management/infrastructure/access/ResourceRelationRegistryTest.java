@@ -136,4 +136,27 @@ class ResourceRelationRegistryTest {
         assertThrows(IllegalStateException.class, () -> reg.forResource("anything"),
                 "空注册表删兜底后无锚点 → 必须 fail-fast, 不得静默放行");
     }
+
+    // ── R4: relationOf per-relation storage_kind 查询 (RECORD_RELATION 检测前置) ──
+
+    @Test
+    @DisplayName("relationOf: 暴露任意关系的 storage_kind (reviewer=RECORD_RELATION); 未注册→empty")
+    void relationOf_exposesPerRelationStorageKind() {
+        AtomicInteger fetches = new AtomicInteger();
+        ResourceRelationRegistry reg = registryReturning(
+                Map.of("inspection_record", List.of(
+                        new AnchorRow("owner_org", StorageKind.COLUMN, "org_unit_id"),
+                        new AnchorRow("creator", StorageKind.COLUMN, "created_by"),
+                        new AnchorRow("reviewer", StorageKind.RECORD_RELATION, null))),
+                fetches);
+
+        assertEquals(StorageKind.RECORD_RELATION,
+                reg.relationOf("inspection_record", "reviewer").orElseThrow().storageKind(),
+                "relationOf 须暴露 reviewer=RECORD_RELATION (forResource 的 DerivedAnchor 不含此关系)");
+        assertEquals(StorageKind.COLUMN,
+                reg.relationOf("inspection_record", "owner_org").orElseThrow().storageKind());
+        assertTrue(reg.relationOf("inspection_record", "nonexistent").isEmpty());
+        assertTrue(reg.relationOf("unregistered_res", "reviewer").isEmpty());
+        assertEquals(1, fetches.get(), "relationOf 与 forResource 共享同一懒加载");
+    }
 }
