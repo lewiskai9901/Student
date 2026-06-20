@@ -13,7 +13,10 @@
 #         完整 schema (333 表/视图, 含归属统一重构 + 插件基础设施 + 检查平台)
 #         + bootstrap 种子数据 (admin/admin123 超管 + 默认角色权限 + 类型/关系配置 + data_modules)。
 #      —— 一次加载即得到"后端可直接启动并登录"的库, 经真实启动 + 冒烟 200 验证。
-#   3. (将来) 应用 database/migrations/post-v3/V*.sql —— baseline_v3 之后的新增量, 目前为空。
+#   3. (不再 apply post-v3) —— fresh 库 = baseline_v3 即完整最新 schema。post-v3/V*.sql 仅作
+#      "已有 dev 库追赶增量"(手动 apply), 不参与 fresh init: 否则 baseline 已含其效果, 重放会与之
+#      冲突 (历史链非幂等, 实测 6 个迁移报重复列/缺列/DROP 不存在)。新 schema 改动一律同步进
+#      baseline_v3 (本项目纪律: 改 baseline + 加迁移), 故 baseline 恒为最新, fresh 无需 post-v3。
 #
 # 为什么不再逐个回放 database/schema/V*.sql + database/migrations/V*.sql ?
 #   那条历史链无法从 baseline 干净重放 (非时间序版本号 + 跨文件矛盾 + 大量线上 ad-hoc
@@ -40,15 +43,8 @@ $MYSQL_CMD -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME} CHARACTER SET utf8mb4 CO
 echo "[init-all] 2. 加载权威 baseline: database/schema/baseline_v3.sql"
 $MYSQL_CMD "${DB_NAME}" < "${SCRIPT_DIR}/database/schema/baseline_v3.sql"
 
-echo "[init-all] 3. 应用 baseline_v3 之后的增量迁移 (database/migrations/post-v3/V*.sql)"
-POST_DIR="${SCRIPT_DIR}/database/migrations/post-v3"
-if compgen -G "${POST_DIR}/V"*.sql > /dev/null 2>&1; then
-  for f in $(ls "${POST_DIR}/V"*.sql 2>/dev/null | sort -V); do
-    echo "   apply $(basename "$f")"
-    $MYSQL_CMD "${DB_NAME}" < "$f" || { echo "[init-all] FAILED at $f"; exit 1; }
-  done
-else
-  echo "   (无增量迁移)"
-fi
+# 注: post-v3/V*.sql 不在 fresh init 中 apply (见顶部说明) —— baseline_v3 已是完整最新 schema。
+# 它们仅供"已有 dev 库追上最新"时按需手动 apply (非幂等, fresh 重放会与 baseline 冲突)。
+echo "[init-all] 3. (skip post-v3) fresh 库 = baseline_v3; post-v3/ 仅 dev 库手动追赶用, 不参与 fresh init"
 
 echo "[init-all] DONE — 默认账号 admin / admin123"

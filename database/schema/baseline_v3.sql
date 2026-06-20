@@ -6221,6 +6221,57 @@ LOCK TABLES `insp_calculation_rules` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `place_audit_logs` (G: post-v3 V20260613_2 同步进 baseline — squash 遗漏的场所审计表)
+--
+
+DROP TABLE IF EXISTS `place_audit_logs`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `place_audit_logs` (
+  `event_id` varchar(64) NOT NULL COMMENT '全局唯一事件ID (UUID)',
+  `request_id` varchar(64) NOT NULL COMMENT '请求ID（同一请求的多个操作共享）',
+  `resource_type` varchar(50) NOT NULL COMMENT '资源类型：PLACE',
+  `resource_id` bigint NOT NULL COMMENT '场所ID',
+  `resource_name` varchar(200) DEFAULT NULL COMMENT '场所名称（冗余，便于查询）',
+  `event_name` varchar(100) NOT NULL COMMENT '事件名称：CREATE/UPDATE/DELETE/AssignOrganization/ChangeStatus',
+  `event_type` varchar(50) NOT NULL COMMENT '事件类型：ApiCall/ConsoleAccess/SystemAction',
+  `event_source` varchar(100) NOT NULL COMMENT '事件来源：place-service',
+  `event_time` datetime(6) NOT NULL COMMENT '事件时间（微秒精度）',
+  `user_id` bigint DEFAULT NULL COMMENT '用户ID',
+  `user_name` varchar(100) DEFAULT NULL COMMENT '用户名',
+  `user_type` varchar(50) DEFAULT NULL COMMENT '用户类型：IAM_USER/ASSUMED_ROLE/SYSTEM',
+  `access_key_id` varchar(100) DEFAULT NULL COMMENT 'JWT Token ID',
+  `session_id` varchar(100) DEFAULT NULL COMMENT '会话ID',
+  `mfa_authenticated` tinyint(1) DEFAULT NULL COMMENT '是否MFA认证',
+  `source_ip` varchar(50) NOT NULL COMMENT '来源IP地址',
+  `user_agent` varchar(500) DEFAULT NULL COMMENT '用户代理（浏览器/客户端）',
+  `referer` varchar(500) DEFAULT NULL COMMENT '来源页面URL',
+  `api_endpoint` varchar(200) NOT NULL COMMENT 'API端点：/api/v9/places/{id}',
+  `http_method` varchar(10) DEFAULT NULL COMMENT 'HTTP方法：GET/POST/PUT/DELETE',
+  `request_parameters` json DEFAULT NULL COMMENT '完整请求参数',
+  `response_elements` json DEFAULT NULL COMMENT '完整响应内容',
+  `before_snapshot` json DEFAULT NULL COMMENT '变更前完整状态快照',
+  `after_snapshot` json DEFAULT NULL COMMENT '变更后完整状态快照',
+  `changed_fields` json DEFAULT NULL COMMENT '变更字段列表 [{fieldName, oldValue, newValue}]',
+  `is_rollback` tinyint(1) DEFAULT '0' COMMENT '是否回滚操作',
+  `related_event_id` varchar(64) DEFAULT NULL COMMENT '关联事件ID（回滚时指向原事件）',
+  `reason` text COLLATE utf8mb4_unicode_ci COMMENT '变更原因/备注',
+  `tags` json DEFAULT NULL COMMENT '自定义标签 {key: value}',
+  `tenant_id` bigint NOT NULL DEFAULT '1' COMMENT '租户ID',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '记录创建时间',
+  `ttl_expires_at` datetime DEFAULT NULL COMMENT '日志过期时间（合规要求：保留7年）',
+  PRIMARY KEY (`event_id`),
+  KEY `idx_resource` (`resource_type`,`resource_id`,`event_time` DESC),
+  KEY `idx_user` (`user_id`,`event_time` DESC),
+  KEY `idx_request` (`request_id`),
+  KEY `idx_event_name` (`event_name`,`event_time` DESC),
+  KEY `idx_source_ip` (`source_ip`,`event_time` DESC),
+  KEY `idx_event_time` (`event_time` DESC),
+  KEY `idx_ttl` (`ttl_expires_at`)
+) ENGINE=InnoDB ROW_FORMAT=COMPRESSED DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='场所审计日志 - 完整5W1H记录（对标AWS CloudTrail）';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `insp_corrective_cases`
 --
 
@@ -6253,6 +6304,7 @@ CREATE TABLE `insp_corrective_cases` (
   `verifier_name` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '验证人姓名',
   `verified_at` datetime DEFAULT NULL COMMENT '验证时间',
   `verification_note` text COLLATE utf8mb4_unicode_ci COMMENT '验证说明',
+  `effectiveness_check_date` date DEFAULT NULL COMMENT '效果检查日期 (G: post-v3 同步进 baseline)',
   `created_by` bigint DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
