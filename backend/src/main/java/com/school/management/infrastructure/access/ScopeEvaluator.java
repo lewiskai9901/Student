@@ -1,6 +1,7 @@
 package com.school.management.infrastructure.access;
 
 import com.school.management.domain.access.model.OrgAnchor;
+import com.school.management.domain.access.model.StorageKind;
 import com.school.management.domain.access.model.SubjectScope;
 import com.school.management.domain.access.model.valueobject.RelationGrant;
 import com.school.management.domain.access.model.valueobject.ScopeSpec;
@@ -44,9 +45,12 @@ public class ScopeEvaluator {
     private static final String DENY = "1 = 0";
 
     private final PluginDataScopeRouter pluginDataScopeRouter;
+    private final ResourceRelationRegistry resourceRelationRegistry;
 
-    public ScopeEvaluator(@Lazy PluginDataScopeRouter pluginDataScopeRouter) {
+    public ScopeEvaluator(@Lazy PluginDataScopeRouter pluginDataScopeRouter,
+                          ResourceRelationRegistry resourceRelationRegistry) {
         this.pluginDataScopeRouter = pluginDataScopeRouter;
+        this.resourceRelationRegistry = resourceRelationRegistry;
     }
 
     /**
@@ -67,7 +71,7 @@ public class ScopeEvaluator {
         List<RelationGrant> grants = grantsOf(spec, meta);
 
         if (grants.size() == 1) {
-            return composeAnchorCondition(toSubSpec(grants.get(0), spec), meta, ctx,
+            return composeGrant(grants.get(0), spec, meta, ctx,
                     effectiveOrgId, effectiveOrgPath, tenantId, paramOffset);
         }
 
@@ -75,7 +79,7 @@ public class ScopeEvaluator {
         ScopeCondition combined = new ScopeCondition();
         int i = 0;
         for (RelationGrant g : grants) {
-            ScopeCondition sub = composeAnchorCondition(toSubSpec(g, spec), meta, ctx,
+            ScopeCondition sub = composeGrant(g, spec, meta, ctx,
                     effectiveOrgId, effectiveOrgPath, tenantId, paramOffset + i * 10000);
             i++;
             if (sub.sql.isEmpty()) {
@@ -103,6 +107,51 @@ public class ScopeEvaluator {
         OrgAnchor anchor = spec.getOrgAnchor() != null ? spec.getOrgAnchor() : OrgAnchor.SELF;
         return RelationGrant.fromM1Axes(anchor, spec.getAnchorParam(), spec.isIncludeSubtree(),
                 spec.getCustomOrgIds(), meta.viaMembership());
+    }
+
+    /**
+     * 一条 grant → 子条件 (R4): grant.relation 的 storage_kind=RECORD_RELATION → record_relations
+     * 子查询; 否则走 org-anchor 单锚点 compose ({@link #composeAnchorCondition})。
+     */
+    private ScopeCondition composeGrant(RelationGrant g, ScopeSpec spec, ResourceScopeMeta meta,
+            UserContext ctx, Long effectiveOrgId, String effectiveOrgPath, Long tenantId, int paramOffset) {
+        if (isRecordRelation(meta, g)) {
+            return buildRecordRelationCondition(g, spec, meta, ctx, paramOffset);
+        }
+        return composeAnchorCondition(toSubSpec(g, spec), meta, ctx,
+                effectiveOrgId, effectiveOrgPath, tenantId, paramOffset);
+    }
+
+    /** grant.relation 在该资源是否 RECORD_RELATION 存储 (查 registry per-relation)。resourceCode 空→false。 */
+    private boolean isRecordRelation(ResourceScopeMeta meta, RelationGrant g) {
+        if (meta.resourceCode() == null || meta.resourceCode().isEmpty()) {
+            return false;
+        }
+        return resourceRelationRegistry.relationOf(meta.resourceCode(), g.relation())
+                .map(r -> r.storageKind() == StorageKind.RECORD_RELATION)
+                .orElse(false);
+    }
+
+    /**
+     * RECORD_RELATION grant → {@code record_relations} 子查询 (R4)。
+     *
+     * <p>语义 subject=SELF: "我经该关系 (reviewer/inspected/...) 可见的记录"。emit:
+     * <pre>{alias}id IN (SELECT record_id FROM record_relations WHERE resource_code=? AND relation_code=?
+     *   AND subject_type='USER' AND subject_id=? AND deleted=0 AND (valid_to IS NULL OR valid_to>NOW()))</pre>
+     * 仍叠加轴③ typeFilter (与其它 grant 一致)。⚠ 仅处理 subject=SELF (用户即关系主体); 非 SELF 的
+     * RECORD_RELATION (如 org 作 reviewer) 罕见, 留后续。
+     */
+    private ScopeCondition buildRecordRelationCondition(RelationGrant g, ScopeSpec spec,
+            ResourceScopeMeta meta, UserContext ctx, int paramOffset) {
+        ScopeCondition cond = new ScopeCondition();
+        String alias = meta.aliasPrefix();
+        cond.sql = alias + "id IN (SELECT record_id FROM record_relations WHERE resource_code = ? "
+                + "AND relation_code = ? AND subject_type = 'USER' AND subject_id = ? AND deleted = 0 "
+                + "AND (valid_to IS NULL OR valid_to > NOW()))";
+        cond.addParam("_dp_rrRes_" + paramOffset, meta.resourceCode(), String.class, JdbcType.VARCHAR);
+        cond.addParam("_dp_rrRel_" + paramOffset, g.relation(), String.class, JdbcType.VARCHAR);
+        cond.addParam("_dp_rrSubj_" + paramOffset, ctx.getUserId(), Long.class, JdbcType.BIGINT);
+        return typeFilter(cond, spec, meta, paramOffset);
     }
 
     /** 一条 grant → 等价单锚点 sub-spec (轴① from grant; 轴②③ 从父 spec 透传)。 */

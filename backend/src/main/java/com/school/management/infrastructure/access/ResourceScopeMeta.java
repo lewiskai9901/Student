@@ -22,6 +22,9 @@ package com.school.management.infrastructure.access;
  * @param viaMembership          主表行即 member 关系 subject。
  * @param membershipSubjectColumn 主表中作为 ar.subject_id 的列 (默认 id)。
  * @param typeField              类型列 (轴③, 为空则不启用类型过滤)。
+ * @param resourceCode           资源码 (= data_resources.resource_code / @DataPermission.module)。
+ *                               R4: 引擎据此查 record_relations + registry.relationOf 判 RECORD_RELATION
+ *                               grant。<b>区别于 {@code resourceType}</b> (后者是 access_relation 类型, 多 NULL)。
  */
 public record ResourceScopeMeta(
         String tableAlias,
@@ -30,7 +33,8 @@ public record ResourceScopeMeta(
         String resourceType,
         boolean viaMembership,
         String membershipSubjectColumn,
-        String typeField
+        String typeField,
+        String resourceCode
 ) {
 
     /** 别名前缀: 有别名时返回 {@code "alias."}, 否则空串 (与 interceptor 拼法一致)。 */

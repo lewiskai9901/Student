@@ -84,10 +84,8 @@ class DataPermissionInterceptorTest {
     @BeforeEach
     void setUp() {
         interceptor = new DataPermissionInterceptor();
-        scopeEvaluator = new ScopeEvaluator(pluginDataScopeRouter);
         ReflectionTestUtils.setField(interceptor, "dynamicModuleService", dynamicModuleService);
         ReflectionTestUtils.setField(interceptor, "dataPermissionPolicyService", dataPermissionPolicyService);
-        ReflectionTestUtils.setField(interceptor, "scopeEvaluator", scopeEvaluator);
         // Tier 1: buildMeta 锚点改由 resourceRelationRegistry 驱动 (注解锚兜底已删)。
         // 桩 forResource → 各 module 的 DerivedAnchor: student=列锚, user=成员图。
         // (字段, 便于个别测试覆写为 empty 验证 fail-fast)
@@ -97,6 +95,9 @@ class DataPermissionInterceptorTest {
         when(resourceRelationRegistry.forResource("user"))
                 .thenReturn(Optional.of(new ResourceRelationRegistry.DerivedAnchor(true, null, null)));
         ReflectionTestUtils.setField(interceptor, "resourceRelationRegistry", resourceRelationRegistry);
+        // R4: ScopeEvaluator 持 router + registry (registry 供 RECORD_RELATION 检测)。
+        scopeEvaluator = new ScopeEvaluator(pluginDataScopeRouter, resourceRelationRegistry);
+        ReflectionTestUtils.setField(interceptor, "scopeEvaluator", scopeEvaluator);
         UserContextHolder.clear();
         UserContextHolder.enableDataPermission();
     }

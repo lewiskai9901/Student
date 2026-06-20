@@ -395,14 +395,14 @@ public class DataPermissionInterceptor implements Interceptor {
 
         return new ResourceScopeMeta(
                 tableAlias, orgField, creatorField, resourceType,
-                viaMembership, membershipSubjectColumn, typeField);
+                viaMembership, membershipSubjectColumn, typeField, annotation.module());
     }
 
     /** 复制一个 meta, 仅替换 resourceType (供 PLUGIN_DIM resolve 注入 moduleCode 兜底)。 */
     private ResourceScopeMeta withResourceType(ResourceScopeMeta base, String resourceType) {
         return new ResourceScopeMeta(
                 base.tableAlias(), base.orgUnitField(), base.creatorField(), resourceType,
-                base.viaMembership(), base.membershipSubjectColumn(), base.typeField());
+                base.viaMembership(), base.membershipSubjectColumn(), base.typeField(), base.resourceCode());
     }
 
     /**

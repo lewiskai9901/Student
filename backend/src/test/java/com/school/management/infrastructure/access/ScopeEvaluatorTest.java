@@ -1,10 +1,13 @@
 package com.school.management.infrastructure.access;
 
 import com.school.management.domain.access.model.OrgAnchor;
+import com.school.management.domain.access.model.StorageKind;
 import com.school.management.domain.access.model.SubjectScope;
 import com.school.management.domain.access.model.valueobject.RelationGrant;
 import com.school.management.domain.access.model.valueobject.ScopeSpec;
 import org.apache.ibatis.type.JdbcType;
+
+import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,10 +41,13 @@ class ScopeEvaluatorTest {
     @Mock
     private PluginDataScopeRouter pluginDataScopeRouter;
 
+    @Mock
+    private ResourceRelationRegistry resourceRelationRegistry;
+
     private static final Long TENANT = 1L;
 
     private ScopeEvaluator evaluator() {
-        return new ScopeEvaluator(pluginDataScopeRouter);
+        return new ScopeEvaluator(pluginDataScopeRouter, resourceRelationRegistry);
     }
 
     private UserContext ctx() {
@@ -54,21 +60,21 @@ class ScopeEvaluatorTest {
 
     /** org 字段路径 meta: 无 membership / 无 resourceType。 */
     private ResourceScopeMeta orgFieldMeta() {
-        return new ResourceScopeMeta("t", "org_unit_id", "created_by", "", false, "id", null);
+        return new ResourceScopeMeta("t", "org_unit_id", "created_by", "", false, "id", null, null);
     }
 
     /** membership 路径 meta (如 user): viaMembership, subjectCol=id。 */
     private ResourceScopeMeta membershipMeta() {
-        return new ResourceScopeMeta("u", "org_unit_id", "created_by", "", true, "id", null);
+        return new ResourceScopeMeta("u", "org_unit_id", "created_by", "", true, "id", null, null);
     }
 
     private ResourceScopeMeta membershipMetaWithType() {
-        return new ResourceScopeMeta("u", "org_unit_id", "created_by", "", true, "id", "user_type_code");
+        return new ResourceScopeMeta("u", "org_unit_id", "created_by", "", true, "id", "user_type_code", null);
     }
 
     /** access_relation 路径 meta: resourceType="student", 非 membership, alias="t"。 */
     private ResourceScopeMeta accessRelationMeta() {
-        return new ResourceScopeMeta("t", "org_unit_id", "created_by", "student", false, "id", null);
+        return new ResourceScopeMeta("t", "org_unit_id", "created_by", "student", false, "id", null, null);
     }
 
     // ---- 1. PRIMARY_ORG + subtree, org-field ----
@@ -402,5 +408,54 @@ class ScopeEvaluatorTest {
 
         assertThat(c.sql).isEmpty(); // ALL grant 使并集无界 → 放行
         assertThat(c.params).isEmpty();
+    }
+
+    // ---- 14. R4 RECORD_RELATION grant → record_relations 子查询 ----
+    @Test
+    @DisplayName("R4 RECORD_RELATION: reviewer (storage=RECORD_RELATION) → record_relations 子查询 (subject=SELF)")
+    void recordRelationGrant_emitsSubquery() {
+        when(resourceRelationRegistry.relationOf("inspection_record", "reviewer"))
+                .thenReturn(Optional.of(new ResourceRelationRegistry.AnchorRow(
+                        "reviewer", StorageKind.RECORD_RELATION, null)));
+        ResourceScopeMeta meta = new ResourceScopeMeta(
+                "t", "org_unit_id", "created_by", "", false, "id", null, "inspection_record");
+        ScopeSpec spec = ScopeSpec.builder()
+                .relationGrants(List.of(new RelationGrant("reviewer", SubjectScope.SELF, null, false, null)))
+                .build();
+
+        ScopeCondition c = evaluator().toSqlCondition(spec, meta, ctx(), 100L, "/1/100/", TENANT, 0);
+
+        assertThat(c.sql).isEqualTo(
+                "t.id IN (SELECT record_id FROM record_relations WHERE resource_code = ? "
+                + "AND relation_code = ? AND subject_type = 'USER' AND subject_id = ? AND deleted = 0 "
+                + "AND (valid_to IS NULL OR valid_to > NOW()))");
+        // 参数: [resourceCode, relationCode, userId]
+        assertThat(c.params).hasSize(3);
+        assertThat(c.params.get(0).value).isEqualTo("inspection_record");
+        assertThat(c.params.get(1).value).isEqualTo("reviewer");
+        assertThat(c.params.get(2).value).isEqualTo(7L);
+    }
+
+    @Test
+    @DisplayName("R4 多 grant: creator(COLUMN) ∨ reviewer(RECORD_RELATION) → 列谓词 OR record_relations 子查询")
+    void multiGrant_columnOrRecordRelation() {
+        when(resourceRelationRegistry.relationOf("inspection_record", "reviewer"))
+                .thenReturn(Optional.of(new ResourceRelationRegistry.AnchorRow(
+                        "reviewer", StorageKind.RECORD_RELATION, null)));
+        // creator 关系不是 RECORD_RELATION (registry mock 默认 empty) → 走列路径
+        ResourceScopeMeta meta = new ResourceScopeMeta(
+                "t", "org_unit_id", "created_by", "", false, "id", null, "inspection_record");
+        ScopeSpec spec = ScopeSpec.builder()
+                .relationGrants(List.of(
+                        new RelationGrant("creator", SubjectScope.SELF, null, false, null),
+                        new RelationGrant("reviewer", SubjectScope.SELF, null, false, null)))
+                .build();
+
+        ScopeCondition c = evaluator().toSqlCondition(spec, meta, ctx(), 100L, "/1/100/", TENANT, 0);
+
+        assertThat(c.sql).startsWith("(").endsWith(")");
+        assertThat(c.sql).contains("t.created_by = ?");                 // creator COLUMN 路径
+        assertThat(c.sql).contains(" OR ");
+        assertThat(c.sql).contains("SELECT record_id FROM record_relations"); // reviewer RECORD_RELATION 路径
     }
 }

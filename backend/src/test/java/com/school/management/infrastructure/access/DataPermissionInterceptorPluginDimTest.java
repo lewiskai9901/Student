@@ -63,8 +63,6 @@ class DataPermissionInterceptorPluginDimTest {
         interceptor = new DataPermissionInterceptor();
         ReflectionTestUtils.setField(interceptor, "dynamicModuleService", dynamicModuleService);
         ReflectionTestUtils.setField(interceptor, "dataPermissionPolicyService", dataPermissionPolicyService);
-        // T7: 插件维度 compose 已下沉 ScopeEvaluator (持 router); 拦截器只编排。
-        ReflectionTestUtils.setField(interceptor, "scopeEvaluator", new ScopeEvaluator(pluginDataScopeRouter));
         // Tier 1: buildMeta 锚点改由 resourceRelationRegistry 驱动 (注解锚兜底已删)。
         // student=成员图 (viaMembership), attendance=列锚 (creator=recorded_by)。
         ResourceRelationRegistry resourceRelationRegistry = mock(ResourceRelationRegistry.class);
@@ -75,6 +73,9 @@ class DataPermissionInterceptorPluginDimTest {
         when(resourceRelationRegistry.forResource("attendance"))
                 .thenReturn(Optional.of(new ResourceRelationRegistry.DerivedAnchor(false, "org_unit_id", "recorded_by")));
         ReflectionTestUtils.setField(interceptor, "resourceRelationRegistry", resourceRelationRegistry);
+        // T7/R4: 插件维度 compose 下沉 ScopeEvaluator (持 router + registry); 拦截器只编排。
+        ReflectionTestUtils.setField(interceptor, "scopeEvaluator",
+                new ScopeEvaluator(pluginDataScopeRouter, resourceRelationRegistry));
         UserContextHolder.clear();
         UserContextHolder.enableDataPermission();
     }

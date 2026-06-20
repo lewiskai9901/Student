@@ -33,10 +33,13 @@ class BuildMetaRegistryEquivalenceTest {
     @Mock
     private PluginDataScopeRouter router;
 
+    @Mock
+    private ResourceRelationRegistry resourceRelationRegistry;
+
     private static final Long TENANT = 1L;
 
     private ScopeEvaluator evaluator() {
-        return new ScopeEvaluator(router);
+        return new ScopeEvaluator(router, resourceRelationRegistry);
     }
 
     private UserContext ctx() {
@@ -45,12 +48,12 @@ class BuildMetaRegistryEquivalenceTest {
 
     /** legacy: 成员主体 creatorField=created_by (来自 data_resources)。 */
     private ResourceScopeMeta legacyMembership() {
-        return new ResourceScopeMeta("u", "", "created_by", "", true, "id", null);
+        return new ResourceScopeMeta("u", "", "created_by", "", true, "id", null, null);
     }
 
     /** registry: 注册表无 creator 行 → coerce 成 "" (orgUnitField 同为 "")。其余字段不变。 */
     private ResourceScopeMeta registryMembership() {
-        return new ResourceScopeMeta("u", "", "", "", true, "id", null);
+        return new ResourceScopeMeta("u", "", "", "", true, "id", null, null);
     }
 
     private void assertSameSql(ScopeSpec spec) {
@@ -110,8 +113,8 @@ class BuildMetaRegistryEquivalenceTest {
     @DisplayName("非成员 SELF 消费 creatorField(与成员路径相反): 登 created_by → 't.created_by=?', 不登('') → 't.=?' 发散")
     void orgFieldSelfConsumesCreatorField() {
         ScopeSpec self = ScopeSpec.builder().orgAnchor(OrgAnchor.SELF).build();
-        ResourceScopeMeta withCreator = new ResourceScopeMeta("t", "org_unit_id", "created_by", "", false, "id", null);
-        ResourceScopeMeta noCreator   = new ResourceScopeMeta("t", "org_unit_id", "",           "", false, "id", null);
+        ResourceScopeMeta withCreator = new ResourceScopeMeta("t", "org_unit_id", "created_by", "", false, "id", null, null);
+        ResourceScopeMeta noCreator   = new ResourceScopeMeta("t", "org_unit_id", "",           "", false, "id", null, null);
         String a = evaluator().toSqlCondition(self, withCreator, ctx(), 100L, "/1/100/", TENANT, 0).sql;
         String b = evaluator().toSqlCondition(self, noCreator,   ctx(), 100L, "/1/100/", TENANT, 0).sql;
         // 证明 creatorField 在非成员 SELF 确实进 SQL —— 这就是 student_grade/school_class 必须登 creator 的原因

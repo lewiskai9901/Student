@@ -64,13 +64,14 @@ class DataPermissionInterceptorMembershipCustomTest {
         interceptor = new DataPermissionInterceptor();
         ReflectionTestUtils.setField(interceptor, "dynamicModuleService", dynamicModuleService);
         ReflectionTestUtils.setField(interceptor, "dataPermissionPolicyService", dataPermissionPolicyService);
-        // T7: CUSTOM membership compose 下沉 ScopeEvaluator; 拦截器只编排。
-        ReflectionTestUtils.setField(interceptor, "scopeEvaluator", new ScopeEvaluator(pluginDataScopeRouter));
         // Tier 1: buildMeta 锚点改由 resourceRelationRegistry 驱动 (注解锚兜底已删)。student=成员图。
         ResourceRelationRegistry resourceRelationRegistry = mock(ResourceRelationRegistry.class);
         when(resourceRelationRegistry.forResource(anyString()))
                 .thenReturn(Optional.of(new ResourceRelationRegistry.DerivedAnchor(true, null, null)));
         ReflectionTestUtils.setField(interceptor, "resourceRelationRegistry", resourceRelationRegistry);
+        // T7/R4: CUSTOM membership compose 下沉 ScopeEvaluator (持 router + registry); 拦截器只编排。
+        ReflectionTestUtils.setField(interceptor, "scopeEvaluator",
+                new ScopeEvaluator(pluginDataScopeRouter, resourceRelationRegistry));
         UserContextHolder.clear();
         UserContextHolder.enableDataPermission();
     }
