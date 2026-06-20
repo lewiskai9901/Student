@@ -155,6 +155,8 @@ public class DataPermissionApplicationService {
                                         ? new ArrayList<>(permission.getSubjectRelInclude()) : null)
                                 .subjectRelExclude(permission.getSubjectRelExclude() != null
                                         ? new ArrayList<>(permission.getSubjectRelExclude()) : null)
+                                // R3/R4: 透传原始多 grant (UI 回填多锚点; 上面三轴是 deriveAxis 首 grant 视图)
+                                .relationGrants(permission.getRelationGrants())
                                 .build();
                     } else {
                         return RoleModulePermissionDTO.builder()
@@ -577,6 +579,8 @@ public class DataPermissionApplicationService {
         private List<String> subjectRelInclude;
         /** 轴② 结果关系 exclude。 */
         private List<String> subjectRelExclude;
+        /** R3/R4: 原始关系授予数组 (多锚点)。上面三轴是其 deriveAxis 首 grant 视图; 多 grant 配置以此为准。 */
+        private List<com.school.management.domain.access.model.valueobject.RelationGrant> relationGrants;
     }
 
     @lombok.Data

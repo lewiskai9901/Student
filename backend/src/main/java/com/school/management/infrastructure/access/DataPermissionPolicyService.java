@@ -241,6 +241,7 @@ public class DataPermissionPolicyService {
                 .customOrgIds(customOrgIds)
                 .subjectRelInclude(parseStringSet(row.get("subject_rel_include")))
                 .subjectRelExclude(parseStringSet(row.get("subject_rel_exclude")))
+                .relationGrants(grants)  // R3/R4: 回传原始多 grant (deriveAxis 仅取首 grant, 多锚点需原始)
                 .build();
 
         // CUSTOM: 由 custom_org_ids 还原 scopeItems (前端 CUSTOM picker 回填用)
