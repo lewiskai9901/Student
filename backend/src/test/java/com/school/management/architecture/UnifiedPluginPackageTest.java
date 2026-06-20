@@ -121,7 +121,7 @@ class UnifiedPluginPackageTest {
     }
 
     @Test
-    @DisplayName("PluginPackage 默认 metadata() 非 null; CoreManifest.contribute() 含 321 个 contribution (R2.2前置②: +entity_event)")
+    @DisplayName("PluginPackage 默认 metadata() 非 null; CoreManifest.contribute() 含 322 个 contribution (R4: +inspection_record reviewer RECORD_RELATION)")
     void pluginPackageDefaultMethods() {
         PluginPackage core = new CoreManifest();
         // Phase 2 W2.2: CoreManifest 已覆盖 contribute() 声明 9 个核心关系 (CoreRelationsPlugin 已删).
@@ -134,9 +134,10 @@ class UnifiedPluginPackageTest {
         // Role 双轨收敛: 加 3 个 RoleContribution → 63+3=66.
         // Menu 双轨收敛: 加 8 个 MenuContribution → 66+8=74.
         // Permission 双轨收敛: 加 223 个 PermissionContribution (聚合 CorePermissionCatalog) → 74+223=297.
+        // R4: inspection_record 加 reviewer RECORD_RELATION 关系 → resource-relation 23→24 → 321+1=322.
         // 旧测试期望"默认空流"已不再适用; 改为校验内容契约.
         long count = core.contribute().count();
-        assertEquals(321, count, "CoreManifest 应贡献 321 个 contribution (15 关系 + 3 workflow + 26 TENANT_ADMIN + 20 data-resource + 23 resource-relation + 3 role + 8 menu + 223 permission)");
+        assertEquals(322, count, "CoreManifest 应贡献 322 个 contribution (15 关系 + 3 workflow + 26 TENANT_ADMIN + 20 data-resource + 24 resource-relation + 3 role + 8 menu + 223 permission)");
         long rolePermCount = new CoreManifest().contribute()
             .filter(c -> c instanceof Contribution.RolePermissionBindingContribution)
             .count();

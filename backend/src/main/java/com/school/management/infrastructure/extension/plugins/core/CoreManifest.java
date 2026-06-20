@@ -348,6 +348,10 @@ public class CoreManifest implements PluginPackage {
             orgCreator("place", "effective_org_unit_id", "created_by"),
             // 普通记录: org_unit_id + created_by
             orgCreator("inspection_record", "org_unit_id", "created_by"),
+            // R4: 检查记录的"复核员" = 多值记录关系 (record_relations); 复核员只看指派给自己的检查记录。
+            // 引擎 (ScopeEvaluator RECORD_RELATION 分支) 据此出 record_relations 子查询。
+            Stream.<Contribution>of(rr(ResourceRelationDef.recordRelation(
+                "inspection_record", "reviewer", "复核员", "USER", "reviewer"))),
             orgCreator("inspection_project", "org_unit_id", "created_by"),
             orgCreator("inspection_alert", "org_unit_id", "created_by"),
             orgCreator("inspection_summary", "org_unit_id", "created_by"),
