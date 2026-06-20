@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import type { ModulePermission } from '@/types/access'
+import type { ModulePermission, RelationGrant } from '@/types/access'
 import type { ScopeSpecVM } from '../../components/ScopeBuilder.vue'
 import {
   inferDefaultAndExceptions,
@@ -427,5 +427,52 @@ describe('round-trip stability (THE invariant)', () => {
     const def = SPEC.custom()
     const exc: ResourceException[] = [{ moduleCode: 'user', spec: SPEC.managedAndBelow() }]
     assertRoundTrip(def, exc, ['user', 'a', 'b'])
+  })
+})
+
+describe('R3/R4 multi-grant (relationGrants)', () => {
+  const multi: RelationGrant[] = [
+    { relation: 'creator', subject: 'SELF' },
+    { relation: 'owner_org', subject: 'MY_ORG', subtree: true },
+  ]
+
+  it('多锚点模块 (>1 grant) 被推断为例外, 保留 relationGrants', () => {
+    const modules: ModulePermission[] = [
+      mod('a', SPEC.self()),
+      mod('a2', SPEC.self()),
+      { moduleCode: 'b', scopeCode: 'SELF', orgAnchor: 'SELF', relationGrants: multi },
+    ]
+    const { exceptions } = inferDefaultAndExceptions(modules)
+    const ex = exceptions.find(e => e.moduleCode === 'b')
+    expect(ex).toBeTruthy()
+    expect(ex!.spec.relationGrants).toHaveLength(2)
+  })
+
+  it('单 grant 不承载 relationGrants (走常规轴①, 不污染默认/例外)', () => {
+    const modules: ModulePermission[] = [
+      { moduleCode: 'b', scopeCode: 'SELF', orgAnchor: 'SELF', relationGrants: [multi[0]] },
+    ]
+    const { defaultSpec, exceptions } = inferDefaultAndExceptions(modules)
+    ;[defaultSpec, ...exceptions.map(e => e.spec)].forEach(s =>
+      expect(s.relationGrants).toBeUndefined()
+    )
+  })
+
+  it('expand 把例外的 relationGrants 原样下发, 非多锚点资源不带', () => {
+    const exc: ResourceException[] = [
+      { moduleCode: 'b', spec: { orgAnchor: 'SELF', relationGrants: multi } },
+    ]
+    const cmds = expandToCommands(SPEC.self(), exc, ['a', 'b'])
+    expect(cmds.find(c => c.moduleCode === 'b')!.relationGrants).toHaveLength(2)
+    expect(cmds.find(c => c.moduleCode === 'a')!.relationGrants).toBeUndefined()
+  })
+
+  it('round-trip: infer(expand(多锚点)) 保留多 grant (修覆盖 bug)', () => {
+    const exc: ResourceException[] = [
+      { moduleCode: 'b', spec: { orgAnchor: 'SELF', relationGrants: multi } },
+    ]
+    const cmds = expandToCommands(SPEC.self(), exc, ['a', 'b'])
+    const { exceptions } = inferDefaultAndExceptions(cmds)
+    expect(exceptions.find(e => e.moduleCode === 'b')!.spec.relationGrants).toHaveLength(2)
   })
 })

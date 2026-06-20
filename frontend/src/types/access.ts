@@ -229,6 +229,30 @@ export interface ScopeItem {
 export type OrgAnchor = 'ALL' | 'SELF' | 'PRIMARY_ORG' | 'RELATION' | 'CUSTOM_ORG' | 'PLUGIN_DIM'
 
 /**
+ * 主体范围 (RelationGrant.subject) — 与后端 SubjectScope 枚举往返。
+ *  - SELF 仅本人 / MY_ORG 本组织(成员归属) / ALL 全部
+ *  - RELATION 由关系派生 / CUSTOM 指定组织 / PLUGIN_DIM 插件维度派生
+ */
+export type SubjectScope = 'SELF' | 'MY_ORG' | 'ALL' | 'RELATION' | 'CUSTOM' | 'PLUGIN_DIM'
+
+/**
+ * 关系授予 (R3/R4) — 一条"按某关系锚定到某主体范围"的授予; 多条之间 OR 组合。
+ * 与后端 RelationGrant 值对象严格往返。
+ */
+export interface RelationGrant {
+  /** 关系码 (如 creator / owner_org / reviewer / inspected) */
+  relation: string
+  /** 主体范围 */
+  subject: SubjectScope
+  /** 主体参数 (RELATION=关系码, PLUGIN_DIM=维度码) */
+  subjectParam?: string
+  /** 是否含锚定组织子树 */
+  subtree?: boolean
+  /** 指定组织 id 集 (CUSTOM 时) */
+  orgIds?: (number | string)[]
+}
+
+/**
  * 模块权限配置 — 可组合三轴 (T10 READ 侧)
  *  - 轴① 组织锚点: orgAnchor / anchorParam / includeSubtree / customOrgIds
  *  - 轴② 关系过滤: subjectRelInclude / subjectRelExclude (仅 relationFilterable 资源)
@@ -254,6 +278,11 @@ export interface ModulePermission {
   subjectRelInclude?: string[]
   /** 轴② 关系过滤-排除: 排除这些关系的主体 (如"排除管理者") */
   subjectRelExclude?: string[]
+  /**
+   * R3/R4 多锚点授予 (>1 条 = 多 grant 配置)。后端有此时优先采用, 上面三轴退为其首 grant 视图。
+   * UI: >1 条时按只读多锚点卡渲染 (ScopeBuilder 不编辑多 grant)。
+   */
+  relationGrants?: RelationGrant[]
 }
 
 /**

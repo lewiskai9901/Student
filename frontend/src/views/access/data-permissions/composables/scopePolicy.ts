@@ -33,7 +33,15 @@ function toSpec(m: ModulePermission): ScopeSpecVM {
     subjectRelInclude: m.subjectRelInclude,
     subjectRelExclude: m.subjectRelExclude,
     typeFilter: m.typeFilter,
+    // R3/R4: 仅多锚点 (>1 grant) 时承载原始 grants; 单 grant 走常规三轴 (后端按 scopeCode 派生).
+    relationGrants:
+      m.relationGrants && m.relationGrants.length > 1 ? m.relationGrants : undefined,
   }
+}
+
+/** spec 是否为多锚点配置 (>1 条关系授予). */
+function isMultiGrant(spec: ScopeSpecVM): boolean {
+  return (spec.relationGrants?.length ?? 0) > 1
 }
 
 /** 该 spec 的有效组织锚点 (缺省 = SELF). */
@@ -258,7 +266,8 @@ export function inferDefaultAndExceptions(modules: ModulePermission[]): {
   const exceptions: ResourceException[] = []
   for (const { moduleCode, spec } of specs) {
     const differsAxis1 = axis1Signature(spec) !== bestSig
-    if (differsAxis1 || hasAxis23(spec)) {
+    // 多锚点 (>1 grant) 恒为例外 — 默认范围只承载单一轴①, 不能折叠多 grant.
+    if (differsAxis1 || hasAxis23(spec) || isMultiGrant(spec)) {
       exceptions.push({ moduleCode, spec })
     }
   }
@@ -282,6 +291,8 @@ function specToCommand(moduleCode: string, spec: ScopeSpecVM): ModulePermission 
     subjectRelInclude: spec.subjectRelInclude,
     subjectRelExclude: spec.subjectRelExclude,
     typeFilter: spec.typeFilter,
+    // R3/R4: 多锚点例外原样下发 relationGrants → 后端 saveRolePermission 优先采用 (跳过 scopeCode 派生).
+    relationGrants: spec.relationGrants,
   }
 }
 

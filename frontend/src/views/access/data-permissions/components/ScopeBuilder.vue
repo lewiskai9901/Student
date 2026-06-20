@@ -175,7 +175,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import CustomScopeTreePicker from './CustomScopeTreePicker.vue'
-import type { OrgAnchor } from '@/types/access'
+import type { OrgAnchor, RelationGrant } from '@/types/access'
 import { entityTypeApi } from '@/api/entityType'
 import { relationTypeApi, type RelationTypeDef } from '@/api/relationType'
 
@@ -199,6 +199,11 @@ export interface ScopeSpecVM {
   subjectRelExclude?: string[]
   /** 轴③ 类型过滤: 类型码集, 与组织范围 AND 组合; 空=不限 */
   typeFilter?: string[]
+  /**
+   * R3/R4 多锚点授予 (>1 条)。ScopeBuilder 不编辑它 — 仅承载/透传, 由 DataScopeStudio 例外层
+   * 以只读多锚点卡渲染。单 grant / 缺省时为 undefined, 走常规三轴。
+   */
+  relationGrants?: RelationGrant[]
 }
 
 /** 资源能力声明 — 决定哪些轴/锚点可用. 来自 M1 模块列表暴露的能力字段. */
