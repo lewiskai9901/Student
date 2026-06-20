@@ -241,26 +241,12 @@ public class DataPermissionInterceptor implements Interceptor {
                 effectiveOrgPath = userContext.getOrgUnitPath();
             }
 
-            // PLUGIN_DIM resolve 的 resourceType 需要 moduleCode 兜底 (端口自旧 plugin-dim 分支),
-            // 但核心路径的 hasResourceType() 选择 *不可* 被 moduleCode 污染 (否则核心 scope 误走
-            // access_relation)。故仅在 PLUGIN_DIM 时切换到带兜底的 meta 变体。
-            //
-            // ⚠ R3b 已知限制 (仅 COLUMN 资源): roleMeta 是 meta 级 (整条 spec 共享), COLUMN 资源
-            // (!viaMembership) 多 grant 混 PLUGIN_DIM 与非 PLUGIN_DIM 时, withResourceType 注入的
-            // moduleCode 会让同条非 PLUGIN_DIM grant 误走 accessRelationSelect → DENY 被丢。
-            // membership 资源不受影响 (subjectSelect viaMembership 优先于 hasResourceType)。
-            // ⚠ 简单"非 PLUGIN_DIM grant 剥 resourceType"修法**错**: 无法区分此 moduleCode 兜底与
-            // **原生** access_relation resourceType, 会破坏真 access_relation 资源 (字节等价测试已证)。
-            // 正解: 不把 moduleCode 注入共享 meta, plugin-dim resolve 另路拿 moduleCode (per-grant)。
-            // 现单 grant 全部正确; 多 grant 全非 PLUGIN_DIM 正确。无真消费者 (gated 于 R4)。待 R3b 深化。
-            ResourceScopeMeta roleMeta = meta;
-            if (spec.hasPluginDimGrant()
-                    && (meta.resourceType() == null || meta.resourceType().isEmpty())) {
-                roleMeta = withResourceType(meta, moduleCode);
-            }
-
+            // R3b 正解 (R4 enabled): plugin-dim resolve 改用 meta.resourceCode() (buildPluginDimCondition),
+            // 不再"hasPluginDimGrant→withResourceType 注入 moduleCode" —— 那会污染同 spec 的非 PLUGIN_DIM
+            // grant (COLUMN 资源被推 accessRelationSelect → DENY 丢)。resourceCode 与 resourceType 解耦后,
+            // 多 grant 混 PLUGIN_DIM 与 org/creator 自然正确。meta 直传。
             ScopeCondition roleCond = scopeEvaluator.toSqlCondition(
-                    spec, roleMeta, userContext, effectiveOrgId, effectiveOrgPath, tenantId, globalParamIdx);
+                    spec, meta, userContext, effectiveOrgId, effectiveOrgPath, tenantId, globalParamIdx);
 
             if (roleCond != null && !roleCond.sql.isEmpty()) {
                 roleSqls.add(roleCond.sql);
@@ -327,14 +313,9 @@ public class DataPermissionInterceptor implements Interceptor {
                 return null;
             }
 
-            ResourceScopeMeta roleMeta = meta;
-            if (spec.hasPluginDimGrant()
-                    && (meta.resourceType() == null || meta.resourceType().isEmpty())) {
-                roleMeta = withResourceType(meta, moduleCode);
-            }
-
+            // R3b 正解 (R4): plugin-dim 用 resourceCode, 不再注入 resourceType (见核心路径注释)。
             ScopeCondition roleCond = scopeEvaluator.toSqlCondition(
-                    spec, roleMeta, userContext,
+                    spec, meta, userContext,
                     userContext.getOrgUnitId(), userContext.getOrgUnitPath(), tenantId, globalParamIdx);
 
             if (roleCond != null && !roleCond.sql.isEmpty()) {
@@ -361,8 +342,8 @@ public class DataPermissionInterceptor implements Interceptor {
      *   <li>tableAlias —— 注解 (sanitize)。</li>
      *   <li>resourceType —— annotation.resourceType (非空) ?? moduleConfig.resourceType。
      *       <b>不</b>兜底 moduleCode — 核心路径 hasResourceType() 选择必须与旧 buildSingleRoleCondition
-     *       一致 (空→org-field, 非空→access_relation)。PLUGIN_DIM 的 moduleCode 兜底由调用方在
-     *       per-role 切换 meta 变体 ({@link #withResourceType}) 实现, 不污染此处。</li>
+     *       一致 (空→org-field, 非空→access_relation)。PLUGIN_DIM 的 moduleCode 由 buildPluginDimCondition
+     *       直接用 {@code meta.resourceCode()} (R4; 不再注入 resourceType, 避免污染非 PLUGIN_DIM grant)。</li>
      *   <li>membershipSubjectColumn —— 注解 (Tier 2 再迁注册表)。</li>
      *   <li>typeField —— moduleConfig.typeField (sanitize; 为空则轴③禁用; Tier 2 再迁)。</li>
      * </ul>
@@ -396,13 +377,6 @@ public class DataPermissionInterceptor implements Interceptor {
         return new ResourceScopeMeta(
                 tableAlias, orgField, creatorField, resourceType,
                 viaMembership, membershipSubjectColumn, typeField, annotation.module());
-    }
-
-    /** 复制一个 meta, 仅替换 resourceType (供 PLUGIN_DIM resolve 注入 moduleCode 兜底)。 */
-    private ResourceScopeMeta withResourceType(ResourceScopeMeta base, String resourceType) {
-        return new ResourceScopeMeta(
-                base.tableAlias(), base.orgUnitField(), base.creatorField(), resourceType,
-                base.viaMembership(), base.membershipSubjectColumn(), base.typeField(), base.resourceCode());
     }
 
     /**

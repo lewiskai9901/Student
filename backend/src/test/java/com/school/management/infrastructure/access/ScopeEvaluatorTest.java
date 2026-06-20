@@ -458,4 +458,29 @@ class ScopeEvaluatorTest {
         assertThat(c.sql).contains(" OR ");
         assertThat(c.sql).contains("SELECT record_id FROM record_relations"); // reviewer RECORD_RELATION 路径
     }
+
+    // ---- 15. R3b 正解 (R4): plugin-dim 用 resourceCode → 多 grant 混 PLUGIN_DIM 不污染非 PLUGIN_DIM grant ----
+    @Test
+    @DisplayName("R3b 正解: 多 grant PLUGIN_DIM ∨ MY_ORG (COLUMN) — plugin-dim 用 resourceCode, MY_ORG 走 orgField 不被污染")
+    void multiGrant_pluginDimAndOrg_noResourceTypePollution() {
+        when(pluginDataScopeRouter.resolve(eq("BY_CLASS"), anyLong(), eq("student")))
+                .thenReturn(List.of(55L));
+        // COLUMN 资源: resourceType="" (原生空, 不再被 interceptor 注入 moduleCode), resourceCode="student"
+        ResourceScopeMeta meta = new ResourceScopeMeta(
+                "t", "org_unit_id", "created_by", "", false, "id", null, "student");
+        ScopeSpec spec = ScopeSpec.builder()
+                .relationGrants(List.of(
+                        new RelationGrant("owner_org", SubjectScope.PLUGIN_DIM, "BY_CLASS", false, null),
+                        new RelationGrant("owner_org", SubjectScope.MY_ORG, null, true, null)))
+                .build();
+
+        ScopeCondition c = evaluator().toSqlCondition(spec, meta, ctx(), 100L, "/1/100/", TENANT, 0);
+
+        assertThat(c.sql).contains("t.id IN (55)");  // PLUGIN_DIM 用 resourceCode resolve (=student)
+        assertThat(c.sql).contains(
+                "t.org_unit_id IN (SELECT id FROM org_units WHERE tenant_id = ? AND tree_path LIKE ?)"); // MY_ORG orgField
+        assertThat(c.sql).contains(" OR ");
+        // 关键: MY_ORG 未被 resourceType 污染到 accessRelationSelect (R3b 污染正解)
+        assertThat(c.sql).doesNotContain("access_relations");
+    }
 }

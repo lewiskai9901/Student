@@ -384,10 +384,12 @@ public class ScopeEvaluator {
                                                    UserContext ctx, int paramOffset) {
         String alias = meta.aliasPrefix();
         String dimCode = spec.getAnchorParam();
-        String resourceType = meta.resourceType();
+        // R4: plugin-dim resolve 的"资源"用 resourceCode (=moduleCode, 恒有); 不再靠 interceptor 把
+        // moduleCode 注入 resourceType (那会污染同 spec 的非 PLUGIN_DIM grant → 误走 accessRelationSelect)。
+        String resourceCode = meta.resourceCode();
         ScopeCondition cond = new ScopeCondition();
 
-        List<Long> ids = pluginDataScopeRouter.resolve(dimCode, ctx.getUserId(), resourceType);
+        List<Long> ids = pluginDataScopeRouter.resolve(dimCode, ctx.getUserId(), resourceCode);
 
         if (ids == null) {
             log.warn("[DataPermission] plugin dim '{}' unavailable, degrading to SELF", dimCode);

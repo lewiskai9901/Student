@@ -71,17 +71,6 @@ public class ScopeSpec {
         return orgAnchor == OrgAnchor.ALL;
     }
 
-    /**
-     * R3: 是否含 PLUGIN_DIM grant (拦截器据此为 plugin-dim resolve 注入 resourceType=moduleCode)。
-     * grant-aware: relation_grants 非空时 = 任一 grant subject 为 PLUGIN_DIM; 否则看 orgAnchor。
-     */
-    public boolean hasPluginDimGrant() {
-        if (hasRelationGrants()) {
-            return relationGrants.stream().anyMatch(g -> g.subject() == SubjectScope.PLUGIN_DIM);
-        }
-        return orgAnchor == OrgAnchor.PLUGIN_DIM;
-    }
-
     /** R3: relation_grants 是否生效 (非空)。null-safe。 */
     public boolean hasRelationGrants() {
         return relationGrants != null && !relationGrants.isEmpty();

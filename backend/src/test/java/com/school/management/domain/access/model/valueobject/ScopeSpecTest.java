@@ -90,23 +90,9 @@ class ScopeSpecTest {
     }
 
     @Test
-    void hasPluginDimGrant_multiGrant_anyPluginDim_evenNonFirst() {
-        assertThat(ScopeSpec.builder().relationGrants(List.of(grant(SubjectScope.PLUGIN_DIM))).build()
-                .hasPluginDimGrant()).isTrue();
-        // PLUGIN_DIM 非首条 —— 否则 resourceType 注入漏 → plugin-dim resolve 失败
-        assertThat(ScopeSpec.builder()
-                .relationGrants(List.of(grant(SubjectScope.SELF), grant(SubjectScope.PLUGIN_DIM))).build()
-                .hasPluginDimGrant()).isTrue();
-        assertThat(ScopeSpec.builder()
-                .relationGrants(List.of(grant(SubjectScope.SELF))).build()
-                .hasPluginDimGrant()).isFalse();
-    }
-
-    @Test
-    void grantAware_falseToLegacyAnchor_whenNoGrants() {
+    void isOrgUnbounded_legacyAnchor_whenNoGrants() {
         // 无 relationGrants → 看 orgAnchor (旧 spec / sub-spec 行为不变)
-        assertThat(ScopeSpec.builder().orgAnchor(OrgAnchor.PLUGIN_DIM).build().hasPluginDimGrant()).isTrue();
-        assertThat(ScopeSpec.builder().orgAnchor(OrgAnchor.SELF).build().hasPluginDimGrant()).isFalse();
         assertThat(ScopeSpec.builder().orgAnchor(OrgAnchor.ALL).build().isOrgUnbounded()).isTrue();
+        assertThat(ScopeSpec.builder().orgAnchor(OrgAnchor.SELF).build().isOrgUnbounded()).isFalse();
     }
 }
