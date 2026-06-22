@@ -31,32 +31,43 @@
         />
       </el-select>
       <span class="text-[11px] text-gray-400">→</span>
-      <!-- 主体范围 -->
-      <el-select
-        :model-value="g.subject"
-        size="small"
-        placeholder="范围"
-        :disabled="disabled"
-        style="width: 120px"
-        @update:model-value="(v: any) => patch(i, { subject: v as SubjectScope })"
-      >
-        <el-option
-          v-for="s in subjectOptions"
-          :key="s.value"
-          :label="s.label"
-          :value="s.value"
-        />
-      </el-select>
-      <!-- 含下级 (锚到组织的范围才有意义) -->
-      <el-checkbox
-        v-if="subtreeRelevant(g.subject)"
-        :model-value="!!g.subtree"
-        size="small"
-        :disabled="disabled"
-        @update:model-value="(v: any) => patch(i, { subtree: !!v })"
-      >
-        <span class="text-[11px]">含下级</span>
-      </el-checkbox>
+      <!-- PROVIDER 关系: 范围由插件 resolver 按当前用户算, 主体不可选 (引擎忽略 subject) -->
+      <template v-if="isProvider(g.relation)">
+        <span
+          class="inline-flex items-center gap-1 rounded bg-amber-50 px-2 py-0.5 text-[11px] text-amber-700"
+          title="此关系由插件接口按当前用户实时解析, 范围不需(也无法)手选"
+        >
+          <Zap class="h-3 w-3" /> 由插件解析
+        </span>
+      </template>
+      <template v-else>
+        <!-- 主体范围 -->
+        <el-select
+          :model-value="g.subject"
+          size="small"
+          placeholder="范围"
+          :disabled="disabled"
+          style="width: 120px"
+          @update:model-value="(v: any) => patch(i, { subject: v as SubjectScope })"
+        >
+          <el-option
+            v-for="s in subjectOptions"
+            :key="s.value"
+            :label="s.label"
+            :value="s.value"
+          />
+        </el-select>
+        <!-- 含下级 (锚到组织的范围才有意义) -->
+        <el-checkbox
+          v-if="subtreeRelevant(g.subject)"
+          :model-value="!!g.subtree"
+          size="small"
+          :disabled="disabled"
+          @update:model-value="(v: any) => patch(i, { subtree: !!v })"
+        >
+          <span class="text-[11px]">含下级</span>
+        </el-checkbox>
+      </template>
       <!-- 删除该行 -->
       <button
         class="ml-auto flex h-5 w-5 items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500 disabled:opacity-40"
@@ -80,7 +91,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { X, Plus } from 'lucide-vue-next'
+import { X, Plus, Zap } from 'lucide-vue-next'
 import { dataPermissionApi, type ResourceRelationOption } from '@/api/access'
 import type { RelationGrant, SubjectScope } from '@/types/access'
 
@@ -130,6 +141,11 @@ function relLabel(code: string): string {
   return REL_LABELS[code] || code
 }
 
+/** 该关系是否 PROVIDER 存储 (接口式): 范围由插件 resolver 按当前用户算, 引擎忽略 grant.subject。 */
+function isProvider(code: string): boolean {
+  return relationOptions.value.some(r => r.relationCode === code && r.storageKind === 'PROVIDER')
+}
+
 // ── 主体范围选项 ─────────────────────────────────────────────
 const subjectOptions: { value: SubjectScope; label: string }[] = [
   { value: 'SELF', label: '仅本人' },
@@ -147,6 +163,11 @@ function emitChange() {
 }
 function patch(i: number, partial: Partial<RelationGrant>) {
   grants.value[i] = { ...grants.value[i], ...partial }
+  // 切到 PROVIDER 关系: subject 由插件解析, 归一为 SELF + 清 subtree (引擎忽略, 仅保存储干净)
+  if (partial.relation && isProvider(partial.relation)) {
+    grants.value[i].subject = 'SELF'
+    delete grants.value[i].subtree
+  }
   // 切到非组织范围时清掉 subtree, 避免脏字段
   if (partial.subject && !subtreeRelevant(partial.subject)) {
     delete grants.value[i].subtree
