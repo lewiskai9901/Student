@@ -225,6 +225,24 @@ class DataPermissionInterceptorTest {
         }
 
         @Test
+        @DisplayName("R8 写鉴权: UPDATE ... WHERE → 注入 AND (scope), 写范围真拦截")
+        void writeScope_appendsToUpdate() {
+            // UPDATE/DELETE 走 WRITE actionClass, 同样经 injectFilterCondition (通用 WHERE 注入)。
+            // 注入后 UPDATE 仅命中 scope 内的行 → 范围外行 0 rows affected (静默拦截)。
+            String out = inject("UPDATE insp_submissions SET status = ? WHERE id = ?", "org_unit_id IN (?)");
+            assertThat(out).isEqualTo(
+                    "UPDATE insp_submissions SET status = ? WHERE id = ? AND (org_unit_id IN (?))");
+        }
+
+        @Test
+        @DisplayName("R8 写鉴权: DELETE ... WHERE → 注入 AND (scope)")
+        void writeScope_appendsToDelete() {
+            String out = inject("DELETE FROM insp_submissions WHERE id = ?", "org_unit_id IN (?)");
+            assertThat(out).isEqualTo(
+                    "DELETE FROM insp_submissions WHERE id = ? AND (org_unit_id IN (?))");
+        }
+
+        @Test
         @DisplayName("过滤条件插在 ORDER BY 之前")
         void insertsBeforeOrderBy() {
             String out = inject("SELECT * FROM s WHERE s.deleted = 0 ORDER BY s.id", "s.org_unit_id = ?");
