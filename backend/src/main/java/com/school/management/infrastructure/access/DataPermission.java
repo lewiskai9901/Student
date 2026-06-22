@@ -28,12 +28,6 @@ public @interface DataPermission {
     boolean enabled() default true;
 
     /**
-     * 资源类型（access_relations 查询用）
-     * 非空时，使用 access_relations 子查询做行级过滤
-     */
-    String resourceType() default "";
-
-    /**
      * 成员图(membership)模式下,主表中"作为 access_relations subject_id"的列名。
      *
      * <p>是否走成员图过滤 (viaMembership) 由 resource_relations 注册表的 owner_org 关系

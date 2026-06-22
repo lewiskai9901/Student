@@ -69,16 +69,16 @@ class ScopeEvaluatorTest {
 
     /** org 字段路径 meta: 无 membership / 无 resourceType。 */
     private ResourceScopeMeta orgFieldMeta() {
-        return new ResourceScopeMeta("t", "org_unit_id", "created_by", "", false, "id", null, null);
+        return new ResourceScopeMeta("t", "org_unit_id", "created_by", false, "id", null, null);
     }
 
     /** membership 路径 meta (如 user): viaMembership, subjectCol=id。 */
     private ResourceScopeMeta membershipMeta() {
-        return new ResourceScopeMeta("u", "org_unit_id", "created_by", "", true, "id", null, null);
+        return new ResourceScopeMeta("u", "org_unit_id", "created_by", true, "id", null, null);
     }
 
     private ResourceScopeMeta membershipMetaWithType() {
-        return new ResourceScopeMeta("u", "org_unit_id", "created_by", "", true, "id", "user_type_code", null);
+        return new ResourceScopeMeta("u", "org_unit_id", "created_by", true, "id", "user_type_code", null);
     }
 
 
@@ -352,7 +352,7 @@ class ScopeEvaluatorTest {
                 .thenReturn(Optional.of(new ResourceRelationRegistry.AnchorRow(
                         "reviewer", StorageKind.RECORD_RELATION, null, null)));
         ResourceScopeMeta meta = new ResourceScopeMeta(
-                "t", "org_unit_id", "created_by", "", false, "id", null, "inspection_record");
+                "t", "org_unit_id", "created_by", false, "id", null, "inspection_record");
         ScopeSpec spec = ScopeSpec.builder()
                 .relationGrants(List.of(new RelationGrant("reviewer", SubjectScope.SELF, null, false, null)))
                 .build();
@@ -378,7 +378,7 @@ class ScopeEvaluatorTest {
                         "reviewer", StorageKind.RECORD_RELATION, null, null)));
         // creator 关系不是 RECORD_RELATION (registry mock 默认 empty) → 走列路径
         ResourceScopeMeta meta = new ResourceScopeMeta(
-                "t", "org_unit_id", "created_by", "", false, "id", null, "inspection_record");
+                "t", "org_unit_id", "created_by", false, "id", null, "inspection_record");
         ScopeSpec spec = ScopeSpec.builder()
                 .relationGrants(List.of(
                         new RelationGrant("creator", SubjectScope.SELF, null, false, null),
@@ -401,7 +401,7 @@ class ScopeEvaluatorTest {
                 .thenReturn(List.of(55L));
         // COLUMN 资源: resourceType="" (原生空, 不再被 interceptor 注入 moduleCode), resourceCode="student"
         ResourceScopeMeta meta = new ResourceScopeMeta(
-                "t", "org_unit_id", "created_by", "", false, "id", null, "student");
+                "t", "org_unit_id", "created_by", false, "id", null, "student");
         ScopeSpec spec = ScopeSpec.builder()
                 .relationGrants(List.of(
                         new RelationGrant("owner_org", SubjectScope.PLUGIN_DIM, "BY_CLASS", false, null),
@@ -427,7 +427,7 @@ class ScopeEvaluatorTest {
     }
 
     private ResourceScopeMeta providerMeta() {
-        return new ResourceScopeMeta("s", "org_unit_id", "created_by", "", false, "id", null, "user_student");
+        return new ResourceScopeMeta("s", "org_unit_id", "created_by", false, "id", null, "user_student");
     }
 
     private ScopeSpec providerSpec() {

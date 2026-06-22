@@ -356,7 +356,7 @@ public class DataPermissionInterceptor implements Interceptor {
         // = 资源裸奔 → fail-fast。覆盖由 PluginDeclarationCoverageTest 构建期守护 (每个 @DataPermission
         // 模块必登锚点) + P3 懒加载保证运行期注册表已载, 故此异常实际不可达 (防御 contribution 漏登/写失败)。
         // null → coerce 成 "" (成员主体无列锚; 成员路径不消费 org/creator 列 — BuildMetaRegistryEquivalenceTest)。
-        // tableAlias / membershipSubjectColumn / typeField / resourceType 仍来自注解/data_resources (Tier 2 再迁)。
+        // tableAlias / membershipSubjectColumn / typeField 仍来自注解/data_resources (Tier 2 再迁)。
         ResourceRelationRegistry.DerivedAnchor a = resourceRelationRegistry.forResource(annotation.module())
                 .orElseThrow(() -> new IllegalStateException(
                         "模块 " + annotation.module() + " 未注册 resource_relations 锚点 — @DataPermission 无注解兜底 " +
@@ -365,17 +365,12 @@ public class DataPermissionInterceptor implements Interceptor {
         String creatorField = a.creatorField() == null ? "" : sanitizeIdentifier(a.creatorField());
         boolean viaMembership = a.viaMembership();
 
-        String resourceType = annotation.resourceType();
-        if (resourceType.isEmpty() && moduleConfig.getResourceType() != null) {
-            resourceType = moduleConfig.getResourceType();
-        }
-
         String membershipSubjectColumn = annotation.membershipSubjectColumn() == null
                 ? null : sanitizeIdentifier(annotation.membershipSubjectColumn());
         String typeField = sanitizeIdentifier(moduleConfig.getTypeField());
 
         return new ResourceScopeMeta(
-                tableAlias, orgField, creatorField, resourceType,
+                tableAlias, orgField, creatorField,
                 viaMembership, membershipSubjectColumn, typeField, annotation.module());
     }
 

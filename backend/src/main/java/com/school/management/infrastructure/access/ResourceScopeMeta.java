@@ -7,31 +7,27 @@ package com.school.management.infrastructure.access;
  * (合并规则与 interceptor 现状一致: moduleConfig 优先, 注解兜底)。本任务 (T6) 只定义并消费
  * 该结构; <b>T7</b> 负责在 interceptor 里从 annotation+moduleConfig 构建它。
  *
- * <p>三条互斥的资源路径 (与 {@code buildSingleRoleCondition} 的分支一致):
+ * <p>两条互斥的资源路径 (与 compose 的分支一致):
  * <ul>
  *   <li>{@code viaMembership=true} —— 主表行本身是 access_relations 的 subject(user),
  *       按 {@code member} 关系的 org 归属过滤 (如 users / user_student)。</li>
- *   <li>{@code resourceType} 非空 —— 走 access_relations 子查询 (resource 侧, 如 student)。</li>
  *   <li>否则 —— org 字段直过滤 ({@code orgUnitField})。</li>
  * </ul>
  *
  * @param tableAlias             主表别名 (空串表示无别名)。已 sanitize, 不含 "." 后缀。
- * @param orgUnitField           org 字段列名 (org 字段路径用; access_relation 路径的直过滤 OR 也用)。
+ * @param orgUnitField           org 字段列名 (org 字段路径用)。
  * @param creatorField           创建者列名 (SELF 在 org 字段路径用)。
- * @param resourceType           [R4 后无读者] 旧 access_relation 路径 (accessRelationSelect) 已删; 来源恒空
- *                               (无注解设, data_resources.access_resource_type 全 NULL, 经核实); 字段暂留待专项移除。
  * @param viaMembership          主表行即 member 关系 subject。
  * @param membershipSubjectColumn 主表中作为 ar.subject_id 的列 (默认 id)。
  * @param typeField              类型列 (轴③, 为空则不启用类型过滤)。
  * @param resourceCode           资源码 (= data_resources.resource_code / @DataPermission.module)。
- *                               R4: 引擎据此查 record_relations + registry.relationOf 判 RECORD_RELATION
- *                               grant。<b>区别于 {@code resourceType}</b> (后者是 access_relation 类型, 多 NULL)。
+ *                               R4: 引擎据此查 record_relations + registry.relationOf 判 RECORD_RELATION /
+ *                               PROVIDER grant。
  */
 public record ResourceScopeMeta(
         String tableAlias,
         String orgUnitField,
         String creatorField,
-        String resourceType,
         boolean viaMembership,
         String membershipSubjectColumn,
         String typeField,
