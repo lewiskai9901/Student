@@ -105,35 +105,37 @@
                   <X class="h-3.5 w-3.5" />
                 </button>
               </div>
-              <!-- R3/R4 多锚点 (>1 grant): 只读卡 + 改为单一范围 (ScopeBuilder 暂不编辑多 grant) -->
+              <!-- R3/R4 多锚点 (>1 grant): 可编辑编辑器 + 改为单一范围 -->
               <div v-if="isMultiGrantSpec(ex.spec)" class="space-y-2">
-                <div class="flex flex-wrap gap-1.5">
-                  <span
-                    v-for="(g, gi) in ex.spec.relationGrants"
-                    :key="gi"
-                    class="inline-flex items-center rounded bg-indigo-50 px-2 py-0.5 text-[11px] text-indigo-700"
-                  >
-                    {{ grantLabel(g) }}
-                  </span>
-                </div>
-                <div class="flex items-center gap-2 text-[11px] text-gray-500">
-                  <span>多锚点 (满足任一即可见)</span>
-                  <button
-                    class="text-indigo-600 hover:underline disabled:opacity-40"
-                    :disabled="roleDisabled"
-                    @click="simplifyToSingle(i)"
-                  >
-                    改为单一范围
-                  </button>
-                </div>
+                <MultiGrantEditor
+                  :module-code="ex.moduleCode"
+                  :model-value="ex.spec.relationGrants || []"
+                  :disabled="roleDisabled"
+                  @update:model-value="(v: RelationGrant[]) => updateGrants(i, v)"
+                />
+                <button
+                  class="pl-5 text-[11px] text-gray-500 hover:text-indigo-600 hover:underline disabled:opacity-40"
+                  :disabled="roleDisabled"
+                  @click="simplifyToSingle(i)"
+                >
+                  改为单一范围
+                </button>
               </div>
-              <ScopeBuilder
-                v-else
-                :model-value="ex.spec"
-                :capabilities="capabilityOf(ex.moduleCode)"
-                :disabled="roleDisabled"
-                @update:model-value="(v: ScopeSpecVM) => updateException(i, v)"
-              />
+              <div v-else class="space-y-1.5">
+                <ScopeBuilder
+                  :model-value="ex.spec"
+                  :capabilities="capabilityOf(ex.moduleCode)"
+                  :disabled="roleDisabled"
+                  @update:model-value="(v: ScopeSpecVM) => updateException(i, v)"
+                />
+                <button
+                  class="pl-5 text-[11px] text-gray-500 hover:text-indigo-600 hover:underline disabled:opacity-40"
+                  :disabled="roleDisabled"
+                  @click="convertToMulti(i)"
+                >
+                  改为多锚点（满足任一即可见）
+                </button>
+              </div>
             </div>
           </div>
 
@@ -314,6 +316,7 @@ import { ref, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ChevronDown, Plus, X, User, Loader2 } from 'lucide-vue-next'
 import ScopeBuilder, { type ScopeSpecVM, type ScopeCapabilities } from './ScopeBuilder.vue'
+import MultiGrantEditor from './MultiGrantEditor.vue'
 import TemplateLibraryDialog from './TemplateLibraryDialog.vue'
 import {
   dataPermissionApi,
@@ -466,35 +469,40 @@ function updateException(i: number, spec: ScopeSpecVM) {
   exceptions.value[i] = { ...exceptions.value[i], spec }
 }
 
-// ── R3/R4 多锚点 (relationGrants >1) 只读展示 + 改为单一 ──────────
-const SUBJECT_LABELS: Record<string, string> = {
-  SELF: '仅本人',
-  MY_ORG: '本组织',
-  ALL: '全部',
-  RELATION: '关系派生',
-  CUSTOM: '指定组织',
-  PLUGIN_DIM: '插件维度',
-}
-const RELATION_LABELS: Record<string, string> = {
-  creator: '创建者',
-  owner_org: '所属组织',
-  reviewer: '复核',
-  inspected: '受检',
-  member: '成员',
-  admin: '管理',
-}
+// ── R3/R4 多锚点 (relationGrants >1) 编辑 + 单一↔多锚点切换 ──────────
 function isMultiGrantSpec(spec: ScopeSpecVM): boolean {
   return (spec.relationGrants?.length ?? 0) > 1
 }
-function grantLabel(g: RelationGrant): string {
-  const rel = RELATION_LABELS[g.relation] || g.relation
-  const subj = SUBJECT_LABELS[g.subject] || g.subject
-  return `${rel} → ${subj}${g.subtree ? '(含下级)' : ''}`
+/** 多 grant 编辑器变更 → 写回该例外的 relationGrants. */
+function updateGrants(i: number, grants: RelationGrant[]) {
+  const ex = exceptions.value[i]
+  updateException(i, { ...ex.spec, relationGrants: grants })
 }
 /** 清掉多 grant → 退回单一范围 (ScopeBuilder 接管, 以其首 grant 派生的轴① 为起点). */
 function simplifyToSingle(i: number) {
   const ex = exceptions.value[i]
   updateException(i, { ...ex.spec, relationGrants: undefined })
+}
+/** 单一范围 → 多锚点: 以当前轴① 为种子第一条 grant + 追加一条, 进入多 grant 模式. */
+function convertToMulti(i: number) {
+  const ex = exceptions.value[i]
+  const seed = axisToGrant(ex.spec)
+  updateException(i, {
+    ...ex.spec,
+    relationGrants: [seed, { relation: 'owner_org', subject: 'MY_ORG', subtree: true }],
+  })
+}
+/** 轴① spec → 近似单条 grant (前端种子, 后端最终以 relationGrants 为准). */
+function axisToGrant(spec: ScopeSpecVM): RelationGrant {
+  switch (spec.orgAnchor) {
+    case 'ALL':
+      return { relation: 'owner_org', subject: 'ALL' }
+    case 'PRIMARY_ORG':
+      return { relation: 'owner_org', subject: 'MY_ORG', subtree: !!spec.includeSubtree }
+    case 'SELF':
+    default:
+      return { relation: 'creator', subject: 'SELF' }
+  }
 }
 
 // ── 模板载入 ────────────────────────────────────────────────

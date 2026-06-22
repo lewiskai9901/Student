@@ -397,6 +397,19 @@ export function getDataScopes(): Promise<DataScopeOption[]> {
   return http.get<DataScopeOption[]>(`${ROLE_URL}/data-permissions/scopes`)
 }
 
+/** R3c: 某资源已注册的可锚定关系 (数据驱动, 供多 grant 编辑器关系下拉)。 */
+export interface ResourceRelationOption {
+  relationCode: string
+  /** SUBJECT_GRAPH / COLUMN / RECORD_RELATION */
+  storageKind: string
+}
+
+export function getResourceRelations(module: string): Promise<ResourceRelationOption[]> {
+  return http.get<ResourceRelationOption[]>(`${ROLE_URL}/data-permissions/resource-relations`, {
+    params: { module },
+  })
+}
+
 /**
  * 数据权限 API 对象 (v3: 无 scope-item-types, CUSTOM 直接用 org_unit_id 列表)
  */
@@ -405,7 +418,8 @@ export const dataPermissionApi = {
   saveConfig: saveRoleDataPermissions,
   getModules: getDataModules,
   getModulesForRole: getDataModulesForRole,
-  getScopes: getDataScopes
+  getScopes: getDataScopes,
+  getResourceRelations,
 }
 
 // ==================== 数据权限模拟预览 ====================
