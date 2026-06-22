@@ -189,6 +189,21 @@ public class ResourceRelationRegistry {
         return byRel == null ? List.of() : new ArrayList<>(byRel.values());
     }
 
+    /**
+     * 全部 PROVIDER 关系的 {@code "resource/relation" -> resolver_bean} 映射 (R3c 守护)。
+     * 供启动期校验每个 resolver bean 真存在 (否则运行期静默 fail-closed 拒绝, 难排查)。
+     */
+    public Map<String, String> providerResolverBeans() {
+        ensureLoaded();
+        Map<String, String> out = new java.util.LinkedHashMap<>();
+        relationCache.forEach((resource, byRel) -> byRel.forEach((rel, row) -> {
+            if (row.storageKind() == StorageKind.PROVIDER) {
+                out.put(resource + "/" + rel, row.resolverBean());
+            }
+        }));
+        return out;
+    }
+
     /** 配置变更后强制重载缓存 (绕过 loaded 标志)。 */
     public void refresh() {
         synchronized (loadLock) {

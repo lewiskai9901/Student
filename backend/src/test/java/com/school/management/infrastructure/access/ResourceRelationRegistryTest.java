@@ -159,4 +159,26 @@ class ResourceRelationRegistryTest {
         assertTrue(reg.relationOf("unregistered_res", "reviewer").isEmpty());
         assertEquals(1, fetches.get(), "relationOf 与 forResource 共享同一懒加载");
     }
+
+    // ── R3c 守护: providerResolverBeans 列出所有 PROVIDER 关系的 resolver bean ──
+
+    @Test
+    @DisplayName("providerResolverBeans: 仅收集 PROVIDER 行的 resource/relation → bean (COLUMN/RECORD_RELATION 排除)")
+    void providerResolverBeans_collectsOnlyProviderRows() {
+        AtomicInteger fetches = new AtomicInteger();
+        ResourceRelationRegistry reg = registryReturning(
+                Map.of(
+                    "student", List.of(
+                        new AnchorRow("owner_org", StorageKind.SUBJECT_GRAPH, null, null),
+                        new AnchorRow("taught_by", StorageKind.PROVIDER, null, "teachingStudentResolver")),
+                    "inspection_record", List.of(
+                        new AnchorRow("creator", StorageKind.COLUMN, "created_by", null),
+                        new AnchorRow("reviewer", StorageKind.RECORD_RELATION, null, null))),
+                fetches);
+
+        Map<String, String> beans = reg.providerResolverBeans();
+
+        assertEquals(1, beans.size(), "仅 1 个 PROVIDER 行 (taught_by); 其余存储种类排除");
+        assertEquals("teachingStudentResolver", beans.get("student/taught_by"));
+    }
 }
