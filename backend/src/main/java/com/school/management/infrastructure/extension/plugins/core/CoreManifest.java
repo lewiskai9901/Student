@@ -352,6 +352,11 @@ public class CoreManifest implements PluginPackage {
             // 引擎 (ScopeEvaluator RECORD_RELATION 分支) 据此出 record_relations 子查询。
             Stream.<Contribution>of(rr(ResourceRelationDef.recordRelation(
                 "inspection_record", "reviewer", "复核员", "USER", "reviewer"))),
+            // R3c P2: 检查记录的"受检" = PROVIDER 接口式关系 — "发生在我所属组织的检查记录"
+            // (insp_submissions.target_id ∈ 我的成员组织)。过去卡"周级"(target_id 列锚 + 成员组织主体),
+            // 现 resolver 内部一把算 (访问图取我的成员组织 → target_id 命中), 无需新 SubjectScope。
+            Stream.<Contribution>of(rr(ResourceRelationDef.provider(
+                "inspection_record", "inspected", "受检(我所属组织)", "USER", "myReceivedInspectionsResolver"))),
             orgCreator("inspection_project", "org_unit_id", "created_by"),
             orgCreator("inspection_alert", "org_unit_id", "created_by"),
             orgCreator("inspection_summary", "org_unit_id", "created_by"),
