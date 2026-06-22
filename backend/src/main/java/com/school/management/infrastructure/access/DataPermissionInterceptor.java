@@ -467,8 +467,11 @@ public class DataPermissionInterceptor implements Interceptor {
             upperOrig.contains("(" + a + ".")) {
             return filterSql;
         }
-        // Alias missing — strip "alias." occurrences
-        return filterSql.replace(san + ".", "");
+        // Alias missing — strip "alias." occurrences, but ONLY at identifier boundary:
+        // 裸 replace("s.","") 会殃及子查询里以该别名结尾的别名 (如 "us." 含 "s." → "us.id"→"uid")。
+        // 负向后顾确保只剥独立的 "<alias>.",不碰 "u<alias>." 这类 (R3c PROVIDER 子查询暴露此潜伏 bug)。
+        return filterSql.replaceAll(
+                "(?<![A-Za-z0-9_])" + java.util.regex.Pattern.quote(san) + "\\.", "");
     }
 
     /**

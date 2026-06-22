@@ -7,6 +7,9 @@ package com.school.management.domain.access.model;
  *   <li>{@link #SUBJECT_GRAPH} —— 存 {@code access_relations} 主体图 (资源本身是主体, 关系是主体↔主体边)。</li>
  *   <li>{@link #COLUMN} —— 存业务表的列 (单值; 最快, 强不变量)。</li>
  *   <li>{@link #RECORD_RELATION} —— 存 {@code record_relations} 表 (多值, 列装不下集合)。</li>
+ *   <li>{@link #PROVIDER} —— 接口式: 关系逻辑不落列/不入表/不走图, 由插件 resolver bean 算
+ *       (返回参数化子查询或 id 集)。{@code resource_relations.resolver_bean} 指向 bean。见
+ *       {@code RecordRelationResolver}。逃生舱: 复杂动态关系 (如"老师任课的学生")。</li>
  *   <li>{@link #MATERIALIZED} —— 热路径叠加: 物化倒排索引加速 (设计 §11)。<b>不</b>作为关系的声明存储,
  *       由系统按热度叠加。</li>
  * </ul>
@@ -19,7 +22,7 @@ package com.school.management.domain.access.model;
  * (防重建已删的 user_student.org_unit_id), 属设计 §10 / R6。
  */
 public enum StorageKind {
-    SUBJECT_GRAPH, COLUMN, RECORD_RELATION, MATERIALIZED;
+    SUBJECT_GRAPH, COLUMN, RECORD_RELATION, PROVIDER, MATERIALIZED;
 
     /** 按 {@code name()} 严格解析, 未知/null 返回 {@code null} (供 PO 反序列化, 同 OrgAnchor 约定)。 */
     public static StorageKind fromCode(String c) {

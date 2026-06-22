@@ -75,7 +75,7 @@ class DataPermissionInterceptorPluginDimTest {
         ReflectionTestUtils.setField(interceptor, "resourceRelationRegistry", resourceRelationRegistry);
         // T7/R4: 插件维度 compose 下沉 ScopeEvaluator (持 router + registry); 拦截器只编排。
         ReflectionTestUtils.setField(interceptor, "scopeEvaluator",
-                new ScopeEvaluator(pluginDataScopeRouter, resourceRelationRegistry));
+                new ScopeEvaluator(pluginDataScopeRouter, resourceRelationRegistry, org.mockito.Mockito.mock(RecordRelationResolverRouter.class)));
         UserContextHolder.clear();
         UserContextHolder.enableDataPermission();
     }

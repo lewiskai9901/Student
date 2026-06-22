@@ -40,7 +40,7 @@ class ResourceRelationDefTest {
     void columnCannotBeMulti() {
         assertThrows(IllegalArgumentException.class, () -> new ResourceRelationDef(
                 "r", "x", "X", "USER", Cardinality.MULTI, StorageKind.COLUMN,
-                "col", null, null, false, false));
+                "col", null, null, false, false, null));
     }
 
     @Test
@@ -48,7 +48,7 @@ class ResourceRelationDefTest {
     void columnRequiresColumnName() {
         assertThrows(IllegalArgumentException.class, () -> new ResourceRelationDef(
                 "r", "x", "X", "USER", Cardinality.SINGLE, StorageKind.COLUMN,
-                "   ", null, null, false, false));
+                "   ", null, null, false, false, null));
     }
 
     @Test
@@ -56,7 +56,7 @@ class ResourceRelationDefTest {
     void recordRelationRequiresMulti() {
         assertThrows(IllegalArgumentException.class, () -> new ResourceRelationDef(
                 "r", "x", "X", "USER", Cardinality.SINGLE, StorageKind.RECORD_RELATION,
-                null, null, "reviewer", false, false));
+                null, null, "reviewer", false, false, null));
     }
 
     @Test
@@ -87,7 +87,7 @@ class ResourceRelationDefTest {
     void materializedNotDeclarable() {
         assertThrows(IllegalArgumentException.class, () -> new ResourceRelationDef(
                 "r", "x", "X", "USER", Cardinality.SINGLE, StorageKind.MATERIALIZED,
-                null, null, null, false, false));
+                null, null, null, false, false, null));
     }
 
     @Test

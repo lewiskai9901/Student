@@ -47,8 +47,8 @@ public class ResourceRelationRegistry {
         this.jdbc = jdbc;
     }
 
-    /** 一条 resource_relations 行里派生锚点所需的最小字段。 */
-    public record AnchorRow(String relationCode, StorageKind storageKind, String columnName) {}
+    /** 一条 resource_relations 行里派生锚点所需的最小字段。{@code resolverBean} 仅 PROVIDER 存储非空。 */
+    public record AnchorRow(String relationCode, StorageKind storageKind, String columnName, String resolverBean) {}
 
     /** 从注册行派生出的锚点视图 (对应 ResourceScopeMeta 的 3 个字段)。 */
     public record DerivedAnchor(boolean viaMembership, String orgUnitField, String creatorField) {}
@@ -98,14 +98,15 @@ public class ResourceRelationRegistry {
     protected Map<String, List<AnchorRow>> fetchByResource() {
         Map<String, List<AnchorRow>> byResource = new HashMap<>();
         jdbc.query(
-            "SELECT resource_code, relation_code, storage_kind, column_name " +
+            "SELECT resource_code, relation_code, storage_kind, column_name, resolver_bean " +
             "FROM resource_relations WHERE enabled = 1 AND tenant_id = 1",
             (java.sql.ResultSet rs) -> {
                 byResource
                     .computeIfAbsent(rs.getString("resource_code"), k -> new ArrayList<>())
                     .add(new AnchorRow(rs.getString("relation_code"),
                             StorageKind.fromCode(rs.getString("storage_kind")),
-                            rs.getString("column_name")));
+                            rs.getString("column_name"),
+                            rs.getString("resolver_bean")));
             });
         return byResource;
     }

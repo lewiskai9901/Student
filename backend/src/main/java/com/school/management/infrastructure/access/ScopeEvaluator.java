@@ -46,11 +46,14 @@ public class ScopeEvaluator {
 
     private final PluginDataScopeRouter pluginDataScopeRouter;
     private final ResourceRelationRegistry resourceRelationRegistry;
+    private final RecordRelationResolverRouter recordRelationResolverRouter;
 
     public ScopeEvaluator(@Lazy PluginDataScopeRouter pluginDataScopeRouter,
-                          ResourceRelationRegistry resourceRelationRegistry) {
+                          ResourceRelationRegistry resourceRelationRegistry,
+                          @Lazy RecordRelationResolverRouter recordRelationResolverRouter) {
         this.pluginDataScopeRouter = pluginDataScopeRouter;
         this.resourceRelationRegistry = resourceRelationRegistry;
+        this.recordRelationResolverRouter = recordRelationResolverRouter;
     }
 
     /**
@@ -118,6 +121,10 @@ public class ScopeEvaluator {
         if (isRecordRelation(meta, g)) {
             return buildRecordRelationCondition(g, spec, meta, ctx, paramOffset);
         }
+        StorageKind providerKind = providerStorage(meta, g);
+        if (providerKind == StorageKind.PROVIDER) {
+            return buildProviderCondition(g, spec, meta, ctx, tenantId, paramOffset);
+        }
         return composeAnchorCondition(toSubSpec(g, spec), meta, ctx,
                 effectiveOrgId, effectiveOrgPath, tenantId, paramOffset);
     }
@@ -130,6 +137,90 @@ public class ScopeEvaluator {
         return resourceRelationRegistry.relationOf(meta.resourceCode(), g.relation())
                 .map(r -> r.storageKind() == StorageKind.RECORD_RELATION)
                 .orElse(false);
+    }
+
+    /** grant.relation 的存储种类 (供 PROVIDER 分流)；resourceCode 空 / 未注册 → null。 */
+    private StorageKind providerStorage(ResourceScopeMeta meta, RelationGrant g) {
+        if (meta.resourceCode() == null || meta.resourceCode().isEmpty()) {
+            return null;
+        }
+        return resourceRelationRegistry.relationOf(meta.resourceCode(), g.relation())
+                .map(ResourceRelationRegistry.AnchorRow::storageKind)
+                .orElse(null);
+    }
+
+    /**
+     * PROVIDER grant → 插件 resolver 算可见记录集 (R3c)。
+     *
+     * <p>取 {@code resolver_bean} 指向的 {@link com.school.management.infrastructure.extension.RecordRelationResolver},
+     * 优先用 {@code subquery()} 包成 {@code {alias}id IN (<子查询>)} (命名参数 :name 按序改写为位置 ?);
+     * 否则用 {@code recordIds()} 包成 {@code {alias}id IN (...)}。<b>fail-closed</b>:bean 不可用 / 两者皆空 /
+     * id 集为空 → emit {@code 1=0}。仍叠加轴③ typeFilter。
+     */
+    private ScopeCondition buildProviderCondition(RelationGrant g, ScopeSpec spec,
+            ResourceScopeMeta meta, UserContext ctx, Long tenantId, int paramOffset) {
+        ScopeCondition cond = new ScopeCondition();
+        String alias = meta.aliasPrefix();
+        String beanName = resourceRelationRegistry.relationOf(meta.resourceCode(), g.relation())
+                .map(ResourceRelationRegistry.AnchorRow::resolverBean).orElse(null);
+
+        var resolverOpt = recordRelationResolverRouter.resolve(beanName);
+        if (resolverOpt.isEmpty()) {
+            cond.sql = DENY;   // fail-closed: resolver 不可用
+            return cond;
+        }
+        var resolver = resolverOpt.get();
+        var sctx = new com.school.management.infrastructure.extension.ScopeContext(
+                ctx.getUserId(), "USER", meta.resourceCode(), tenantId);
+
+        var frag = resolver.subquery(sctx);
+        if (frag != null && frag.sql() != null && !frag.sql().isBlank()) {
+            String inlined = inlineNamedParams(frag.sql(), frag.params(), cond, paramOffset);
+            cond.sql = alias + "id IN (" + inlined + ")";
+            return typeFilter(cond, spec, meta, paramOffset);
+        }
+
+        List<Long> ids = resolver.recordIds(sctx);
+        if (ids == null || ids.isEmpty()) {
+            cond.sql = DENY;   // fail-closed: 无子查询且无 id 集
+            return cond;
+        }
+        StringBuilder in = new StringBuilder();
+        for (int i = 0; i < ids.size(); i++) {
+            if (i > 0) in.append(", ");
+            in.append("?");
+            cond.addParam("_dp_pid_" + paramOffset + "_" + i, ids.get(i), Long.class, JdbcType.BIGINT);
+        }
+        cond.sql = alias + "id IN (" + in + ")";
+        return typeFilter(cond, spec, meta, paramOffset);
+    }
+
+    /**
+     * 把命名参数子查询 ({@code :name}) 按出现顺序改写为位置 {@code ?},并依序把值加入 cond.params
+     * (property 唯一名 {@code _dp_pv_<offset>_<i>})。命名参数可重复出现 → 每次出现各加一个 ?。
+     */
+    private String inlineNamedParams(String sql, java.util.Map<String, Object> params,
+                                     ScopeCondition cond, int paramOffset) {
+        java.util.regex.Matcher m = NAMED_PARAM.matcher(sql);
+        StringBuilder sb = new StringBuilder();
+        int i = 0;
+        while (m.find()) {
+            Object val = params == null ? null : params.get(m.group(1));
+            cond.addParam("_dp_pv_" + paramOffset + "_" + (i++), val,
+                    val == null ? Object.class : val.getClass(), jdbcTypeOf(val));
+            m.appendReplacement(sb, "?");
+        }
+        m.appendTail(sb);
+        return sb.toString();
+    }
+
+    private static final java.util.regex.Pattern NAMED_PARAM =
+            java.util.regex.Pattern.compile(":([a-zA-Z_][a-zA-Z0-9_]*)");
+
+    private static JdbcType jdbcTypeOf(Object v) {
+        if (v instanceof Long || v instanceof Integer || v instanceof Short) return JdbcType.BIGINT;
+        if (v instanceof Boolean) return JdbcType.BOOLEAN;
+        return JdbcType.VARCHAR;
     }
 
     /**

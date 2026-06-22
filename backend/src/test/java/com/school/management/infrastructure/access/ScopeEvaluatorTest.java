@@ -22,8 +22,14 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+
+import com.school.management.infrastructure.extension.RecordRelationResolver;
+import com.school.management.infrastructure.extension.ScopeContext;
+import com.school.management.infrastructure.extension.SqlFragment;
+import java.util.Map;
 
 /**
  * Unit tests for {@link ScopeEvaluator#toSqlCondition}.
@@ -44,10 +50,13 @@ class ScopeEvaluatorTest {
     @Mock
     private ResourceRelationRegistry resourceRelationRegistry;
 
+    @Mock
+    private RecordRelationResolverRouter recordRelationResolverRouter;
+
     private static final Long TENANT = 1L;
 
     private ScopeEvaluator evaluator() {
-        return new ScopeEvaluator(pluginDataScopeRouter, resourceRelationRegistry);
+        return new ScopeEvaluator(pluginDataScopeRouter, resourceRelationRegistry, recordRelationResolverRouter);
     }
 
     private UserContext ctx() {
@@ -341,7 +350,7 @@ class ScopeEvaluatorTest {
     void recordRelationGrant_emitsSubquery() {
         when(resourceRelationRegistry.relationOf("inspection_record", "reviewer"))
                 .thenReturn(Optional.of(new ResourceRelationRegistry.AnchorRow(
-                        "reviewer", StorageKind.RECORD_RELATION, null)));
+                        "reviewer", StorageKind.RECORD_RELATION, null, null)));
         ResourceScopeMeta meta = new ResourceScopeMeta(
                 "t", "org_unit_id", "created_by", "", false, "id", null, "inspection_record");
         ScopeSpec spec = ScopeSpec.builder()
@@ -366,7 +375,7 @@ class ScopeEvaluatorTest {
     void multiGrant_columnOrRecordRelation() {
         when(resourceRelationRegistry.relationOf("inspection_record", "reviewer"))
                 .thenReturn(Optional.of(new ResourceRelationRegistry.AnchorRow(
-                        "reviewer", StorageKind.RECORD_RELATION, null)));
+                        "reviewer", StorageKind.RECORD_RELATION, null, null)));
         // creator 关系不是 RECORD_RELATION (registry mock 默认 empty) → 走列路径
         ResourceScopeMeta meta = new ResourceScopeMeta(
                 "t", "org_unit_id", "created_by", "", false, "id", null, "inspection_record");
@@ -407,5 +416,88 @@ class ScopeEvaluatorTest {
         assertThat(c.sql).contains(" OR ");
         // 关键: MY_ORG 未被 resourceType 污染到 accessRelationSelect (R3b 污染正解)
         assertThat(c.sql).doesNotContain("access_relations");
+    }
+
+    // ---- 16. R3c PROVIDER: 接口式关系 → resolver 子查询 / id 集 / fail-closed ----
+
+    private void stubProvider(String resourceCode, String relation, String bean) {
+        when(resourceRelationRegistry.relationOf(resourceCode, relation))
+                .thenReturn(Optional.of(new ResourceRelationRegistry.AnchorRow(
+                        relation, StorageKind.PROVIDER, null, bean)));
+    }
+
+    private ResourceScopeMeta providerMeta() {
+        return new ResourceScopeMeta("s", "org_unit_id", "created_by", "", false, "id", null, "user_student");
+    }
+
+    private ScopeSpec providerSpec() {
+        return ScopeSpec.builder()
+                .relationGrants(List.of(new RelationGrant("taught_by", SubjectScope.SELF, null, false, null)))
+                .build();
+    }
+
+    @Test
+    @DisplayName("R3c PROVIDER 子查询模式: resolver.subquery → s.id IN (<子查询>), 命名参数 :me 改写为 ? 绑当前用户")
+    void provider_subqueryMode() {
+        stubProvider("user_student", "taught_by", "teachingStudentResolver");
+        when(recordRelationResolverRouter.resolve("teachingStudentResolver"))
+                .thenReturn(Optional.of(new RecordRelationResolver() {
+                    @Override public SqlFragment subquery(ScopeContext c) {
+                        return SqlFragment.of(
+                                "SELECT s2.id FROM user_student s2 JOIN teacher_assignments ta "
+                                + "ON ta.org_unit_id = s2.org_unit_id WHERE ta.teacher_id = :me",
+                                Map.of("me", c.userId()));
+                    }
+                }));
+
+        ScopeCondition c = evaluator().toSqlCondition(providerSpec(), providerMeta(), ctx(), 100L, "/1/100/", TENANT, 0);
+
+        assertThat(c.sql).isEqualTo(
+                "s.id IN (SELECT s2.id FROM user_student s2 JOIN teacher_assignments ta "
+                + "ON ta.org_unit_id = s2.org_unit_id WHERE ta.teacher_id = ?)");
+        assertThat(c.params).hasSize(1);
+        assertThat(c.params.get(0).value).isEqualTo(7L);          // ctx().userId
+        assertThat(c.params.get(0).jdbcType).isEqualTo(JdbcType.BIGINT);
+    }
+
+    @Test
+    @DisplayName("R3c PROVIDER id 集模式: subquery 返回 null → recordIds → s.id IN (?, ?)")
+    void provider_idsMode() {
+        stubProvider("user_student", "taught_by", "teachingStudentResolver");
+        when(recordRelationResolverRouter.resolve("teachingStudentResolver"))
+                .thenReturn(Optional.of(new RecordRelationResolver() {
+                    @Override public List<Long> recordIds(ScopeContext c) { return List.of(301L, 302L); }
+                }));
+
+        ScopeCondition c = evaluator().toSqlCondition(providerSpec(), providerMeta(), ctx(), 100L, "/1/100/", TENANT, 0);
+
+        assertThat(c.sql).isEqualTo("s.id IN (?, ?)");
+        assertThat(c.params).hasSize(2);
+        assertThat(c.params.get(0).value).isEqualTo(301L);
+        assertThat(c.params.get(1).value).isEqualTo(302L);
+    }
+
+    @Test
+    @DisplayName("R3c PROVIDER fail-closed: resolver bean 不可用 → 1 = 0 拒绝所有")
+    void provider_failClosed_beanMissing() {
+        stubProvider("user_student", "taught_by", "missingResolver");
+        when(recordRelationResolverRouter.resolve("missingResolver")).thenReturn(Optional.empty());
+
+        ScopeCondition c = evaluator().toSqlCondition(providerSpec(), providerMeta(), ctx(), 100L, "/1/100/", TENANT, 0);
+
+        assertThat(c.sql).isEqualTo("1 = 0");
+        assertThat(c.params).isEmpty();
+    }
+
+    @Test
+    @DisplayName("R3c PROVIDER fail-closed: subquery 与 recordIds 皆空 → 1 = 0")
+    void provider_failClosed_bothNull() {
+        stubProvider("user_student", "taught_by", "emptyResolver");
+        when(recordRelationResolverRouter.resolve("emptyResolver"))
+                .thenReturn(Optional.of(new RecordRelationResolver() { }));  // 全用默认 (都 null)
+
+        ScopeCondition c = evaluator().toSqlCondition(providerSpec(), providerMeta(), ctx(), 100L, "/1/100/", TENANT, 0);
+
+        assertThat(c.sql).isEqualTo("1 = 0");
     }
 }

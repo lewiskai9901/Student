@@ -216,6 +216,10 @@ public class EducationManifest implements PluginPackage {
             // 学生 = user_student, 归属走 access_relations member
             Stream.<Contribution>of(rr(ResourceRelationDef.subjectGraph(
                 "student", "owner_org", "所属组织", "ORG_UNIT", Cardinality.SINGLE, "member").withGrantsByDefault())),
+            // R3c PROVIDER 样板「任课老师」: "老师任课的学生" 不落列/不入表, 由 teacher_assignments 逻辑算
+            // (老师→所教组织→该组织学生)。resolver = teachingStudentResolver bean, 返回参数化子查询。
+            Stream.<Contribution>of(rr(ResourceRelationDef.provider(
+                "student", "taught_by", "任课老师", "USER", "teachingStudentResolver"))),
             // 普通记录: org_unit_id + created_by
             orgCreator("teaching_task", "org_unit_id", "created_by"),
             orgCreator("grade_batch", "org_unit_id", "created_by"),

@@ -24,8 +24,8 @@ class ResourceRelationRegistryTest {
     @DisplayName("普通记录 owner_org(列) + creator(列) → 列锚, 非 membership")
     void plainColumnAnchors() {
         DerivedAnchor d = ResourceRelationRegistry.deriveAnchor(List.of(
-                new AnchorRow("owner_org", StorageKind.COLUMN, "org_unit_id"),
-                new AnchorRow("creator", StorageKind.COLUMN, "created_by")));
+                new AnchorRow("owner_org", StorageKind.COLUMN, "org_unit_id", null),
+                new AnchorRow("creator", StorageKind.COLUMN, "created_by", null)));
         assertFalse(d.viaMembership());
         assertEquals("org_unit_id", d.orgUnitField());
         assertEquals("created_by", d.creatorField());
@@ -35,7 +35,7 @@ class ResourceRelationRegistryTest {
     @DisplayName("成员主体 owner_org(SUBJECT_GRAPH) → viaMembership, orgUnitField=null")
     void subjectGraphImpliesMembership() {
         DerivedAnchor d = ResourceRelationRegistry.deriveAnchor(List.of(
-                new AnchorRow("owner_org", StorageKind.SUBJECT_GRAPH, null)));
+                new AnchorRow("owner_org", StorageKind.SUBJECT_GRAPH, null, null)));
         assertTrue(d.viaMembership());
         assertNull(d.orgUnitField());
         assertNull(d.creatorField());
@@ -45,7 +45,7 @@ class ResourceRelationRegistryTest {
     @DisplayName("仅 creator(无 org 维度, 如 exam_batch) → orgUnitField=null, 非 membership")
     void creatorOnly() {
         DerivedAnchor d = ResourceRelationRegistry.deriveAnchor(List.of(
-                new AnchorRow("creator", StorageKind.COLUMN, "created_by")));
+                new AnchorRow("creator", StorageKind.COLUMN, "created_by", null)));
         assertFalse(d.viaMembership());
         assertNull(d.orgUnitField());
         assertEquals("created_by", d.creatorField());
@@ -55,8 +55,8 @@ class ResourceRelationRegistryTest {
     @DisplayName("owner_org 列名随业务 (org_unit=parent_id 冻结现状)")
     void ownerOrgCustomColumn() {
         DerivedAnchor d = ResourceRelationRegistry.deriveAnchor(List.of(
-                new AnchorRow("owner_org", StorageKind.COLUMN, "parent_id"),
-                new AnchorRow("creator", StorageKind.COLUMN, "created_by")));
+                new AnchorRow("owner_org", StorageKind.COLUMN, "parent_id", null),
+                new AnchorRow("creator", StorageKind.COLUMN, "created_by", null)));
         assertFalse(d.viaMembership());
         assertEquals("parent_id", d.orgUnitField());
     }
@@ -65,8 +65,8 @@ class ResourceRelationRegistryTest {
     @DisplayName("creator 列名随业务 (recorded_by / student_id / teacher_id)")
     void creatorCustomColumn() {
         DerivedAnchor d = ResourceRelationRegistry.deriveAnchor(List.of(
-                new AnchorRow("owner_org", StorageKind.COLUMN, "org_unit_id"),
-                new AnchorRow("creator", StorageKind.COLUMN, "recorded_by")));
+                new AnchorRow("owner_org", StorageKind.COLUMN, "org_unit_id", null),
+                new AnchorRow("creator", StorageKind.COLUMN, "recorded_by", null)));
         assertEquals("recorded_by", d.creatorField());
     }
 
@@ -100,7 +100,7 @@ class ResourceRelationRegistryTest {
         AtomicInteger fetches = new AtomicInteger();
         ResourceRelationRegistry reg = registryReturning(
                 Map.of("inspection_record", List.of(
-                        new AnchorRow("owner_org", StorageKind.COLUMN, "org_unit_id"))),
+                        new AnchorRow("owner_org", StorageKind.COLUMN, "org_unit_id", null))),
                 fetches);
 
         // 未调用 load()/run(); 直接 forResource 应自行加载
@@ -117,7 +117,7 @@ class ResourceRelationRegistryTest {
         AtomicInteger fetches = new AtomicInteger();
         ResourceRelationRegistry reg = registryReturning(
                 Map.of("inspection_record", List.of(
-                        new AnchorRow("creator", StorageKind.COLUMN, "created_by"))),
+                        new AnchorRow("creator", StorageKind.COLUMN, "created_by", null))),
                 fetches);
 
         reg.forResource("inspection_record");
@@ -145,9 +145,9 @@ class ResourceRelationRegistryTest {
         AtomicInteger fetches = new AtomicInteger();
         ResourceRelationRegistry reg = registryReturning(
                 Map.of("inspection_record", List.of(
-                        new AnchorRow("owner_org", StorageKind.COLUMN, "org_unit_id"),
-                        new AnchorRow("creator", StorageKind.COLUMN, "created_by"),
-                        new AnchorRow("reviewer", StorageKind.RECORD_RELATION, null))),
+                        new AnchorRow("owner_org", StorageKind.COLUMN, "org_unit_id", null),
+                        new AnchorRow("creator", StorageKind.COLUMN, "created_by", null),
+                        new AnchorRow("reviewer", StorageKind.RECORD_RELATION, null, null))),
                 fetches);
 
         assertEquals(StorageKind.RECORD_RELATION,

@@ -30,12 +30,13 @@ import com.school.management.domain.access.model.StorageKind;
  * @param arRelation      SUBJECT_GRAPH/RECORD_RELATION 存储: access_relations/record_relations 的 relation 值
  * @param autoFill        写入是否自动填 (creator/owner_org=true)
  * @param grantsByDefault 无显式授予时是否默认参与可见性 (一般 owner_org=true)
+ * @param resolverBean    PROVIDER 存储: 解析器 {@code RecordRelationResolver} 的 Spring bean 名, 其它存储为 null
  */
 public record ResourceRelationDef(
         String resourceCode, String relationCode, String relationName, String subjectType,
         Cardinality cardinality, StorageKind storageKind,
         String columnName, String typeColumn, String arRelation,
-        boolean autoFill, boolean grantsByDefault) {
+        boolean autoFill, boolean grantsByDefault, String resolverBean) {
 
     public ResourceRelationDef {
         requireText(resourceCode, "resourceCode");
@@ -64,6 +65,13 @@ public record ResourceRelationDef(
                 requireText(arRelation, "arRelation (RECORD_RELATION 存储必填): " + relationCode);
             }
             case SUBJECT_GRAPH -> requireText(arRelation, "arRelation (SUBJECT_GRAPH 存储必填): " + relationCode);
+            case PROVIDER -> {
+                if (cardinality != Cardinality.MULTI) {
+                    throw new IllegalArgumentException(
+                        "PROVIDER 存储要求 MULTI 基数 (接口产出记录集): " + relationCode);
+                }
+                requireText(resolverBean, "resolverBean (PROVIDER 存储必填): " + relationCode);
+            }
             case MATERIALIZED -> throw new IllegalArgumentException(
                 "MATERIALIZED 是物化叠加层, 不能作为关系的声明存储: " + relationCode);
         }
@@ -79,34 +87,44 @@ public record ResourceRelationDef(
     public static ResourceRelationDef column(String resourceCode, String relationCode, String relationName,
                                              String subjectType, String columnName) {
         return new ResourceRelationDef(resourceCode, relationCode, relationName, subjectType,
-                Cardinality.SINGLE, StorageKind.COLUMN, columnName, null, null, false, false);
+                Cardinality.SINGLE, StorageKind.COLUMN, columnName, null, null, false, false, null);
     }
 
     public static ResourceRelationDef recordRelation(String resourceCode, String relationCode, String relationName,
                                                      String subjectType, String arRelation) {
         return new ResourceRelationDef(resourceCode, relationCode, relationName, subjectType,
-                Cardinality.MULTI, StorageKind.RECORD_RELATION, null, null, arRelation, false, false);
+                Cardinality.MULTI, StorageKind.RECORD_RELATION, null, null, arRelation, false, false, null);
     }
 
     public static ResourceRelationDef subjectGraph(String resourceCode, String relationCode, String relationName,
                                                    String subjectType, Cardinality cardinality, String arRelation) {
         return new ResourceRelationDef(resourceCode, relationCode, relationName, subjectType,
-                cardinality, StorageKind.SUBJECT_GRAPH, null, null, arRelation, false, false);
+                cardinality, StorageKind.SUBJECT_GRAPH, null, null, arRelation, false, false, null);
+    }
+
+    /**
+     * 接口式关系 (PROVIDER):由 {@code resolverBean} 指向的 {@code RecordRelationResolver} 算可见记录集。
+     * 不落列、不入表 —— 逻辑全归插件。基数固定 MULTI。
+     */
+    public static ResourceRelationDef provider(String resourceCode, String relationCode, String relationName,
+                                               String subjectType, String resolverBean) {
+        return new ResourceRelationDef(resourceCode, relationCode, relationName, subjectType,
+                Cardinality.MULTI, StorageKind.PROVIDER, null, null, null, false, false, resolverBean);
     }
 
     // ── 链式修饰 ──────────────────────────────────────────────────────────
     public ResourceRelationDef withAutoFill() {
         return new ResourceRelationDef(resourceCode, relationCode, relationName, subjectType,
-                cardinality, storageKind, columnName, typeColumn, arRelation, true, grantsByDefault);
+                cardinality, storageKind, columnName, typeColumn, arRelation, true, grantsByDefault, resolverBean);
     }
 
     public ResourceRelationDef withGrantsByDefault() {
         return new ResourceRelationDef(resourceCode, relationCode, relationName, subjectType,
-                cardinality, storageKind, columnName, typeColumn, arRelation, autoFill, true);
+                cardinality, storageKind, columnName, typeColumn, arRelation, autoFill, true, resolverBean);
     }
 
     public ResourceRelationDef polymorphic(String typeColumn) {
         return new ResourceRelationDef(resourceCode, relationCode, relationName, subjectType,
-                cardinality, storageKind, columnName, typeColumn, arRelation, autoFill, grantsByDefault);
+                cardinality, storageKind, columnName, typeColumn, arRelation, autoFill, grantsByDefault, resolverBean);
     }
 }
