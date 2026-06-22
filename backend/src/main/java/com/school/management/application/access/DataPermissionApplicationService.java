@@ -30,6 +30,20 @@ public class DataPermissionApplicationService {
     private final DynamicModuleService dynamicModuleService;
     private final DataPermissionPolicyService dataPermissionPolicyService;
     private final JdbcTemplate jdbcTemplate;
+    private final com.school.management.infrastructure.access.ResourceRelationRegistry resourceRelationRegistry;
+
+    /**
+     * R3c: 某资源已注册的可锚定关系 (供多 grant 编辑器关系下拉)。数据驱动 — 来自 resource_relations 注册表。
+     */
+    public List<ResourceRelationOption> getResourceRelations(String module) {
+        return resourceRelationRegistry.relationsOf(module).stream()
+                .map(r -> new ResourceRelationOption(
+                        r.relationCode(), r.storageKind() != null ? r.storageKind().name() : null))
+                .collect(Collectors.toList());
+    }
+
+    /** R3c 资源关系选项 (relationCode + storageKind)。 */
+    public record ResourceRelationOption(String relationCode, String storageKind) {}
 
     /**
      * 获取所有数据模块（按领域分组）.

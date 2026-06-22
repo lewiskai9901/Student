@@ -178,6 +178,16 @@ public class ResourceRelationRegistry {
         return byRel == null ? Optional.empty() : Optional.ofNullable(byRel.get(relationCode));
     }
 
+    /**
+     * 某资源已注册的全部关系行 (R3c: 供数据权限 UI 多 grant 编辑器列出可选锚点关系)。
+     * 未注册资源 → 空列表。数据驱动, 无行业硬编码 —— 关系来自 resource_relations 注册表。
+     */
+    public List<AnchorRow> relationsOf(String resourceCode) {
+        ensureLoaded();
+        Map<String, AnchorRow> byRel = relationCache.get(resourceCode);
+        return byRel == null ? List.of() : new ArrayList<>(byRel.values());
+    }
+
     /** 配置变更后强制重载缓存 (绕过 loaded 标志)。 */
     public void refresh() {
         synchronized (loadLock) {

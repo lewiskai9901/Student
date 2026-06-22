@@ -84,6 +84,7 @@ public class RoleDataPermissionController {
                     mp.setCustomOrgIds(m.getCustomOrgIds());
                     mp.setSubjectRelInclude(m.getSubjectRelInclude());
                     mp.setSubjectRelExclude(m.getSubjectRelExclude());
+                    mp.setRelationGrants(m.getRelationGrants());  // R3/R4: 回带多锚点
                     return mp;
                 })
                 .collect(java.util.stream.Collectors.toList()));
@@ -107,6 +108,7 @@ public class RoleDataPermissionController {
                     cmd.setCustomOrgIds(mp.getCustomOrgIds());
                     cmd.setSubjectRelInclude(mp.getSubjectRelInclude());
                     cmd.setSubjectRelExclude(mp.getSubjectRelExclude());
+                    cmd.setRelationGrants(mp.getRelationGrants());  // R3/R4: 透传多锚点
                     return cmd;
                 })
                 .collect(java.util.stream.Collectors.toList());
@@ -129,6 +131,13 @@ public class RoleDataPermissionController {
     public Result<Map<String, List<Map<String, String>>>> getModules(
             @RequestParam(required = false, defaultValue = "false") Boolean includeDisabled) {
         return Result.success(dataPermissionService.getAllModules(Boolean.TRUE.equals(includeDisabled)));
+    }
+
+    @GetMapping("/data-permissions/resource-relations")
+    @Operation(summary = "获取某资源已注册的可锚定关系 (R3c 多 grant 编辑器用; 数据驱动无硬编码)")
+    @CasbinAccess(resource = "system:role", action = "view")
+    public Result<List<ResourceRelationOption>> getResourceRelations(@RequestParam String module) {
+        return Result.success(dataPermissionService.getResourceRelations(module));
     }
 
     // ==================== DTO for frontend contract ====================
@@ -162,6 +171,8 @@ public class RoleDataPermissionController {
         private List<String> subjectRelInclude;
         /** 轴② 结果关系 exclude。 */
         private List<String> subjectRelExclude;
+        /** R3/R4: 多锚点关系授予 (>1 = 多 grant 配置)。 */
+        private List<com.school.management.domain.access.model.valueobject.RelationGrant> relationGrants;
     }
 
     @lombok.Data
