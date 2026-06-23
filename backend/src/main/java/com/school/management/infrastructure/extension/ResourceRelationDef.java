@@ -36,7 +36,7 @@ public record ResourceRelationDef(
         String resourceCode, String relationCode, String relationName, String subjectType,
         Cardinality cardinality, StorageKind storageKind,
         String columnName, String typeColumn, String arRelation,
-        boolean autoFill, boolean grantsByDefault, String resolverBean) {
+        boolean autoFill, boolean grantsByDefault, String resolverBean, boolean enforceInsertScope) {
 
     public ResourceRelationDef {
         requireText(resourceCode, "resourceCode");
@@ -87,19 +87,19 @@ public record ResourceRelationDef(
     public static ResourceRelationDef column(String resourceCode, String relationCode, String relationName,
                                              String subjectType, String columnName) {
         return new ResourceRelationDef(resourceCode, relationCode, relationName, subjectType,
-                Cardinality.SINGLE, StorageKind.COLUMN, columnName, null, null, false, false, null);
+                Cardinality.SINGLE, StorageKind.COLUMN, columnName, null, null, false, false, null, false);
     }
 
     public static ResourceRelationDef recordRelation(String resourceCode, String relationCode, String relationName,
                                                      String subjectType, String arRelation) {
         return new ResourceRelationDef(resourceCode, relationCode, relationName, subjectType,
-                Cardinality.MULTI, StorageKind.RECORD_RELATION, null, null, arRelation, false, false, null);
+                Cardinality.MULTI, StorageKind.RECORD_RELATION, null, null, arRelation, false, false, null, false);
     }
 
     public static ResourceRelationDef subjectGraph(String resourceCode, String relationCode, String relationName,
                                                    String subjectType, Cardinality cardinality, String arRelation) {
         return new ResourceRelationDef(resourceCode, relationCode, relationName, subjectType,
-                cardinality, StorageKind.SUBJECT_GRAPH, null, null, arRelation, false, false, null);
+                cardinality, StorageKind.SUBJECT_GRAPH, null, null, arRelation, false, false, null, false);
     }
 
     /**
@@ -109,22 +109,32 @@ public record ResourceRelationDef(
     public static ResourceRelationDef provider(String resourceCode, String relationCode, String relationName,
                                                String subjectType, String resolverBean) {
         return new ResourceRelationDef(resourceCode, relationCode, relationName, subjectType,
-                Cardinality.MULTI, StorageKind.PROVIDER, null, null, null, false, false, resolverBean);
+                Cardinality.MULTI, StorageKind.PROVIDER, null, null, null, false, false, resolverBean, false);
     }
 
     // ── 链式修饰 ──────────────────────────────────────────────────────────
     public ResourceRelationDef withAutoFill() {
         return new ResourceRelationDef(resourceCode, relationCode, relationName, subjectType,
-                cardinality, storageKind, columnName, typeColumn, arRelation, true, grantsByDefault, resolverBean);
+                cardinality, storageKind, columnName, typeColumn, arRelation, true, grantsByDefault, resolverBean, enforceInsertScope);
     }
 
     public ResourceRelationDef withGrantsByDefault() {
         return new ResourceRelationDef(resourceCode, relationCode, relationName, subjectType,
-                cardinality, storageKind, columnName, typeColumn, arRelation, autoFill, true, resolverBean);
+                cardinality, storageKind, columnName, typeColumn, arRelation, autoFill, true, resolverBean, enforceInsertScope);
     }
 
     public ResourceRelationDef polymorphic(String typeColumn) {
         return new ResourceRelationDef(resourceCode, relationCode, relationName, subjectType,
-                cardinality, storageKind, columnName, typeColumn, arRelation, autoFill, grantsByDefault, resolverBean);
+                cardinality, storageKind, columnName, typeColumn, arRelation, autoFill, grantsByDefault, resolverBean, enforceInsertScope);
+    }
+
+    /**
+     * 标记该 owner_org 关系参与 INSERT 授权 (R8 P3-INSERT): 新行 owner_org 必 ∈ 用户可写组织集。
+     * <b>仅用于 owner_org = ownership 语义的资源</b> (创建者声明该行归属某组织, 如教务记录 / 场所 / 组织);
+     * <b>勿用于 target 语义</b> (如检查 submission 的 org_unit_id = 受检组织, 非创建者归属 → 会误拦)。
+     */
+    public ResourceRelationDef withInsertGuard() {
+        return new ResourceRelationDef(resourceCode, relationCode, relationName, subjectType,
+                cardinality, storageKind, columnName, typeColumn, arRelation, autoFill, grantsByDefault, resolverBean, true);
     }
 }

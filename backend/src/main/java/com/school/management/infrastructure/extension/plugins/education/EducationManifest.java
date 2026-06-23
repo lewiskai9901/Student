@@ -230,7 +230,7 @@ public class EducationManifest implements PluginPackage {
             // 班级(本就是 org_unit, id 即组织 id, orgField=id 正确): owner_org=id + creator created_by
             // (审计"应改 org_unit_id"已驳回: school_classes 无该列, 且班级即组织)
             Stream.<Contribution>of(rr(ResourceRelationDef.column(
-                "school_class", "owner_org", "所属组织", "ORG_UNIT", "id").withGrantsByDefault())),
+                "school_class", "owner_org", "所属组织", "ORG_UNIT", "id").withGrantsByDefault().withInsertGuard())),
             Stream.<Contribution>of(rr(ResourceRelationDef.column(
                 "school_class", "creator", "创建者", "USER", "created_by").withAutoFill())),
             // 考试批次: 无 org 维度, 仅 creator
@@ -250,11 +250,15 @@ public class EducationManifest implements PluginPackage {
         ).flatMap(s -> s);
     }
 
-    /** 普通记录标准锚点: owner_org(默认参与可见性) + creator, 均写入自动填。 */
+    /**
+     * 普通记录标准锚点: owner_org(默认参与可见性) + creator, 均写入自动填。
+     * 教务记录 org_unit_id = 该记录归属组织 (ownership 语义) → owner_org 加 INSERT 授权
+     * (R8 P3-INSERT: 新行 owner_org 必 ∈ 用户可写组织; 区别于 inspection 的 target 语义)。
+     */
     private static Stream<Contribution> orgCreator(String resource, String orgCol, String creatorCol) {
         return Stream.of(
             rr(ResourceRelationDef.column(resource, "owner_org", "所属组织", "ORG_UNIT", orgCol)
-                .withAutoFill().withGrantsByDefault()),
+                .withAutoFill().withGrantsByDefault().withInsertGuard()),
             rr(ResourceRelationDef.column(resource, "creator", "创建者", "USER", creatorCol)
                 .withAutoFill())
         );

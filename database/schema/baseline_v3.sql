@@ -4397,6 +4397,7 @@ CREATE TABLE `resource_relations` (
   `type_column` varchar(50) DEFAULT NULL COMMENT '多态主体的类型列 (配 column_name)',
   `ar_relation` varchar(30) DEFAULT NULL COMMENT 'SUBJECT_GRAPH/RECORD_RELATION: relation 值',
   `resolver_bean` varchar(100) DEFAULT NULL COMMENT 'PROVIDER: RecordRelationResolver 的 Spring bean 名',
+  `enforce_insert_scope` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'R8: owner_org 参与 INSERT 授权 (新行 owner_org∈可写组织, 仅 ownership 语义资源)',
   `auto_fill` tinyint(1) NOT NULL DEFAULT '0' COMMENT '写入是否自动填列',
   `grants_by_default` tinyint(1) NOT NULL DEFAULT '0' COMMENT '无显式授予时默认参与可见性',
   `industry` varchar(20) DEFAULT NULL COMMENT '贡献插件 CORE/EDU/...',

@@ -27,17 +27,19 @@ public class ResourceRelationUpserter {
         jdbc.update(
             "INSERT INTO resource_relations " +
             "(resource_code, relation_code, relation_name, subject_type, cardinality, storage_kind, " +
-            " column_name, type_column, ar_relation, resolver_bean, auto_fill, grants_by_default, industry, enabled, tenant_id) " +
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,1,1) " +
+            " column_name, type_column, ar_relation, resolver_bean, enforce_insert_scope, auto_fill, grants_by_default, industry, enabled, tenant_id) " +
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,1) " +
             "ON DUPLICATE KEY UPDATE " +
             " relation_name=VALUES(relation_name), subject_type=VALUES(subject_type), " +
             " cardinality=VALUES(cardinality), storage_kind=VALUES(storage_kind), " +
             " column_name=VALUES(column_name), type_column=VALUES(type_column), " +
-            " ar_relation=VALUES(ar_relation), resolver_bean=VALUES(resolver_bean), auto_fill=VALUES(auto_fill), " +
+            " ar_relation=VALUES(ar_relation), resolver_bean=VALUES(resolver_bean), " +
+            " enforce_insert_scope=VALUES(enforce_insert_scope), auto_fill=VALUES(auto_fill), " +
             " grants_by_default=VALUES(grants_by_default), industry=VALUES(industry), enabled=1",
             def.resourceCode(), def.relationCode(), def.relationName(), def.subjectType(),
             def.cardinality().name(), def.storageKind().name(),
             def.columnName(), def.typeColumn(), def.arRelation(), def.resolverBean(),
+            def.enforceInsertScope() ? 1 : 0,
             def.autoFill() ? 1 : 0, def.grantsByDefault() ? 1 : 0, industry);
     }
 }

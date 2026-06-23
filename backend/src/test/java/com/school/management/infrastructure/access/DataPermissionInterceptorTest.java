@@ -787,6 +787,8 @@ class DataPermissionInterceptorTest {
             when(dynamicModuleService.getModuleConfig(anyLong(), anyString())).thenReturn(moduleConfig(true, ""));
             when(dataPermissionPolicyService.getScopeSpec(anyLong(), anyLong(), anyString(), eq("WRITE")))
                     .thenReturn(spec);
+            // R8 opt-in: 该资源已标注 INSERT 授权 (否则 gate 早退放行)
+            when(resourceRelationRegistry.isInsertGuarded(anyString())).thenReturn(true);
         }
 
         @Test

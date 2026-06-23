@@ -395,6 +395,9 @@ public class DataPermissionInterceptor implements Interceptor {
     private void enforceInsertAuthz(BoundSql boundSql, DataPermission annotation,
                                     DataModulePO moduleConfig, UserContext ctx, Long tenantId) {
         try {
+            // R8 P3-INSERT 显式 opt-in: 仅 owner_org 标注 enforce_insert_scope 的 ownership 资源参与
+            // (排除 target 语义资源如 inspection submission 的 org_unit_id=受检组织, 否则误拦)。
+            if (!resourceRelationRegistry.isInsertGuarded(annotation.module())) return;
             ResourceScopeMeta meta = buildMeta(annotation, moduleConfig);
             String orgField = meta.orgUnitField();
             if (orgField == null || orgField.isEmpty()) return;   // 无 org 列锚 → 放行

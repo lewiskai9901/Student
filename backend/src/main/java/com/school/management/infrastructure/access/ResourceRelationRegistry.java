@@ -38,6 +38,8 @@ public class ResourceRelationRegistry {
     private final Map<String, DerivedAnchor> cache = new ConcurrentHashMap<>();
     /** R4: 每资源 relationCode → AnchorRow (per-relation storage_kind 查询; 引擎 RECORD_RELATION 分支用)。 */
     private final Map<String, Map<String, AnchorRow>> relationCache = new ConcurrentHashMap<>();
+    /** R8 P3-INSERT: owner_org 标注 enforce_insert_scope=1 的资源 (其 INSERT 受 owner_org∈可写组织 授权)。 */
+    private final java.util.Set<String> insertGuardedResources = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     /** 懒加载标志: 首次访问加载一次后置 true。volatile + loadLock 双检锁保证只加载一次。 */
     private volatile boolean loaded = false;
@@ -137,8 +139,27 @@ public class ResourceRelationRegistry {
         cache.putAll(fresh);
         relationCache.clear();
         relationCache.putAll(freshRel);
-        log.info("[ResourceRelationRegistry] 加载 {} 个资源的锚点 (来自 resource_relations {} 行)",
-                fresh.size(), byResource.values().stream().mapToInt(List::size).sum());
+        insertGuardedResources.clear();
+        insertGuardedResources.addAll(fetchInsertGuardedResources());
+        log.info("[ResourceRelationRegistry] 加载 {} 个资源的锚点 (来自 resource_relations {} 行), INSERT 授权资源 {} 个",
+                fresh.size(), byResource.values().stream().mapToInt(List::size).sum(), insertGuardedResources.size());
+    }
+
+    /**
+     * owner_org 标注 enforce_insert_scope=1 的资源集 (R8 P3-INSERT)。protected = 测试 seam;
+     * jdbc 为空 (单测 mock 注册表) → 空集 (INSERT 授权不触发, fail-safe)。
+     */
+    protected java.util.Set<String> fetchInsertGuardedResources() {
+        if (jdbc == null) return java.util.Set.of();
+        return new java.util.HashSet<>(jdbc.queryForList(
+            "SELECT resource_code FROM resource_relations WHERE relation_code = 'owner_org' " +
+            "AND enforce_insert_scope = 1 AND enabled = 1 AND tenant_id = 1", String.class));
+    }
+
+    /** 该资源的 INSERT 是否受 owner_org∈可写组织 授权 (R8 P3-INSERT)。首次调用触发懒加载。 */
+    public boolean isInsertGuarded(String resourceCode) {
+        ensureLoaded();
+        return insertGuardedResources.contains(resourceCode);
     }
 
     /**
