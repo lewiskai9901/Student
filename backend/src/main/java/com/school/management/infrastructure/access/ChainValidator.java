@@ -1,5 +1,6 @@
 package com.school.management.infrastructure.access;
 
+import com.school.management.domain.access.model.StorageKind;
 import com.school.management.domain.access.model.chain.Chain;
 import com.school.management.domain.access.model.chain.Hop;
 import com.school.management.domain.access.model.chain.ScopeChainSpec;
@@ -7,7 +8,9 @@ import com.school.management.domain.access.model.chain.Terminal;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -58,10 +61,13 @@ public class ChainValidator {
             return new Result(false, List.of("数据范围不能为空 (至少一条链)"));
         }
 
-        // 该资源注册的终端锚点候选 (来自 resource_relations; 数据驱动, 无硬编码)
-        Set<String> registered = registry.relationsOf(resourceCode).stream()
-                .map(ResourceRelationRegistry.AnchorRow::relationCode)
-                .collect(Collectors.toSet());
+        // 该资源注册的终端锚点候选 + 存储种类 (来自 resource_relations; 数据驱动, 无硬编码)
+        Set<String> registered = new java.util.HashSet<>();
+        Map<String, StorageKind> kindByRel = new HashMap<>();
+        for (ResourceRelationRegistry.AnchorRow row : registry.relationsOf(resourceCode)) {
+            registered.add(row.relationCode());
+            kindByRel.put(row.relationCode(), row.storageKind());
+        }
 
         List<Chain> chains = spec.chains();
         for (int ci = 0; ci < chains.size(); ci++) {
@@ -78,6 +84,14 @@ public class ChainValidator {
                         errs.add(p + " 终端锚点 '" + a + "' 未在资源 '" + resourceCode
                                 + "' 的 resource_relations 注册 — 终端只能是模块数据支持的锚点"
                                 + " (可选: " + registered + ")");
+                    } else {
+                        // PROVIDER/RECORD 终端自带记录解析, 不消费中间跳组织集 → 须 hops 空
+                        StorageKind k = kindByRel.get(a);
+                        if ((k == StorageKind.PROVIDER || k == StorageKind.RECORD_RELATION)
+                                && !c.hops().isEmpty()) {
+                            errs.add(p + " 终端 '" + a + "' (" + k + ") 不支持中间跳 — 此类终端自带记录解析,"
+                                    + " 须无中间跳 (hops 空)");
+                        }
                     }
                 }
             }

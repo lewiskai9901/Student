@@ -105,6 +105,26 @@ class ChainValidatorTest {
     }
 
     @Test
+    @DisplayName("PROVIDER 终端 + 中间跳 → 拒绝 (此类终端不消费组织集, 须 hops 空)")
+    void providerTerminalWithHopsRejected() {
+        ScopeChainSpec spec = new ScopeChainSpec(List.of(
+                new Chain(List.of(new Hop(List.of("admin"), Combine.OR, "org_unit", false)),
+                        new Terminal(List.of("taught_by"), Combine.OR), List.of())));
+        ChainValidator.Result r = validator().validate("student", spec);
+        assertFalse(r.valid());
+        assertTrue(r.errors().stream().anyMatch(e -> e.contains("taught_by") && e.contains("不支持中间跳")),
+                () -> r.errors().toString());
+    }
+
+    @Test
+    @DisplayName("PROVIDER 终端 + 空跳 → 合法 (走旧路径)")
+    void providerTerminalNoHopsOk() {
+        ScopeChainSpec spec = new ScopeChainSpec(List.of(
+                new Chain(List.of(), new Terminal(List.of("taught_by"), Combine.OR), List.of())));
+        assertTrue(validator().validate("student", spec).valid());
+    }
+
+    @Test
     @DisplayName("空链 → 拒绝")
     void emptyRejected() {
         assertFalse(validator().validate("student", new ScopeChainSpec(List.of())).valid());

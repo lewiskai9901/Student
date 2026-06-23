@@ -114,10 +114,9 @@ class ChainCompilerTest {
     }
 
     @Test
-    @DisplayName("PROVIDER 终端 → 抛 (留 Step2b)")
-    void providerThrowsInStep2a() {
+    @DisplayName("PROVIDER 终端 (链路径) → fail-closed DENY (不崩; 此类终端须 hops 空走旧路径)")
+    void providerFailClosedInChain() {
         Chain c = new Chain(List.of(), new Terminal(List.of("taught_by"), Combine.OR), List.of());
-        assertThrows(UnsupportedOperationException.class,
-                () -> compiler().compileChain(c, "student", "", "user_id", 1L, T));
+        assertEquals("1=0", compiler().compileChain(c, "student", "", "user_id", 1L, T).sql());
     }
 }

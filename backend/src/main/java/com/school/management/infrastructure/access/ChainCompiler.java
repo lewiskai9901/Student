@@ -124,9 +124,10 @@ public class ChainCompiler {
             }
             case PROVIDER:
             case RECORD_RELATION:
-                // 2b: 复用 ScopeEvaluator.buildProviderCondition / buildRecordRelationCondition
-                throw new UnsupportedOperationException(
-                        "PROVIDER/RECORD_RELATION 终端编译留 P1 Step2b: " + resourceCode + "/" + anchor);
+                // PROVIDER/RECORD 终端按定义自带记录解析 (插件 resolver / record_relations), 不消费中间跳组织集 S
+                // → 仅在 hops 空时有意义, 此时走旧 composeGrant 路径 (非本编译器)。链 (hops 非空) + 这类终端
+                // 语义无效 → fail-closed DENY (不崩查询); ChainValidator 在保存期拒绝该组合。
+                return DENY;
             default:
                 return DENY;
         }
