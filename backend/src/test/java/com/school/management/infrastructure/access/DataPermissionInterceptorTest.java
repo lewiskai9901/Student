@@ -132,6 +132,13 @@ class DataPermissionInterceptorTest {
         List<Object> selectList();
     }
 
+    /** 方法级 @DataPermission only (无接口级 + insert 方法无注解) — 模拟方法级 plugin mapper。 */
+    interface MethodOnlyMapper {
+        @DataPermission(module = "method_only_res")
+        List<Object> findByX();
+        Object insert(Object entity);   // 无注解 (同 BaseMapper.insert)
+    }
+
     private DataPermission stubAnnotation() {
         return AnnotatedMapper.class.getAnnotation(DataPermission.class);
     }
@@ -814,6 +821,25 @@ class DataPermissionInterceptorTest {
             when(invocation.proceed()).thenReturn("ok");
 
             assertThat(interceptor.intercept(invocation)).isEqualTo("ok");
+        }
+
+        @Test
+        @DisplayName("R8 P3-INSERT: 方法级 mapper insert (无注解) → any-method 解析模块 → 仍受授权 (deny)")
+        void insertMethodLevelMapper_resolvedViaAnyMethod() throws Throwable {
+            UserContextHolder.setContext(userWithScopedRoles(
+                    List.of(scopedRole(1L, ScopeType.ORG_UNIT, 100L, "1.10.100."))));
+            // insert 方法本身无 @DataPermission → 走 resolveAnyMethodAnnotation 扫到 findByX 的 module
+            when(mappedStatement.getId()).thenReturn(MethodOnlyMapper.class.getName() + ".insert");
+            when(mappedStatement.getSqlCommandType()).thenReturn(SqlCommandType.INSERT);
+            when(dynamicModuleService.getModuleConfig(anyLong(), anyString())).thenReturn(moduleConfig(true, ""));
+            when(dataPermissionPolicyService.getScopeSpec(anyLong(), anyLong(), anyString(), eq("WRITE")))
+                    .thenReturn(grantSpec("owner_org", com.school.management.domain.access.model.SubjectScope.MY_ORG));
+            when(resourceRelationRegistry.isInsertGuarded(anyString())).thenReturn(true);
+            when(jdbcTemplate.queryForObject(anyString(), any(Object[].class), eq(Boolean.class))).thenReturn(false);
+            when(invocation.getTarget()).thenReturn(handler(insertBoundSql(999L)));
+
+            assertThatThrownBy(() -> interceptor.intercept(invocation))
+                    .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
         }
 
         @Test

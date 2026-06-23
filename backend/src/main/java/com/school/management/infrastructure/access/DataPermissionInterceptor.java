@@ -101,25 +101,34 @@ public class DataPermissionInterceptor implements Interceptor {
         String mapperId = mappedStatement.getId();
 
         boolean isInsert = mappedStatement.getSqlCommandType() == org.apache.ibatis.mapping.SqlCommandType.INSERT;
+        Long tenantId = TenantContextHolder.getTenantId();
+
+        // INSERT (R8 P3-INSERT 授权): 无 WHERE 可注入 → 改为"新行 owner_org ∈ 用户可写组织"前置校验。
+        // 平台健壮性: insert 方法常无注解 (BaseMapper.insert), 故用 any-method 解析 (扫 mapper 任一
+        // @DataPermission), 让 withInsertGuard 对接口级/方法级 mapper 一致生效。enforceInsertAuthz 内部
+        // 再 gate isInsertGuarded (默认 false) → 未标注资源放行, 加 any-method 不引入新强制 (fail-safe)。
+        if (isInsert) {
+            DataPermission insAnno = getDataPermissionAnnotation(mapperId);
+            if (insAnno == null) insAnno = resolveAnyMethodAnnotation(mapperId);
+            if (insAnno != null && insAnno.enabled()) {
+                DataModulePO mc = dynamicModuleService.getModuleConfig(tenantId, insAnno.module());
+                if (mc != null && mc.getEnabled()) {
+                    enforceInsertAuthz(statementHandler.getBoundSql(), insAnno, mc, userContext, tenantId);
+                }
+            }
+            return invocation.proceed();
+        }
 
         DataPermission dataPermission = getDataPermissionAnnotation(mapperId);
         if (dataPermission == null || !dataPermission.enabled()) {
             return invocation.proceed();
         }
 
-        Long tenantId = TenantContextHolder.getTenantId();
         String moduleCode = dataPermission.module();
 
         // Check module config
         DataModulePO moduleConfig = dynamicModuleService.getModuleConfig(tenantId, moduleCode);
         if (moduleConfig == null || !moduleConfig.getEnabled()) {
-            return invocation.proceed();
-        }
-
-        // INSERT (R8 P3-INSERT 授权): 无 WHERE 可注入 → 改为"新行 owner_org ∈ 用户可写组织"前置校验。
-        // 越界 throw (回滚, pre-insert 无副作用); fail-safe: 取不到列/值/异常 → 放行 (不阻断合法写)。
-        if (isInsert) {
-            enforceInsertAuthz(statementHandler.getBoundSql(), dataPermission, moduleConfig, userContext, tenantId);
             return invocation.proceed();
         }
 
@@ -518,6 +527,35 @@ public class DataPermissionInterceptor implements Interceptor {
         return annotationCache
                 .computeIfAbsent(mapperId, this::resolveDataPermissionAnnotation)
                 .orElse(null);
+    }
+
+    /** mapperClassName → 该 mapper 任一方法/类上的 @DataPermission (R8 INSERT: insert 无注解时回退用)。 */
+    private final java.util.Map<String, java.util.Optional<DataPermission>> anyMethodAnnotationCache =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * 取 mapper "任一" @DataPermission (类级优先, 否则任一方法级)。供 INSERT 授权: BaseMapper.insert
+     * 无自身注解, 但该 mapper 是数据权限管的资源 → 用它的模块做 INSERT 授权 (仍 gate isInsertGuarded)。
+     * <p>同一 mapper 通常单一 module, 取首个即可。
+     */
+    private DataPermission resolveAnyMethodAnnotation(String mapperId) {
+        int lastDot = mapperId.lastIndexOf('.');
+        String className = lastDot > 0 ? mapperId.substring(0, lastDot) : mapperId;
+        return anyMethodAnnotationCache.computeIfAbsent(className, cn -> {
+            try {
+                Class<?> mapperClass = Class.forName(cn);
+                DataPermission classAnno = mapperClass.getAnnotation(DataPermission.class);
+                if (classAnno != null) return java.util.Optional.of(classAnno);
+                for (Method m : mapperClass.getMethods()) {
+                    DataPermission ma = m.getAnnotation(DataPermission.class);
+                    if (ma != null) return java.util.Optional.of(ma);
+                }
+                return java.util.Optional.empty();
+            } catch (Exception e) {
+                log.error("[DataPermission] any-method 注解解析失败 mapper={}: {}", cn, e.getMessage());
+                return java.util.Optional.empty();
+            }
+        }).orElse(null);
     }
 
     private java.util.Optional<DataPermission> resolveDataPermissionAnnotation(String mapperId) {

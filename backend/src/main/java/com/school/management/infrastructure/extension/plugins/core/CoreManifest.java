@@ -344,8 +344,15 @@ public class CoreManifest implements PluginPackage {
             Stream.<Contribution>of(rr(ResourceRelationDef.subjectGraph(
                 "user", "owner_org", "所属组织", "ORG_UNIT", Cardinality.SINGLE, "member").withGrantsByDefault())),
             // 主体但列锚: org_unit/place 的组织是内在列 (非成员图)
+            // org_unit owner_org=id (自引用): 不加 INSERT 授权 — 新 org 的 id 不在任何现存可写集 → 会误拒建组织。
             orgCreator("org_unit", "id", "created_by"),              // 审计 P2.4: 修 parent_id→id (恢复注解本意; data_resources seed 误置 parent_id 致"按父组织过滤")
-            orgCreator("place", "effective_org_unit_id", "created_by"),
+            // place owner_org=effective_org_unit_id (现存归属组织, ownership 语义) → 加 INSERT 授权:
+            // 建场所须对其归属组织有写权 (R8; place mapper 方法级, 经 any-method 解析触发)。
+            Stream.<Contribution>of(
+                rr(ResourceRelationDef.column("place", "owner_org", "所属组织", "ORG_UNIT", "effective_org_unit_id")
+                    .withAutoFill().withGrantsByDefault().withInsertGuard()),
+                rr(ResourceRelationDef.column("place", "creator", "创建者", "USER", "created_by").withAutoFill())
+            ),
             // 普通记录: org_unit_id + created_by
             orgCreator("inspection_record", "org_unit_id", "created_by"),
             // R4: 检查记录的"复核员" = 多值记录关系 (record_relations); 复核员只看指派给自己的检查记录。
