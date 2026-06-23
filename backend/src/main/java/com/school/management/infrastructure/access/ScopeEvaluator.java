@@ -145,12 +145,14 @@ public class ScopeEvaluator {
     private ScopeCondition composeHopChain(RelationGrant g, ScopeSpec spec, ResourceScopeMeta meta,
                                            UserContext ctx, Long tenantId, int paramOffset) {
         // 单终端链: hops + relation 作唯一终端锚点 (多终端 AND 是后续细化)
+        // [完成项2] 链 grant 复用 subjectParam 携带终端成员关系 (属于/负责; 空→member); subject 已归一 SELF。
         com.school.management.domain.access.model.chain.Chain chain =
                 new com.school.management.domain.access.model.chain.Chain(
                         g.hops(),
                         new com.school.management.domain.access.model.chain.Terminal(
                                 java.util.List.of(g.relation()),
-                                com.school.management.domain.access.model.chain.Combine.OR),
+                                com.school.management.domain.access.model.chain.Combine.OR,
+                                g.subjectParam()),
                         java.util.List.of());
         com.school.management.infrastructure.extension.SqlFragment frag =
                 chainCompiler.compileChain(chain, meta, ctx.getUserId(), tenantId == null ? 1L : tenantId);

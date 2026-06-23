@@ -91,10 +91,23 @@ class ChainCompilerTest {
         SqlFragment f = compiler().compileChain(c, STUDENT_S, 1L, T);
         String sql = f.sql();
         assertTrue(sql.startsWith("s.user_id IN (SELECT ccm0.subject_id FROM access_relations ccm0"), sql);
-        assertTrue(sql.contains("ccm0.relation = 'member'"), sql);
+        // [完成项2] 成员关系参数化 (默认 member)
+        assertTrue(sql.contains("ccm0.relation = :ccmRel0"), sql);
+        assertEquals("member", f.params().get("ccmRel0"));
         assertTrue(sql.contains("ccm0.tenant_id = :ccTenant0"), sql);
         assertTrue(sql.contains("ccm0.resource_id IN (SELECT ar0.resource_id"), "应嵌入跳子查询: " + sql);
         assertEquals(1L, f.params().get("ccTenant0"));
+    }
+
+    @Test
+    @DisplayName("[完成项2] SUBJECT_GRAPH 终端可配成员关系 (responsible_for=负责)")
+    void subjectGraphConfigurableMembership() {
+        Chain c = new Chain(
+                List.of(new Hop(List.of("admin"), Combine.OR, "org_unit", false)),
+                new Terminal(List.of("owner_org"), Combine.OR, "responsible_for"), List.of());
+        SqlFragment f = compiler().compileChain(c, STUDENT_S, 1L, T);
+        assertTrue(f.sql().contains("ccm0.relation = :ccmRel0"), f.sql());
+        assertEquals("responsible_for", f.params().get("ccmRel0"));
     }
 
     @Test

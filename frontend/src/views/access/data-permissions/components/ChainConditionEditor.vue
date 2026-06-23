@@ -81,7 +81,21 @@
       >
         <el-option v-for="t in terminalOptions" :key="t.code" :label="t.label" :value="t.code" />
       </el-select>
-      <span class="text-gray-500">挂到末级实体</span>
+      <!-- [完成项2] 成员图终端: 可选数据↔组织的成员关系 (属于/负责) -->
+      <template v-if="terminalIsSubjectGraph">
+        <span class="text-gray-500">·数据与组织</span>
+        <el-select
+          :model-value="modelValue.subjectParam || 'member'"
+          size="small"
+          style="width: 120px"
+          :disabled="disabled"
+          @update:model-value="(v: any) => setMembership(v)"
+        >
+          <el-option v-for="m in membershipOptions" :key="m.relationCode" :label="m.relationName || m.relationCode" :value="m.relationCode" />
+        </el-select>
+        <span class="text-gray-500">关系</span>
+      </template>
+      <span v-else class="text-gray-500">挂到末级实体</span>
     </div>
   </div>
 </template>
@@ -152,6 +166,20 @@ const terminalOptions = computed(() =>
     .filter(r => r.storageKind === 'COLUMN' || r.storageKind === 'SUBJECT_GRAPH')
     .map(r => ({ code: r.relationCode, label: TERM_LABEL[r.relationCode] || r.relationCode }))
 )
+
+// [完成项2] 选中终端是否成员图 (SUBJECT_GRAPH) → 显示"数据↔组织成员关系"下拉 (属于/负责)
+const terminalIsSubjectGraph = computed(
+  () => resRels.value.find(r => r.relationCode === props.modelValue.relation)?.storageKind === 'SUBJECT_GRAPH'
+)
+/** 数据↔组织成员关系候选 = 用户↔组织关系 (member 属于 / responsible_for 负责 / admin …)。 */
+const membershipOptions = computed<RelationTypeDef[]>(() =>
+  allRelations.value.filter(
+    r => (r.fromType || '').toUpperCase() === 'USER' && (r.toType || '').toUpperCase() === 'ORG_UNIT'
+  )
+)
+function setMembership(v: string) {
+  emit('update:model-value', { ...props.modelValue, subject: 'SELF', subjectParam: v })
+}
 
 // ── 编辑 ──
 function setHopRelations(i: number, v: string[]) {

@@ -62,11 +62,12 @@ public class ChainCompiler {
             params.putAll(hop.params());
         }
 
-        // 终端: 每个锚点一条谓词
+        // 终端: 每个锚点一条谓词; SUBJECT_GRAPH 用链声明的成员关系 (属于/负责, 默认 member)
+        String membershipRel = chain.terminal().membershipRelationOrDefault();
         List<String> preds = new ArrayList<>();
         int ai = 0;
         for (String anchor : chain.terminal().anchorRelations()) {
-            String pred = terminalPredicate(anchor, meta, sSubquery, userId, tenantId, params, ai++);
+            String pred = terminalPredicate(anchor, meta, membershipRel, sSubquery, userId, tenantId, params, ai++);
             if (pred != null) {
                 preds.add(pred);
             }
@@ -80,8 +81,9 @@ public class ChainCompiler {
     }
 
     /** 一个终端锚点 → 谓词 (按 storage_kind)。null = 跳过 (不应发生; 未注册→DENY)。 */
-    private String terminalPredicate(String anchor, ResourceScopeMeta meta, String sSubquery,
-                                     long userId, long tenantId, Map<String, Object> params, int ai) {
+    private String terminalPredicate(String anchor, ResourceScopeMeta meta, String membershipRel,
+                                     String sSubquery, long userId, long tenantId,
+                                     Map<String, Object> params, int ai) {
         String resourceCode = meta.resourceCode();
         String alias = meta.aliasPrefix();
         var rowOpt = registry.relationOf(resourceCode, anchor);
@@ -119,11 +121,13 @@ public class ChainCompiler {
                     params.put(p, userId);
                     return alias + subjectCol + " = :" + p;
                 }
-                // 数据(成员主体) ∈ S 中各组织的 member (与旧 membershipSelect 同结构 + ar.tenant_id 过滤)
+                // 数据(成员主体) ∈ S 中各组织的 [成员关系] ([完成项2] 默认 member, 可配 属于/负责; + tenant 过滤)
                 String tp = "ccTenant" + ai;
+                String rp = "ccmRel" + ai;
                 params.put(tp, tenantId);
+                params.put(rp, membershipRel);
                 return alias + subjectCol + " IN (SELECT ccm" + ai + ".subject_id FROM access_relations ccm" + ai
-                        + " WHERE ccm" + ai + ".relation = 'member' AND ccm" + ai + ".resource_type = 'org_unit'"
+                        + " WHERE ccm" + ai + ".relation = :" + rp + " AND ccm" + ai + ".resource_type = 'org_unit'"
                         + " AND ccm" + ai + ".subject_type = 'user' AND ccm" + ai + ".deleted = 0"
                         + " AND ccm" + ai + ".tenant_id = :" + tp
                         + " AND ccm" + ai + ".resource_id IN (" + sSubquery + "))";
