@@ -8,6 +8,10 @@ import com.school.management.domain.access.model.entity.DataScopeItem;
 import com.school.management.domain.access.model.entity.RoleDataPermission;
 import com.school.management.domain.access.model.valueobject.RelationGrant;
 import com.school.management.domain.access.model.valueobject.ScopeSpec;
+import com.school.management.domain.access.model.chain.Chain;
+import com.school.management.domain.access.model.chain.Combine;
+import com.school.management.domain.access.model.chain.ScopeChainSpec;
+import com.school.management.domain.access.model.chain.Terminal;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -37,10 +41,12 @@ public class DataPermissionPolicyService {
 
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
+    private final ChainValidator chainValidator;
 
-    public DataPermissionPolicyService(JdbcTemplate jdbcTemplate) {
+    public DataPermissionPolicyService(JdbcTemplate jdbcTemplate, ChainValidator chainValidator) {
         this.jdbcTemplate = jdbcTemplate;
         this.objectMapper = new ObjectMapper();
+        this.chainValidator = chainValidator;
     }
 
     /**
@@ -154,6 +160,10 @@ public class DataPermissionPolicyService {
                     anchorParam, includeSubtree == 1, customSet,
                     isMembershipResource(permission.getModuleCode()));
         }
+        // P1 多级链: 含 hops 的 grant 保存前过 ChainValidator (终端∈注册表 / 限深≤3 / 结构 / PROVIDER+跳)。
+        // 非法 → 抛, 拒绝入库 (否则引擎查询期 fail-closed DENY, 用户存了却查不到数据, 无反馈)。
+        validateChainGrants(permission.getModuleCode(), grants);
+
         String relationGrantsJson = toJsonList(grants);
 
         // UK (role_id, resource_code, apply_to, tenant_id) 不含 deleted, 软删后再 INSERT 会撞 unique.
@@ -176,6 +186,26 @@ public class DataPermissionPolicyService {
 
         log.info("Saved role data scope: tenantId={}, roleId={}, resourceCode={}, scopeType={}, anchor={}, applyTo={}",
                 tenantId, permission.getRoleId(), permission.getModuleCode(), permission.getScopeCode(), orgAnchor, applyTo);
+    }
+
+    /**
+     * 校验含中间跳 (多级链) 的 grant: 每条 grant.hops 非空 → 视为单终端链 (terminal=[relation]),
+     * 过 {@link ChainValidator} (终端∈resource_relations / 限深≤3 / 结构 / PROVIDER+跳)。任一非法 → 抛。
+     * 无 hops 的 grant (1 跳/旧形态) 跳过 (不经链校验, 行为不变)。
+     */
+    private void validateChainGrants(String resourceCode, List<RelationGrant> grants) {
+        if (grants == null) return;
+        List<String> allErrors = new ArrayList<>();
+        for (RelationGrant g : grants) {
+            if (g.hops() == null || g.hops().isEmpty()) continue; // 非链 grant 不校验
+            ScopeChainSpec spec = new ScopeChainSpec(List.of(
+                    new Chain(g.hops(), new Terminal(List.of(g.relation()), Combine.OR), List.of())));
+            ChainValidator.Result r = chainValidator.validate(resourceCode, spec);
+            if (!r.valid()) allErrors.addAll(r.errors());
+        }
+        if (!allErrors.isEmpty()) {
+            throw new IllegalArgumentException("数据范围关系链非法: " + String.join("; ", allErrors));
+        }
     }
 
     /** 批量保存角色的所有数据权限 */

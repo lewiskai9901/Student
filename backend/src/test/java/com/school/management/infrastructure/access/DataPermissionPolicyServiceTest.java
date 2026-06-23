@@ -39,7 +39,7 @@ class DataPermissionPolicyServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new DataPermissionPolicyService(jdbcTemplate);
+        service = new DataPermissionPolicyService(jdbcTemplate, new ChainValidator(new ResourceRelationRegistry(null)));
     }
 
     @Test
