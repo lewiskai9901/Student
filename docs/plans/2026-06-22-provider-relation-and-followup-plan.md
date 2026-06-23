@@ -60,9 +60,15 @@ owner_org/target 是否 ∈ 用户可写范围**无拦截器校验**。这是 R8
 | B3 | PROVIDER 关系 INSERT: 无 row 无法 resolver 反查 → INSERT 时 PROVIDER 不参与(读向语义), 文档明确 |
 | B4 | TDD + 真库: 非授权 INSERT(owner_org 越界)被拒; 合法 INSERT 通过 |
 
-**已完成**:UPDATE/DELETE WRITE 注入(代码既有 + 单测验证)。
-**剩余**:INSERT 授权(careful 安全设计, 需独立专注会话 + 真库 E2E)。**工作量**:几天(非周级)。
-**待验**:UPDATE/DELETE 的运行期 E2E(非授权 UPDATE→0 rows)—— 机制已码+单测证, 运行期证并入 INSERT 会话。
+**已完成 + 全部真库 E2E 已证 (2026-06-22)**:
+- UPDATE/DELETE WRITE 注入: 真库 E2E 证 (teaching_task 逻辑删: ttu 写=CUSTOM_ORG[O1], DELETE O2 task →
+  注入 `UPDATE ... SET deleted=1 WHERE id=O2 AND ... AND ((org_unit_id IN (O1)))` → 0 行 → 未删;
+  DELETE O1 → 1 行 → 已删)。
+- INSERT 授权 (pre-insert, owner_org ∈ 可写组织): 真库 E2E 证 (teaching_task: POST org=O2 → AccessDenied;
+  org=O1 → 过授权)。见 `2026-06-22-p3-insert-authz-design.md`。
+**R8 三动作全真库验证**: READ(dpt_ct 金标准)+ UPDATE/DELETE(0行静默拦截)+ INSERT(AccessDenied)。
+**剩余 follow-up**: INSERT 方法级 mapper 覆盖扩展 (安全行为变更, 需逐资源语义分析 — 如 inspection 检查员
+跨组织创建 submission 是否该拦, 非盲目扩展; 独立 careful pass)。接口级资源已全覆盖。
 
 ---
 
