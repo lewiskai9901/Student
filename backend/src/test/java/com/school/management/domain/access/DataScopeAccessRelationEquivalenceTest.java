@@ -21,9 +21,10 @@ class DataScopeAccessRelationEquivalenceTest {
     @Test
     void allScopesEnumerated() {
         // 防止有人偷偷加新 scope 而没在 ADR 里登记
-        // 当前 hardcoded 5 个: ALL / DEPARTMENT_AND_BELOW / DEPARTMENT / CUSTOM / SELF
-        // (年级/班级粒度走插件维度 PluginDataScopeRouter, 不在此枚举)
-        assertThat(DataScope.values()).hasSize(5);
+        // 当前 7 个: ALL / DEPARTMENT_AND_BELOW / MANAGED_ORGS_AND_BELOW / MANAGED_ORGS /
+        //          DEPARTMENT / CUSTOM / SELF (MANAGED_ORGS* 为授权增强三闸 2026-06-14 新增;
+        //          年级/班级粒度走插件维度 PluginDataScopeRouter, 不在此枚举)
+        assertThat(DataScope.values()).hasSize(7);
     }
 
     @Test
