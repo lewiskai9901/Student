@@ -47,13 +47,16 @@ public class ScopeEvaluator {
     private final PluginDataScopeRouter pluginDataScopeRouter;
     private final ResourceRelationRegistry resourceRelationRegistry;
     private final RecordRelationResolverRouter recordRelationResolverRouter;
+    private final ChainCompiler chainCompiler;
 
     public ScopeEvaluator(@Lazy PluginDataScopeRouter pluginDataScopeRouter,
                           ResourceRelationRegistry resourceRelationRegistry,
-                          @Lazy RecordRelationResolverRouter recordRelationResolverRouter) {
+                          @Lazy RecordRelationResolverRouter recordRelationResolverRouter,
+                          ChainCompiler chainCompiler) {
         this.pluginDataScopeRouter = pluginDataScopeRouter;
         this.resourceRelationRegistry = resourceRelationRegistry;
         this.recordRelationResolverRouter = recordRelationResolverRouter;
+        this.chainCompiler = chainCompiler;
     }
 
     /**
@@ -118,6 +121,11 @@ public class ScopeEvaluator {
      */
     private ScopeCondition composeGrant(RelationGrant g, ScopeSpec spec, ResourceScopeMeta meta,
             UserContext ctx, Long effectiveOrgId, String effectiveOrgPath, Long tenantId, int paramOffset) {
+        // P1: 有中间跳 → 多级关系链 (我 →[hops]→ 组织集 S, relation 作终端 over S)。
+        // 空跳 (既有全部配置) 走下方旧路径, 字节不变 → 金标准安全。
+        if (g.hasHops()) {
+            return composeHopChain(g, spec, meta, ctx, tenantId, paramOffset);
+        }
         if (isRecordRelation(meta, g)) {
             return buildRecordRelationCondition(g, spec, meta, ctx, paramOffset);
         }
@@ -127,6 +135,35 @@ public class ScopeEvaluator {
         }
         return composeAnchorCondition(toSubSpec(g, spec), meta, ctx,
                 effectiveOrgId, effectiveOrgPath, tenantId, paramOffset);
+    }
+
+    /**
+     * P1 多级关系链 grant → 子条件: 中间跳 ({@link ChainCompiler} via {@link ChainHopResolver}) 求可达组织集 S,
+     * grant.relation 作终端 over S (COLUMN: col IN(S) / SUBJECT_GRAPH: 成员 of S)。命名参数内联为位置 ?,
+     * 再叠加轴③ typeFilter (复用既有, 与旧路径一致)。
+     */
+    private ScopeCondition composeHopChain(RelationGrant g, ScopeSpec spec, ResourceScopeMeta meta,
+                                           UserContext ctx, Long tenantId, int paramOffset) {
+        // 单终端链: hops + relation 作唯一终端锚点 (多终端 AND 是后续细化)
+        com.school.management.domain.access.model.chain.Chain chain =
+                new com.school.management.domain.access.model.chain.Chain(
+                        g.hops(),
+                        new com.school.management.domain.access.model.chain.Terminal(
+                                java.util.List.of(g.relation()),
+                                com.school.management.domain.access.model.chain.Combine.OR),
+                        java.util.List.of());
+        com.school.management.infrastructure.extension.SqlFragment frag =
+                chainCompiler.compileChain(chain, meta.resourceCode(), meta.aliasPrefix(),
+                        meta.membershipSubjectColumnOrDefault(), ctx.getUserId(),
+                        tenantId == null ? 1L : tenantId);
+        ScopeCondition cond = new ScopeCondition();
+        String sql = frag.sql();
+        if (sql == null || sql.isBlank() || "1=0".equals(sql.replace(" ", ""))) {
+            cond.sql = DENY; // 链 deny → fail-closed
+            return cond;
+        }
+        cond.sql = inlineNamedParams(sql, frag.params(), cond, paramOffset);
+        return typeFilter(cond, spec, meta, paramOffset);
     }
 
     /** grant.relation 在该资源是否 RECORD_RELATION 存储 (查 registry per-relation)。resourceCode 空→false。 */

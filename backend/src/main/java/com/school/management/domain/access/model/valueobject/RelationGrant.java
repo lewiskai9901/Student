@@ -2,6 +2,7 @@ package com.school.management.domain.access.model.valueobject;
 
 import com.school.management.domain.access.model.OrgAnchor;
 import com.school.management.domain.access.model.SubjectScope;
+import com.school.management.domain.access.model.chain.Hop;
 
 import java.util.List;
 import java.util.Set;
@@ -25,8 +26,32 @@ public record RelationGrant(
         SubjectScope subject,
         String subjectParam,
         boolean subtree,
-        Set<Long> orgIds
+        Set<Long> orgIds,
+        /**
+         * P1 多级关系链中间跳 (可空)。空 = 1 跳 (subject 即组织解析, 走旧 composeGrant, 与 M1 字节等价);
+         * 非空 = 多级链 (我 →[hops]→ 组织集 S, relation 作终端 over S, 走 ChainCompiler)。
+         */
+        List<Hop> hops
 ) {
+    /**
+     * 紧凑构造器: hops 归一非 null; subject 归一非 null (多级链 grant 的 subject 无意义可空,
+     * 但 legacy 读路径桥接 {@link #anchorOf} 会 switch(subject) → 归一为 SELF 防 NPE; 链路径不读 subject)。
+     */
+    public RelationGrant {
+        hops = hops == null ? List.of() : List.copyOf(hops);
+        subject = subject == null ? SubjectScope.SELF : subject;
+    }
+
+    /** 向下兼容 5-arg 构造器 (旧 fromM1Axes / 既有 JSON 无 hops 字段 → 空跳)。 */
+    public RelationGrant(String relation, SubjectScope subject, String subjectParam,
+                         boolean subtree, Set<Long> orgIds) {
+        this(relation, subject, subjectParam, subtree, orgIds, List.of());
+    }
+
+    /** 有中间跳 = 多级链 (走 ChainCompiler); 否则 1 跳 (走旧 composeGrant)。 */
+    public boolean hasHops() {
+        return hops != null && !hops.isEmpty();
+    }
 
     /** 标准关系码常量 (与 resource_relations / CoreManifest 登记一致)。 */
     public static final String OWNER_ORG = "owner_org";

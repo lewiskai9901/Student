@@ -40,13 +40,16 @@ public class ChainCompiler {
     /**
      * 编译一条链 → 资源谓词。
      *
-     * @param chain        链
-     * @param resourceCode 资源码 (查终端锚点 storage_kind/column)
-     * @param alias        资源表别名前缀 (如 "" 或 "t.")
-     * @param userId       当前用户 (链起点)
+     * @param chain            链
+     * @param resourceCode     资源码 (查终端锚点 storage_kind/column)
+     * @param alias            资源表别名前缀 (如 "" 或 "t.")
+     * @param membershipSubjectColumn 成员图资源主表的成员主体列 (如 user_student.user_id); SUBJECT_GRAPH 终端用
+     * @param userId           当前用户 (链起点)
+     * @param tenantId         租户 (成员图子查询 ar.tenant_id 过滤, 与旧引擎一致)
      * @return SQL 谓词 + 命名参数; {@code 1=0} = deny
      */
-    public SqlFragment compileChain(Chain chain, String resourceCode, String alias, long userId) {
+    public SqlFragment compileChain(Chain chain, String resourceCode, String alias,
+                                    String membershipSubjectColumn, long userId, long tenantId) {
         Map<String, Object> params = new LinkedHashMap<>();
 
         // 中间跳 → 可达末实体集 S 子查询; hops 空 → S=null (终端直接绑用户)
@@ -61,7 +64,8 @@ public class ChainCompiler {
         List<String> preds = new ArrayList<>();
         int ai = 0;
         for (String anchor : chain.terminal().anchorRelations()) {
-            String pred = terminalPredicate(anchor, resourceCode, alias, sSubquery, userId, params, ai++);
+            String pred = terminalPredicate(anchor, resourceCode, alias, membershipSubjectColumn,
+                    sSubquery, userId, tenantId, params, ai++);
             if (pred != null) {
                 preds.add(pred);
             }
@@ -76,7 +80,8 @@ public class ChainCompiler {
 
     /** 一个终端锚点 → 谓词 (按 storage_kind)。null = 跳过 (不应发生; 未注册→DENY)。 */
     private String terminalPredicate(String anchor, String resourceCode, String alias,
-                                     String sSubquery, long userId, Map<String, Object> params, int ai) {
+                                     String membershipSubjectColumn, String sSubquery,
+                                     long userId, long tenantId, Map<String, Object> params, int ai) {
         var rowOpt = registry.relationOf(resourceCode, anchor);
         if (rowOpt.isEmpty()) {
             return DENY; // 终端未注册 (ChainValidator 本应拦下) → fail-closed
@@ -99,16 +104,22 @@ public class ChainCompiler {
                 return alias + col + " IN (" + sSubquery + ")";
             }
             case SUBJECT_GRAPH: {
+                // 成员主体列 (如 user_student.user_id) —— 旧引擎 membershipSelect 同口径; shadow 实证非 id
+                String subjectCol = (membershipSubjectColumn == null || membershipSubjectColumn.isBlank())
+                        ? "user_id" : membershipSubjectColumn;
                 if (sSubquery == null) {
-                    // hops 空 → 成员自身 (data 即我, 如 user/student 自己)
+                    // hops 空 → 成员自身 (data 即我, subjectCol = me)
                     String p = "ccMe" + ai;
                     params.put(p, userId);
-                    return alias + "id = :" + p;
+                    return alias + subjectCol + " = :" + p;
                 }
-                // 数据(成员主体) ∈ S 中各组织的 member
-                return alias + "id IN (SELECT ccm" + ai + ".subject_id FROM access_relations ccm" + ai
+                // 数据(成员主体) ∈ S 中各组织的 member (与旧 membershipSelect 同结构 + ar.tenant_id 过滤)
+                String tp = "ccTenant" + ai;
+                params.put(tp, tenantId);
+                return alias + subjectCol + " IN (SELECT ccm" + ai + ".subject_id FROM access_relations ccm" + ai
                         + " WHERE ccm" + ai + ".relation = 'member' AND ccm" + ai + ".resource_type = 'org_unit'"
                         + " AND ccm" + ai + ".subject_type = 'user' AND ccm" + ai + ".deleted = 0"
+                        + " AND ccm" + ai + ".tenant_id = :" + tp
                         + " AND ccm" + ai + ".resource_id IN (" + sSubquery + "))";
             }
             case PROVIDER:

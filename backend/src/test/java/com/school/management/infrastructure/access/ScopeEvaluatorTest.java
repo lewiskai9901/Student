@@ -56,7 +56,8 @@ class ScopeEvaluatorTest {
     private static final Long TENANT = 1L;
 
     private ScopeEvaluator evaluator() {
-        return new ScopeEvaluator(pluginDataScopeRouter, resourceRelationRegistry, recordRelationResolverRouter);
+        return new ScopeEvaluator(pluginDataScopeRouter, resourceRelationRegistry, recordRelationResolverRouter,
+                new ChainCompiler(new ChainHopResolver(), resourceRelationRegistry));
     }
 
     private UserContext ctx() {
@@ -327,6 +328,32 @@ class ScopeEvaluatorTest {
         assertThat(c.params.get(0).value).isEqualTo(7L);
         assertThat(c.params.get(1).value).isEqualTo(TENANT);
         assertThat(c.params.get(2).value).isEqualTo("/1/100/%");
+    }
+
+    // ---- P1: 多级关系链 grant (hops 非空) → ChainCompiler 路径 ----
+    @Test
+    @DisplayName("P1 多级链: hops=[我 admin 组织] + owner_org 终端 → org_unit_id IN (access_relations 子查询)")
+    void hopChainGrant() {
+        when(resourceRelationRegistry.relationOf("doc", "owner_org"))
+                .thenReturn(Optional.of(new ResourceRelationRegistry.AnchorRow(
+                        "owner_org", StorageKind.COLUMN, "org_unit_id", null)));
+        ResourceScopeMeta meta = new ResourceScopeMeta(
+                "t", "org_unit_id", "created_by", false, "id", null, "doc");
+        ScopeSpec spec = ScopeSpec.builder()
+                .relationGrants(List.of(new RelationGrant("owner_org", null, null, false, null,
+                        List.of(new com.school.management.domain.access.model.chain.Hop(
+                                List.of("admin"),
+                                com.school.management.domain.access.model.chain.Combine.OR,
+                                "org_unit", false)))))
+                .build();
+
+        ScopeCondition c = evaluator().toSqlCondition(spec, meta, ctx(), 100L, "/1/100/", TENANT, 0);
+
+        assertThat(c.sql).contains("t.org_unit_id IN (SELECT ar0.resource_id FROM access_relations ar0");
+        assertThat(c.sql).contains("ar0.resource_type = 'org_unit'");
+        assertThat(c.sql).doesNotContain(":");  // 命名参数已内联为位置 ?
+        assertThat(c.params).anyMatch(p -> Long.valueOf(7L).equals(p.value)); // chmMe = userId 7
+        assertThat(c.params).anyMatch(p -> "admin".equals(p.value));
     }
 
     @Test

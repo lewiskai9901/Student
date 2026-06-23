@@ -39,7 +39,8 @@ class BuildMetaRegistryEquivalenceTest {
     private static final Long TENANT = 1L;
 
     private ScopeEvaluator evaluator() {
-        return new ScopeEvaluator(router, resourceRelationRegistry, org.mockito.Mockito.mock(RecordRelationResolverRouter.class));
+        return new ScopeEvaluator(router, resourceRelationRegistry, org.mockito.Mockito.mock(RecordRelationResolverRouter.class),
+                new ChainCompiler(new ChainHopResolver(), resourceRelationRegistry));
     }
 
     private UserContext ctx() {

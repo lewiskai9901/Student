@@ -100,7 +100,8 @@ class DataPermissionInterceptorTest {
                 .thenReturn(Optional.of(new ResourceRelationRegistry.DerivedAnchor(true, null, null)));
         ReflectionTestUtils.setField(interceptor, "resourceRelationRegistry", resourceRelationRegistry);
         // R4: ScopeEvaluator 持 router + registry (registry 供 RECORD_RELATION 检测)。
-        scopeEvaluator = new ScopeEvaluator(pluginDataScopeRouter, resourceRelationRegistry, org.mockito.Mockito.mock(RecordRelationResolverRouter.class));
+        scopeEvaluator = new ScopeEvaluator(pluginDataScopeRouter, resourceRelationRegistry, org.mockito.Mockito.mock(RecordRelationResolverRouter.class),
+                new ChainCompiler(new ChainHopResolver(), resourceRelationRegistry));
         ReflectionTestUtils.setField(interceptor, "scopeEvaluator", scopeEvaluator);
         UserContextHolder.clear();
         UserContextHolder.enableDataPermission();
