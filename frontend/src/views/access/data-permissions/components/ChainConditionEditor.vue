@@ -85,15 +85,17 @@
       <template v-if="terminalIsSubjectGraph">
         <span class="text-gray-500">·数据与组织</span>
         <el-select
-          :model-value="modelValue.subjectParam || 'member'"
+          :model-value="membershipArray"
+          multiple
+          collapse-tags
           size="small"
-          style="width: 120px"
+          style="width: 180px"
           :disabled="disabled"
-          @update:model-value="(v: any) => setMembership(v)"
+          @update:model-value="(v: any) => setMembership(v as string[])"
         >
           <el-option v-for="m in membershipOptions" :key="m.relationCode" :label="m.relationName || m.relationCode" :value="m.relationCode" />
         </el-select>
-        <span class="text-gray-500">关系</span>
+        <span class="text-gray-500">关系{{ membershipArray.length > 1 ? '(且)' : '' }}</span>
       </template>
       <span v-else class="text-gray-500">挂到末级实体</span>
     </div>
@@ -177,7 +179,14 @@ const membershipOptions = computed<RelationTypeDef[]>(() =>
     r => (r.fromType || '').toUpperCase() === 'USER' && (r.toType || '').toUpperCase() === 'ORG_UNIT'
   )
 )
-function setMembership(v: string) {
+/** 当前终端成员关系集 (subjectParam 逗号串 → 数组; 空→[member])。 */
+const membershipArray = computed<string[]>(() => {
+  const p = props.modelValue.subjectParam
+  return p ? p.split(',').map(s => s.trim()).filter(Boolean) : ['member']
+})
+/** 多选 → subjectParam 逗号串 (多个 = AND 交集"属于且负责"); 空→member。 */
+function setMembership(arr: string[]) {
+  const v = arr && arr.length ? arr.join(',') : 'member'
   emit('update:model-value', { ...props.modelValue, subject: 'SELF', subjectParam: v })
 }
 

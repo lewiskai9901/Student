@@ -121,16 +121,34 @@ public class ChainCompiler {
                     params.put(p, userId);
                     return alias + subjectCol + " = :" + p;
                 }
-                // 数据(成员主体) ∈ S 中各组织的 [成员关系] ([完成项2] 默认 member, 可配 属于/负责; + tenant 过滤)
+                // 数据(成员主体) ∈ S 中各组织的 [成员关系] ([完成项2/3] 默认 member; 可配单个(属于/负责) 或
+                // 逗号多个=AND 交集(属于且负责, 同一组织同时具备); + tenant 过滤)
                 String tp = "ccTenant" + ai;
-                String rp = "ccmRel" + ai;
                 params.put(tp, tenantId);
-                params.put(rp, membershipRel);
+                String[] memRels = membershipRel.split(",");
+                String relClause;
+                String groupBy = "";
+                if (memRels.length == 1) {
+                    String rp = "ccmRel" + ai;
+                    params.put(rp, memRels[0].trim());
+                    relClause = "ccm" + ai + ".relation = :" + rp;
+                } else {
+                    // AND: 同一 (subject, org) 同时具备全部成员关系 → 分组计数
+                    List<String> ph = new ArrayList<>();
+                    for (int ri = 0; ri < memRels.length; ri++) {
+                        String rp = "ccmRel" + ai + "_" + ri;
+                        params.put(rp, memRels[ri].trim());
+                        ph.add(":" + rp);
+                    }
+                    relClause = "ccm" + ai + ".relation IN (" + String.join(",", ph) + ")";
+                    groupBy = " GROUP BY ccm" + ai + ".subject_id, ccm" + ai + ".resource_id"
+                            + " HAVING COUNT(DISTINCT ccm" + ai + ".relation) >= " + memRels.length;
+                }
                 return alias + subjectCol + " IN (SELECT ccm" + ai + ".subject_id FROM access_relations ccm" + ai
-                        + " WHERE ccm" + ai + ".relation = :" + rp + " AND ccm" + ai + ".resource_type = 'org_unit'"
+                        + " WHERE " + relClause + " AND ccm" + ai + ".resource_type = 'org_unit'"
                         + " AND ccm" + ai + ".subject_type = 'user' AND ccm" + ai + ".deleted = 0"
                         + " AND ccm" + ai + ".tenant_id = :" + tp
-                        + " AND ccm" + ai + ".resource_id IN (" + sSubquery + "))";
+                        + " AND ccm" + ai + ".resource_id IN (" + sSubquery + ")" + groupBy + ")";
             }
             case PROVIDER:
             case RECORD_RELATION:

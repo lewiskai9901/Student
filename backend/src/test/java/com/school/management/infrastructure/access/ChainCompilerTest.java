@@ -111,6 +111,22 @@ class ChainCompilerTest {
     }
 
     @Test
+    @DisplayName("[完成项3] SUBJECT_GRAPH 终端成员关系 AND 组合 (member,responsible_for=属于且负责)")
+    void subjectGraphMembershipAnd() {
+        Chain c = new Chain(
+                List.of(new Hop(List.of("admin"), Combine.OR, "org_unit", false)),
+                new Terminal(List.of("owner_org"), Combine.OR, "member,responsible_for"), List.of());
+        SqlFragment f = compiler().compileChain(c, STUDENT_S, 1L, T);
+        String sql = f.sql();
+        assertTrue(sql.contains("ccm0.relation IN (:ccmRel0_0,:ccmRel0_1)"), sql);
+        // 同组织同时具备两关系 → 分组计数
+        assertTrue(sql.contains("GROUP BY ccm0.subject_id, ccm0.resource_id"), sql);
+        assertTrue(sql.contains("HAVING COUNT(DISTINCT ccm0.relation) >= 2"), sql);
+        assertEquals("member", f.params().get("ccmRel0_0"));
+        assertEquals("responsible_for", f.params().get("ccmRel0_1"));
+    }
+
+    @Test
     @DisplayName("多终端 AND (owner_org ∧ creator) → 两谓词 AND")
     void multiAnchorAnd() {
         Chain c = new Chain(
