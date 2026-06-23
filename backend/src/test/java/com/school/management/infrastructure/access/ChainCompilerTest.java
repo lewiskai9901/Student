@@ -17,12 +17,19 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * ChainCompiler 单测 (统一锚定 P1 Step2a/2b): 链 → 资源谓词。终端 COLUMN/SUBJECT_GRAPH over 多跳 S。
- * 纯 SQL 构造 (注册表 seam 喂 canned 锚点, 不连库)。SUBJECT_GRAPH 用 membershipSubjectColumn (shadow 实证非 id)。
+ * ChainCompiler 单测 (统一锚定 P1 Step2a/2b/2c): 链 → 资源谓词。终端列取自 ResourceScopeMeta
+ * (owner_org→orgUnitField / creator→creatorField / SUBJECT_GRAPH→membershipSubjectColumn), 使 READ 用真列、
+ * INSERT 合成 org 元 (orgUnitField=id) 探 org_units 两用。纯 SQL 构造 (注册表 seam 喂 canned 锚点)。
  */
 class ChainCompilerTest {
 
     private static final long T = 1L; // tenant
+    // 列锚资源 (别名 t. / 空)
+    private static final ResourceScopeMeta DOC_T = new ResourceScopeMeta("t", "org_unit_id", "created_by", false, "user_id", null, "doc");
+    private static final ResourceScopeMeta DOC = new ResourceScopeMeta("", "org_unit_id", "created_by", false, "user_id", null, "doc");
+    // 成员图资源
+    private static final ResourceScopeMeta STUDENT_S = new ResourceScopeMeta("s", null, null, true, "user_id", null, "student");
+    private static final ResourceScopeMeta STUDENT = new ResourceScopeMeta("", null, null, true, "user_id", null, "student");
 
     private ChainCompiler compiler() {
         ResourceRelationRegistry reg = new ResourceRelationRegistry(null) {
@@ -49,7 +56,7 @@ class ChainCompilerTest {
         Chain c = new Chain(
                 List.of(new Hop(List.of("member"), Combine.OR, "org_unit", false)),
                 new Terminal(List.of("owner_org"), Combine.OR), List.of());
-        SqlFragment f = compiler().compileChain(c, "doc", "t.", "user_id", 9L, T);
+        SqlFragment f = compiler().compileChain(c, DOC_T, 9L, T);
         assertTrue(f.sql().startsWith("t.org_unit_id IN (SELECT ar0.resource_id"), f.sql());
         assertEquals(9L, f.params().get("chmMe"));
         assertEquals("member", f.params().get("chmH0r0"));
@@ -59,9 +66,20 @@ class ChainCompilerTest {
     @DisplayName("creator + 空 hops → created_by = :me (绑用户, 无中间跳)")
     void creatorBindsUser() {
         Chain c = new Chain(List.of(), new Terminal(List.of("creator"), Combine.OR), List.of());
-        SqlFragment f = compiler().compileChain(c, "doc", "", "user_id", 42L, T);
+        SqlFragment f = compiler().compileChain(c, DOC, 42L, T);
         assertEquals("created_by = :ccMe0", f.sql());
         assertEquals(42L, f.params().get("ccMe0"));
+    }
+
+    @Test
+    @DisplayName("INSERT 探针: 合成 org 元 (orgUnitField=id) → owner_org 终端产 id IN (S) 探 org_units")
+    void insertOrgProbeUsesMetaColumn() {
+        ResourceScopeMeta orgProbe = new ResourceScopeMeta("", "id", "", false, "id", null, "doc");
+        Chain c = new Chain(
+                List.of(new Hop(List.of("admin"), Combine.OR, "org_unit", false)),
+                new Terminal(List.of("owner_org"), Combine.OR), List.of());
+        SqlFragment f = compiler().compileChain(c, orgProbe, 7L, T);
+        assertTrue(f.sql().startsWith("id IN (SELECT ar0.resource_id"), "INSERT 探针应产 id IN(S): " + f.sql());
     }
 
     @Test
@@ -70,9 +88,8 @@ class ChainCompilerTest {
         Chain c = new Chain(
                 List.of(new Hop(List.of("admin"), Combine.OR, "org_unit", false)),
                 new Terminal(List.of("owner_org"), Combine.OR), List.of());
-        SqlFragment f = compiler().compileChain(c, "student", "s.", "user_id", 1L, T);
+        SqlFragment f = compiler().compileChain(c, STUDENT_S, 1L, T);
         String sql = f.sql();
-        // 关键: 成员主体列用 user_id (非 id) —— shadow 实证
         assertTrue(sql.startsWith("s.user_id IN (SELECT ccm0.subject_id FROM access_relations ccm0"), sql);
         assertTrue(sql.contains("ccm0.relation = 'member'"), sql);
         assertTrue(sql.contains("ccm0.tenant_id = :ccTenant0"), sql);
@@ -86,7 +103,7 @@ class ChainCompilerTest {
         Chain c = new Chain(
                 List.of(new Hop(List.of("member"), Combine.OR, "org_unit", false)),
                 new Terminal(List.of("owner_org", "creator"), Combine.AND), List.of());
-        SqlFragment f = compiler().compileChain(c, "doc", "", "user_id", 5L, T);
+        SqlFragment f = compiler().compileChain(c, DOC, 5L, T);
         assertTrue(f.sql().startsWith("("), f.sql());
         assertTrue(f.sql().contains(" AND "), f.sql());
         assertTrue(f.sql().contains("org_unit_id IN"), f.sql());
@@ -101,7 +118,7 @@ class ChainCompilerTest {
                         new Hop(List.of("manages"), Combine.OR, "place", false),
                         new Hop(List.of("belongs_to"), Combine.OR, "org_unit", false)),
                 new Terminal(List.of("owner_org"), Combine.OR), List.of());
-        SqlFragment f = compiler().compileChain(c, "doc", "", "user_id", 3L, T);
+        SqlFragment f = compiler().compileChain(c, DOC, 3L, T);
         assertTrue(f.sql().startsWith("org_unit_id IN (SELECT ar1.resource_id"), f.sql());
         assertTrue(f.sql().contains("ar1.subject_id IN (SELECT ar0.resource_id"), f.sql());
     }
@@ -110,13 +127,13 @@ class ChainCompilerTest {
     @DisplayName("未注册终端 → DENY (fail-closed)")
     void unregisteredTerminalDeny() {
         Chain c = new Chain(List.of(), new Terminal(List.of("bogus"), Combine.OR), List.of());
-        assertEquals("1=0", compiler().compileChain(c, "doc", "", "user_id", 1L, T).sql());
+        assertEquals("1=0", compiler().compileChain(c, DOC, 1L, T).sql());
     }
 
     @Test
     @DisplayName("PROVIDER 终端 (链路径) → fail-closed DENY (不崩; 此类终端须 hops 空走旧路径)")
     void providerFailClosedInChain() {
         Chain c = new Chain(List.of(), new Terminal(List.of("taught_by"), Combine.OR), List.of());
-        assertEquals("1=0", compiler().compileChain(c, "student", "", "user_id", 1L, T).sql());
+        assertEquals("1=0", compiler().compileChain(c, STUDENT, 1L, T).sql());
     }
 }

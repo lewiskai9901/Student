@@ -40,16 +40,18 @@ public class ChainCompiler {
     /**
      * 编译一条链 → 资源谓词。
      *
-     * @param chain            链
-     * @param resourceCode     资源码 (查终端锚点 storage_kind/column)
-     * @param alias            资源表别名前缀 (如 "" 或 "t.")
-     * @param membershipSubjectColumn 成员图资源主表的成员主体列 (如 user_student.user_id); SUBJECT_GRAPH 终端用
-     * @param userId           当前用户 (链起点)
-     * @param tenantId         租户 (成员图子查询 ar.tenant_id 过滤, 与旧引擎一致)
+     * <p><b>终端列取自 {@code meta}</b> (非注册表 columnName): owner_org→{@link ResourceScopeMeta#orgUnitField()}
+     * / creator→{@link ResourceScopeMeta#creatorField()} / SUBJECT_GRAPH→{@code membershipSubjectColumnOrDefault()}。
+     * 这样 READ/UPDATE/DELETE 用真资源列 (org_unit_id), 而 INSERT 授权探针传入"合成 org 元"(orgUnitField=id,
+     * 探 org_units) 时自然产 {@code id IN (S)} —— 同一编译器两用。registry 仅供判 storage_kind。
+     *
+     * @param chain   链
+     * @param meta    资源元 (别名/org列/creator列/成员主体列/资源码); INSERT 探针传合成 org 元
+     * @param userId  当前用户 (链起点)
+     * @param tenantId 租户 (成员图子查询 ar.tenant_id 过滤)
      * @return SQL 谓词 + 命名参数; {@code 1=0} = deny
      */
-    public SqlFragment compileChain(Chain chain, String resourceCode, String alias,
-                                    String membershipSubjectColumn, long userId, long tenantId) {
+    public SqlFragment compileChain(Chain chain, ResourceScopeMeta meta, long userId, long tenantId) {
         Map<String, Object> params = new LinkedHashMap<>();
 
         // 中间跳 → 可达末实体集 S 子查询; hops 空 → S=null (终端直接绑用户)
@@ -64,8 +66,7 @@ public class ChainCompiler {
         List<String> preds = new ArrayList<>();
         int ai = 0;
         for (String anchor : chain.terminal().anchorRelations()) {
-            String pred = terminalPredicate(anchor, resourceCode, alias, membershipSubjectColumn,
-                    sSubquery, userId, tenantId, params, ai++);
+            String pred = terminalPredicate(anchor, meta, sSubquery, userId, tenantId, params, ai++);
             if (pred != null) {
                 preds.add(pred);
             }
@@ -79,18 +80,24 @@ public class ChainCompiler {
     }
 
     /** 一个终端锚点 → 谓词 (按 storage_kind)。null = 跳过 (不应发生; 未注册→DENY)。 */
-    private String terminalPredicate(String anchor, String resourceCode, String alias,
-                                     String membershipSubjectColumn, String sSubquery,
+    private String terminalPredicate(String anchor, ResourceScopeMeta meta, String sSubquery,
                                      long userId, long tenantId, Map<String, Object> params, int ai) {
+        String resourceCode = meta.resourceCode();
+        String alias = meta.aliasPrefix();
         var rowOpt = registry.relationOf(resourceCode, anchor);
         if (rowOpt.isEmpty()) {
             return DENY; // 终端未注册 (ChainValidator 本应拦下) → fail-closed
         }
         StorageKind kind = rowOpt.get().storageKind();
         boolean isCreator = ResourceRelationRegistry.CREATOR.equals(anchor);
+        boolean isOwnerOrg = ResourceRelationRegistry.OWNER_ORG.equals(anchor);
         switch (kind) {
             case COLUMN: {
-                String col = rowOpt.get().columnName();
+                // 列取自 meta (owner_org→orgUnitField / creator→creatorField), 使 INSERT 合成 org 元 (=id) 自然两用;
+                // 其它列锚回退注册表列名。
+                String col = isOwnerOrg ? meta.orgUnitField()
+                        : isCreator ? meta.creatorField()
+                        : rowOpt.get().columnName();
                 // creator (USER 锚点) = 我创建的 → 绑用户, 与中间跳无关 (created_by = me)
                 if (isCreator) {
                     String p = "ccMe" + ai;
@@ -98,15 +105,14 @@ public class ChainCompiler {
                     return alias + col + " = :" + p;
                 }
                 // owner_org 类 (ORG 锚点) 需中间跳产组织集 S; 无 S → deny (不可"组织=我")
-                if (sSubquery == null) {
+                if (sSubquery == null || col == null || col.isBlank()) {
                     return DENY;
                 }
                 return alias + col + " IN (" + sSubquery + ")";
             }
             case SUBJECT_GRAPH: {
                 // 成员主体列 (如 user_student.user_id) —— 旧引擎 membershipSelect 同口径; shadow 实证非 id
-                String subjectCol = (membershipSubjectColumn == null || membershipSubjectColumn.isBlank())
-                        ? "user_id" : membershipSubjectColumn;
+                String subjectCol = meta.membershipSubjectColumnOrDefault();
                 if (sSubquery == null) {
                     // hops 空 → 成员自身 (data 即我, subjectCol = me)
                     String p = "ccMe" + ai;

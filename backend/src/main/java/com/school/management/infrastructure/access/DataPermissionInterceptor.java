@@ -466,6 +466,9 @@ public class DataPermissionInterceptor implements Interceptor {
                 return true;   // 无配置 → SELF (creator) → 新行我即创建者 → 放行
             }
             for (com.school.management.domain.access.model.valueobject.RelationGrant g : spec.getRelationGrants()) {
+                // 链 grant (hops 非空) 的 subject 被归一为 SELF (防 anchorOf NPE), 不可据此短路放行 —
+                // 须交给下方 toSqlCondition org 探针 (chain → id IN (可达组织集 S)) 真正判定。
+                if (g.hasHops()) continue;
                 if (g.subject() == com.school.management.domain.access.model.SubjectScope.ALL) return true;
                 if (com.school.management.domain.access.model.valueobject.RelationGrant.CREATOR.equals(g.relation())) return true;
                 if (g.subject() == com.school.management.domain.access.model.SubjectScope.SELF) return true;

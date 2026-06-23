@@ -153,9 +153,7 @@ public class ScopeEvaluator {
                                 com.school.management.domain.access.model.chain.Combine.OR),
                         java.util.List.of());
         com.school.management.infrastructure.extension.SqlFragment frag =
-                chainCompiler.compileChain(chain, meta.resourceCode(), meta.aliasPrefix(),
-                        meta.membershipSubjectColumnOrDefault(), ctx.getUserId(),
-                        tenantId == null ? 1L : tenantId);
+                chainCompiler.compileChain(chain, meta, ctx.getUserId(), tenantId == null ? 1L : tenantId);
         ScopeCondition cond = new ScopeCondition();
         String sql = frag.sql();
         if (sql == null || sql.isBlank() || "1=0".equals(sql.replace(" ", ""))) {
