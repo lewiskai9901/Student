@@ -72,6 +72,19 @@ owner_org/target 是否 ∈ 用户可写范围**无拦截器校验**。这是 R8
 
 ---
 
+## 数据权限剩余 #1-#3 处理结论 (2026-06-22)
+用户要求"1-3 全部开发完成"。逐项取证后:
+- **#1 INSERT 方法级覆盖 → 改为显式 opt-in ✅完成** (`ec90c45f`): 取证发现原"接口级=覆盖"是偶然边界,
+  盲扩到方法级会误拦 inspection(org_unit_id=受检 target org)。改 `enforce_insert_scope` 显式标志:
+  仅 owner_org=ownership 语义资源参与(教务/班级);inspection target 排除。真库 E2E 证。
+- **#2 Tier2 typeField/membershipSubjectColumn → 判定"已正确放置, 不动" (主见)**: typeField 已数据驱动
+  (data_modules, 模块配置的合理家); membershipSubjectColumn 是 per-mapper 注解配置(同 tableAlias, 有意保留)。
+  二者是 **per-resource** 粒度, 强塞进 **per-relation** 的 resource_relations = 过度设计(违反反过度设计原则)。
+  真 Tier2 债(resourceType 死字段)已删(`a2be9d90`)。**结论: Tier2 收敛已实质完成。**
+- **#3 受检面聚合旁路 → 判定"有意设计, 无需退役" (主见)**: trends/recurring/summary 是 GROUP BY 聚合,
+  **本质无法走行级拦截器**(行级 WHERE 注入不适用聚合); 且已正确按 `resolveOrgUnitIds`(用户成员组织,
+  = PROVIDER 受检面 resolver 同逻辑)收窄。"旁路"是聚合的必然, 非漏洞。**无可退役。**
+
 ## Phase P4 — D Tier2 收敛 + E R7 守护【清理】
 | # | 任务 |
 |---|---|
