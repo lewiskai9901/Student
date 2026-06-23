@@ -1,0 +1,139 @@
+package com.school.management.infrastructure.access;
+
+import com.school.management.domain.access.model.StorageKind;
+import com.school.management.domain.access.model.chain.Chain;
+import com.school.management.domain.access.model.chain.Combine;
+import com.school.management.domain.access.model.chain.Hop;
+import com.school.management.domain.access.model.chain.ScopeChainSpec;
+import com.school.management.domain.access.model.chain.Terminal;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+/**
+ * ChainValidator 单测 (统一锚定 P0): 终端∈注册表 / 限深 / 结构。
+ *
+ * <p>用注册表 seam (覆写 fetchByResource) 喂 canned 锚点, 免 DB —— student 注册
+ * owner_org(成员图)/taught_by(PROVIDER)/creator(列)。
+ */
+class ChainValidatorTest {
+
+    private ChainValidator validator() {
+        ResourceRelationRegistry reg = new ResourceRelationRegistry(null) {
+            @Override
+            protected Map<String, List<AnchorRow>> fetchByResource() {
+                Map<String, List<AnchorRow>> m = new HashMap<>();
+                m.put("student", List.of(
+                        new AnchorRow("owner_org", StorageKind.SUBJECT_GRAPH, null, null),
+                        new AnchorRow("taught_by", StorageKind.PROVIDER, null, "teachingStudentResolver"),
+                        new AnchorRow("creator", StorageKind.COLUMN, "created_by", null)));
+                return m;
+            }
+            @Override
+            protected Set<String> fetchInsertGuardedResources() {
+                return Set.of();
+            }
+        };
+        return new ChainValidator(reg);
+    }
+
+    @Test
+    @DisplayName("用户原例: 我[管理且负责]组织(含下级) → 终端 owner_org + 类型 → 合法")
+    void validUserExample() {
+        ScopeChainSpec spec = new ScopeChainSpec(List.of(
+                new Chain(
+                        List.of(new Hop(List.of("admin", "responsible_for"), Combine.AND, "org_unit", true)),
+                        new Terminal(List.of("owner_org"), Combine.OR),
+                        List.of("STUDENT"))));
+        ChainValidator.Result r = validator().validate("student", spec);
+        assertTrue(r.valid(), () -> "应合法, errors=" + r.errors());
+    }
+
+    @Test
+    @DisplayName("1 跳退化 (无中间跳 + 单终端) = 旧 grant → 合法")
+    void oneHopDegenerate() {
+        ScopeChainSpec spec = new ScopeChainSpec(List.of(
+                new Chain(List.of(), new Terminal(List.of("owner_org"), Combine.OR), List.of())));
+        assertTrue(validator().validate("student", spec).valid());
+    }
+
+    @Test
+    @DisplayName("多终端锚点 (owner_org ∧ taught_by) 皆已注册 → 合法")
+    void multiRegisteredTerminal() {
+        ScopeChainSpec spec = new ScopeChainSpec(List.of(
+                new Chain(List.of(), new Terminal(List.of("owner_org", "taught_by"), Combine.AND), List.of())));
+        assertTrue(validator().validate("student", spec).valid());
+    }
+
+    @Test
+    @DisplayName("终端锚点未注册 (member 不在 student 的 resource_relations) → 拒绝 + 提示可选")
+    void unregisteredTerminalRejected() {
+        ScopeChainSpec spec = new ScopeChainSpec(List.of(
+                new Chain(List.of(), new Terminal(List.of("member"), Combine.OR), List.of())));
+        ChainValidator.Result r = validator().validate("student", spec);
+        assertFalse(r.valid());
+        assertTrue(r.errors().stream().anyMatch(e -> e.contains("member") && e.contains("未在资源")),
+                () -> "应提示 member 未注册, errors=" + r.errors());
+    }
+
+    @Test
+    @DisplayName("超限深 (4 跳 > MAX_DEPTH 3) → 拒绝")
+    void depthExceededRejected() {
+        Hop h = new Hop(List.of("member"), Combine.OR, "org_unit", false);
+        ScopeChainSpec spec = new ScopeChainSpec(List.of(
+                new Chain(List.of(h, h, h, h), new Terminal(List.of("owner_org"), Combine.OR), List.of())));
+        ChainValidator.Result r = validator().validate("student", spec);
+        assertFalse(r.valid());
+        assertTrue(r.errors().stream().anyMatch(e -> e.contains("限深")));
+    }
+
+    @Test
+    @DisplayName("跳到达类型非法 (department 非三大主体) → 拒绝")
+    void badToTypeRejected() {
+        ScopeChainSpec spec = new ScopeChainSpec(List.of(
+                new Chain(List.of(new Hop(List.of("member"), Combine.OR, "department", false)),
+                        new Terminal(List.of("owner_org"), Combine.OR), List.of())));
+        ChainValidator.Result r = validator().validate("student", spec);
+        assertFalse(r.valid());
+        assertTrue(r.errors().stream().anyMatch(e -> e.contains("类型非法")));
+    }
+
+    @Test
+    @DisplayName("空链 → 拒绝")
+    void emptyRejected() {
+        assertFalse(validator().validate("student", new ScopeChainSpec(List.of())).valid());
+        assertFalse(validator().validate("student", null).valid());
+    }
+
+    @Test
+    @DisplayName("跳关系为空 → 拒绝")
+    void emptyHopRelationsRejected() {
+        ScopeChainSpec spec = new ScopeChainSpec(List.of(
+                new Chain(List.of(new Hop(List.of(), Combine.OR, "org_unit", false)),
+                        new Terminal(List.of("owner_org"), Combine.OR), List.of())));
+        ChainValidator.Result r = validator().validate("student", spec);
+        assertFalse(r.valid());
+        assertTrue(r.errors().stream().anyMatch(e -> e.contains("关系为空")));
+    }
+
+    @Test
+    @DisplayName("经场所链: 我[管理]场所→[占用]... 多级 (3 跳=上限) 终端合法 → 合法")
+    void multiLevelPlaceChain() {
+        // 我 --manages--> place --(占用)--> ... 终端 owner_org (3 跳上限内)
+        ScopeChainSpec spec = new ScopeChainSpec(List.of(
+                new Chain(
+                        List.of(
+                                new Hop(List.of("manages"), Combine.OR, "place", false),
+                                new Hop(List.of("belongs_to"), Combine.OR, "org_unit", true)),
+                        new Terminal(List.of("owner_org"), Combine.OR),
+                        List.of())));
+        assertTrue(validator().validate("student", spec).valid(),
+                () -> validator().validate("student", spec).errors().toString());
+    }
+}
