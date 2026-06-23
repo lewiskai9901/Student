@@ -70,6 +70,43 @@ lvl2 AS (SELECT resource_id FROM access_relations               -- place--belong
 ```
 AND 同级多关系 = 子查询交集; OR = 并集。
 
+## 4b. 性能架构 (动工前必须定死 — 这是生死线)
+
+### 矛盾
+多级链跑在 **DataPermissionInterceptor** 里 → **每张受控表的每次查询都注入**该 WHERE;
+分页还 **COUNT + 数据各跑一遍**。若把 §4 的 N 级递归子查询直接塞进每条数据查询 →
+热路径上反复跑 N 趟 access_relations 遍历 → 不可接受。
+
+### 核心解法: **解析与过滤分离** (ReBAC 标准性能模式)
+关键洞察: **链的中间部分 (我 →…→ 可达实体集 S) 与"在查哪张表的数据"无关** —— 它只依赖
+`(用户, 角色, access_relations 当前状态)`。所以:
+1. **每请求只解析一次**: 算出可达集 S = {可达 org ids, 可达 place ids, 可达 user ids}, 缓存在请求上下文。
+2. **每条数据查询只注入便宜的终端过滤**: `data.owner_org IN (S)` —— 不再是递归, 是一个 IN。
+   N 级深度的代价**只付一次**, 不随查询次数/表数量放大。
+
+### 三层缓存/物化 (读多写少, 物化必胜)
+- **L1 请求内**: 同请求多次查询 (含 COUNT+数据) 复用同一 S。
+- **L2 跨请求 (按 用户×角色)**: S 缓存, 失效挂在**现有关系变更事件** (access_relations 改 / RolePermissionsChanged / PermissionsRefreshed) —— access_relations 改动频率 << 查询频率, 命中率极高。
+- **L3 物化闭包表 (深链/大体量)**: 预计算可达闭包 `reachable(user/role → entity_type, entity_id)`, 关系变更时增量刷新。链解析退化为**一次表查**, 零遍历。
+  - 复用现成物化: **place.effective_org_unit_id** (A3 投影, "经场所→组织"免跑 belongs_to)、org path/subtree (子树免递归)。
+
+### 注入形态按基数自适应 (避免巨 IN / 巨子查询)
+- S 小 (≤ 阈值, 如 500) → **内联 ids** `IN (1,2,3,…)` (最快, 无子查询)。
+- S 中 → 子查询 / 临时表。
+- S = 全集 (如 root admin 可达所有 org) → **短路成"不限"** (复用现 ALL 短路, 不生成 IN)。
+- S 空 → **deny (1=0)**, 不泄露。
+
+### 硬约束
+- **限深 ≤ 3** (中间跳), 编译期拒绝更深 → worst case 有界。
+- **环防护**: 编译期检测 user--family_of-->user 类环, 限深兜底。
+- **access_relations 索引**: `(subject_type, subject_id, relation)` + `(resource_type, resource_id, relation)` 必建。
+- **终端 PROVIDER/RECORD**: resolver 自己负责性能 (本就是插件子查询, 已有 fail-closed)。
+
+### 性能验收 (动工时)
+- 真库压测: 大 access_relations (万级边) 下, 3 级链分页查询 P95 与现 1 跳对比, 物化命中后应**接近 1 跳**。
+- 退化路径: 缓存未命中首次解析耗时上限。
+- COUNT 复用 S 验证 (不重复解析)。
+
 ## 5. 插件扩展 (综合插件注册)
 - **新链边**: 插件在 relation_types 注册新关系 (teaches/mentor_of 已是 EDU) → 自动可选为中间跳。
 - **新终端锚点**: 插件在 resource_relations 注册 PROVIDER/RECORD/COLUMN (taught_by/inspected/reviewer 已是) → 自动可选为终端。
@@ -81,7 +118,7 @@ AND 同级多关系 = 子查询交集; OR = 并集。
 
 ## 7. 代价 / 风险 (诚实)
 1. **引擎重写**: ScopeEvaluator 从 1 跳 → 链编译器。S/S+ 级。
-2. **性能**: 行级拦截器里每查询跑 N 级子查询 → **限深(建议 ≤3) + access_relations 索引(subject_id/resource_id/relation) + 高频链物化**。
+2. **性能**: 见 §4b —— **解析与过滤分离 + 三层缓存/物化** 是可行性前提, 必须从 P1 引擎第一天就内建, 不能后补。
 3. **AND 交集 + 多级嵌套** SQL 复杂, 需大量测 + 金标准回归 (dpt_ct + R2.2 字节等价那套)。
 4. **存储**: ChainScope 比现 grant 复杂; role_data_scopes.relation_grants JSON 可扩展为 chain, 或新表。
 5. **环检测**: 多级链可能成环 (user--family_of-->user...) → 编译期限深防爆。
@@ -89,6 +126,7 @@ AND 同级多关系 = 子查询交集; OR = 并集。
 ## 8. 分阶段 (若动工)
 - P0 数据模型: ChainScope JSON schema + 注册表终端锚点校验 (终端∈resource_relations)。
 - P1 引擎: 链编译器 (中间 access_relations 递归 + 终端 storage_kind 分派), 限深, 环防护。
+  **+ §4b 性能架构同步内建**: 解析与过滤分离 (每请求解析一次 S) + L1/L2 缓存 (挂关系变更事件失效) + 基数自适应注入。物化闭包表 (L3) 可 P1 留接口、P2 视压测结果再上。
 - P2 PLACE 锚点 + place→org 投影优化。
 - P3 AND 交集。
 - P4 UI: 链式下拉 (中间跳 +/− + 终端, 数据驱动) + 预览 + 模拟。
