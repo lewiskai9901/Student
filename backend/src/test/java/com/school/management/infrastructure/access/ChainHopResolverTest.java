@@ -57,24 +57,23 @@ class ChainHopResolverTest {
     }
 
     @Test
-    @DisplayName("两级链: 我 →[manages]→ 场所 →[belongs_to]→ 组织 → 嵌套子查询")
-    void twoLevelChain() {
+    @DisplayName("两级链: 我 →[manages]→ 场所 →[belongs_to]→ 组织 → place→org 经 effective_org_unit_id 投影 (P2)")
+    void twoLevelChainPlaceProjection() {
         SqlFragment f = resolver.resolve(List.of(
                 new Hop(List.of("manages"), Combine.OR, "place", false),
                 new Hop(List.of("belongs_to"), Combine.OR, "org_unit", true)), 5L);
         String sql = f.sql();
-        // 外层 = level1 (belongs_to → org), subject_type=place, subject_id IN (level0)
-        assertTrue(sql.startsWith("SELECT ar1.resource_id"), sql);
-        assertTrue(sql.contains("ar1.subject_type = 'place'"), sql);
-        assertTrue(sql.contains("ar1.resource_type = 'org_unit'"), sql);
-        assertTrue(sql.contains("ar1.subject_id IN (SELECT ar0.resource_id"), "外层应嵌内层: " + sql);
+        // 外层 = place→org 投影 (places.effective_org_unit_id, 非 access_relations)
+        assertTrue(sql.startsWith("SELECT plc1.effective_org_unit_id FROM places plc1"), sql);
+        assertTrue(sql.contains("plc1.effective_org_unit_id IS NOT NULL"), sql);
+        assertTrue(sql.contains("plc1.id IN (SELECT ar0.resource_id"), "投影 IN 内层 manages→place 子查询: " + sql);
         // 内层 = level0 (manages → place), 起点 :chmMe
         assertTrue(sql.contains("ar0.subject_type = 'user'"), sql);
-        assertTrue(sql.contains("ar0.subject_id = :chmMe"), sql);
         assertTrue(sql.contains("ar0.resource_type = 'place'"), sql);
         assertEquals(5L, f.params().get("chmMe"));
         assertEquals("manages", f.params().get("chmH0r0"));
-        assertEquals("belongs_to", f.params().get("chmH1r0"));
+        // belongs_to 关系码不入投影 SQL (投影即真相), 故无 chmH1r0
+        assertFalse(sql.contains("chmH1r0"), "place→org 投影不绑 belongs_to 关系参数: " + sql);
     }
 
     @Test

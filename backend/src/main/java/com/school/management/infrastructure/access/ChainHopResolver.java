@@ -55,6 +55,19 @@ public class ChainHopResolver {
             if (h.relations().isEmpty()) {
                 throw new IllegalArgumentException("跳[" + k + "] 关系为空");
             }
+
+            // P2: place→org_unit 跳走 effective_org_unit_id 投影 (A3 place 归属真相的物化列), 而非
+            // access_relations belongs_to —— 投影是 place→org 的单一真相入口, 且免一次 access_relations 子查询。
+            // (place→org 必非起跳: prevType=place 仅可能来自上一跳, 故 inner 非 null。)
+            if ("place".equals(prevType) && "org_unit".equals(h.toType())) {
+                String p = "plc" + k;
+                inner = "SELECT " + p + ".effective_org_unit_id FROM places " + p
+                        + " WHERE " + p + ".id IN (" + inner + ")"
+                        + " AND " + p + ".effective_org_unit_id IS NOT NULL AND " + p + ".deleted = 0";
+                prevType = "org_unit";
+                continue;
+            }
+
             String a = "ar" + k;
             StringBuilder sb = new StringBuilder();
             sb.append("SELECT ").append(a).append(".resource_id FROM access_relations ").append(a)

@@ -119,8 +119,9 @@ class ChainCompilerTest {
                         new Hop(List.of("belongs_to"), Combine.OR, "org_unit", false)),
                 new Terminal(List.of("owner_org"), Combine.OR), List.of());
         SqlFragment f = compiler().compileChain(c, DOC, 3L, T);
-        assertTrue(f.sql().startsWith("org_unit_id IN (SELECT ar1.resource_id"), f.sql());
-        assertTrue(f.sql().contains("ar1.subject_id IN (SELECT ar0.resource_id"), f.sql());
+        // place→org 跳走 effective_org_unit_id 投影 (P2)
+        assertTrue(f.sql().startsWith("org_unit_id IN (SELECT plc1.effective_org_unit_id FROM places plc1"), f.sql());
+        assertTrue(f.sql().contains("plc1.id IN (SELECT ar0.resource_id"), f.sql());
     }
 
     @Test
