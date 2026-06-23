@@ -127,6 +127,20 @@ class ChainCompilerTest {
     }
 
     @Test
+    @DisplayName("[完成项4] 链末跳=场所 + 成员关系 occupies → 成员图终端 resource_type='place' (场所占用)")
+    void placeMembershipTerminal() {
+        Chain c = new Chain(
+                List.of(new Hop(List.of("manages"), Combine.OR, "place", false)),
+                new Terminal(List.of("owner_org"), Combine.OR, "occupies"), List.of());
+        SqlFragment f = compiler().compileChain(c, STUDENT_S, 1L, T);
+        String sql = f.sql();
+        assertTrue(sql.contains("ccm0.resource_type = 'place'"), sql);
+        assertEquals("occupies", f.params().get("ccmRel0"));
+        // 末跳 user→place (manages) 用 access_relations, 非 place→org 投影
+        assertTrue(sql.contains("ar0.resource_type = 'place'"), sql);
+    }
+
+    @Test
     @DisplayName("多终端 AND (owner_org ∧ creator) → 两谓词 AND")
     void multiAnchorAnd() {
         Chain c = new Chain(

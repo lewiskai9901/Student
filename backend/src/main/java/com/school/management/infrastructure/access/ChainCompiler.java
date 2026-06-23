@@ -64,10 +64,13 @@ public class ChainCompiler {
 
         // 终端: 每个锚点一条谓词; SUBJECT_GRAPH 用链声明的成员关系 (属于/负责, 默认 member)
         String membershipRel = chain.terminal().membershipRelationOrDefault();
+        // [完成项4] 成员图终端的实体类型 = 链末跳到达类型 (org_unit 默认 / place → 场所占用); S 即该类型实体集
+        String lastHopType = chain.hops().isEmpty() ? "org_unit"
+                : chain.hops().get(chain.hops().size() - 1).toType();
         List<String> preds = new ArrayList<>();
         int ai = 0;
         for (String anchor : chain.terminal().anchorRelations()) {
-            String pred = terminalPredicate(anchor, meta, membershipRel, sSubquery, userId, tenantId, params, ai++);
+            String pred = terminalPredicate(anchor, meta, membershipRel, lastHopType, sSubquery, userId, tenantId, params, ai++);
             if (pred != null) {
                 preds.add(pred);
             }
@@ -80,9 +83,12 @@ public class ChainCompiler {
         return SqlFragment.of(sql, params);
     }
 
+    /** 三大主体白名单 (成员图 resource_type 内联前校验, 防注入)。 */
+    private static final java.util.Set<String> ENTITY_TYPES = java.util.Set.of("user", "org_unit", "place");
+
     /** 一个终端锚点 → 谓词 (按 storage_kind)。null = 跳过 (不应发生; 未注册→DENY)。 */
     private String terminalPredicate(String anchor, ResourceScopeMeta meta, String membershipRel,
-                                     String sSubquery, long userId, long tenantId,
+                                     String entityType, String sSubquery, long userId, long tenantId,
                                      Map<String, Object> params, int ai) {
         String resourceCode = meta.resourceCode();
         String alias = meta.aliasPrefix();
@@ -121,6 +127,8 @@ public class ChainCompiler {
                     params.put(p, userId);
                     return alias + subjectCol + " = :" + p;
                 }
+                // [完成项4] 成员图实体类型 = 链末跳类型 (org_unit / place 场所占用); 白名单校验后内联
+                String resType = ENTITY_TYPES.contains(entityType) ? entityType : "org_unit";
                 // 数据(成员主体) ∈ S 中各组织的 [成员关系] ([完成项2/3] 默认 member; 可配单个(属于/负责) 或
                 // 逗号多个=AND 交集(属于且负责, 同一组织同时具备); + tenant 过滤)
                 String tp = "ccTenant" + ai;
@@ -145,7 +153,7 @@ public class ChainCompiler {
                             + " HAVING COUNT(DISTINCT ccm" + ai + ".relation) >= " + memRels.length;
                 }
                 return alias + subjectCol + " IN (SELECT ccm" + ai + ".subject_id FROM access_relations ccm" + ai
-                        + " WHERE " + relClause + " AND ccm" + ai + ".resource_type = 'org_unit'"
+                        + " WHERE " + relClause + " AND ccm" + ai + ".resource_type = '" + resType + "'"
                         + " AND ccm" + ai + ".subject_type = 'user' AND ccm" + ai + ".deleted = 0"
                         + " AND ccm" + ai + ".tenant_id = :" + tp
                         + " AND ccm" + ai + ".resource_id IN (" + sSubquery + ")" + groupBy + ")";
