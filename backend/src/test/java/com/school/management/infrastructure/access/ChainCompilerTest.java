@@ -1,0 +1,118 @@
+package com.school.management.infrastructure.access;
+
+import com.school.management.domain.access.model.StorageKind;
+import com.school.management.domain.access.model.chain.Chain;
+import com.school.management.domain.access.model.chain.Combine;
+import com.school.management.domain.access.model.chain.Hop;
+import com.school.management.domain.access.model.chain.Terminal;
+import com.school.management.infrastructure.extension.SqlFragment;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+/**
+ * ChainCompiler 单测 (统一锚定 P1 Step2a): 链 → 资源谓词。终端 COLUMN/SUBJECT_GRAPH over 多跳 S。
+ * 纯 SQL 构造 (注册表 seam 喂 canned 锚点, 不连库)。
+ */
+class ChainCompilerTest {
+
+    private ChainCompiler compiler() {
+        ResourceRelationRegistry reg = new ResourceRelationRegistry(null) {
+            @Override
+            protected Map<String, List<AnchorRow>> fetchByResource() {
+                Map<String, List<AnchorRow>> m = new HashMap<>();
+                m.put("doc", List.of(   // 列锚资源
+                        new AnchorRow("owner_org", StorageKind.COLUMN, "org_unit_id", null),
+                        new AnchorRow("creator", StorageKind.COLUMN, "created_by", null)));
+                m.put("student", List.of(   // 成员图资源
+                        new AnchorRow("owner_org", StorageKind.SUBJECT_GRAPH, null, null),
+                        new AnchorRow("taught_by", StorageKind.PROVIDER, null, "teachingStudentResolver")));
+                return m;
+            }
+            @Override
+            protected Set<String> fetchInsertGuardedResources() { return Set.of(); }
+        };
+        return new ChainCompiler(new ChainHopResolver(), reg);
+    }
+
+    @Test
+    @DisplayName("1 跳 + COLUMN owner_org: 我[member]组织 → org_unit_id IN (跳子查询)")
+    void columnOwnerOrgOneHop() {
+        Chain c = new Chain(
+                List.of(new Hop(List.of("member"), Combine.OR, "org_unit", false)),
+                new Terminal(List.of("owner_org"), Combine.OR), List.of());
+        SqlFragment f = compiler().compileChain(c, "doc", "t.", 9L);
+        assertTrue(f.sql().startsWith("t.org_unit_id IN (SELECT ar0.resource_id"), f.sql());
+        assertEquals(9L, f.params().get("chmMe"));
+        assertEquals("member", f.params().get("chmH0r0"));
+    }
+
+    @Test
+    @DisplayName("creator + 空 hops → created_by = :me (绑用户, 无中间跳)")
+    void creatorBindsUser() {
+        Chain c = new Chain(List.of(), new Terminal(List.of("creator"), Combine.OR), List.of());
+        SqlFragment f = compiler().compileChain(c, "doc", "", 42L);
+        assertEquals("created_by = :ccMe0", f.sql());
+        assertEquals(42L, f.params().get("ccMe0"));
+    }
+
+    @Test
+    @DisplayName("SUBJECT_GRAPH 终端 + 多跳: 数据 ∈ S 各组织的 member")
+    void subjectGraphTerminal() {
+        Chain c = new Chain(
+                List.of(new Hop(List.of("admin"), Combine.OR, "org_unit", false)),
+                new Terminal(List.of("owner_org"), Combine.OR), List.of());
+        SqlFragment f = compiler().compileChain(c, "student", "s.", 1L);
+        String sql = f.sql();
+        assertTrue(sql.startsWith("s.id IN (SELECT ccm0.subject_id FROM access_relations ccm0"), sql);
+        assertTrue(sql.contains("ccm0.relation = 'member'"), sql);
+        assertTrue(sql.contains("ccm0.resource_id IN (SELECT ar0.resource_id"), "应嵌入跳子查询: " + sql);
+    }
+
+    @Test
+    @DisplayName("多终端 AND (owner_org ∧ creator) → 两谓词 AND")
+    void multiAnchorAnd() {
+        Chain c = new Chain(
+                List.of(new Hop(List.of("member"), Combine.OR, "org_unit", false)),
+                new Terminal(List.of("owner_org", "creator"), Combine.AND), List.of());
+        SqlFragment f = compiler().compileChain(c, "doc", "", 5L);
+        assertTrue(f.sql().startsWith("("), f.sql());
+        assertTrue(f.sql().contains(" AND "), f.sql());
+        assertTrue(f.sql().contains("org_unit_id IN"), f.sql());
+        assertTrue(f.sql().contains("created_by = :ccMe1"), f.sql()); // creator 锚点 index 1
+    }
+
+    @Test
+    @DisplayName("两级链 (我 manages 场所 → belongs_to 组织) + owner_org 终端")
+    void twoLevelChainColumn() {
+        Chain c = new Chain(
+                List.of(
+                        new Hop(List.of("manages"), Combine.OR, "place", false),
+                        new Hop(List.of("belongs_to"), Combine.OR, "org_unit", false)),
+                new Terminal(List.of("owner_org"), Combine.OR), List.of());
+        SqlFragment f = compiler().compileChain(c, "doc", "", 3L);
+        assertTrue(f.sql().startsWith("org_unit_id IN (SELECT ar1.resource_id"), f.sql());
+        assertTrue(f.sql().contains("ar1.subject_id IN (SELECT ar0.resource_id"), f.sql());
+    }
+
+    @Test
+    @DisplayName("未注册终端 → DENY (fail-closed)")
+    void unregisteredTerminalDeny() {
+        Chain c = new Chain(List.of(), new Terminal(List.of("bogus"), Combine.OR), List.of());
+        assertEquals("1=0", compiler().compileChain(c, "doc", "", 1L).sql());
+    }
+
+    @Test
+    @DisplayName("PROVIDER 终端 → 抛 (留 Step2b)")
+    void providerThrowsInStep2a() {
+        Chain c = new Chain(List.of(), new Terminal(List.of("taught_by"), Combine.OR), List.of());
+        assertThrows(UnsupportedOperationException.class,
+                () -> compiler().compileChain(c, "student", "", 1L));
+    }
+}
