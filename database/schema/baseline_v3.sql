@@ -279,7 +279,8 @@ CREATE TABLE `access_relations` (
   KEY `idx_access_relations_tenant` (`tenant_id`),
   KEY `idx_validity` (`valid_from`,`valid_to`),
   KEY `idx_relation_validity` (`relation`,`valid_to`,`deleted`),
-  KEY `idx_expand` (`resource_type`,`resource_id`,`relation`,`deleted`)
+  KEY `idx_expand` (`resource_type`,`resource_id`,`relation`,`deleted`),
+  KEY `idx_chain_hop` (`subject_type`,`subject_id`,`relation`,`resource_type`,`deleted`)
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='统一访问关系表 (Zanzibar Simplified)';
 /*!40101 SET character_set_client = @saved_cs_client */;
 

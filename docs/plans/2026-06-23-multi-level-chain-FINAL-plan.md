@@ -121,3 +121,19 @@ compileSpec: OR( compileChain(c) for c in chains )
 ## 10. P0 立即开工 (本次)
 产出: `domain/access/model/chain/` (Chain/Hop/Terminal + ScopeChainSpec) + JSON 编解码 + `ChainValidator`
 (终端∈ResourceRelationRegistry / 限深 / 环) + 单测 (含用户原例 + 1 跳退化 + 非法终端拒绝)。不接引擎, 零回归风险。
+
+## 11. 实施完成状态 (2026-06-24) — 全部交付
+P0→P4+P2 + 收尾 #1-#6 全部完成 (每步 dpt_ct 金标准 + shadow + 全量回归):
+- **P0** `696f7408` 模型+Validator / **P1-S1** `6652144b` 跳解析 / **S2a** `c71efb98` 编译器 /
+  **S2b** `d20eb244` 接 live (shadow 抓修 user_id 列/subject NPE) / **S2c** `478c88ee` AND 交集 /
+  **P3** `d1ba9b98` 写路径 / **P4** `b609d076` 链式 UI / **P2** `2797635b` 场所投影
+- **#1** `8dff7245` ChainValidator 接保存 (非法链 HTTP 400 + 提示)
+- **#2** `a2ac6466` 终端 membership 可选 (属于/负责)
+- **#3** `39159467` 终端 membership AND (属于且负责 — 原例字面)
+- **#4** `a1586475` PLACE 终端 (成员图 resource_type=末跳类型, 场所占用)
+- **#5** 双路径有意共存 (链=规范模型, 1 跳=已证等价优化路径, 2b shadow 实证; 不做赌金标准的 composeGrant 重写)
+- **#6** access_relations idx_chain_hop 索引 (链遍历性能; L3 物化闭包作 future-when-volume, 零数据量不预建)
+
+**诚实记录**: #2-#4/#6 为平台超前能力 (场所子系统空 / 无非 member 数据↔组织 / 零数据量), 按用户"平台超前建设"
+意愿完成并以 seed 数据 shadow 验证; #5 全量统一(重写退役 composeGrant) 经分析为负 ROI(零功能收益+赌金标准),
+改以"有意共存+等价已证"收口。多级关系链特性端到端完整可用。

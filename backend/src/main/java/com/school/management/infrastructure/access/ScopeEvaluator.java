@@ -123,6 +123,12 @@ public class ScopeEvaluator {
             UserContext ctx, Long effectiveOrgId, String effectiveOrgPath, Long tenantId, int paramOffset) {
         // P1: 有中间跳 → 多级关系链 (我 →[hops]→ 组织集 S, relation 作终端 over S)。
         // 空跳 (既有全部配置) 走下方旧路径, 字节不变 → 金标准安全。
+        //
+        // [完成项5 — 双路径有意共存, 非"未统一"债务] 链是规范模型; 1 跳 grant 是它的"退化优化路径":
+        // 退化链 (hops 空) 的等价形态 = {hops:[{subject 关系→org}], terminal:relation}, 已 2b live shadow
+        // 实证两路径同行集 ({owner_org,RELATION,X} ≡ 链 {[X]→org, owner_org})。下方走 composeAnchorCondition
+        // 复用历经金标准锤炼的 resolveOrgSet (ALL/CUSTOM/PLUGIN_DIM/MY_ORG/SELF 等非 access_relations 解析),
+        // 故意保留为快路径 —— "退役 composeGrant 改由链编译器重实现这些解析" = 赌金标准换零功能收益, 不做。
         if (g.hasHops()) {
             return composeHopChain(g, spec, meta, ctx, tenantId, paramOffset);
         }
