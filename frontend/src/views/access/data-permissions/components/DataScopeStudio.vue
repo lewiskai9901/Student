@@ -11,7 +11,6 @@
         </p>
       </div>
       <div v-if="currentRole" class="flex items-center gap-2">
-        <!-- 模板库: 选模板 → 载入为 默认+例外 (不自动保存) -->
         <button
           class="flex h-8 items-center gap-1 rounded-md border border-gray-200 bg-white px-3 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40"
           :disabled="roleDisabled"
@@ -45,156 +44,81 @@
       加载中…
     </div>
 
-    <!-- 主体: 配置 (左) + 预览 (右) -->
+    <!-- 主体: 逐资源统一配置 (左) + 模拟 (右) -->
     <div v-else class="flex flex-1 overflow-hidden">
-      <!-- 配置区 -->
-      <div class="flex-1 overflow-y-auto px-5 py-4 space-y-5">
-        <!-- ① 默认范围 (仅轴① 看哪些组织的数据, 适用所有资源) -->
-        <section class="rounded-lg border border-gray-200 bg-white p-4">
-          <div class="mb-1 flex items-center gap-2">
-            <h3 class="text-sm font-semibold text-gray-900">默认范围</h3>
-          </div>
-          <p class="mb-2 text-[11px] leading-relaxed text-gray-500">
-            先设一个对所有功能都生效的范围；个别功能要不一样，在下面「添加例外」单独设。
-          </p>
-          <ScopeBuilder
-            :model-value="defaultSpec"
-            axis-only-org
-            :disabled="roleDisabled"
-            @update:model-value="(v: ScopeSpecVM) => (defaultSpec = v)"
-          />
-        </section>
+      <!-- 配置区: 全部资源, 一套统一规则, 无"默认/例外"之分 -->
+      <div class="flex-1 overflow-y-auto px-5 py-4">
+        <div class="mb-3 flex items-center gap-2">
+          <h3 class="text-sm font-semibold text-gray-900">数据范围 · 逐资源配置</h3>
+          <span class="text-[11px] text-gray-400">— 每个资源用同一套规则独立配置（组织锚点 / 按关系筛 / 多锚点）</span>
+        </div>
+        <input
+          v-model="search"
+          placeholder="搜索资源…"
+          class="mb-3 h-8 w-full rounded-md border border-gray-300 px-3 text-xs outline-none focus:border-blue-500"
+        />
 
-        <!-- ② 资源例外 (完整三轴, 只列与默认不同的) -->
-        <section class="rounded-lg border border-gray-200 bg-white p-4">
-          <div class="mb-3 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <h3 class="text-sm font-semibold text-gray-900">资源例外</h3>
-              <span class="text-[11px] text-gray-400">— 个别功能想和默认不同，在这里单独配（只列出与默认不同的）</span>
-            </div>
-            <button
-              class="flex h-7 items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2.5 text-[11px] font-medium text-blue-600 hover:bg-blue-100 disabled:opacity-40"
-              :disabled="roleDisabled || addableModules.length === 0"
-              @click="pickerOpen = true"
-            >
-              <Plus class="h-3 w-3" />
-              添加例外
-            </button>
+        <div v-for="(mods, industry) in groupedModules" :key="industry" class="mb-4">
+          <div class="mb-1.5 px-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+            {{ industry }} <span class="font-normal normal-case">({{ mods.length }})</span>
           </div>
-
-          <div v-if="exceptions.length === 0" class="py-3 text-center text-[11px] text-gray-400">
-            暂无例外 — 所有资源跟随默认范围
-          </div>
-
-          <div v-else class="space-y-3">
+          <div class="space-y-2">
             <div
-              v-for="(ex, i) in exceptions"
-              :key="ex.moduleCode"
-              class="rounded-md border border-gray-200 bg-gray-50/60 p-3"
+              v-for="m in mods"
+              :key="m.code"
+              class="rounded-md border border-gray-200 bg-white p-3"
+              :class="{ 'opacity-60': m.pluginEnabled === false }"
             >
               <div class="mb-2 flex items-center justify-between">
                 <span class="text-xs font-medium text-gray-800">
-                  {{ moduleName(ex.moduleCode) }}
+                  {{ m.name }}
+                  <span v-if="m.pluginEnabled === false" class="ml-1 text-[10px] text-orange-500">(插件已禁用)</span>
                 </span>
-                <button
-                  class="flex h-6 w-6 items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500 disabled:opacity-40"
-                  :disabled="roleDisabled"
-                  title="移除例外"
-                  @click="removeException(i)"
-                >
-                  <X class="h-3.5 w-3.5" />
-                </button>
+                <span class="text-[10.5px] text-gray-400">{{ previewLineFor(specOf(m.code)) }}</span>
               </div>
-              <!-- R3/R4 多锚点 (>1 grant): 可编辑编辑器 + 改为单一范围 -->
-              <div v-if="isMultiGrantSpec(ex.spec)" class="space-y-2">
+              <!-- 多锚点 (>1 grant): 编辑器 + 改为单一 -->
+              <div v-if="isMultiGrantSpec(specOf(m.code))" class="space-y-2">
                 <MultiGrantEditor
-                  :module-code="ex.moduleCode"
-                  :model-value="ex.spec.relationGrants || []"
-                  :disabled="roleDisabled"
-                  @update:model-value="(v: RelationGrant[]) => updateGrants(i, v)"
+                  :module-code="m.code"
+                  :model-value="specOf(m.code).relationGrants || []"
+                  :disabled="roleDisabled || m.pluginEnabled === false"
+                  @update:model-value="(v: RelationGrant[]) => updateGrants(m.code, v)"
                 />
                 <button
                   class="pl-5 text-[11px] text-gray-500 hover:text-indigo-600 hover:underline disabled:opacity-40"
                   :disabled="roleDisabled"
-                  @click="simplifyToSingle(i)"
+                  @click="simplifyToSingle(m.code)"
                 >
                   改为单一范围
                 </button>
               </div>
+              <!-- 单一: ScopeBuilder + 改为多锚点 -->
               <div v-else class="space-y-1.5">
                 <ScopeBuilder
-                  :model-value="ex.spec"
-                  :capabilities="capabilityOf(ex.moduleCode)"
-                  :disabled="roleDisabled"
-                  @update:model-value="(v: ScopeSpecVM) => updateException(i, v)"
+                  :model-value="specOf(m.code)"
+                  :capabilities="capabilityOf(m.code)"
+                  :disabled="roleDisabled || m.pluginEnabled === false"
+                  @update:model-value="(v: ScopeSpecVM) => updateModuleSpec(m.code, v)"
                 />
                 <button
                   class="pl-5 text-[11px] text-gray-500 hover:text-indigo-600 hover:underline disabled:opacity-40"
-                  :disabled="roleDisabled"
-                  @click="convertToMulti(i)"
+                  :disabled="roleDisabled || m.pluginEnabled === false"
+                  @click="convertToMulti(m.code)"
                 >
                   改为多锚点（满足任一即可见）
                 </button>
               </div>
             </div>
           </div>
-
-          <!-- 其余资源跟随默认 -->
-          <div class="mt-3 border-t border-gray-100 pt-3">
-            <div class="flex items-center justify-between">
-              <span class="text-[11px] text-gray-500">
-                其余 {{ followerModules.length }} 个资源 → 跟随默认
-              </span>
-              <button
-                class="text-[11px] text-blue-500 hover:underline"
-                @click="showFollowers = !showFollowers"
-              >
-                {{ showFollowers ? '收起' : '展开全部' }}
-              </button>
-            </div>
-            <ul v-if="showFollowers" class="mt-2 max-h-48 space-y-1 overflow-y-auto">
-              <li
-                v-for="m in followerModules"
-                :key="m.code"
-                class="flex items-center justify-between text-[11px] text-gray-600"
-              >
-                <span class="truncate">{{ m.name }}</span>
-                <span class="ml-2 flex-shrink-0 text-gray-400">{{ followerEffectiveLine(m.code) }}</span>
-              </li>
-            </ul>
-          </div>
-        </section>
+        </div>
+        <div v-if="props.modules.length === 0" class="py-8 text-center text-xs text-gray-400">
+          当前无可配置的资源
+        </div>
       </div>
 
-      <!-- 预览区 -->
+      <!-- 模拟区 -->
       <aside class="w-80 flex-shrink-0 overflow-y-auto border-l border-gray-200 bg-gray-50 px-4 py-4">
-        <h3 class="mb-1 text-sm font-semibold text-gray-900">预览 · 此角色实际能看到</h3>
-        <p class="mb-3 text-[11px] text-gray-500">逐资源自然语言</p>
-
-        <div class="space-y-2">
-          <!-- 默认行 -->
-          <div class="rounded-md border border-gray-200 bg-white px-3 py-2">
-            <div class="text-[11px] font-medium text-gray-500">默认</div>
-            <div class="text-xs text-gray-800">{{ defaultPreviewLine }}</div>
-          </div>
-          <!-- 例外逐行 -->
-          <div
-            v-for="ex in exceptions"
-            :key="ex.moduleCode"
-            class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2"
-          >
-            <div class="text-[11px] font-medium text-amber-700">{{ moduleName(ex.moduleCode) }}</div>
-            <div class="text-xs text-amber-900">{{ previewLineFor(ex.spec) }}</div>
-          </div>
-          <!-- 其余 -->
-          <div class="rounded-md border border-gray-200 bg-white px-3 py-2">
-            <div class="text-[11px] font-medium text-gray-500">其余资源</div>
-            <div class="text-xs text-gray-600">→ {{ defaultPreviewLine }}</div>
-          </div>
-        </div>
-
-        <!-- 模拟用户: 输入用户 ID → 看此角色下该用户实际能访问的数据 -->
-        <div class="mt-4 rounded-md border border-blue-200 bg-blue-50 px-3 py-3">
+        <div class="rounded-md border border-blue-200 bg-blue-50 px-3 py-3">
           <div class="mb-2 flex items-center justify-between">
             <span class="flex items-center gap-1 text-[11px] font-medium text-blue-700">
               <User class="h-3 w-3" />
@@ -272,36 +196,6 @@
       </aside>
     </div>
 
-    <!-- 例外资源选择器 -->
-    <el-dialog v-model="pickerOpen" title="添加资源例外" width="480px">
-      <el-input
-        v-model="pickerSearch"
-        placeholder="搜索资源"
-        size="small"
-        clearable
-        class="mb-2"
-      />
-      <div class="max-h-80 overflow-y-auto">
-        <div v-for="(mods, industry) in pickerGrouped" :key="industry" class="mb-2">
-          <div class="px-1 py-1 text-[11px] font-medium uppercase tracking-wide text-gray-400">
-            {{ industry }}
-          </div>
-          <button
-            v-for="m in mods"
-            :key="m.code"
-            class="flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-xs text-gray-700 hover:bg-blue-50"
-            @click="addException(m.code)"
-          >
-            <span class="truncate">{{ m.name }}</span>
-            <Plus class="h-3 w-3 flex-shrink-0 text-blue-400" />
-          </button>
-        </div>
-        <div v-if="addableModules.length === 0" class="py-6 text-center text-xs text-gray-400">
-          所有资源都已是例外
-        </div>
-      </div>
-    </el-dialog>
-
     <!-- 模板库 -->
     <TemplateLibraryDialog
       :visible="templateDialogOpen"
@@ -314,7 +208,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ChevronDown, Plus, X, User, Loader2 } from 'lucide-vue-next'
+import { ChevronDown, User, Loader2 } from 'lucide-vue-next'
 import ScopeBuilder, { type ScopeSpecVM, type ScopeCapabilities } from './ScopeBuilder.vue'
 import MultiGrantEditor from './MultiGrantEditor.vue'
 import TemplateLibraryDialog from './TemplateLibraryDialog.vue'
@@ -326,12 +220,11 @@ import {
 } from '@/api/access'
 import type { ModulePermission, RelationGrant } from '@/types/access'
 import {
-  inferDefaultAndExceptions,
-  expandToCommands,
+  toSpec,
+  specToCommand,
   clampSpecToAllowed,
   scopeCodeFromAxis1,
   presetCodeToSpec,
-  type ResourceException,
 } from '../composables/scopePolicy'
 import { sceneToModuleScopes } from '../composables/useSceneTemplate'
 import type { RoleTemplate } from '../composables/useTemplateLibrary'
@@ -340,8 +233,7 @@ import { usePluginsStore } from '@/stores/plugins'
 import { useScopeLabels } from '../composables/useScopeLabels'
 
 /**
- * 一个资源 (数据模块) + 其能力声明 (扁平化, 来自 M1 getModulesForRole 暴露的字段).
- * 父组件 (P5) 把 getModulesForRole 的 relevant/advanced item 映射到本形状.
+ * 一个资源 (数据模块) + 其能力声明. 父组件 (P5) 把 getModulesForRole 的 item 映射到本形状.
  */
 export interface ModuleCapability {
   code: string
@@ -349,11 +241,8 @@ export interface ModuleCapability {
   industry?: string
   /** 本资源支持的 preset scope 代码; null=全集 */
   allowedScopes?: string[] | null
-  /** 轴② 关系过滤可用 */
   relationFilterable?: boolean
-  /** 轴③ 类型选项来源实体 (USER/PLACE/ORG_UNIT); 非空=支持类型过滤 */
   typeEntity?: string | null
-  /** 所属插件是否启用 */
   pluginEnabled?: boolean
 }
 
@@ -366,24 +255,22 @@ const emit = defineEmits<{ saved: [] }>()
 
 const loading = ref(false)
 const saving = ref(false)
-
-const defaultSpec = ref<ScopeSpecVM>({ orgAnchor: 'SELF' })
-const exceptions = ref<ResourceException[]>([])
+const search = ref('')
 
 /**
- * 上次 getConfig 载入的原始 per-resource 列表 (含 props.modules 之外的码).
- * 保存时用于"未托管模块直通保留" — 后端 saveRolePermissions 是 delete-all-then-insert,
- * 不回传的码会被软删, 故 UI 不管理的码必须原样回传, 否则静默丢配.
+ * 逐资源范围 spec (统一配置规则, 无"默认/例外"分层 — 每个资源独立配)。
+ * key = moduleCode, value = 该资源的 ScopeSpecVM (未配=SELF)。
+ */
+const specByCode = ref<Record<string, ScopeSpecVM>>({})
+
+/**
+ * 上次 getConfig 载入的原始 per-resource 列表 (含 props.modules 之外的码)。
+ * 保存时"未托管模块直通保留" — 后端 delete-all-then-insert, 不回传的码会被软删。
  */
 const loadedPermissions = ref<ModulePermission[]>([])
 
-const showFollowers = ref(false)
-const pickerOpen = ref(false)
-const pickerSearch = ref('')
 const templateDialogOpen = ref(false)
-
 const pluginsStore = usePluginsStore()
-
 const roleDisabled = computed(() => props.currentRole?.pluginEnabled === false)
 
 // ── 模块索引 / 能力查找 ──────────────────────────────────────
@@ -402,37 +289,29 @@ function capabilityOf(code: string): ScopeCapabilities {
   }
 }
 
-const exceptionCodes = computed(() => new Set(exceptions.value.map(e => e.moduleCode)))
-
-/** 跟随默认的资源 (非例外). */
-const followerModules = computed<ModuleCapability[]>(() =>
-  props.modules.filter(m => !exceptionCodes.value.has(m.code))
-)
-
-// ── 例外选择器: 可添加 (非例外) 的资源, 按行业分组 + 搜索 ──────
-const addableModules = computed<ModuleCapability[]>(() => {
-  const kw = pickerSearch.value.trim().toLowerCase()
-  return props.modules.filter(m => {
-    if (exceptionCodes.value.has(m.code)) return false
-    if (!kw) return true
-    return m.name.toLowerCase().includes(kw) || m.code.toLowerCase().includes(kw)
-  })
-})
-const pickerGrouped = computed<Record<string, ModuleCapability[]>>(() => {
+/** 全部资源按行业分组 + 搜索过滤 (统一列出, 不再区分默认/例外)。 */
+const groupedModules = computed<Record<string, ModuleCapability[]>>(() => {
+  const kw = search.value.trim().toLowerCase()
   const out: Record<string, ModuleCapability[]> = {}
-  for (const m of addableModules.value) {
+  for (const m of props.modules) {
+    if (kw && !m.name.toLowerCase().includes(kw) && !m.code.toLowerCase().includes(kw)) continue
     const ind = m.industry || 'CORE'
     ;(out[ind] ||= []).push(m)
   }
   return out
 })
 
+/** 某资源的当前 spec (未配 → 仅本人)。 */
+function specOf(code: string): ScopeSpecVM {
+  return specByCode.value[code] || { orgAnchor: 'SELF' }
+}
+
 // ── 标签字典 + 预览 compose ──────────────────────────────────
 const { loadDicts, compose } = useScopeLabels()
 loadDicts()
 
-/** 一个 spec → 自然语言整句 (含轴①锚点措辞). */
 function previewLineFor(spec: ScopeSpecVM): string {
+  if ((spec.relationGrants?.length ?? 0) > 1) return '多锚点（满足任一即可见）'
   const mp: ModulePermission = {
     moduleCode: '',
     scopeCode: scopeCodeFromAxis1(spec),
@@ -445,54 +324,27 @@ function previewLineFor(spec: ScopeSpecVM): string {
   }
   return compose(mp, true) || '仅本人'
 }
-const defaultPreviewLine = computed(() => previewLineFor(defaultSpec.value))
 
-/** 折叠列表里某跟随资源的 (钳制后) 有效范围一行. */
-function followerEffectiveLine(code: string): string {
-  const allowed = moduleByCode.value.get(code)?.allowedScopes
-  const clamped = clampSpecToAllowed(defaultSpec.value, allowed)
-  return previewLineFor(clamped)
+// ── 逐资源编辑 ──────────────────────────────────────────────
+function updateModuleSpec(code: string, spec: ScopeSpecVM) {
+  specByCode.value = { ...specByCode.value, [code]: spec }
 }
-
-// ── 例外增删改 ──────────────────────────────────────────────
-function addException(code: string) {
-  if (exceptionCodes.value.has(code)) return
-  // 从当前默认范围 seed (用户在此基础上精修)
-  exceptions.value.push({ moduleCode: code, spec: { ...defaultSpec.value } })
-  pickerOpen.value = false
-  pickerSearch.value = ''
-}
-function removeException(i: number) {
-  exceptions.value.splice(i, 1)
-}
-function updateException(i: number, spec: ScopeSpecVM) {
-  exceptions.value[i] = { ...exceptions.value[i], spec }
-}
-
-// ── R3/R4 多锚点 (relationGrants >1) 编辑 + 单一↔多锚点切换 ──────────
 function isMultiGrantSpec(spec: ScopeSpecVM): boolean {
   return (spec.relationGrants?.length ?? 0) > 1
 }
-/** 多 grant 编辑器变更 → 写回该例外的 relationGrants. */
-function updateGrants(i: number, grants: RelationGrant[]) {
-  const ex = exceptions.value[i]
-  updateException(i, { ...ex.spec, relationGrants: grants })
+function updateGrants(code: string, grants: RelationGrant[]) {
+  updateModuleSpec(code, { ...specOf(code), relationGrants: grants })
 }
-/** 清掉多 grant → 退回单一范围 (ScopeBuilder 接管, 以其首 grant 派生的轴① 为起点). */
-function simplifyToSingle(i: number) {
-  const ex = exceptions.value[i]
-  updateException(i, { ...ex.spec, relationGrants: undefined })
+function simplifyToSingle(code: string) {
+  updateModuleSpec(code, { ...specOf(code), relationGrants: undefined })
 }
-/** 单一范围 → 多锚点: 以当前轴① 为种子第一条 grant + 追加一条, 进入多 grant 模式. */
-function convertToMulti(i: number) {
-  const ex = exceptions.value[i]
-  const seed = axisToGrant(ex.spec)
-  updateException(i, {
-    ...ex.spec,
-    relationGrants: [seed, { relation: 'owner_org', subject: 'MY_ORG', subtree: true }],
+function convertToMulti(code: string) {
+  const spec = specOf(code)
+  updateModuleSpec(code, {
+    ...spec,
+    relationGrants: [axisToGrant(spec), { relation: 'owner_org', subject: 'MY_ORG', subtree: true }],
   })
 }
-/** 轴① spec → 近似单条 grant (前端种子, 后端最终以 relationGrants 为准). */
 function axisToGrant(spec: ScopeSpecVM): RelationGrant {
   switch (spec.orgAnchor) {
     case 'ALL':
@@ -505,46 +357,22 @@ function axisToGrant(spec: ScopeSpecVM): RelationGrant {
   }
 }
 
-// ── 模板载入 ────────────────────────────────────────────────
-/**
- * 应用模板: 模板的 SceneDecision → 每资源 scope → ModulePermission[] → 推断回「默认 + 例外」.
- *
- * 复用旧 PermissionConfigurator.applyTemplateScene 的 sceneToModuleScopes/specs/relevantCodes 链路,
- * 但终点不再是扁平 modulePermissions, 而是过 inferDefaultAndExceptions 落成本 UI 的默认+例外模型,
- * 与 getConfig 载入路径完全一致. 仅载入不保存 — 用户复核后手动点保存.
- */
+// ── 模板载入: 每资源 scope → specByCode (统一逐资源, 不再 infer 默认+例外) ──
 function applyTemplate(tpl: RoleTemplate) {
-  // props.modules → sceneToModuleScopes 需要的 SimpleModule[] 形状
   const simpleModules = props.modules.map(m => ({
     code: m.code,
     industry: m.industry || 'CORE',
     allowedScopes: m.allowedScopes ?? null,
   }))
-  // 本视图不区分 relevant/advanced — 所有托管资源都视作"相关", 模板主决策对其全量生效
   const relevantCodes = new Set(props.modules.map(m => m.code))
   const specs = enabledScopeSpecializations(pluginsStore.codes)
-
   const { scopes } = sceneToModuleScopes(tpl.scene, simpleModules, specs, relevantCodes)
 
-  // scope 映射 → ModulePermission[]. preset scopeCode → 轴① spec 字段 (orgAnchor/includeSubtree...),
-  // 否则 inferDefaultAndExceptions 的 toSpec 会因缺 orgAnchor 一律退化成 SELF.
-  const mps: ModulePermission[] = props.modules.map(m => {
-    const code = scopes[m.code]?.scopeCode || 'SELF'
-    const axis1 = presetCodeToSpec(code)
-    return {
-      moduleCode: m.code,
-      scopeCode: code,
-      orgAnchor: axis1.orgAnchor,
-      anchorParam: axis1.anchorParam,
-      includeSubtree: axis1.includeSubtree,
-      customOrgIds: axis1.customOrgIds,
-      scopeItems: scopes[m.code]?.scopeItems,
-    }
-  })
-
-  const inferred = inferDefaultAndExceptions(mps)
-  defaultSpec.value = inferred.defaultSpec
-  exceptions.value = inferred.exceptions
+  const next: Record<string, ScopeSpecVM> = {}
+  for (const m of props.modules) {
+    next[m.code] = presetCodeToSpec(scopes[m.code]?.scopeCode || 'SELF')
+  }
+  specByCode.value = next
   ElMessage.info('模板已载入, 点击保存生效')
 }
 
@@ -556,9 +384,13 @@ async function load() {
     const config = await dataPermissionApi.getConfig(props.currentRole.id)
     const loaded = config.modulePermissions || []
     loadedPermissions.value = loaded
-    const inferred = inferDefaultAndExceptions(loaded)
-    defaultSpec.value = inferred.defaultSpec
-    exceptions.value = inferred.exceptions
+    const byCode = new Map(loaded.map(m => [m.moduleCode, m]))
+    const next: Record<string, ScopeSpecVM> = {}
+    for (const m of props.modules) {
+      const mp = byCode.get(m.code)
+      next[m.code] = mp ? toSpec(mp) : { orgAnchor: 'SELF' }
+    }
+    specByCode.value = next
   } catch (e: any) {
     ElMessage.error('加载数据权限失败: ' + (e?.message || e))
   } finally {
@@ -571,8 +403,7 @@ watch(
   id => {
     if (id != null) load()
     else {
-      defaultSpec.value = { orgAnchor: 'SELF' }
-      exceptions.value = []
+      specByCode.value = {}
       loadedPermissions.value = []
     }
   },
@@ -590,32 +421,40 @@ async function handleReset() {
   }
 }
 
-// ── 保存: 默认 + 例外 → per-resource commands (默认按各资源 allowedScopes 钳制) ──
-async function handleSave() {
-  if (!props.currentRole) return
+/** 逐资源 spec → per-resource commands (统一, 无默认展开)。单 grant 按 allowedScopes 钳制 (多锚点不钳)。 */
+function buildCommands(): ModulePermission[] {
   const managedCodes = props.modules.map(m => m.code)
-
-  // 防呆: 无托管资源宇宙时, 后端 delete-all-then-insert 会把整个角色配置清空.
-  // 绝不下发 [] — 此时大概率是 props.modules 尚未到位, 直接中止.
-  if (managedCodes.length === 0) {
-    ElMessage.warning('当前无可配置的资源, 已取消保存以避免误删已有配置')
-    return
-  }
-
-  const allowedByCode = Object.fromEntries(props.modules.map(m => [m.code, m.allowedScopes]))
-  const cmds = expandToCommands(defaultSpec.value, exceptions.value, managedCodes, allowedByCode)
-
-  // 保留未托管模块: 后端 saveRolePermissions 是 delete-all-then-insert, 不回传的码会被软删.
-  // 凡 loadedPermissions 里、本 UI 宇宙 (managedCodes) 之外的码, 原样直通保留, 防静默丢配.
+  const cmds = managedCodes.map(code => {
+    const spec = specOf(code)
+    // 跳过钳制: ① 多锚点 (>1 grant, 无单一轴①) ② PLUGIN_DIM (维度码如 BY_CLASS 非预设, 钳会腐蚀)。
+    // 仅对预设 org 锚点 (ALL/PRIMARY_ORG/CUSTOM/RELATION/SELF) 按 allowedScopes 钳制 (防超范围/坏 SQL)。
+    const skipClamp = (spec.relationGrants?.length ?? 0) > 1 || spec.orgAnchor === 'PLUGIN_DIM'
+    const finalSpec = skipClamp
+      ? spec
+      : clampSpecToAllowed(spec, moduleByCode.value.get(code)?.allowedScopes)
+    return specToCommand(code, finalSpec)
+  })
+  // 未托管模块直通保留 (后端 delete-all-then-insert)
   const managedSet = new Set(managedCodes)
   for (const mp of loadedPermissions.value) {
     if (!managedSet.has(mp.moduleCode)) {
       cmds.push({ ...mp })
-      managedSet.add(mp.moduleCode) // 去重: 同码只保留一次
+      managedSet.add(mp.moduleCode)
     }
   }
+  return cmds
+}
 
-  // Guard: 禁用插件的资源不允许配置非 SELF (镜像 PermissionConfigurator)
+// ── 保存 ────────────────────────────────────────────────────
+async function handleSave() {
+  if (!props.currentRole) return
+  if (props.modules.length === 0) {
+    ElMessage.warning('当前无可配置的资源, 已取消保存以避免误删已有配置')
+    return
+  }
+  const cmds = buildCommands()
+
+  // Guard: 禁用插件的资源不允许配置非 SELF
   const violators = cmds.filter(c => {
     const m = moduleByCode.value.get(c.moduleCode)
     return m?.pluginEnabled === false && c.scopeCode !== 'SELF'
@@ -643,40 +482,27 @@ async function handleSave() {
   }
 }
 
-// ── 模拟用户: 给定 userId, 按当前编辑中的范围算该用户实际可见数据 ──────
-// 后端 simulate 接受 (userId + modulePermissions 快照), 逐资源 COUNT + 取样;
-// 这里用 expandToCommands 把"默认+例外"展开成与保存一致的 per-resource 快照,
-// 故无需先保存即可预览未落库的配置.
+// ── 模拟用户 ────────────────────────────────────────────────
 const simulateUserId = ref<number | null>(null)
 const simulating = ref(false)
 const simulateResults = ref<SimulateResult[]>([])
 const simulateError = ref('')
 const expandAll = ref(false)
-
 const topResults = computed(() =>
   expandAll.value ? simulateResults.value : simulateResults.value.slice(0, 5)
 )
-
 function resetSimulation() {
   simulateResults.value = []
   simulateError.value = ''
   expandAll.value = false
 }
-
 async function runSimulate() {
   if (!simulateUserId.value) return
-  const managedCodes = props.modules.map(m => m.code)
-  if (managedCodes.length === 0) {
+  if (props.modules.length === 0) {
     simulateError.value = '当前无可配置的资源, 无法模拟'
     return
   }
-  const allowedByCode = Object.fromEntries(props.modules.map(m => [m.code, m.allowedScopes]))
-  const snapshot = expandToCommands(
-    defaultSpec.value,
-    exceptions.value,
-    managedCodes,
-    allowedByCode
-  )
+  const snapshot = buildCommands()
   simulating.value = true
   simulateError.value = ''
   try {

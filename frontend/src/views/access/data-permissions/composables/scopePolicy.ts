@@ -24,7 +24,7 @@ export interface ResourceException {
 // ──────────────────────────────────────────────────────────────────────────
 // 提取: ModulePermission → ScopeSpecVM (只取轴字段). 无 orgAnchor 视作 SELF.
 // ──────────────────────────────────────────────────────────────────────────
-function toSpec(m: ModulePermission): ScopeSpecVM {
+export function toSpec(m: ModulePermission): ScopeSpecVM {
   return {
     orgAnchor: m.orgAnchor || 'SELF',
     anchorParam: m.anchorParam,
@@ -280,7 +280,7 @@ export function inferDefaultAndExceptions(modules: ModulePermission[]): {
 // ──────────────────────────────────────────────────────────────────────────
 
 /** spec → ModulePermission (携带派生 scopeCode + 三轴字段). */
-function specToCommand(moduleCode: string, spec: ScopeSpecVM): ModulePermission {
+export function specToCommand(moduleCode: string, spec: ScopeSpecVM): ModulePermission {
   return {
     moduleCode,
     scopeCode: scopeCodeFromAxis1(spec),

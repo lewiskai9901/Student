@@ -121,104 +121,94 @@ beforeEach(() => {
   entityListMock.mockResolvedValue([{ typeCode: 'STAFF', typeName: '职员' }])
 })
 
-describe('DataScopeStudio — 加载推断', () => {
-  it('载入 → 默认范围 + 例外卡片被推断并渲染', async () => {
+describe('DataScopeStudio — 加载 (扁平逐资源)', () => {
+  it('载入 → 每资源独立 spec (无默认/例外分层)', async () => {
     const wrapper = mountStudio()
     await flushPromises()
 
     expect(getConfigMock).toHaveBeenCalledWith('7')
     const vm: any = wrapper.vm
-    // 众数默认 = PRIMARY_ORG + subtree (3 个资源)
-    expect(vm.defaultSpec.orgAnchor).toBe('PRIMARY_ORG')
-    expect(vm.defaultSpec.includeSubtree).toBe(true)
-    // user 是唯一例外 (轴① 不同 + 带轴②③)
-    expect(vm.exceptions).toHaveLength(1)
-    expect(vm.exceptions[0].moduleCode).toBe('user')
+    // 每个资源各有自己的 spec
+    expect(vm.specOf('org_unit').orgAnchor).toBe('PRIMARY_ORG')
+    expect(vm.specOf('org_unit').includeSubtree).toBe(true)
+    expect(vm.specOf('place').orgAnchor).toBe('PRIMARY_ORG')
+    expect(vm.specOf('user').orgAnchor).toBe('RELATION')
+    expect(vm.specOf('user').subjectRelExclude).toEqual(['admin'])
+    expect(vm.specOf('user').typeFilter).toEqual(['STAFF'])
 
-    // 默认卡片 + 例外卡片 (含资源名) 渲染
+    // 全部资源逐行渲染 (含资源名), 无"默认范围/资源例外"分层标题
     const html = wrapper.html()
-    expect(html).toContain('默认范围')
-    expect(html).toContain('资源例外')
+    expect(html).toContain('逐资源配置')
+    expect(html).not.toContain('默认范围')
+    expect(html).not.toContain('资源例外')
     expect(html).toContain('用户')
+    expect(html).toContain('组织单元')
   })
 })
 
-describe('DataScopeStudio — 例外增删', () => {
-  it('通过选择器添加例外 → 新卡片从默认 seed', async () => {
+describe('DataScopeStudio — 逐资源编辑 + 多锚点切换', () => {
+  it('updateModuleSpec → 改某资源 spec, 不影响其他', async () => {
     const wrapper = mountStudio()
     await flushPromises()
     const vm: any = wrapper.vm
 
-    expect(vm.exceptions).toHaveLength(1)
-    vm.addException('place')
+    vm.updateModuleSpec('place', { orgAnchor: 'ALL' })
     await flushPromises()
-
-    expect(vm.exceptions).toHaveLength(2)
-    const added = vm.exceptions.find((e: any) => e.moduleCode === 'place')
-    expect(added).toBeTruthy()
-    // 从默认 seed
-    expect(added.spec.orgAnchor).toBe('PRIMARY_ORG')
-    expect(added.spec.includeSubtree).toBe(true)
+    expect(vm.specOf('place').orgAnchor).toBe('ALL')
+    // 其他资源不变
+    expect(vm.specOf('org_unit').orgAnchor).toBe('PRIMARY_ORG')
   })
 
-  it('移除例外 → 该资源回到跟随默认', async () => {
+  it('convertToMulti → 该资源变多锚点 (>1 grant); simplifyToSingle 还原', async () => {
     const wrapper = mountStudio()
     await flushPromises()
     const vm: any = wrapper.vm
 
-    expect(vm.exceptions).toHaveLength(1)
-    vm.removeException(0)
+    vm.convertToMulti('place')
     await flushPromises()
-    expect(vm.exceptions).toHaveLength(0)
+    expect(vm.isMultiGrantSpec(vm.specOf('place'))).toBe(true)
+    expect(vm.specOf('place').relationGrants.length).toBe(2)
+
+    vm.simplifyToSingle('place')
+    await flushPromises()
+    expect(vm.isMultiGrantSpec(vm.specOf('place'))).toBe(false)
   })
 })
 
-describe('DataScopeStudio — 模板载入', () => {
-  it('应用"本部门及以下"模板 → defaultSpec 变为 PRIMARY_ORG+subtree, 不自动保存', async () => {
+describe('DataScopeStudio — 模板载入 (逐资源)', () => {
+  it('应用"本部门及以下"模板 → 每资源 spec=PRIMARY_ORG+subtree, 不自动保存', async () => {
     const wrapper = mountStudio()
     await flushPromises()
     const vm: any = wrapper.vm
 
-    // 模板携带 SceneDecision: primary=DEPARTMENT_AND_BELOW, 业务跟随
     vm.applyTemplate({
-      id: 'dept-manager',
-      name: '部门经理',
-      icon: 'Users',
-      industry: 'CORE',
-      description: '',
+      id: 'dept-manager', name: '部门经理', icon: 'Users', industry: 'CORE', description: '',
       scene: { primary: 'DEPARTMENT_AND_BELOW', bizAutoFollow: true },
     })
     await flushPromises()
 
-    // 模板主决策落成默认范围: PRIMARY_ORG + 含子树
-    expect(vm.defaultSpec.orgAnchor).toBe('PRIMARY_ORG')
-    expect(vm.defaultSpec.includeSubtree).toBe(true)
-    // 全资源同一范围 → 无例外
-    expect(vm.exceptions).toHaveLength(0)
-    // 不自动保存 — 用户复核后手动保存
+    // 模板逐资源落 specByCode: org_unit/user 等无限制资源 → PRIMARY_ORG + 含子树
+    expect(vm.specOf('org_unit').orgAnchor).toBe('PRIMARY_ORG')
+    expect(vm.specOf('org_unit').includeSubtree).toBe(true)
+    expect(vm.specOf('user').orgAnchor).toBe('PRIMARY_ORG')
     expect(saveConfigMock).not.toHaveBeenCalled()
   })
 
-  it('应用"全部数据"模板 + 受限资源 → 默认 ALL, 受限资源因 allowedScopes 沦为例外', async () => {
-    // inspection_record 仅允许 [SELF,DEPARTMENT,DEPARTMENT_AND_BELOW] → ALL 经 fallback 降级 → 成例外
+  it('应用"全部数据"模板 + 受限资源 → 受限资源 scope 被 sceneToModuleScopes 钳到允许集内', async () => {
     const wrapper = mountStudio()
     await flushPromises()
     const vm: any = wrapper.vm
 
     vm.applyTemplate({
-      id: 'super-admin',
-      name: '超级管理员',
-      icon: 'Crown',
-      industry: 'CORE',
-      description: '',
+      id: 'super-admin', name: '超级管理员', icon: 'Crown', industry: 'CORE', description: '',
       scene: { primary: 'ALL', bizAutoFollow: true },
     })
     await flushPromises()
 
-    // 多数资源 ALL → 默认 ALL
-    expect(vm.defaultSpec.orgAnchor).toBe('ALL')
-    // inspection_record 不允许 ALL → fallback 到 DEPARTMENT_AND_BELOW → 轴① 不同 → 成例外
-    expect(vm.exceptions.map((e: any) => e.moduleCode)).toContain('inspection_record')
+    // 无限制资源 → ALL
+    expect(vm.specOf('user').orgAnchor).toBe('ALL')
+    // inspection_record allowedScopes 不含 ALL → 模板降级到允许集 (非 ALL)
+    expect(vm.specOf('inspection_record').orgAnchor).not.toBe('ALL')
     expect(saveConfigMock).not.toHaveBeenCalled()
   })
 })
@@ -322,8 +312,8 @@ describe('DataScopeStudio — 保存展开+钳制', () => {
     expect(saveConfigMock).not.toHaveBeenCalled()
   })
 
-  it('默认范围被某资源 allowedScopes 钳制 (ALL 默认 → 只允许 SELF 的资源降到 SELF)', async () => {
-    // 配置: 全部 ALL → 默认 ALL; inspection_record 仅允许 [SELF]
+  it('保存逐资源按 allowedScopes 钳制 (载入 ALL, 仅允许 SELF 的资源降到 SELF)', async () => {
+    // 配置: 全部资源载入为 ALL; inspection_record 仅允许 [SELF]
     getConfigMock.mockResolvedValue({
       modulePermissions: MODULES.map(m => ({
         moduleCode: m.code,
@@ -340,16 +330,40 @@ describe('DataScopeStudio — 保存展开+钳制', () => {
     })
     await flushPromises()
     const vm: any = wrapper.vm
-    expect(vm.defaultSpec.orgAnchor).toBe('ALL')
+    // 扁平模型: 每资源各自载入 ALL
+    expect(vm.specOf('inspection_record').orgAnchor).toBe('ALL')
 
     await vm.handleSave()
     await flushPromises()
     const cmds: any[] = saveConfigMock.mock.calls.at(-1)![1].modulePermissions
     const insp = cmds.find(c => c.moduleCode === 'inspection_record')
-    // 钳制: ALL 不在 [SELF] → 落到 SELF
+    // 逐资源钳制: ALL 不在 [SELF] → 落到 SELF
     expect(insp.scopeCode).toBe('SELF')
     // 其它无限制资源仍 ALL
     expect(cmds.find(c => c.moduleCode === 'user').scopeCode).toBe('ALL')
+  })
+
+  it('PLUGIN_DIM (如 BY_CLASS) 不被钳制 (保金标准: 维度码非预设, 钳会腐蚀)', async () => {
+    // inspection_record 载入 PLUGIN_DIM BY_CLASS, 但 allowedScopes 不含 BY_CLASS
+    getConfigMock.mockResolvedValue({
+      modulePermissions: [
+        { moduleCode: 'inspection_record', scopeCode: 'BY_CLASS', orgAnchor: 'PLUGIN_DIM', anchorParam: 'BY_CLASS' },
+      ],
+    })
+    const wrapper = mount(DataScopeStudio, {
+      props: { currentRole: ROLE, modules: MODULES },  // inspection_record allowedScopes=[SELF,DEPARTMENT,DEPARTMENT_AND_BELOW]
+      global: { stubs: localStubs },
+    })
+    await flushPromises()
+    const vm: any = wrapper.vm
+
+    await vm.handleSave()
+    await flushPromises()
+    const cmds: any[] = saveConfigMock.mock.calls.at(-1)![1].modulePermissions
+    const insp = cmds.find(c => c.moduleCode === 'inspection_record')
+    // PLUGIN_DIM 跳过钳制 → BY_CLASS 原样保留 (未被钳成 allowedScopes 里的预设)
+    expect(insp.orgAnchor).toBe('PLUGIN_DIM')
+    expect(insp.scopeCode).toBe('BY_CLASS')
   })
 })
 
