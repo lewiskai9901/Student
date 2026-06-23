@@ -1,6 +1,6 @@
 <template>
   <div class="flex h-full flex-col">
-    <!-- ── 头部: 角色 + 模板 + 重置 + 保存 ── -->
+    <!-- ── 头部 ── -->
     <div class="flex items-center justify-between border-b border-gray-200 bg-white px-5 py-3">
       <div class="min-w-0">
         <h2 class="truncate text-base font-semibold text-gray-900">
@@ -36,7 +36,6 @@
       </div>
     </div>
 
-    <!-- 无角色 / 加载 -->
     <div v-if="!currentRole" class="flex flex-1 items-center justify-center text-sm text-gray-400">
       请在左侧选择一个角色
     </div>
@@ -44,13 +43,12 @@
       加载中…
     </div>
 
-    <!-- 主体: 逐资源统一配置 (左) + 模拟 (右) -->
     <div v-else class="flex flex-1 overflow-hidden">
-      <!-- 配置区: 全部资源, 一套统一规则, 无"默认/例外"之分 -->
+      <!-- 配置区: 全部资源, 一套关系规则逐资源配置 -->
       <div class="flex-1 overflow-y-auto px-5 py-4">
         <div class="mb-3 flex items-center gap-2">
-          <h3 class="text-sm font-semibold text-gray-900">数据范围 · 逐资源配置</h3>
-          <span class="text-[11px] text-gray-400">— 每个资源用同一套规则独立配置（组织锚点 / 按关系筛 / 多锚点）</span>
+          <h3 class="text-sm font-semibold text-gray-900">数据范围 · 按关系逐资源配置</h3>
+          <span class="text-[11px] text-gray-400">— 每个资源 = 满足任一关系条件即可见（我创建的 / 和我有某关系的组织 / 全部 / 由插件解析）</span>
         </div>
         <input
           v-model="search"
@@ -69,45 +67,16 @@
               class="rounded-md border border-gray-200 bg-white p-3"
               :class="{ 'opacity-60': m.pluginEnabled === false }"
             >
-              <div class="mb-2 flex items-center justify-between">
-                <span class="text-xs font-medium text-gray-800">
-                  {{ m.name }}
-                  <span v-if="m.pluginEnabled === false" class="ml-1 text-[10px] text-orange-500">(插件已禁用)</span>
-                </span>
-                <span class="text-[10.5px] text-gray-400">{{ previewLineFor(specOf(m.code)) }}</span>
+              <div class="mb-2 text-xs font-medium text-gray-800">
+                {{ m.name }}
+                <span v-if="m.pluginEnabled === false" class="ml-1 text-[10px] text-orange-500">(插件已禁用)</span>
               </div>
-              <!-- 多锚点 (>1 grant): 编辑器 + 改为单一 -->
-              <div v-if="isMultiGrantSpec(specOf(m.code))" class="space-y-2">
-                <MultiGrantEditor
-                  :module-code="m.code"
-                  :model-value="specOf(m.code).relationGrants || []"
-                  :disabled="roleDisabled || m.pluginEnabled === false"
-                  @update:model-value="(v: RelationGrant[]) => updateGrants(m.code, v)"
-                />
-                <button
-                  class="pl-5 text-[11px] text-gray-500 hover:text-indigo-600 hover:underline disabled:opacity-40"
-                  :disabled="roleDisabled"
-                  @click="simplifyToSingle(m.code)"
-                >
-                  改为单一范围
-                </button>
-              </div>
-              <!-- 单一: ScopeBuilder + 改为多锚点 -->
-              <div v-else class="space-y-1.5">
-                <ScopeBuilder
-                  :model-value="specOf(m.code)"
-                  :capabilities="capabilityOf(m.code)"
-                  :disabled="roleDisabled || m.pluginEnabled === false"
-                  @update:model-value="(v: ScopeSpecVM) => updateModuleSpec(m.code, v)"
-                />
-                <button
-                  class="pl-5 text-[11px] text-gray-500 hover:text-indigo-600 hover:underline disabled:opacity-40"
-                  :disabled="roleDisabled || m.pluginEnabled === false"
-                  @click="convertToMulti(m.code)"
-                >
-                  改为多锚点（满足任一即可见）
-                </button>
-              </div>
+              <MultiGrantEditor
+                :module-code="m.code"
+                :model-value="grantsOf(m.code)"
+                :disabled="roleDisabled || m.pluginEnabled === false"
+                @update:model-value="(v: RelationGrant[]) => setGrants(m.code, v)"
+              />
             </div>
           </div>
         </div>
@@ -132,7 +101,6 @@
               清空
             </button>
           </div>
-
           <div class="mb-2 flex items-center gap-2">
             <input
               v-model.number="simulateUserId"
@@ -150,34 +118,15 @@
               <span v-else>模拟</span>
             </button>
           </div>
-
-          <p class="mb-1.5 text-[10px] text-blue-600">
-            按当前编辑中的范围模拟 — 保存后才会真正生效
-          </p>
-
-          <div v-if="simulateError" class="text-[10.5px] text-red-600">
-            {{ simulateError }}
-          </div>
-
+          <p class="mb-1.5 text-[10px] text-blue-600">按当前编辑中的范围模拟 — 保存后才会真正生效</p>
+          <div v-if="simulateError" class="text-[10.5px] text-red-600">{{ simulateError }}</div>
           <div v-else-if="simulateResults.length" class="space-y-1">
-            <div
-              v-for="r in topResults"
-              :key="r.moduleCode"
-              class="flex items-start gap-1 text-[10.5px]"
-            >
-              <span class="w-20 flex-shrink-0 truncate font-medium text-blue-900">
-                {{ moduleName(r.moduleCode) }}
-              </span>
+            <div v-for="r in topResults" :key="r.moduleCode" class="flex items-start gap-1 text-[10.5px]">
+              <span class="w-20 flex-shrink-0 truncate font-medium text-blue-900">{{ moduleName(r.moduleCode) }}</span>
               <span class="flex-1">
-                <span v-if="r.accessibleCount >= 0" class="font-semibold text-blue-800">
-                  {{ r.accessibleCount }} 条
-                </span>
-                <span v-else class="italic text-amber-600">
-                  {{ r.note || '未支持' }}
-                </span>
-                <span v-if="r.samples?.length" class="ml-1 text-[10px] text-gray-500">
-                  · {{ r.samples.map(s => s.name || s.id).join(', ') }}
-                </span>
+                <span v-if="r.accessibleCount >= 0" class="font-semibold text-blue-800">{{ r.accessibleCount }} 条</span>
+                <span v-else class="italic text-amber-600">{{ r.note || '未支持' }}</span>
+                <span v-if="r.samples?.length" class="ml-1 text-[10px] text-gray-500">· {{ r.samples.map(s => s.name || s.id).join(', ') }}</span>
               </span>
             </div>
             <button
@@ -188,15 +137,11 @@
               {{ expandAll ? '收起' : `展开全部 ${simulateResults.length} 个资源` }}
             </button>
           </div>
-
-          <div v-else class="text-[10px] text-blue-600">
-            输入用户 ID 预览此角色下该用户实际能访问的数据
-          </div>
+          <div v-else class="text-[10px] text-blue-600">输入用户 ID 预览此角色下该用户实际能访问的数据</div>
         </div>
       </aside>
     </div>
 
-    <!-- 模板库 -->
     <TemplateLibraryDialog
       :visible="templateDialogOpen"
       @update:visible="templateDialogOpen = $event"
@@ -209,7 +154,6 @@
 import { ref, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ChevronDown, User, Loader2 } from 'lucide-vue-next'
-import ScopeBuilder, { type ScopeSpecVM, type ScopeCapabilities } from './ScopeBuilder.vue'
 import MultiGrantEditor from './MultiGrantEditor.vue'
 import TemplateLibraryDialog from './TemplateLibraryDialog.vue'
 import {
@@ -219,27 +163,19 @@ import {
   type SimulateResult,
 } from '@/api/access'
 import type { ModulePermission, RelationGrant } from '@/types/access'
-import {
-  toSpec,
-  specToCommand,
-  clampSpecToAllowed,
-  scopeCodeFromAxis1,
-  presetCodeToSpec,
-} from '../composables/scopePolicy'
+import type { ScopeSpecVM } from './ScopeBuilder.vue'
+import { specToCommand, presetCodeToSpec } from '../composables/scopePolicy'
+import { permissionToGrants } from '../composables/scopeRelation'
 import { sceneToModuleScopes } from '../composables/useSceneTemplate'
 import type { RoleTemplate } from '../composables/useTemplateLibrary'
 import { enabledScopeSpecializations } from '../dataScopeSpecializations'
 import { usePluginsStore } from '@/stores/plugins'
-import { useScopeLabels } from '../composables/useScopeLabels'
 
-/**
- * 一个资源 (数据模块) + 其能力声明. 父组件 (P5) 把 getModulesForRole 的 item 映射到本形状.
- */
+/** 一个资源 (数据模块) + 能力声明。 */
 export interface ModuleCapability {
   code: string
   name: string
   industry?: string
-  /** 本资源支持的 preset scope 代码; null=全集 */
   allowedScopes?: string[] | null
   relationFilterable?: boolean
   typeEntity?: string | null
@@ -258,38 +194,25 @@ const saving = ref(false)
 const search = ref('')
 
 /**
- * 逐资源范围 spec (统一配置规则, 无"默认/例外"分层 — 每个资源独立配)。
- * key = moduleCode, value = 该资源的 ScopeSpecVM (未配=SELF)。
+ * 逐资源 spec (relationGrants=关系条件, 一切皆关系; 同时保全 axis②③ 排除关系/类型过滤, 不丢)。
+ * key=moduleCode。编辑器只动 relationGrants, 其余字段透传 (避免高级配置丢失)。
  */
 const specByCode = ref<Record<string, ScopeSpecVM>>({})
 
-/**
- * 上次 getConfig 载入的原始 per-resource 列表 (含 props.modules 之外的码)。
- * 保存时"未托管模块直通保留" — 后端 delete-all-then-insert, 不回传的码会被软删。
- */
+/** 上次 getConfig 原始列表 (未托管模块直通保留用)。 */
 const loadedPermissions = ref<ModulePermission[]>([])
 
 const templateDialogOpen = ref(false)
 const pluginsStore = usePluginsStore()
 const roleDisabled = computed(() => props.currentRole?.pluginEnabled === false)
 
-// ── 模块索引 / 能力查找 ──────────────────────────────────────
 const moduleByCode = computed<Map<string, ModuleCapability>>(
   () => new Map(props.modules.map(m => [m.code, m]))
 )
 function moduleName(code: string): string {
   return moduleByCode.value.get(code)?.name || code
 }
-function capabilityOf(code: string): ScopeCapabilities {
-  const m = moduleByCode.value.get(code)
-  return {
-    relationFilterable: m?.relationFilterable,
-    typeEntity: m?.typeEntity,
-    allowedScopes: m?.allowedScopes,
-  }
-}
 
-/** 全部资源按行业分组 + 搜索过滤 (统一列出, 不再区分默认/例外)。 */
 const groupedModules = computed<Record<string, ModuleCapability[]>>(() => {
   const kw = search.value.trim().toLowerCase()
   const out: Record<string, ModuleCapability[]> = {}
@@ -301,63 +224,18 @@ const groupedModules = computed<Record<string, ModuleCapability[]>>(() => {
   return out
 })
 
-/** 某资源的当前 spec (未配 → 仅本人)。 */
-function specOf(code: string): ScopeSpecVM {
-  return specByCode.value[code] || { orgAnchor: 'SELF' }
+function grantsOf(code: string): RelationGrant[] {
+  const g = specByCode.value[code]?.relationGrants
+  return g && g.length ? g : [{ relation: 'creator', subject: 'SELF' }]
 }
-
-// ── 标签字典 + 预览 compose ──────────────────────────────────
-const { loadDicts, compose } = useScopeLabels()
-loadDicts()
-
-function previewLineFor(spec: ScopeSpecVM): string {
-  if ((spec.relationGrants?.length ?? 0) > 1) return '多锚点（满足任一即可见）'
-  const mp: ModulePermission = {
-    moduleCode: '',
-    scopeCode: scopeCodeFromAxis1(spec),
-    orgAnchor: spec.orgAnchor,
-    anchorParam: spec.anchorParam,
-    includeSubtree: spec.includeSubtree,
-    subjectRelInclude: spec.subjectRelInclude,
-    subjectRelExclude: spec.subjectRelExclude,
-    typeFilter: spec.typeFilter,
-  }
-  return compose(mp, true) || '仅本人'
-}
-
-// ── 逐资源编辑 ──────────────────────────────────────────────
-function updateModuleSpec(code: string, spec: ScopeSpecVM) {
-  specByCode.value = { ...specByCode.value, [code]: spec }
-}
-function isMultiGrantSpec(spec: ScopeSpecVM): boolean {
-  return (spec.relationGrants?.length ?? 0) > 1
-}
-function updateGrants(code: string, grants: RelationGrant[]) {
-  updateModuleSpec(code, { ...specOf(code), relationGrants: grants })
-}
-function simplifyToSingle(code: string) {
-  updateModuleSpec(code, { ...specOf(code), relationGrants: undefined })
-}
-function convertToMulti(code: string) {
-  const spec = specOf(code)
-  updateModuleSpec(code, {
-    ...spec,
-    relationGrants: [axisToGrant(spec), { relation: 'owner_org', subject: 'MY_ORG', subtree: true }],
-  })
-}
-function axisToGrant(spec: ScopeSpecVM): RelationGrant {
-  switch (spec.orgAnchor) {
-    case 'ALL':
-      return { relation: 'owner_org', subject: 'ALL' }
-    case 'PRIMARY_ORG':
-      return { relation: 'owner_org', subject: 'MY_ORG', subtree: !!spec.includeSubtree }
-    case 'SELF':
-    default:
-      return { relation: 'creator', subject: 'SELF' }
+function setGrants(code: string, grants: RelationGrant[]) {
+  specByCode.value = {
+    ...specByCode.value,
+    [code]: { ...(specByCode.value[code] || {}), relationGrants: grants },
   }
 }
 
-// ── 模板载入: 每资源 scope → specByCode (统一逐资源, 不再 infer 默认+例外) ──
+// ── 模板载入: 每资源 scope → grants ──
 function applyTemplate(tpl: RoleTemplate) {
   const simpleModules = props.modules.map(m => ({
     code: m.code,
@@ -367,16 +245,16 @@ function applyTemplate(tpl: RoleTemplate) {
   const relevantCodes = new Set(props.modules.map(m => m.code))
   const specs = enabledScopeSpecializations(pluginsStore.codes)
   const { scopes } = sceneToModuleScopes(tpl.scene, simpleModules, specs, relevantCodes)
-
   const next: Record<string, ScopeSpecVM> = {}
   for (const m of props.modules) {
-    next[m.code] = presetCodeToSpec(scopes[m.code]?.scopeCode || 'SELF')
+    // preset scopeCode → 轴① spec → grants (复用 permissionToGrants 的 legacy 派生)
+    next[m.code] = { relationGrants: permissionToGrants(presetCodeToSpec(scopes[m.code]?.scopeCode || 'SELF') as ModulePermission) }
   }
   specByCode.value = next
   ElMessage.info('模板已载入, 点击保存生效')
 }
 
-// ── 加载 / 重置 ─────────────────────────────────────────────
+// ── 加载 / 重置 ──
 async function load() {
   if (!props.currentRole) return
   loading.value = true
@@ -388,7 +266,13 @@ async function load() {
     const next: Record<string, ScopeSpecVM> = {}
     for (const m of props.modules) {
       const mp = byCode.get(m.code)
-      next[m.code] = mp ? toSpec(mp) : { orgAnchor: 'SELF' }
+      // relationGrants=关系条件; 同时透传 axis②③ (排除关系/类型过滤) 防丢
+      next[m.code] = {
+        relationGrants: permissionToGrants(mp),
+        subjectRelInclude: mp?.subjectRelInclude,
+        subjectRelExclude: mp?.subjectRelExclude,
+        typeFilter: mp?.typeFilter,
+      }
     }
     specByCode.value = next
   } catch (e: any) {
@@ -412,29 +296,20 @@ watch(
 
 async function handleReset() {
   try {
-    await ElMessageBox.confirm('重置为已保存的配置? 未保存的修改将丢失.', '重置确认', {
-      type: 'warning',
-    })
+    await ElMessageBox.confirm('重置为已保存的配置? 未保存的修改将丢失.', '重置确认', { type: 'warning' })
     await load()
   } catch {
     /* cancelled */
   }
 }
 
-/** 逐资源 spec → per-resource commands (统一, 无默认展开)。单 grant 按 allowedScopes 钳制 (多锚点不钳)。 */
+/** 逐资源 grants → per-resource commands (后端优先用 relationGrants)。 */
 function buildCommands(): ModulePermission[] {
   const managedCodes = props.modules.map(m => m.code)
-  const cmds = managedCodes.map(code => {
-    const spec = specOf(code)
-    // 跳过钳制: ① 多锚点 (>1 grant, 无单一轴①) ② PLUGIN_DIM (维度码如 BY_CLASS 非预设, 钳会腐蚀)。
-    // 仅对预设 org 锚点 (ALL/PRIMARY_ORG/CUSTOM/RELATION/SELF) 按 allowedScopes 钳制 (防超范围/坏 SQL)。
-    const skipClamp = (spec.relationGrants?.length ?? 0) > 1 || spec.orgAnchor === 'PLUGIN_DIM'
-    const finalSpec = skipClamp
-      ? spec
-      : clampSpecToAllowed(spec, moduleByCode.value.get(code)?.allowedScopes)
-    return specToCommand(code, finalSpec)
-  })
-  // 未托管模块直通保留 (后端 delete-all-then-insert)
+  // 全 spec 下发 (relationGrants + 透传的 axis②③); 后端优先用 relationGrants。
+  const cmds = managedCodes.map(code =>
+    specToCommand(code, specByCode.value[code] || { relationGrants: grantsOf(code) })
+  )
   const managedSet = new Set(managedCodes)
   for (const mp of loadedPermissions.value) {
     if (!managedSet.has(mp.moduleCode)) {
@@ -445,7 +320,6 @@ function buildCommands(): ModulePermission[] {
   return cmds
 }
 
-// ── 保存 ────────────────────────────────────────────────────
 async function handleSave() {
   if (!props.currentRole) return
   if (props.modules.length === 0) {
@@ -453,19 +327,15 @@ async function handleSave() {
     return
   }
   const cmds = buildCommands()
-
-  // Guard: 禁用插件的资源不允许配置非 SELF
+  // Guard: 禁用插件的资源不允许配置非"我创建的/SELF"
   const violators = cmds.filter(c => {
     const m = moduleByCode.value.get(c.moduleCode)
     return m?.pluginEnabled === false && c.scopeCode !== 'SELF'
   })
   if (violators.length) {
-    ElMessage.warning(
-      `${violators.length} 个资源所属插件已禁用, 请先启用插件或将其范围设为"仅本人"`
-    )
+    ElMessage.warning(`${violators.length} 个资源所属插件已禁用, 请先启用插件或将其范围设为"我创建的"`)
     return
   }
-
   saving.value = true
   try {
     await dataPermissionApi.saveConfig(props.currentRole.id, {
@@ -482,7 +352,7 @@ async function handleSave() {
   }
 }
 
-// ── 模拟用户 ────────────────────────────────────────────────
+// ── 模拟用户 ──
 const simulateUserId = ref<number | null>(null)
 const simulating = ref(false)
 const simulateResults = ref<SimulateResult[]>([])

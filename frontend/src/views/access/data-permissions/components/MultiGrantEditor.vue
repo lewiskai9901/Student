@@ -5,8 +5,8 @@
         class="inline-flex h-4 w-4 items-center justify-center rounded-full bg-indigo-100 text-[9px] text-indigo-600"
         >∨</span
       >
-      多锚点 — 满足<b class="mx-0.5">任一</b>条即可见
-      <span class="font-normal text-gray-400">（每行 = 一种"按某关系锚定到某范围"的授予）</span>
+      显示范围 — 满足<b class="mx-0.5">任一</b>条即可见
+      <span class="font-normal text-gray-400">（每条 = 经某关系关联的数据）</span>
     </div>
 
     <div
@@ -14,65 +14,36 @@
       :key="i"
       class="flex flex-wrap items-center gap-2 rounded border border-gray-200 bg-white px-2 py-1.5 pl-5"
     >
-      <!-- 关系 -->
+      <span class="text-[11px] text-gray-400">经</span>
       <el-select
-        :model-value="g.relation"
+        :model-value="keyOf(g)"
         size="small"
-        placeholder="关系"
+        placeholder="选择关系"
         :disabled="disabled"
-        style="width: 130px"
-        @update:model-value="(v: any) => patch(i, { relation: v as string })"
+        style="width: 240px"
+        @update:model-value="(v: any) => patch(i, v as string)"
       >
         <el-option
-          v-for="r in relationOptions"
-          :key="r.relationCode"
-          :label="relLabel(r.relationCode)"
-          :value="r.relationCode"
+          v-for="o in relationOptions"
+          :key="o.key"
+          :label="o.label"
+          :value="o.key"
         />
       </el-select>
-      <span class="text-[11px] text-gray-400">→</span>
-      <!-- PROVIDER 关系: 范围由插件 resolver 按当前用户算, 主体不可选 (引擎忽略 subject) -->
-      <template v-if="isProvider(g.relation)">
-        <span
-          class="inline-flex items-center gap-1 rounded bg-amber-50 px-2 py-0.5 text-[11px] text-amber-700"
-          title="此关系由插件接口按当前用户实时解析, 范围不需(也无法)手选"
-        >
-          <Zap class="h-3 w-3" /> 由插件解析
-        </span>
-      </template>
-      <template v-else>
-        <!-- 主体范围 -->
-        <el-select
-          :model-value="g.subject"
-          size="small"
-          placeholder="范围"
-          :disabled="disabled"
-          style="width: 120px"
-          @update:model-value="(v: any) => patch(i, { subject: v as SubjectScope })"
-        >
-          <el-option
-            v-for="s in subjectOptions"
-            :key="s.value"
-            :label="s.label"
-            :value="s.value"
-          />
-        </el-select>
-        <!-- 含下级 (锚到组织的范围才有意义) -->
-        <el-checkbox
-          v-if="subtreeRelevant(g.subject)"
-          :model-value="!!g.subtree"
-          size="small"
-          :disabled="disabled"
-          @update:model-value="(v: any) => patch(i, { subtree: !!v })"
-        >
-          <span class="text-[11px]">含下级</span>
-        </el-checkbox>
-      </template>
-      <!-- 删除该行 -->
+      <!-- 含下级: 仅"和我有X关系的组织"有意义 -->
+      <el-checkbox
+        v-if="keyIsOrg(keyOf(g))"
+        :model-value="!!g.subtree"
+        size="small"
+        :disabled="disabled"
+        @update:model-value="(v: any) => toggleSubtree(i, !!v)"
+      >
+        <span class="text-[11px]">含下级</span>
+      </el-checkbox>
       <button
         class="ml-auto flex h-5 w-5 items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500 disabled:opacity-40"
         :disabled="disabled || grants.length <= 1"
-        :title="grants.length <= 1 ? '至少保留一条' : '删除该锚点'"
+        :title="grants.length <= 1 ? '至少保留一条' : '删除该条'"
         @click="removeGrant(i)"
       >
         <X class="h-3 w-3" />
@@ -84,99 +55,117 @@
       :disabled="disabled"
       @click="addGrant"
     >
-      <Plus class="h-3 w-3" /> 添加锚点
+      <Plus class="h-3 w-3" /> 添加条件
     </button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { X, Plus, Zap } from 'lucide-vue-next'
+import { ref, computed, watch } from 'vue'
+import { X, Plus } from 'lucide-vue-next'
 import { dataPermissionApi, type ResourceRelationOption } from '@/api/access'
-import type { RelationGrant, SubjectScope } from '@/types/access'
+import { relationTypeApi, type RelationTypeDef } from '@/api/relationType'
+import type { RelationGrant } from '@/types/access'
+import { grantToKey, keyToGrant, keyIsOrg, ensureGrants, type RelOption } from '../composables/scopeRelation'
 
 const props = defineProps<{
-  /** 该例外资源的模块码 (拉取可锚定关系) */
+  /** 该资源模块码 (拉取可锚定的资源关系) */
   moduleCode: string
-  /** 当前多 grant 数组 */
+  /** 当前 grant 数组 (一切皆关系; 空=创建者) */
   modelValue: RelationGrant[]
   disabled?: boolean
 }>()
 const emit = defineEmits<{ 'update:model-value': [RelationGrant[]] }>()
 
-// 本地副本 (≥1 条保证)
-const grants = ref<RelationGrant[]>(
-  props.modelValue?.length ? props.modelValue.map(g => ({ ...g })) : [{ relation: 'creator', subject: 'SELF' }]
-)
+const grants = ref<RelationGrant[]>(ensureGrants(props.modelValue).map(g => ({ ...g })))
 watch(
   () => props.modelValue,
   v => {
-    if (v && JSON.stringify(v) !== JSON.stringify(grants.value)) {
-      grants.value = v.length ? v.map(g => ({ ...g })) : [{ relation: 'creator', subject: 'SELF' }]
+    if (JSON.stringify(v) !== JSON.stringify(grants.value)) {
+      grants.value = ensureGrants(v).map(g => ({ ...g }))
     }
   }
 )
 
-// ── 关系选项 (数据驱动: resource_relations) ──────────────────
-const relationOptions = ref<ResourceRelationOption[]>([])
-async function loadRelations() {
+function keyOf(g: RelationGrant): string {
+  return grantToKey(g)
+}
+
+// ── 关系下拉来源: 特殊 + 用户↔组织关系 + 资源关系(PROVIDER/RECORD) + 维度(保全) ──
+const orgRels = ref<RelationTypeDef[]>([])
+const resRels = ref<ResourceRelationOption[]>([])
+
+async function loadOrgRelations() {
   try {
-    relationOptions.value = (await dataPermissionApi.getResourceRelations(props.moduleCode)) || []
+    const all = (await relationTypeApi.list()) || []
+    orgRels.value = all.filter(r => (r.toType || '').toUpperCase() === 'ORG_UNIT')
   } catch {
-    relationOptions.value = []
+    orgRels.value = []
   }
 }
-watch(() => props.moduleCode, loadRelations, { immediate: true })
+async function loadResRelations() {
+  try {
+    const all = (await dataPermissionApi.getResourceRelations(props.moduleCode)) || []
+    // 只取 PROVIDER / RECORD_RELATION (owner_org/creator 已由特殊项/org 关系覆盖)
+    resRels.value = all.filter(r => r.storageKind === 'PROVIDER' || r.storageKind === 'RECORD_RELATION')
+  } catch {
+    resRels.value = []
+  }
+}
+loadOrgRelations()
+watch(() => props.moduleCode, loadResRelations, { immediate: true })
 
-// 关系码 → 可读标签 (通用核心关系; 其余原样显示)
-const REL_LABELS: Record<string, string> = {
-  creator: '创建者',
-  owner_org: '所属组织',
-  reviewer: '复核',
-  inspected: '受检',
-  member: '成员',
-  admin: '管理',
-}
-function relLabel(code: string): string {
-  return REL_LABELS[code] || code
-}
+// 资源关系/维度的人话标签: 行业词不硬编码进核心 (no-industry-vocab 守护)。
+// 资源关系名暂用资源关系端点回传的码 (reviewer/inspected…); 维度仅为"保全已配"显示码即可。
+const RES_LABEL: Record<string, string> = { reviewer: '复核', inspected: '受检' }
 
-/** 该关系是否 PROVIDER 存储 (接口式): 范围由插件 resolver 按当前用户算, 引擎忽略 grant.subject。 */
-function isProvider(code: string): boolean {
-  return relationOptions.value.some(r => r.relationCode === code && r.storageKind === 'PROVIDER')
-}
-
-// ── 主体范围选项 ─────────────────────────────────────────────
-const subjectOptions: { value: SubjectScope; label: string }[] = [
-  { value: 'SELF', label: '仅本人' },
-  { value: 'MY_ORG', label: '本组织' },
-  { value: 'ALL', label: '全部' },
-]
-/** 含下级仅对锚到组织的范围有意义 (MY_ORG)。 */
-function subtreeRelevant(subject: SubjectScope): boolean {
-  return subject === 'MY_ORG'
-}
+const relationOptions = computed<RelOption[]>(() => {
+  const opts: RelOption[] = [
+    { key: 'creator', label: '我创建的', kind: 'creator' },
+    { key: 'all', label: '全部（不限组织）', kind: 'all' },
+    ...orgRels.value.map(r => ({
+      key: 'org:' + r.relationCode,
+      label: `和我有「${r.relationName || r.relationCode}」关系的组织`,
+      kind: 'org' as const,
+      code: r.relationCode,
+    })),
+    ...resRels.value.map(r => ({
+      key: 'res:' + r.relationCode,
+      label: (RES_LABEL[r.relationCode] || r.relationCode) +
+        (r.storageKind === 'PROVIDER' ? '（由插件解析）' : '（指派）'),
+      kind: 'res' as const,
+      code: r.relationCode,
+    })),
+  ]
+  // 保全当前 grants 里的 PLUGIN_DIM 维度 (下拉源没有也要能显示/回写, 护金标准 BY_CLASS)
+  const seen = new Set(opts.map(o => o.key))
+  for (const g of grants.value) {
+    const k = grantToKey(g)
+    if (k.startsWith('dim:') && !seen.has(k)) {
+      const dim = g.subjectParam || ''
+      opts.push({ key: k, label: '维度：' + dim, kind: 'dim', code: dim })
+      seen.add(k)
+    }
+  }
+  return opts
+})
 
 // ── 增删改 ───────────────────────────────────────────────────
 function emitChange() {
   emit('update:model-value', grants.value.map(g => ({ ...g })))
 }
-function patch(i: number, partial: Partial<RelationGrant>) {
-  grants.value[i] = { ...grants.value[i], ...partial }
-  // 切到 PROVIDER 关系: subject 由插件解析, 归一为 SELF + 清 subtree (引擎忽略, 仅保存储干净)
-  if (partial.relation && isProvider(partial.relation)) {
-    grants.value[i].subject = 'SELF'
-    delete grants.value[i].subtree
-  }
-  // 切到非组织范围时清掉 subtree, 避免脏字段
-  if (partial.subject && !subtreeRelevant(partial.subject)) {
-    delete grants.value[i].subtree
-  }
+function patch(i: number, key: string) {
+  // 保留原 subtree (若新关系仍是 org 类)
+  const subtree = !!grants.value[i].subtree
+  grants.value[i] = keyToGrant(key, keyIsOrg(key) ? subtree : false)
+  emitChange()
+}
+function toggleSubtree(i: number, v: boolean) {
+  grants.value[i] = { ...grants.value[i], subtree: v }
   emitChange()
 }
 function addGrant() {
-  const firstRel = relationOptions.value[0]?.relationCode || 'creator'
-  grants.value.push({ relation: firstRel, subject: 'SELF' })
+  grants.value.push({ relation: 'creator', subject: 'SELF' })
   emitChange()
 }
 function removeGrant(i: number) {
