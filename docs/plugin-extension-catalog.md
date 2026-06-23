@@ -54,7 +54,7 @@ public class HealthcareManifest implements PluginPackage {
 
 ---
 
-## B. Contribution 9 种
+## B. Contribution 10 种
 
 ### B1. EntityTypeContribution — 实体子类型 (user/org/place)
 
@@ -243,6 +243,73 @@ Stream.of(
 ### B9. DomainContribution — 扩展占位
 
 未来非结构化贡献的口子. 当前不用.
+
+### B10. ResourceRelationContribution — 数据权限锚定 (**让你的资源接入行级数据权限**)
+
+**什么**: 声明"你的资源(表)如何按组织/创建者/关系做行级过滤"。**这是让 `@DataPermission` 真正生效的前提** ——
+mapper 标了 `@DataPermission(module="X")` 还不够,必须在此登记资源 X 的锚点关系,否则启动 fail-fast
+(`ResourceRelationRegistry` 注册表为空异常 / 该模块未注册锚点)。统一锚定模型,见
+`docs/plans/2026-06-18-unified-data-anchoring-design.md`。
+
+**一个资源 = 一组具名关系**,每条关系用工厂声明其物理存储 (`storage_kind`):
+
+```java
+// 在 PluginPackage.contribute() 里, 用 ResourceRelationContribution 包装 ResourceRelationDef:
+Stream.of(
+  // ① COLUMN — 关系就是资源表的一列 (最常见; 单值)
+  new Contribution.ResourceRelationContribution("HEALTH",
+      ResourceRelationDef.column("patient_visit", "owner_org", "所属科室", "ORG_UNIT", "org_unit_id")
+          .withAutoFill()          // 写入时自动填该列 (creator/owner_org 常用)
+          .withGrantsByDefault()   // 无显式授予时默认参与可见性 (一般 owner_org=true)
+          .withInsertGuard()),     // R8: 建记录时校 owner_org ∈ 用户可写组织 (仅 ownership 语义! 见下)
+  new Contribution.ResourceRelationContribution("HEALTH",
+      ResourceRelationDef.column("patient_visit", "creator", "创建者", "USER", "created_by").withAutoFill()),
+
+  // ② SUBJECT_GRAPH — 资源本身是主体(user), 组织归属走 access_relations member 图 (无列)
+  new Contribution.ResourceRelationContribution("EDU",
+      ResourceRelationDef.subjectGraph("student", "owner_org", "所属组织", "ORG_UNIT",
+          Cardinality.SINGLE, "member").withGrantsByDefault()),
+
+  // ③ RECORD_RELATION — 多值, 存独立 record_relations 表 (一条记录关联多主体, 如复核员)
+  new Contribution.ResourceRelationContribution("CORE",
+      ResourceRelationDef.recordRelation("inspection_record", "reviewer", "复核员", "USER", "reviewer")),
+
+  // ④ PROVIDER — 接口式: 关系逻辑不落列/不入表, 由你的 RecordRelationResolver bean 算 (返回参数化子查询)
+  new Contribution.ResourceRelationContribution("EDU",
+      ResourceRelationDef.provider("student", "taught_by", "任课老师", "USER", "teachingStudentResolver"))
+)
+```
+
+**storage_kind 选型**:
+
+| 工厂 | 何时用 | 物理 |
+|---|---|---|
+| `column(...)` | 关系=资源表一列, 单值 | 业务表列 (可索引/可 JOIN) |
+| `subjectGraph(...)` | 资源本身是主体, 组织走成员图 | `access_relations` |
+| `recordRelation(...)` | 多值 / 动态指派 | `record_relations` 表 |
+| `provider(...)` | 逻辑复杂、不愿落列 (跨表推导/外部规则) | 插件 `RecordRelationResolver` bean |
+
+**PROVIDER resolver** (实现 `RecordRelationResolver`, `@Component("beanName")`):
+
+```java
+@Component("teachingStudentResolver")
+public class TeachingStudentResolver implements RecordRelationResolver {
+    @Override public SqlFragment subquery(ScopeContext ctx) {       // 主模式: 参数化子查询 (下推 DB)
+        return SqlFragment.of("SELECT us.id FROM user_student us JOIN ... WHERE ta.teacher_id = :me",
+                Map.of("me", ctx.userId()));
+    }
+    // 或 default List<Long> recordIds(ScopeContext ctx) — 退化模式 (有界 id 集)
+}
+```
+启动期 `ProviderResolverStartupValidator` 校验每个 PROVIDER 的 bean 真存在 (缺则 WARN; 运行期 fail-closed 拒绝)。
+
+**⚠ withInsertGuard 语义红线 (R8 P3-INSERT)**: 只对 **owner_org = "该行归属/拥有的组织"** (ownership) 资源加;
+**勿对 target 语义加** (如检查 submission 的 org_unit_id = 被检查组织, 非创建者归属 → 加了会误拦合法跨组织创建)。
+也勿对 owner_org=自身 id 的资源加 (如 org_unit, 新 id 不在任何现存可写集 → 误拒创建)。
+INSERT 授权对接口级/方法级 mapper 均生效 (any-method 解析), 但**默认关闭**, 只有标了 `withInsertGuard()` 才启用。
+
+**生效范围**: 声明后, READ (SELECT 注入) / UPDATE·DELETE (WHERE 注入) / INSERT (withInsertGuard 时前置校验) 全自动。
+管理员在「访问控制 → 角色权限 → 数据权限」按关系配 `relation_grants` (多锚点 OR)。
 
 ---
 
