@@ -60,12 +60,16 @@ fail-safe 设计保证最坏情况只是"漏拦"(回到现状),绝不"误拦合�
 - ✅ 装配验证: 真启动 0 ERROR + dpt_ct READ 金标准零回归 + 字节等价 harness 绿。
 - ✅ fail-safe: 无 org 列 / 取不到值 / 无 grants / 异常 → 放行。
 
+**✅ 真库端到端 E2E 已证 (2026-06-22, teaching_task)**:
+throwaway 角色 teaching_task WRITE=CUSTOM_ORG[O1] + 用户 ttu; POST /teaching/tasks:
+- orgUnitId=O2(越界)→ `AccessDeniedException: 无权在该组织下创建记录 (org=O2, module=teaching_task)`
+  从 enforceInsertAuthz 抛; 探针 `SELECT EXISTS(SELECT 1 FROM org_units WHERE id=O2 AND ((id IN (O1))) AND deleted=0)` → false → 拒绝。
+- orgUnitId=O1(可写)→ 过授权(探针 true), 死在 insert FK 约束(非授权错)= 授权放行。
+真 MyBatis insert → 取参(真 PO)→ 探针(真 org_units)→ deny 全链证实。
+
 **⚠ 已知覆盖边界 (诚实记录, 待 follow-up)**:
 1. **仅接口级 @DataPermission mapper 的 insert 被覆盖**。注解解析方法级优先、回退接口级
    (`resolveDataPermissionAnnotation`);方法级 mapper(多数 inspection mapper)的 `BaseMapper.insert`
    既无方法注解也无接口注解 → INSERT-authz **不触发**。要全覆盖需给这些 mapper 加接口级注解或显式注解 insert。
-   接口级资源(grade_batch/teaching_task/student_grade/course_evaluation 等教务表)已覆盖。
-2. **广覆盖真库双向 E2E 待补**: deny 逻辑已单测证, 探针 SQL 复用已证 ScopeEvaluator; 但跨真实资源
-   (auto-fill org_unit_id 的 inspection / Map-create 的教务)的端到端真库 deny 证待专项补
-   (各资源 create 路径 org_unit_id 来源各异: 请求体 / target 派生 / auto-fill, 需逐一)。
-3. **PROVIDER / 无 org 锚资源**: 不参与(放行), 设计如此。
+   接口级资源(grade_batch/teaching_task/student_grade/course_evaluation 等教务表)已覆盖 (teaching_task 已 E2E 证)。
+2. **PROVIDER / 无 org 锚资源**: 不参与(放行), 设计如此。
