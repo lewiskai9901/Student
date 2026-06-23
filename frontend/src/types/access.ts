@@ -236,11 +236,23 @@ export type OrgAnchor = 'ALL' | 'SELF' | 'PRIMARY_ORG' | 'RELATION' | 'CUSTOM_OR
 export type SubjectScope = 'SELF' | 'MY_ORG' | 'ALL' | 'RELATION' | 'CUSTOM' | 'PLUGIN_DIM'
 
 /**
- * 关系授予 (R3/R4) — 一条"按某关系锚定到某主体范围"的授予; 多条之间 OR 组合。
+ * 多级关系链中间跳 (P4) — 我 →[relations]→ toType 实体。与后端 Hop 记录往返。
+ *  - relations 同级多关系; combine AND=交集(同时具备)/OR=并集(任一)
+ *  - toType 到达实体类型 (三大主体); subtree 组织跳含下级
+ */
+export interface ChainHop {
+  relations: string[]
+  combine: 'AND' | 'OR'
+  toType: 'user' | 'org_unit' | 'place'
+  subtree?: boolean
+}
+
+/**
+ * 关系授予 (R3/R4/P4) — 一条"按某关系锚定到某主体范围"的授予; 多条之间 OR 组合。
  * 与后端 RelationGrant 值对象严格往返。
  */
 export interface RelationGrant {
-  /** 关系码 (如 creator / owner_org / reviewer / inspected) */
+  /** 关系码 (如 creator / owner_org / reviewer / inspected); 含 hops 时为终端锚点 */
   relation: string
   /** 主体范围 */
   subject: SubjectScope
@@ -250,6 +262,8 @@ export interface RelationGrant {
   subtree?: boolean
   /** 指定组织 id 集 (CUSTOM 时) */
   orgIds?: (number | string)[]
+  /** P4 多级关系链中间跳 (空=1 跳; 非空=我→hops→末实体, relation 作终端锚点 over 末实体集) */
+  hops?: ChainHop[]
 }
 
 /**

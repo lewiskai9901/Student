@@ -9,45 +9,77 @@
       <span class="font-normal text-gray-400">（每条 = 经某关系关联的数据）</span>
     </div>
 
-    <div
-      v-for="(g, i) in grants"
-      :key="i"
-      class="flex flex-wrap items-center gap-2 rounded border border-gray-200 bg-white px-2 py-1.5 pl-5"
-    >
-      <span class="text-[11px] text-gray-400">经</span>
-      <el-select
-        :model-value="keyOf(g)"
-        size="small"
-        placeholder="选择关系"
-        :disabled="disabled"
-        style="width: 240px"
-        @update:model-value="(v: any) => patch(i, v as string)"
-      >
-        <el-option
-          v-for="o in relationOptions"
-          :key="o.key"
-          :label="o.label"
-          :value="o.key"
-        />
-      </el-select>
-      <!-- 含下级: 仅"和我有X关系的组织"有意义 -->
-      <el-checkbox
-        v-if="keyIsOrg(keyOf(g))"
-        :model-value="!!g.subtree"
-        size="small"
-        :disabled="disabled"
-        @update:model-value="(v: any) => toggleSubtree(i, !!v)"
-      >
-        <span class="text-[11px]">含下级</span>
-      </el-checkbox>
-      <button
-        class="ml-auto flex h-5 w-5 items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500 disabled:opacity-40"
-        :disabled="disabled || grants.length <= 1"
-        :title="grants.length <= 1 ? '至少保留一条' : '删除该条'"
-        @click="removeGrant(i)"
-      >
-        <X class="h-3 w-3" />
-      </button>
+    <div v-for="(g, i) in grants" :key="i" class="rounded border border-gray-200 bg-white px-2 py-1.5 pl-5">
+      <!-- 多级关系链 (hops 非空) -->
+      <template v-if="isChain(g)">
+        <div class="flex items-start gap-2">
+          <ChainConditionEditor
+            class="flex-1"
+            :module-code="moduleCode"
+            :model-value="g"
+            :disabled="disabled"
+            @update:model-value="(v: RelationGrant) => updateGrant(i, v)"
+          />
+          <button
+            class="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500 disabled:opacity-40"
+            :disabled="disabled || grants.length <= 1"
+            :title="grants.length <= 1 ? '至少保留一条' : '删除该条'"
+            @click="removeGrant(i)"
+          >
+            <X class="h-3 w-3" />
+          </button>
+        </div>
+        <button
+          class="mt-0.5 pl-3 text-[11px] text-gray-500 hover:text-indigo-600 hover:underline disabled:opacity-40"
+          :disabled="disabled"
+          @click="toSimple(i)"
+        >
+          改回简单关系
+        </button>
+      </template>
+
+      <!-- 简单关系 (1 跳) -->
+      <template v-else>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-[11px] text-gray-400">经</span>
+          <el-select
+            :model-value="keyOf(g)"
+            size="small"
+            placeholder="选择关系"
+            :disabled="disabled"
+            style="width: 240px"
+            @update:model-value="(v: any) => patch(i, v as string)"
+          >
+            <el-option v-for="o in relationOptions" :key="o.key" :label="o.label" :value="o.key" />
+          </el-select>
+          <el-checkbox
+            v-if="keyIsOrg(keyOf(g))"
+            :model-value="!!g.subtree"
+            size="small"
+            :disabled="disabled"
+            @update:model-value="(v: any) => toggleSubtree(i, !!v)"
+          >
+            <span class="text-[11px]">含下级</span>
+          </el-checkbox>
+          <button
+            class="ml-auto flex h-5 w-5 items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500 disabled:opacity-40"
+            :disabled="disabled || grants.length <= 1"
+            :title="grants.length <= 1 ? '至少保留一条' : '删除该条'"
+            @click="removeGrant(i)"
+          >
+            <X class="h-3 w-3" />
+          </button>
+        </div>
+        <!-- 仅"和我有X关系的组织"可升级为多级链 (终端 owner_org) -->
+        <button
+          v-if="keyIsOrg(keyOf(g))"
+          class="mt-0.5 pl-3 text-[11px] text-gray-500 hover:text-indigo-600 hover:underline disabled:opacity-40"
+          :disabled="disabled"
+          @click="toChain(i)"
+        >
+          改为多级关系链（经场所/上级等中转）
+        </button>
+      </template>
     </div>
 
     <button
@@ -65,8 +97,9 @@ import { ref, computed, watch } from 'vue'
 import { X, Plus } from 'lucide-vue-next'
 import { dataPermissionApi, type ResourceRelationOption } from '@/api/access'
 import { relationTypeApi, type RelationTypeDef } from '@/api/relationType'
-import type { RelationGrant } from '@/types/access'
+import type { RelationGrant, ChainHop } from '@/types/access'
 import { grantToKey, keyToGrant, keyIsOrg, ensureGrants, type RelOption } from '../composables/scopeRelation'
+import ChainConditionEditor from './ChainConditionEditor.vue'
 
 const props = defineProps<{
   /** 该资源模块码 (拉取可锚定的资源关系) */
@@ -89,6 +122,33 @@ watch(
 
 function keyOf(g: RelationGrant): string {
   return grantToKey(g)
+}
+
+// ── P4 多级关系链: 条件可在"简单关系"与"关系链"间切换 ──
+function isChain(g: RelationGrant): boolean {
+  return !!g.hops && g.hops.length > 0
+}
+/** 整条 grant 替换 (ChainConditionEditor 回写)。 */
+function updateGrant(i: number, g: RelationGrant) {
+  grants.value[i] = g
+  emitChange()
+}
+/** 简单"和我有X关系的组织" → 多级链 (该关系作首跳, 终端 owner_org)。 */
+function toChain(i: number) {
+  const g = grants.value[i]
+  const k = grantToKey(g)
+  const rel = k.startsWith('org:') ? k.slice(4) : 'member'
+  const hop: ChainHop = { relations: [rel], combine: 'OR', toType: 'org_unit', subtree: !!g.subtree }
+  grants.value[i] = { relation: 'owner_org', subject: 'SELF', hops: [hop] }
+  emitChange()
+}
+/** 多级链 → 简单关系 (取首跳首关系, 退回"和我有X关系的组织")。 */
+function toSimple(i: number) {
+  const g = grants.value[i]
+  const firstHop = g.hops?.[0]
+  const rel = firstHop?.relations?.[0] || 'member'
+  grants.value[i] = keyToGrant('org:' + rel, !!firstHop?.subtree)
+  emitChange()
 }
 
 // ── 关系下拉来源: 特殊 + 用户↔组织关系 + 资源关系(PROVIDER/RECORD) + 维度(保全) ──
