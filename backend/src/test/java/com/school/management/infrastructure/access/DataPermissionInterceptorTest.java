@@ -77,6 +77,9 @@ class DataPermissionInterceptorTest {
     @Mock
     private PluginDataScopeRouter pluginDataScopeRouter;
 
+    @Mock
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
     private DataPermissionInterceptor interceptor;
     private ScopeEvaluator scopeEvaluator;
     private ResourceRelationRegistry resourceRelationRegistry;
@@ -86,6 +89,7 @@ class DataPermissionInterceptorTest {
         interceptor = new DataPermissionInterceptor();
         ReflectionTestUtils.setField(interceptor, "dynamicModuleService", dynamicModuleService);
         ReflectionTestUtils.setField(interceptor, "dataPermissionPolicyService", dataPermissionPolicyService);
+        ReflectionTestUtils.setField(interceptor, "jdbcTemplate", jdbcTemplate);
         // Tier 1: buildMeta 锚点改由 resourceRelationRegistry 驱动 (注解锚兜底已删)。
         // 桩 forResource → 各 module 的 DerivedAnchor: student=列锚, user=成员图。
         // (字段, 便于个别测试覆写为 empty 验证 fail-fast)
@@ -741,7 +745,7 @@ class DataPermissionInterceptorTest {
         }
 
         @Test
-        @DisplayName("INSERT 语句 → 跳过 (无 WHERE, 由应用层保证归属)")
+        @DisplayName("INSERT 语句 → 走 P3-INSERT 授权 (不再早退); moduleConfig 缺失 → fail-safe 放行")
         void insertStatementSkipped() throws Throwable {
             UserContextHolder.setContext(userWithScopedRoles(
                     List.of(scopedRole(1L, ScopeType.ALL, 0L, null))));
@@ -752,8 +756,73 @@ class DataPermissionInterceptorTest {
 
             Object result = interceptor.intercept(invocation);
 
+            // R8 P3-INSERT: INSERT 不再早退, 进入 annotation/moduleConfig 解析; moduleConfig 未 mock=null
+            // → moduleConfig==null 早退放行 (无 SQL 注入)。getModuleConfig 现会被调用一次 (行为变更)。
             assertThat(result).isEqualTo("ok");
-            verify(dynamicModuleService, never()).getModuleConfig(anyLong(), anyString());
+            verify(dynamicModuleService).getModuleConfig(anyLong(), anyString());
+        }
+
+        // ── R8 P3-INSERT 授权 deny/allow 逻辑 (org-bounded grant 探针 → 越界拒绝) ──
+
+        private com.school.management.domain.access.model.valueobject.ScopeSpec grantSpec(
+                String relation, com.school.management.domain.access.model.SubjectScope subject) {
+            return com.school.management.domain.access.model.valueobject.ScopeSpec.builder()
+                    .relationGrants(List.of(new com.school.management.domain.access.model.valueobject.RelationGrant(
+                            relation, subject, null, false, null)))
+                    .build();
+        }
+
+        private BoundSql insertBoundSql(Object ownerOrg) {
+            java.util.Map<String, Object> entity = new java.util.HashMap<>();
+            entity.put("orgUnitId", ownerOrg);
+            return new BoundSql(new Configuration(), "INSERT INTO student (org_unit_id) VALUES (?)",
+                    new ArrayList<ParameterMapping>(), entity);
+        }
+
+        private void primeInsert(com.school.management.domain.access.model.valueobject.ScopeSpec spec) {
+            UserContextHolder.setContext(userWithScopedRoles(
+                    List.of(scopedRole(1L, ScopeType.ORG_UNIT, 100L, "1.10.100."))));
+            when(mappedStatement.getId()).thenReturn(AnnotatedMapper.class.getName() + ".insert");
+            when(mappedStatement.getSqlCommandType()).thenReturn(SqlCommandType.INSERT);
+            when(dynamicModuleService.getModuleConfig(anyLong(), anyString())).thenReturn(moduleConfig(true, ""));
+            when(dataPermissionPolicyService.getScopeSpec(anyLong(), anyLong(), anyString(), eq("WRITE")))
+                    .thenReturn(spec);
+        }
+
+        @Test
+        @DisplayName("R8 P3-INSERT: owner_org 越界 (org-bounded grant, 探针 false) → AccessDeniedException")
+        void insertDeniedWhenOrgOutOfScope() throws Throwable {
+            primeInsert(grantSpec("owner_org", com.school.management.domain.access.model.SubjectScope.MY_ORG));
+            when(jdbcTemplate.queryForObject(anyString(), any(Object[].class), eq(Boolean.class)))
+                    .thenReturn(false);   // owner_org 不在可写组织集
+            when(invocation.getTarget()).thenReturn(handler(insertBoundSql(999L)));
+
+            assertThatThrownBy(() -> interceptor.intercept(invocation))
+                    .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+            verify(invocation, never()).proceed();   // 拒绝 → 不执行 INSERT
+        }
+
+        @Test
+        @DisplayName("R8 P3-INSERT: owner_org 在范围内 (探针 true) → 放行 proceed")
+        void insertAllowedWhenOrgInScope() throws Throwable {
+            primeInsert(grantSpec("owner_org", com.school.management.domain.access.model.SubjectScope.MY_ORG));
+            when(jdbcTemplate.queryForObject(anyString(), any(Object[].class), eq(Boolean.class)))
+                    .thenReturn(true);
+            when(invocation.getTarget()).thenReturn(handler(insertBoundSql(100L)));
+            when(invocation.proceed()).thenReturn("ok");
+
+            assertThat(interceptor.intercept(invocation)).isEqualTo("ok");
+        }
+
+        @Test
+        @DisplayName("R8 P3-INSERT: creator grant → 新行我即创建者, 放行 (不探针)")
+        void insertAllowedForCreatorGrant() throws Throwable {
+            primeInsert(grantSpec("creator", com.school.management.domain.access.model.SubjectScope.SELF));
+            when(invocation.getTarget()).thenReturn(handler(insertBoundSql(999L)));
+            when(invocation.proceed()).thenReturn("ok");
+
+            assertThat(interceptor.intercept(invocation)).isEqualTo("ok");
+            verify(jdbcTemplate, never()).queryForObject(anyString(), eq(Boolean.class), (Object[]) any());
         }
 
         @Test

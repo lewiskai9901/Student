@@ -58,6 +58,10 @@ public class DataPermissionInterceptor implements Interceptor {
     @org.springframework.context.annotation.Lazy
     private ResourceRelationRegistry resourceRelationRegistry;
 
+    @Autowired
+    @org.springframework.context.annotation.Lazy
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
         if (!UserContextHolder.isDataPermissionEnabled()) {
@@ -96,11 +100,7 @@ public class DataPermissionInterceptor implements Interceptor {
         MappedStatement mappedStatement = (MappedStatement) metaObject.getValue("delegate.mappedStatement");
         String mapperId = mappedStatement.getId();
 
-        // INSERT statements have no WHERE clause — appending filter produces invalid SQL.
-        // Ownership for new rows is enforced by the application layer, not by row-level filters.
-        if (mappedStatement.getSqlCommandType() == org.apache.ibatis.mapping.SqlCommandType.INSERT) {
-            return invocation.proceed();
-        }
+        boolean isInsert = mappedStatement.getSqlCommandType() == org.apache.ibatis.mapping.SqlCommandType.INSERT;
 
         DataPermission dataPermission = getDataPermissionAnnotation(mapperId);
         if (dataPermission == null || !dataPermission.enabled()) {
@@ -116,7 +116,14 @@ public class DataPermissionInterceptor implements Interceptor {
             return invocation.proceed();
         }
 
-        // 动作类: SELECT→READ, 其余 (UPDATE/DELETE) → WRITE。INSERT 已在上方早退。
+        // INSERT (R8 P3-INSERT 授权): 无 WHERE 可注入 → 改为"新行 owner_org ∈ 用户可写组织"前置校验。
+        // 越界 throw (回滚, pre-insert 无副作用); fail-safe: 取不到列/值/异常 → 放行 (不阻断合法写)。
+        if (isInsert) {
+            enforceInsertAuthz(statementHandler.getBoundSql(), dataPermission, moduleConfig, userContext, tenantId);
+            return invocation.proceed();
+        }
+
+        // 动作类: SELECT→READ, 其余 (UPDATE/DELETE) → WRITE。INSERT 已在上方处理。
         // 当前所有 seed 行 apply_to=BOTH, READ 与 WRITE 都命中同一行 → 行为等价。
         String actionClass = mappedStatement.getSqlCommandType()
                 == org.apache.ibatis.mapping.SqlCommandType.SELECT ? "READ" : "WRITE";
@@ -372,6 +379,104 @@ public class DataPermissionInterceptor implements Interceptor {
         return new ResourceScopeMeta(
                 tableAlias, orgField, creatorField,
                 viaMembership, membershipSubjectColumn, typeField, annotation.module());
+    }
+
+    // ── R8 P3-INSERT 授权 ─────────────────────────────────────────────────────
+
+    /**
+     * INSERT 授权: 新行 owner_org ∈ 用户可写组织集才放行。设计见
+     * docs/plans/2026-06-22-p3-insert-authz-design.md。
+     *
+     * <p>逐锚点语义: ALL / creator 关系 / SELF 主体 → 放行 (新行天然属创建者自己 / 无界);
+     * owner_org 组织有界 (MY_ORG/RELATION/CUSTOM/PLUGIN_DIM) → owner_org 必 ∈ 可写组织。
+     * <p><b>fail-safe</b>: 无 org 列 (viaMembership/PROVIDER/仅 creator) / 取不到值 / 异常 → 放行,
+     * 绝不因插桩 bug 阻断合法 INSERT (最坏退回"漏拦"=现状)。越界才 throw。
+     */
+    private void enforceInsertAuthz(BoundSql boundSql, DataPermission annotation,
+                                    DataModulePO moduleConfig, UserContext ctx, Long tenantId) {
+        try {
+            ResourceScopeMeta meta = buildMeta(annotation, moduleConfig);
+            String orgField = meta.orgUnitField();
+            if (orgField == null || orgField.isEmpty()) return;   // 无 org 列锚 → 放行
+            Long ownerOrg = extractColumnValue(boundSql, orgField);
+            if (ownerOrg == null) return;                          // 取不到 owner_org → fail-safe 放行
+            if (!isOrgWritable(annotation.module(), ctx, tenantId, ownerOrg)) {
+                throw new org.springframework.security.access.AccessDeniedException(
+                        "无权在该组织下创建记录 (org=" + ownerOrg + ", module=" + annotation.module() + ")");
+            }
+        } catch (org.springframework.security.access.AccessDeniedException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("[InsertAuthz] 校验异常, fail-safe 放行 (module={}): {}", annotation.module(), e.toString());
+        }
+    }
+
+    /** 从 INSERT 参数实体读某列值 (snake_case 列 → 驼峰字段)，非数值/缺失 → null。 */
+    private Long extractColumnValue(BoundSql boundSql, String column) {
+        Object param = boundSql.getParameterObject();
+        if (param == null) return null;
+        String field = snakeToCamel(column);
+        MetaObject mo = SystemMetaObject.forObject(param);
+        if (!mo.hasGetter(field)) return null;
+        Object v = mo.getValue(field);
+        if (v instanceof Number) return ((Number) v).longValue();
+        if (v == null) return null;
+        try { return Long.parseLong(v.toString()); } catch (NumberFormatException e) { return null; }
+    }
+
+    private static String snakeToCamel(String s) {
+        StringBuilder sb = new StringBuilder();
+        boolean up = false;
+        for (char c : s.toCharArray()) {
+            if (c == '_') { up = true; }
+            else { sb.append(up ? Character.toUpperCase(c) : c); up = false; }
+        }
+        return sb.toString();
+    }
+
+    /**
+     * owner_org 是否在用户对该资源的可写组织集内 (合成 org 元探针 org_units)。
+     * 任一角色的 WRITE spec 含 ALL / creator 关系 / SELF 主体 → 放行; 否则各组织有界 grant
+     * 经 ScopeEvaluator 产 org 条件 (orgField=id 探 org_units), OR 合并后探针 owner_org。
+     */
+    private boolean isOrgWritable(String module, UserContext ctx, Long tenantId, Long ownerOrg) {
+        List<UserContext.ScopedRoleInfo> roles = ctx.getScopedRoles();
+        if (roles == null || roles.isEmpty()) return true;        // legacy 路径 → fail-safe 放行
+        // 合成 org 元: 探 org_units.id, 无别名; resourceCode=module (PLUGIN_DIM resolve 用)。
+        ResourceScopeMeta orgMeta = new ResourceScopeMeta("", "id", "", false, "id", null, module);
+        List<String> orgConds = new ArrayList<>();
+        ScopeCondition combined = new ScopeCondition();
+        int idx = 0;
+        for (UserContext.ScopedRoleInfo sr : roles) {
+            com.school.management.domain.access.model.valueobject.ScopeSpec spec =
+                    dataPermissionPolicyService.getScopeSpec(tenantId, sr.getRoleId(), module, "WRITE");
+            if (spec == null || spec.getRelationGrants() == null || spec.getRelationGrants().isEmpty()) {
+                return true;   // 无配置 → SELF (creator) → 新行我即创建者 → 放行
+            }
+            for (com.school.management.domain.access.model.valueobject.RelationGrant g : spec.getRelationGrants()) {
+                if (g.subject() == com.school.management.domain.access.model.SubjectScope.ALL) return true;
+                if (com.school.management.domain.access.model.valueobject.RelationGrant.CREATOR.equals(g.relation())) return true;
+                if (g.subject() == com.school.management.domain.access.model.SubjectScope.SELF) return true;
+            }
+            Long effOrg = ScopeType.ORG_UNIT.equals(sr.getScopeType()) ? sr.getScopeId() : ctx.getOrgUnitId();
+            String effPath = ScopeType.ORG_UNIT.equals(sr.getScopeType()) ? sr.getScopeOrgPath() : ctx.getOrgUnitPath();
+            ScopeCondition c = scopeEvaluator.toSqlCondition(spec, orgMeta, ctx, effOrg, effPath, tenantId, idx);
+            if (c != null && !c.sql.isEmpty()) {
+                orgConds.add(c.sql);
+                combined.params.addAll(c.params);
+                idx += c.params.size();
+            }
+        }
+        if (orgConds.isEmpty()) return true;                       // 无可判定条件 → fail-safe 放行
+        String where = orgConds.size() == 1 ? orgConds.get(0)
+                : "(" + String.join(") OR (", orgConds) + ")";
+        String sql = "SELECT EXISTS(SELECT 1 FROM org_units WHERE id = ? AND (" + where + ") AND deleted = 0)";
+        Object[] args = new Object[combined.params.size() + 1];
+        args[0] = ownerOrg;
+        for (int i = 0; i < combined.params.size(); i++) args[i + 1] = combined.params.get(i).value;
+        // 非 varargs 重载 (args, type): 顺序 args 在前, 避免 varargs 歧义 (亦便于 mock)。
+        Boolean ok = jdbcTemplate.queryForObject(sql, args, Boolean.class);
+        return Boolean.TRUE.equals(ok);
     }
 
     /**
