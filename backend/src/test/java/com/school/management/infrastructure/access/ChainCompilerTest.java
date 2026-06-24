@@ -168,6 +168,26 @@ class ChainCompilerTest {
     }
 
     @Test
+    @DisplayName("[P-E1] 链末=user: SUBJECT_GRAPH 终端退化为 user_id IN (S) 直接身份命中 (非成员子查询)")
+    void subjectGraphUserTerminalDirect() {
+        // 我[管理]组织 →[反·成员]用户 → 数据(student).user_id ∈ 这些用户 (你的例子"数据=这些用户")
+        Chain c = new Chain(
+                List.of(
+                        new com.school.management.domain.access.model.chain.Hop(
+                                List.of("admin"), Combine.OR, "org_unit", false,
+                                com.school.management.domain.access.model.chain.Direction.FORWARD),
+                        new com.school.management.domain.access.model.chain.Hop(
+                                List.of("member"), Combine.OR, "user", false,
+                                com.school.management.domain.access.model.chain.Direction.REVERSE)),
+                new Terminal(List.of("owner_org"), Combine.OR), List.of());
+        SqlFragment f = compiler().compileChain(c, STUDENT_S, 1L, T);
+        String sql = f.sql();
+        // 末=user → 直接 s.user_id IN (S), 不套 ccm 成员子查询
+        assertTrue(sql.startsWith("s.user_id IN (SELECT ar1.subject_id"), "末=user 应直接身份命中: " + sql);
+        assertFalse(sql.contains("ccm0"), "末=user 不应再套成员图子查询: " + sql);
+    }
+
+    @Test
     @DisplayName("未注册终端 → DENY (fail-closed)")
     void unregisteredTerminalDeny() {
         Chain c = new Chain(List.of(), new Terminal(List.of("bogus"), Combine.OR), List.of());

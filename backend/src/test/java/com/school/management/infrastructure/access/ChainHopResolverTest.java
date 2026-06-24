@@ -1,6 +1,7 @@
 package com.school.management.infrastructure.access;
 
 import com.school.management.domain.access.model.chain.Combine;
+import com.school.management.domain.access.model.chain.Direction;
 import com.school.management.domain.access.model.chain.Hop;
 import com.school.management.infrastructure.extension.SqlFragment;
 import org.junit.jupiter.api.DisplayName;
@@ -129,6 +130,59 @@ class ChainHopResolverTest {
                 new Hop(List.of("manages"), Combine.OR, "place", false),
                 new Hop(List.of(), Combine.OR, "org_unit", false)), 5L);
         assertTrue(f.sql().contains("effective_org_unit_id"), f.sql());
+    }
+
+    @Test
+    @DisplayName("[P-E1] 反向走跳 level1: 我[管理]组织 →[反·成员]用户 (组织→其成员用户)")
+    void reverseHopAfterForward() {
+        SqlFragment f = resolver.resolve(List.of(
+                new Hop(List.of("admin"), Combine.OR, "org_unit", false, Direction.FORWARD),
+                new Hop(List.of("member"), Combine.OR, "user", false, Direction.REVERSE)), 9L);
+        String sql = f.sql();
+        // 末跳反向: 选 subject_id, 匹配 resource 侧 = 上一级(org)集
+        assertTrue(sql.startsWith("SELECT ar1.subject_id FROM access_relations ar1"), sql);
+        assertTrue(sql.contains("ar1.resource_type = 'org_unit'"), sql);   // 匹配侧 = prev
+        assertTrue(sql.contains("ar1.resource_id IN (SELECT ar0.resource_id"), sql); // 内层 forward
+        assertTrue(sql.contains("ar1.relation IN (:chmH1r0)"), sql);
+        assertTrue(sql.contains("ar1.subject_type = 'user'"), sql);        // 选取侧 = toType
+        assertEquals("member", f.params().get("chmH1r0"));
+    }
+
+    @Test
+    @DisplayName("[P-E1] 反向走跳 level0: 我[反·上级] → 我的上级们 (supervisor_of 倒读)")
+    void reverseHopLevel0() {
+        SqlFragment f = resolver.resolve(List.of(
+                new Hop(List.of("supervisor_of"), Combine.OR, "user", false, Direction.REVERSE)), 9L);
+        String sql = f.sql();
+        assertTrue(sql.startsWith("SELECT ar0.subject_id FROM access_relations ar0"), sql);
+        assertTrue(sql.contains("ar0.resource_type = 'user'"), sql);   // 匹配侧 = 起点 user
+        assertTrue(sql.contains("ar0.resource_id = :chmMe"), sql);     // 我作为 resource
+        assertTrue(sql.contains("ar0.subject_type = 'user'"), sql);    // 选取侧 = toType
+        assertEquals(9L, f.params().get("chmMe"));
+    }
+
+    @Test
+    @DisplayName("[P-E1] 反向投影 org→place: 我[管理]组织 →[反·归属]场所 (组织下辖场所)")
+    void reverseProjectionOrgToPlace() {
+        SqlFragment f = resolver.resolve(List.of(
+                new Hop(List.of("admin"), Combine.OR, "org_unit", false, Direction.FORWARD),
+                new Hop(List.of("belongs_to"), Combine.OR, "place", false, Direction.REVERSE)), 9L);
+        String sql = f.sql();
+        // org→place 反向投影: 找 effective_org_unit_id ∈ 上一级组织集 的场所
+        assertTrue(sql.startsWith("SELECT plc1.id FROM places plc1"), sql);
+        assertTrue(sql.contains("plc1.effective_org_unit_id IN (SELECT ar0.resource_id"), sql);
+        assertTrue(sql.contains("plc1.deleted = 0"), sql);
+    }
+
+    @Test
+    @DisplayName("[P-E1] 反向 AND 多关系: GROUP BY 选取侧 subject_id (交集)")
+    void reverseAndGroupBySelectSide() {
+        SqlFragment f = resolver.resolve(List.of(
+                new Hop(List.of("admin"), Combine.OR, "org_unit", false, Direction.FORWARD),
+                new Hop(List.of("member", "responsible_for"), Combine.AND, "user", false, Direction.REVERSE)), 9L);
+        String sql = f.sql();
+        assertTrue(sql.contains("GROUP BY ar1.subject_id"), "反向 AND 须按选取侧 subject_id 分组: " + sql);
+        assertTrue(sql.contains("HAVING COUNT(DISTINCT ar1.relation) >= 2"), sql);
     }
 
     @Test

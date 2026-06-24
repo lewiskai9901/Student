@@ -53,11 +53,13 @@ public class ChainHopResolver {
                 throw new IllegalArgumentException("跳[" + k + "] 到达类型非法: " + h.toType());
             }
 
-            // P2: place→org_unit 跳走 effective_org_unit_id 投影 (A3 place 归属真相的物化列), 而非
-            // access_relations belongs_to —— 投影是 place→org 的单一真相入口, 且免一次 access_relations 子查询。
-            // [审计#3] 此跳不读关系码 (投影即真相) → 不要求 relations 非空 (放在 relations-empty 校验之前)。
-            // (place→org 必非起跳: prevType=place 仅可能来自上一跳, 故 inner 非 null。)
+            // P2: place↔org_unit 跳走 effective_org_unit_id 投影 (A3 place 归属真相的物化列), 而非
+            // access_relations —— 投影是 place↔org 的单一真相入口。两个方向 (place→org / org→place) 由类型对
+            // 决定, 不读关系码/方向标记 (投影即真相)。
+            // [审计#3] 此跳不读关系 → 不要求 relations 非空 (放在 relations-empty 校验之前)。
+            // (place↔org 必非起跳: prevType=user 起步, 故 inner 非 null。)
             if ("place".equals(prevType) && "org_unit".equals(h.toType())) {
+                // 正向 place→org: 场所所属组织
                 String p = "plc" + k;
                 inner = "SELECT " + p + ".effective_org_unit_id FROM places " + p
                         + " WHERE " + p + ".id IN (" + inner + ")"
@@ -68,23 +70,41 @@ public class ChainHopResolver {
                 }
                 continue;
             }
+            if ("org_unit".equals(prevType) && "place".equals(h.toType())) {
+                // [P-E1] 反向 org→place: effective_org_unit_id ∈ 组织集 的场所 (组织下辖场所; place 无子树)
+                String p = "plc" + k;
+                inner = "SELECT " + p + ".id FROM places " + p
+                        + " WHERE " + p + ".effective_org_unit_id IN (" + inner + ") AND " + p + ".deleted = 0";
+                prevType = "place";
+                continue;
+            }
 
-            // 非 place→org 跳走 access_relations, 必须有关系码
+            // 非投影跳走 access_relations, 必须有关系码
             if (h.relations().isEmpty()) {
                 throw new IllegalArgumentException("跳[" + k + "] 关系为空");
             }
 
+            // [P-E1] 方向决定匹配侧/选取侧:
+            //   FORWARD: match=subject(=prev), select=resource(=toType)  —— subject→resource (历史)
+            //   REVERSE: match=resource(=prev), select=subject(=toType)  —— resource→subject (倒读同一条边)
+            boolean reverse = h.direction() == com.school.management.domain.access.model.chain.Direction.REVERSE;
+            String selIdCol  = reverse ? "subject_id"   : "resource_id";
+            String matchType = reverse ? "resource_type" : "subject_type";
+            String matchId   = reverse ? "resource_id"   : "subject_id";
+            String selType   = reverse ? "subject_type"  : "resource_type";
+
             String a = "ar" + k;
             StringBuilder sb = new StringBuilder();
-            sb.append("SELECT ").append(a).append(".resource_id FROM access_relations ").append(a)
-              .append(" WHERE ").append(a).append(".subject_type = '").append(prevType).append("'");
+            sb.append("SELECT ").append(a).append(".").append(selIdCol)
+              .append(" FROM access_relations ").append(a)
+              .append(" WHERE ").append(a).append(".").append(matchType).append(" = '").append(prevType).append("'");
 
             // 起点 = :me; 后续级 = 上一级子查询
             if (inner == null) {
                 params.put("chmMe", userId);
-                sb.append(" AND ").append(a).append(".subject_id = :chmMe");
+                sb.append(" AND ").append(a).append(".").append(matchId).append(" = :chmMe");
             } else {
-                sb.append(" AND ").append(a).append(".subject_id IN (").append(inner).append(")");
+                sb.append(" AND ").append(a).append(".").append(matchId).append(" IN (").append(inner).append(")");
             }
 
             // 关系 IN (...) — 每个关系码一个命名参数
@@ -96,21 +116,20 @@ public class ChainHopResolver {
                 ph.add(":" + p);
             }
             sb.append(" AND ").append(a).append(".relation IN (").append(String.join(",", ph)).append(")")
-              .append(" AND ").append(a).append(".resource_type = '").append(h.toType()).append("'")
+              .append(" AND ").append(a).append(".").append(selType).append(" = '").append(h.toType()).append("'")
               .append(" AND ").append(a).append(".deleted = 0");
 
-            // AND 交集: 该实体须同时具备全部关系 → 分组计数
+            // AND 交集: 选取侧实体须同时具备全部关系 → 按选取侧 id 分组计数
             if (h.combine() == Combine.AND && rels.size() > 1) {
-                sb.append(" GROUP BY ").append(a).append(".resource_id")
+                sb.append(" GROUP BY ").append(a).append(".").append(selIdCol)
                   .append(" HAVING COUNT(DISTINCT ").append(a).append(".relation) >= ").append(rels.size());
             }
 
             inner = sb.toString();
             prevType = h.toType();
 
-            // [#1] org_unit 跳含下级 → tree_path 子树展开 (我直接关系到的组织 + 其全部后代)。
-            // 与 ScopeEvaluator RELATION/CUSTOM 子树分支同款 tree_path LIKE 口径; 旧 1 跳 RELATION 锚点
-            // honor subtree, 多级链此前漏读 h.subtree() → 配"含下级"形同未勾, 此处补齐使两路径一致。
+            // [#1] org_unit 跳含下级 → tree_path 子树展开 (我关系到的组织 + 其全部后代)。
+            // 与 ScopeEvaluator RELATION/CUSTOM 子树分支同款 tree_path LIKE 口径; 正/反向到达 org 均适用。
             if ("org_unit".equals(prevType) && h.subtree()) {
                 inner = subtreeExpand(inner, k);
             }

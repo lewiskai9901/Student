@@ -127,6 +127,11 @@ public class ChainCompiler {
                     params.put(p, userId);
                     return alias + subjectCol + " = :" + p;
                 }
+                // [P-E1] 链末实体 = user → S 已是用户集 → 数据直接身份命中 (data.user_id ∈ S),
+                // 不再套成员图子查询 (你的例子: 组织→反成员→用户, 数据=这些用户的学生)。
+                if ("user".equals(entityType)) {
+                    return alias + subjectCol + " IN (" + sSubquery + ")";
+                }
                 // [完成项4] 成员图实体类型 = 链末跳类型 (org_unit / place 场所占用); 白名单校验后内联
                 String resType = ENTITY_TYPES.contains(entityType) ? entityType : "org_unit";
                 // 数据(成员主体) ∈ S 中各组织的 [成员关系] ([完成项2/3] 默认 member; 可配单个(属于/负责) 或
