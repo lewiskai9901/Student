@@ -96,6 +96,18 @@ public class ChainValidator {
                 }
             }
 
+            // ②b [审计#2] creator 终端 (绑当前用户 created_by=me) 不消费中间跳组织集; 若<b>全部</b>终端锚点
+            // 都是 creator 且有中间跳 → 跳被静默忽略 (配置误导) → 拒绝。creator 与 org 锚点 (owner_org) 混用
+            // 时, org 锚点消费跳, creator 仅追加用户约束 → 合法。
+            if (t != null && !t.anchorRelations().isEmpty() && !c.hops().isEmpty()) {
+                boolean anyConsumesHops = t.anchorRelations().stream()
+                        .anyMatch(a -> !ResourceRelationRegistry.CREATOR.equals(a));
+                if (!anyConsumesHops) {
+                    errs.add(p + " 终端仅含 'creator'(我创建) 却配了中间跳 — creator 绑当前用户,"
+                            + " 中间跳会被忽略; 要'我创建的'请删除中间跳, 要'链末组织的数据'请改终端锚点 (如 owner_org)");
+                }
+            }
+
             // ② 限深
             List<Hop> hops = c.hops();
             if (hops.size() > MAX_DEPTH) {

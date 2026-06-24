@@ -125,6 +125,36 @@ class ChainValidatorTest {
     }
 
     @Test
+    @DisplayName("[审计#2] creator 终端 + 中间跳 → 拒绝 (creator 绑当前用户, 中间跳会被忽略)")
+    void creatorTerminalWithHopsRejected() {
+        ScopeChainSpec spec = new ScopeChainSpec(List.of(
+                new Chain(List.of(new Hop(List.of("admin"), Combine.OR, "org_unit", false)),
+                        new Terminal(List.of("creator"), Combine.OR), List.of())));
+        ChainValidator.Result r = validator().validate("student", spec);
+        assertFalse(r.valid());
+        assertTrue(r.errors().stream().anyMatch(e -> e.contains("creator") && e.contains("忽略")),
+                () -> r.errors().toString());
+    }
+
+    @Test
+    @DisplayName("[审计#2] creator 终端 + 空跳 → 合法 (我创建的, 退化路径)")
+    void creatorTerminalNoHopsOk() {
+        ScopeChainSpec spec = new ScopeChainSpec(List.of(
+                new Chain(List.of(), new Terminal(List.of("creator"), Combine.OR), List.of())));
+        assertTrue(validator().validate("student", spec).valid());
+    }
+
+    @Test
+    @DisplayName("[审计#2] creator + owner_org 混用 + 中间跳 → 合法 (owner_org 消费跳, creator 加用户约束)")
+    void creatorMixedWithOrgAnchorWithHopsOk() {
+        ScopeChainSpec spec = new ScopeChainSpec(List.of(
+                new Chain(List.of(new Hop(List.of("admin"), Combine.OR, "org_unit", false)),
+                        new Terminal(List.of("owner_org", "creator"), Combine.AND), List.of())));
+        assertTrue(validator().validate("student", spec).valid(),
+                () -> validator().validate("student", spec).errors().toString());
+    }
+
+    @Test
     @DisplayName("空链 → 拒绝")
     void emptyRejected() {
         assertFalse(validator().validate("student", new ScopeChainSpec(List.of())).valid());
