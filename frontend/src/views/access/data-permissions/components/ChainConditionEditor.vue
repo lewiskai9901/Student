@@ -10,7 +10,7 @@
       <span class="inline-flex items-center rounded-full bg-indigo-600 px-2 py-0.5 text-[11px] font-medium text-white">我</span>
 
       <template v-for="(h, i) in hops" :key="i">
-        <!-- 边 i: prevType --[关系/方向]--> h.toType -->
+        <!-- 边 i: 上一级 经[关系/方向] 到达 h.toType -->
         <el-popover trigger="click" :width="290" placement="bottom" :disabled="disabled">
           <template #reference>
             <button type="button" class="inline-flex items-center gap-0.5 rounded border border-indigo-300 bg-white px-1.5 py-0.5 text-[11px] text-indigo-700 hover:bg-indigo-100">
