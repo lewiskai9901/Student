@@ -4,8 +4,9 @@
       <Workflow class="h-3 w-3" /> 多级关系链（点节点 / 连线编辑）
     </div>
 
-    <!-- 可视化流图: 我 ─边→ 实体 ─边→ … ─终端→ 数据 -->
-    <div class="flex flex-wrap items-center gap-1 pl-1">
+    <!-- 可视化流图: 我 ─边→ 实体 ─边→ … ─终端→ 数据 (窄列横向滚动, 不竖排) -->
+    <div class="overflow-x-auto pb-1">
+     <div class="flex w-max items-center gap-1 pl-1">
       <!-- 起点 -->
       <span class="inline-flex items-center rounded-full bg-indigo-600 px-2 py-0.5 text-[11px] font-medium text-white">我</span>
 
@@ -104,6 +105,7 @@
 
       <!-- 数据节点 -->
       <span class="inline-flex items-center rounded bg-emerald-600 px-2 py-0.5 text-[11px] font-medium text-white">《数据》</span>
+     </div>
     </div>
 
     <!-- 实时预览 (P-U2): 命中数 + 每跳漏斗 + 样本 -->

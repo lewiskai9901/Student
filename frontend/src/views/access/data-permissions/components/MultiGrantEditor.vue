@@ -1,12 +1,13 @@
 <template>
   <div class="space-y-2">
-    <div class="flex items-center gap-1.5 text-[11px] font-semibold text-gray-600">
+    <div class="flex items-start gap-1.5 text-[11px] font-semibold text-gray-600">
       <span
-        class="inline-flex h-4 w-4 items-center justify-center rounded-full bg-indigo-100 text-[9px] text-indigo-600"
+        class="mt-px inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[9px] text-indigo-600"
         >∨</span
       >
-      显示范围 — 满足<b class="mx-0.5">任一</b>条即可见
-      <span class="font-normal text-gray-400">（每条 = 经某关系关联的数据）</span>
+      <span class="leading-4"
+        >显示范围 — 满足<b class="mx-0.5">任一</b>条即可见<span class="font-normal text-gray-400">（每条 = 经某关系关联的数据）</span></span
+      >
     </div>
 
     <div v-for="(g, i) in grants" :key="i" class="rounded border border-gray-200 bg-white px-2 py-1.5 pl-5">
