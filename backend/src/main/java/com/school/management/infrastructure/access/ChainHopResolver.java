@@ -52,12 +52,10 @@ public class ChainHopResolver {
             if (h.toType() == null || !ENTITY_TYPES.contains(h.toType())) {
                 throw new IllegalArgumentException("跳[" + k + "] 到达类型非法: " + h.toType());
             }
-            if (h.relations().isEmpty()) {
-                throw new IllegalArgumentException("跳[" + k + "] 关系为空");
-            }
 
             // P2: place→org_unit 跳走 effective_org_unit_id 投影 (A3 place 归属真相的物化列), 而非
             // access_relations belongs_to —— 投影是 place→org 的单一真相入口, 且免一次 access_relations 子查询。
+            // [审计#3] 此跳不读关系码 (投影即真相) → 不要求 relations 非空 (放在 relations-empty 校验之前)。
             // (place→org 必非起跳: prevType=place 仅可能来自上一跳, 故 inner 非 null。)
             if ("place".equals(prevType) && "org_unit".equals(h.toType())) {
                 String p = "plc" + k;
@@ -69,6 +67,11 @@ public class ChainHopResolver {
                     inner = subtreeExpand(inner, k); // [#1] 投影出的组织集再含下级
                 }
                 continue;
+            }
+
+            // 非 place→org 跳走 access_relations, 必须有关系码
+            if (h.relations().isEmpty()) {
+                throw new IllegalArgumentException("跳[" + k + "] 关系为空");
             }
 
             String a = "ar" + k;

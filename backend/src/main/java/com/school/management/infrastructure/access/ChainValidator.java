@@ -103,13 +103,21 @@ public class ChainValidator {
             }
 
             // ③ 结构: 每跳关系非空 + toType 合法
+            String prevType = "user"; // 起点恒为用户
             for (int hi = 0; hi < hops.size(); hi++) {
                 Hop h = hops.get(hi);
-                if (h.relations().isEmpty()) {
+                boolean validType = h.toType() != null && ENTITY_TYPES.contains(h.toType());
+                if (!validType) {
+                    errs.add(p + " 跳[" + hi + "] 到达类型非法: '" + h.toType() + "' (须 ∈ " + ENTITY_TYPES + ")");
+                }
+                // [审计#3] place→org 跳走 effective_org_unit_id 投影 (引擎忽略关系码) → 不要求关系非空;
+                // 其余跳走 access_relations, 必须有关系。
+                boolean placeToOrg = "place".equals(prevType) && "org_unit".equals(h.toType());
+                if (!placeToOrg && h.relations().isEmpty()) {
                     errs.add(p + " 跳[" + hi + "] 关系为空");
                 }
-                if (h.toType() == null || !ENTITY_TYPES.contains(h.toType())) {
-                    errs.add(p + " 跳[" + hi + "] 到达类型非法: '" + h.toType() + "' (须 ∈ " + ENTITY_TYPES + ")");
+                if (validType) {
+                    prevType = h.toType();
                 }
             }
         }

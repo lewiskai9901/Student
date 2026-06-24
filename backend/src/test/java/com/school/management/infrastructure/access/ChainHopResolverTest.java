@@ -123,6 +123,15 @@ class ChainHopResolverTest {
     }
 
     @Test
+    @DisplayName("[审计#3] place→org 跳关系为空 → 不抛 (走投影, 忽略关系)")
+    void placeToOrgEmptyRelationsResolves() {
+        SqlFragment f = resolver.resolve(List.of(
+                new Hop(List.of("manages"), Combine.OR, "place", false),
+                new Hop(List.of(), Combine.OR, "org_unit", false)), 5L);
+        assertTrue(f.sql().contains("effective_org_unit_id"), f.sql());
+    }
+
+    @Test
     @DisplayName("空 hops → 抛 (终端直接绑用户, 不需中间跳)")
     void emptyHopsThrows() {
         assertThrows(IllegalArgumentException.class, () -> resolver.resolve(List.of(), 1L));

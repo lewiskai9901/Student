@@ -143,6 +143,21 @@ class ChainValidatorTest {
     }
 
     @Test
+    @DisplayName("[审计#3] place→org 跳关系为空 → 合法 (引擎走 effective_org_unit_id 投影, 忽略关系)")
+    void placeToOrgEmptyRelationsOk() {
+        // UI 隐藏了 place→org 跳的关系选择 → relations 为空; 引擎按场所归属投影, 不应判"关系为空"
+        ScopeChainSpec spec = new ScopeChainSpec(List.of(
+                new Chain(
+                        List.of(
+                                new Hop(List.of("manages"), Combine.OR, "place", false),
+                                new Hop(List.of(), Combine.OR, "org_unit", false)),
+                        new Terminal(List.of("owner_org"), Combine.OR),
+                        List.of())));
+        ChainValidator.Result r = validator().validate("student", spec);
+        assertTrue(r.valid(), () -> "place→org 空关系应合法, errors=" + r.errors());
+    }
+
+    @Test
     @DisplayName("经场所链: 我[管理]场所→[占用]... 多级 (3 跳=上限) 终端合法 → 合法")
     void multiLevelPlaceChain() {
         // 我 --manages--> place --(占用)--> ... 终端 owner_org (3 跳上限内)

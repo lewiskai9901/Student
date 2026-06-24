@@ -6,31 +6,38 @@
 
     <!-- 中间跳 -->
     <div v-for="(h, i) in hops" :key="i" class="flex flex-wrap items-center gap-1.5 pl-3 text-[11px]">
-      <span class="text-gray-500">{{ i === 0 ? '我' : '上一级' }} 经</span>
-      <el-select
-        :model-value="h.relations"
-        multiple
-        collapse-tags
-        size="small"
-        placeholder="选关系"
-        style="width: 200px"
-        :disabled="disabled"
-        @update:model-value="(v: any) => setHopRelations(i, v)"
-      >
-        <el-option v-for="r in relsFor(i, h.toType)" :key="r.relationCode" :label="r.relationName || r.relationCode" :value="r.relationCode" />
-      </el-select>
-      <el-select
-        v-if="(h.relations?.length || 0) > 1"
-        :model-value="h.combine"
-        size="small"
-        style="width: 92px"
-        :disabled="disabled"
-        @update:model-value="(v: any) => setHopField(i, 'combine', v)"
-      >
-        <el-option label="满足任一" value="OR" />
-        <el-option label="同时满足" value="AND" />
-      </el-select>
-      <span class="text-gray-500">关系的</span>
+      <span class="text-gray-500">{{ i === 0 ? '我' : '上一级' }}</span>
+      <!-- 场所→组织: 引擎按场所归属(effective_org_unit_id)自动投影, 不读关系 → 不让选关系(否则误导) -->
+      <template v-if="isPlaceToOrg(i)">
+        <span class="text-gray-500">所属（按场所归属自动）的</span>
+      </template>
+      <template v-else>
+        <span class="text-gray-500">经</span>
+        <el-select
+          :model-value="h.relations"
+          multiple
+          collapse-tags
+          size="small"
+          placeholder="选关系"
+          style="width: 200px"
+          :disabled="disabled"
+          @update:model-value="(v: any) => setHopRelations(i, v)"
+        >
+          <el-option v-for="r in relsFor(i, h.toType)" :key="r.relationCode" :label="r.relationName || r.relationCode" :value="r.relationCode" />
+        </el-select>
+        <el-select
+          v-if="(h.relations?.length || 0) > 1"
+          :model-value="h.combine"
+          size="small"
+          style="width: 92px"
+          :disabled="disabled"
+          @update:model-value="(v: any) => setHopField(i, 'combine', v)"
+        >
+          <el-option label="满足任一" value="OR" />
+          <el-option label="同时满足" value="AND" />
+        </el-select>
+        <span class="text-gray-500">关系的</span>
+      </template>
       <el-select
         :model-value="h.toType"
         size="small"
@@ -151,6 +158,10 @@ watch(
 /** 第 i 跳的起点实体类型: 跳 0 = 我(user); 跳 k = 上一跳 toType。 */
 function prevType(i: number): string {
   return i === 0 ? 'user' : hops.value[i - 1].toType
+}
+/** 场所→组织跳: 引擎走 effective_org_unit_id 投影忽略关系 → UI 不让选关系。 */
+function isPlaceToOrg(i: number): boolean {
+  return prevType(i) === 'place' && hops.value[i]?.toType === 'org_unit'
 }
 /** 第 i 跳可选关系: fromType=起点, toType=该跳到达类型。 */
 function relsFor(i: number, toType: string): RelationTypeDef[] {
