@@ -3,6 +3,7 @@ package com.school.management.infrastructure.access;
 import com.school.management.domain.access.model.StorageKind;
 import com.school.management.domain.access.model.chain.Chain;
 import com.school.management.domain.access.model.chain.Combine;
+import com.school.management.domain.access.model.chain.Direction;
 import com.school.management.domain.access.model.chain.Hop;
 import com.school.management.domain.access.model.chain.ScopeChainSpec;
 import com.school.management.domain.access.model.chain.Terminal;
@@ -24,6 +25,11 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class ChainValidatorTest {
 
+    /** canned relation_types 边 (code|from|to) 供方向校验。 */
+    private static final Set<String> EDGES = Set.of(
+            "admin|user|org_unit", "member|user|org_unit", "responsible_for|user|org_unit",
+            "manages|user|place", "belongs_to|place|org_unit", "supervisor_of|user|user");
+
     private ChainValidator validator() {
         ResourceRelationRegistry reg = new ResourceRelationRegistry(null) {
             @Override
@@ -40,7 +46,14 @@ class ChainValidatorTest {
                 return Set.of();
             }
         };
-        return new ChainValidator(reg);
+        com.school.management.application.access.RelationTypeRegistry rtr =
+                new com.school.management.application.access.RelationTypeRegistry(null) {
+                    @Override
+                    public boolean isRegistered(String code, String fromType, String toType) {
+                        return EDGES.contains(code + "|" + fromType + "|" + toType);
+                    }
+                };
+        return new ChainValidator(reg, rtr);
     }
 
     @Test
@@ -152,6 +165,47 @@ class ChainValidatorTest {
                         new Terminal(List.of("owner_org", "creator"), Combine.AND), List.of())));
         assertTrue(validator().validate("student", spec).valid(),
                 () -> validator().validate("student", spec).errors().toString());
+    }
+
+    @Test
+    @DisplayName("[P-V1] 反向走跳 + 边存在: 我[admin]组织→[反·member]用户 → 合法 (member 反向 = user→org 边)")
+    void reverseEdgeValid() {
+        ScopeChainSpec spec = new ScopeChainSpec(List.of(
+                new Chain(
+                        List.of(
+                                new Hop(List.of("admin"), Combine.OR, "org_unit", false, Direction.FORWARD),
+                                new Hop(List.of("member"), Combine.OR, "user", false, Direction.REVERSE)),
+                        new Terminal(List.of("owner_org"), Combine.OR), List.of())));
+        ChainValidator.Result r = validator().validate("student", spec);
+        assertTrue(r.valid(), () -> "反向 member 边应合法, errors=" + r.errors());
+    }
+
+    @Test
+    @DisplayName("[P-V1] 方向反了 → 拒绝: member 正向从 org→user (member 实为 user→org)")
+    void forwardWrongDirectionRejected() {
+        ScopeChainSpec spec = new ScopeChainSpec(List.of(
+                new Chain(
+                        List.of(
+                                new Hop(List.of("admin"), Combine.OR, "org_unit", false, Direction.FORWARD),
+                                new Hop(List.of("member"), Combine.OR, "user", false, Direction.FORWARD)),
+                        new Terminal(List.of("owner_org"), Combine.OR), List.of())));
+        ChainValidator.Result r = validator().validate("student", spec);
+        assertFalse(r.valid());
+        assertTrue(r.errors().stream().anyMatch(e -> e.contains("member") && e.contains("org_unit→user")),
+                () -> r.errors().toString());
+    }
+
+    @Test
+    @DisplayName("[P-V1/审计#4] 乱填关系码 → 拒绝 + 友好报错 (relation_types 无此边)")
+    void bogusRelationRejected() {
+        ScopeChainSpec spec = new ScopeChainSpec(List.of(
+                new Chain(
+                        List.of(new Hop(List.of("gibberish"), Combine.OR, "org_unit", false, Direction.FORWARD)),
+                        new Terminal(List.of("owner_org"), Combine.OR), List.of())));
+        ChainValidator.Result r = validator().validate("student", spec);
+        assertFalse(r.valid());
+        assertTrue(r.errors().stream().anyMatch(e -> e.contains("gibberish") && e.contains("不存在")),
+                () -> r.errors().toString());
     }
 
     @Test

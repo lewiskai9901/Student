@@ -37,9 +37,12 @@ public class ChainValidator {
     private static final Set<String> ENTITY_TYPES = Set.of("user", "org_unit", "place");
 
     private final ResourceRelationRegistry registry;
+    private final com.school.management.application.access.RelationTypeRegistry relationTypeRegistry;
 
-    public ChainValidator(ResourceRelationRegistry registry) {
+    public ChainValidator(ResourceRelationRegistry registry,
+                          com.school.management.application.access.RelationTypeRegistry relationTypeRegistry) {
         this.registry = registry;
+        this.relationTypeRegistry = relationTypeRegistry;
     }
 
     /** 校验结果: valid + 人话错误清单。 */
@@ -114,7 +117,7 @@ public class ChainValidator {
                 errs.add(p + " 中间跳 " + hops.size() + " 超过限深 " + MAX_DEPTH + " (防递归爆炸/性能)");
             }
 
-            // ③ 结构: 每跳关系非空 + toType 合法
+            // ③ 结构: 每跳关系非空 + toType 合法 + [P-V1] 方向边合法
             String prevType = "user"; // 起点恒为用户
             for (int hi = 0; hi < hops.size(); hi++) {
                 Hop h = hops.get(hi);
@@ -122,11 +125,26 @@ public class ChainValidator {
                 if (!validType) {
                     errs.add(p + " 跳[" + hi + "] 到达类型非法: '" + h.toType() + "' (须 ∈ " + ENTITY_TYPES + ")");
                 }
-                // [审计#3] place→org 跳走 effective_org_unit_id 投影 (引擎忽略关系码) → 不要求关系非空;
-                // 其余跳走 access_relations, 必须有关系。
-                boolean placeToOrg = "place".equals(prevType) && "org_unit".equals(h.toType());
-                if (!placeToOrg && h.relations().isEmpty()) {
+                // [审计#3] place↔org 跳走 effective_org_unit_id 投影 (引擎忽略关系码) → 不要求关系非空、不查边;
+                // 其余跳走 access_relations, 必须有关系 + [P-V1] 关系在声明方向上须是 relation_types 的真实边。
+                boolean isProjection = validType && (
+                        ("place".equals(prevType) && "org_unit".equals(h.toType()))
+                        || ("org_unit".equals(prevType) && "place".equals(h.toType())));
+                if (!isProjection && h.relations().isEmpty()) {
                     errs.add(p + " 跳[" + hi + "] 关系为空");
+                }
+                // [P-V1] 方向边校验 (关掉审计#4): 正向需 (code, from=上一级, to=toType); 反向需 (code, from=toType, to=上一级)。
+                if (validType && !isProjection && !h.relations().isEmpty()) {
+                    boolean reverse = h.direction() == com.school.management.domain.access.model.chain.Direction.REVERSE;
+                    String edgeFrom = reverse ? h.toType() : prevType;
+                    String edgeTo   = reverse ? prevType   : h.toType();
+                    for (String code : h.relations()) {
+                        if (!relationTypeRegistry.isRegistered(code, edgeFrom, edgeTo)) {
+                            errs.add(p + " 跳[" + hi + "] 关系 '" + code + "' 在方向 "
+                                    + edgeFrom + "→" + edgeTo + " 上不存在 (relation_types 无此边)"
+                                    + (reverse ? " — 反向走跳需 " + edgeFrom + "→" + edgeTo + " 的关系" : ""));
+                        }
+                    }
                 }
                 if (validType) {
                     prevType = h.toType();

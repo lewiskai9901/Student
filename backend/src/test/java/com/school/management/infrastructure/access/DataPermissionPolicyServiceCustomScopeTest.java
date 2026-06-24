@@ -63,7 +63,7 @@ class DataPermissionPolicyServiceCustomScopeTest {
         when(jdbcTemplate.queryForList(anyString(), any(Object[].class)))
                 .thenReturn(List.of(customRow()));
 
-        DataPermissionPolicyService service = new DataPermissionPolicyService(jdbcTemplate, new ChainValidator(new ResourceRelationRegistry(null)));
+        DataPermissionPolicyService service = new DataPermissionPolicyService(jdbcTemplate, new ChainValidator(new ResourceRelationRegistry(null), new com.school.management.application.access.RelationTypeRegistry(null)));
 
         List<RoleDataPermission> permissions = service.getRolePermissions(TENANT_ID, ROLE_ID);
 
