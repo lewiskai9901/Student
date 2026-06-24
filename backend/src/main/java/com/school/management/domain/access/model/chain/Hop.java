@@ -12,15 +12,24 @@ import java.util.List;
  * @param combine   同级多关系组合: AND=交集 / OR=并集
  * @param toType    这一跳到达的实体类型: user | org_unit | place
  * @param subtree   org_unit 跳是否含下级 (子树展开)
+ * @param direction 遍历方向: FORWARD=subject→resource (默认) / REVERSE=resource→subject
  */
 public record Hop(
         List<String> relations,
         Combine combine,
         String toType,
-        boolean subtree
+        boolean subtree,
+        Direction direction
 ) {
     public Hop {
         relations = relations == null ? List.of() : List.copyOf(relations);
         combine = combine == null ? Combine.OR : combine;
+        // 回兼: 旧 grant JSON 无 direction → null → 默认正向 (现有配置字节等价, 金标准安全)
+        direction = direction == null ? Direction.FORWARD : direction;
+    }
+
+    /** 4-arg 回兼构造 (现有调用/测试不带 direction → 默认 FORWARD)。 */
+    public Hop(List<String> relations, Combine combine, String toType, boolean subtree) {
+        this(relations, combine, toType, subtree, Direction.FORWARD);
     }
 }

@@ -64,6 +64,30 @@ class ScopeChainSpecJsonTest {
     }
 
     @Test
+    @DisplayName("[P-M1] 旧 grant JSON 无 direction 字段 → 反序列化默认 FORWARD (回兼, 金标准安全)")
+    void legacyJsonWithoutDirectionDefaultsForward() throws Exception {
+        // 模拟既有库里的 relation_grants JSON: hop 只有 relations/combine/toType/subtree, 无 direction
+        String legacy = "{\"chains\":[{\"hops\":[{\"relations\":[\"member\"],\"combine\":\"OR\","
+                + "\"toType\":\"org_unit\",\"subtree\":false}],"
+                + "\"terminal\":{\"anchorRelations\":[\"owner_org\"],\"combine\":\"OR\"},\"typeFilter\":[]}]}";
+        ScopeChainSpec back = om.readValue(legacy, ScopeChainSpec.class);
+        assertEquals(Direction.FORWARD, back.chains().get(0).hops().get(0).direction(),
+                "无 direction 字段必须默认正向");
+    }
+
+    @Test
+    @DisplayName("[P-M1] 含 direction=REVERSE 的链 JSON 往返无损")
+    void roundTripWithReverseDirection() throws Exception {
+        ScopeChainSpec spec = new ScopeChainSpec(List.of(
+                new Chain(
+                        List.of(new Hop(List.of("member"), Combine.OR, "user", false, Direction.REVERSE)),
+                        new Terminal(List.of("owner_org"), Combine.OR), List.of())));
+        ScopeChainSpec back = om.readValue(om.writeValueAsString(spec), ScopeChainSpec.class);
+        assertEquals(spec, back);
+        assertEquals(Direction.REVERSE, back.chains().get(0).hops().get(0).direction());
+    }
+
+    @Test
     @DisplayName("null 字段归一: 缺省 hops/typeFilter → 空列表 (紧凑构造器)")
     void nullsNormalized() {
         ScopeChainSpec spec = new ScopeChainSpec(List.of(
