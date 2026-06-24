@@ -57,11 +57,44 @@ class ChainHopResolverTest {
     }
 
     @Test
+    @DisplayName("[#1] 单跳 org 含下级 → tree_path 子树展开 (我管理的组织 + 其后代)")
+    void orgHopSubtreeExpands() {
+        SqlFragment f = resolver.resolve(
+                List.of(new Hop(List.of("admin"), Combine.OR, "org_unit", true)), 9L);
+        String sql = f.sql();
+        assertTrue(sql.contains("tree_path LIKE CONCAT("), "含下级须 tree_path 子树展开: " + sql);
+        assertTrue(sql.contains("FROM org_units"), sql);
+        // 内层仍是 admin→org 的 access_relations 子查询 (展开的种子)
+        assertTrue(sql.contains("ar0.relation IN (:chmH0r0)"), sql);
+        assertEquals("admin", f.params().get("chmH0r0"));
+    }
+
+    @Test
+    @DisplayName("[#1] 单跳 org 不含下级 → 无 tree_path 展开 (仅直接关系)")
+    void orgHopNoSubtreeNoExpand() {
+        SqlFragment f = resolver.resolve(
+                List.of(new Hop(List.of("admin"), Combine.OR, "org_unit", false)), 9L);
+        assertFalse(f.sql().contains("tree_path"), "不含下级不应展开: " + f.sql());
+    }
+
+    @Test
+    @DisplayName("[#1] place→org 跳含下级 → 投影后再 tree_path 展开 (场所所属组织 + 其后代)")
+    void placeToOrgSubtreeExpands() {
+        SqlFragment f = resolver.resolve(List.of(
+                new Hop(List.of("manages"), Combine.OR, "place", false),
+                new Hop(List.of("belongs_to"), Combine.OR, "org_unit", true)), 5L);
+        String sql = f.sql();
+        // 外层 = 子树展开, 内含 place→org 投影
+        assertTrue(sql.contains("tree_path LIKE CONCAT("), "place→org 含下级也须展开: " + sql);
+        assertTrue(sql.contains("effective_org_unit_id"), "展开种子仍是场所投影: " + sql);
+    }
+
+    @Test
     @DisplayName("两级链: 我 →[manages]→ 场所 →[belongs_to]→ 组织 → place→org 经 effective_org_unit_id 投影 (P2)")
     void twoLevelChainPlaceProjection() {
         SqlFragment f = resolver.resolve(List.of(
                 new Hop(List.of("manages"), Combine.OR, "place", false),
-                new Hop(List.of("belongs_to"), Combine.OR, "org_unit", true)), 5L);
+                new Hop(List.of("belongs_to"), Combine.OR, "org_unit", false)), 5L);
         String sql = f.sql();
         // 外层 = place→org 投影 (places.effective_org_unit_id, 非 access_relations)
         assertTrue(sql.startsWith("SELECT plc1.effective_org_unit_id FROM places plc1"), sql);

@@ -24,7 +24,7 @@ import java.util.Set;
  * <p><b>注入安全</b>: 关系码 + userId 走命名参数; 实体类型 (subject_type/resource_type) 取自链模型
  * 且校验 ∈ 三大主体白名单后内联 (非用户数据)。
  *
- * <p>限制 (Step1): 暂不含 org 子树展开 (subtree) —— 留 Step2 (复用 org path 投影); 终端不在此处。
+ * <p>org_unit 跳含下级 (subtree) → tree_path 子树展开 ([#1] 修复, 与旧 RELATION 锚点同口径); 终端不在此处。
  */
 @Component
 public class ChainHopResolver {
@@ -65,6 +65,9 @@ public class ChainHopResolver {
                         + " WHERE " + p + ".id IN (" + inner + ")"
                         + " AND " + p + ".effective_org_unit_id IS NOT NULL AND " + p + ".deleted = 0";
                 prevType = "org_unit";
+                if (h.subtree()) {
+                    inner = subtreeExpand(inner, k); // [#1] 投影出的组织集再含下级
+                }
                 continue;
             }
 
@@ -101,7 +104,28 @@ public class ChainHopResolver {
 
             inner = sb.toString();
             prevType = h.toType();
+
+            // [#1] org_unit 跳含下级 → tree_path 子树展开 (我直接关系到的组织 + 其全部后代)。
+            // 与 ScopeEvaluator RELATION/CUSTOM 子树分支同款 tree_path LIKE 口径; 旧 1 跳 RELATION 锚点
+            // honor subtree, 多级链此前漏读 h.subtree() → 配"含下级"形同未勾, 此处补齐使两路径一致。
+            if ("org_unit".equals(prevType) && h.subtree()) {
+                inner = subtreeExpand(inner, k);
+            }
         }
         return SqlFragment.of(inner, params);
+    }
+
+    /**
+     * 子树展开: 把"组织 id 子查询"包成"这些组织 + 其全部后代 id"。
+     * <pre>SELECT o.id FROM org_units o JOIN org_units anc ON o.tree_path LIKE CONCAT(anc.tree_path,'%')
+     *   WHERE anc.id IN (&lt;种子&gt;) AND o.deleted = 0</pre>
+     * (与既有 hop 子查询一致, 不加 tenant 过滤 —— 单租户; 别名按跳号 k 唯一化。)
+     */
+    private String subtreeExpand(String orgIdSubquery, int k) {
+        String o = "osub" + k;
+        String anc = "oanc" + k;
+        return "SELECT " + o + ".id FROM org_units " + o
+                + " JOIN org_units " + anc + " ON " + o + ".tree_path LIKE CONCAT(" + anc + ".tree_path, '%')"
+                + " WHERE " + anc + ".id IN (" + orgIdSubquery + ") AND " + o + ".deleted = 0";
     }
 }
