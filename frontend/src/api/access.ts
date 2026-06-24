@@ -469,3 +469,23 @@ export const dataPermissionSimulateApi = {
   simulate: (req: SimulateRequest): Promise<SimulateResponse> =>
     http.post<SimulateResponse>('/access/data-permissions/simulate', req)
 }
+
+/** 关系链实时预览 (P-U2): 以模拟用户身份编译链 → 命中数 + 样本 + 每跳漏斗。 */
+export interface ChainPreviewRequest {
+  moduleCode: string
+  asUserId: number | string
+  relation: string
+  subjectParam?: string
+  hops: Array<{ relations: string[]; combine: string; toType: string; subtree?: boolean; direction?: string }>
+}
+export interface ChainPreviewResult {
+  count?: number
+  samples?: Array<{ id: string; name?: string }>
+  funnel?: Array<{ type: string; count: number }>
+  note?: string
+  error?: string
+}
+export const dataPermissionChainPreviewApi = {
+  preview: (req: ChainPreviewRequest): Promise<ChainPreviewResult> =>
+    http.post<ChainPreviewResult>('/access/data-permissions/simulate/chain-preview', req)
+}

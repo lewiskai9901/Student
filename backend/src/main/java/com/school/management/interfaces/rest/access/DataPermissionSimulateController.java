@@ -4,11 +4,22 @@ import com.school.management.application.access.DataPermissionSimulateApplicatio
 import com.school.management.application.access.SimulateModuleMetaContributor;
 import com.school.management.application.access.SimulateModuleMetaContributor.SimulateModuleMeta;
 import com.school.management.common.result.Result;
+import com.school.management.domain.access.model.chain.Chain;
+import com.school.management.domain.access.model.chain.Combine;
+import com.school.management.domain.access.model.chain.Direction;
+import com.school.management.domain.access.model.chain.Hop;
+import com.school.management.domain.access.model.chain.Terminal;
+import com.school.management.infrastructure.access.ChainCompiler;
+import com.school.management.infrastructure.access.ChainHopResolver;
+import com.school.management.infrastructure.access.ResourceScopeMeta;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import com.school.management.infrastructure.extension.SqlFragment;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -31,14 +42,20 @@ import java.util.stream.Collectors;
 public class DataPermissionSimulateController {
 
     private final DataPermissionSimulateApplicationService simulateService;
+    private final ChainCompiler chainCompiler;
+    private final ChainHopResolver hopResolver;
 
     /** moduleCode → 表元数据: 核心通用模块 + 插件贡献 (后者可覆盖, 以插件口径为准)。 */
     private final Map<String, SimulateModuleMeta> moduleMetas;
 
     public DataPermissionSimulateController(
             DataPermissionSimulateApplicationService simulateService,
+            ChainCompiler chainCompiler,
+            ChainHopResolver hopResolver,
             List<SimulateModuleMetaContributor> contributors) {
         this.simulateService = simulateService;
+        this.chainCompiler = chainCompiler;
+        this.hopResolver = hopResolver;
         Map<String, SimulateModuleMeta> metas = new LinkedHashMap<>();
         // 通用核心模块 — 不含任何行业表
         // user 归属来自 access_relations member 关系 (primary_org_unit_id 已删):
@@ -217,7 +234,135 @@ public class DataPermissionSimulateController {
         return out;
     }
 
+    // ── 关系链实时预览 (P-U2): 以模拟用户身份编译链 → COUNT + 样本 + 每跳漏斗 ──
+
+    private static final Pattern NAMED = Pattern.compile(":([a-zA-Z_][a-zA-Z0-9_]*)");
+
+    @PostMapping("/chain-preview")
+    @CasbinAccess(resource = "admin", action = "access")
+    public Result<Map<String, Object>> chainPreview(@RequestBody ChainPreviewRequest req) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        if (req.getAsUserId() == null) {
+            out.put("error", "asUserId(模拟用户) 必填");
+            return Result.success(out);
+        }
+        if (req.getRelation() == null || req.getRelation().isBlank()) {
+            out.put("note", "未选终端锚点");
+            return Result.success(out);
+        }
+        SimulateModuleMeta sm = resolveMeta(req.getModuleCode());
+        if (sm == null) {
+            out.put("note", "此模块未实现预览");
+            return Result.success(out);
+        }
+        try {
+            // DTO → 链领域模型
+            List<Hop> hops = new ArrayList<>();
+            if (req.getHops() != null) {
+                for (ChainHopDto d : req.getHops()) {
+                    Combine cb = "AND".equalsIgnoreCase(d.getCombine()) ? Combine.AND : Combine.OR;
+                    Direction dir = "REVERSE".equalsIgnoreCase(d.getDirection()) ? Direction.REVERSE : Direction.FORWARD;
+                    hops.add(new Hop(d.getRelations() == null ? List.of() : d.getRelations(),
+                            cb, d.getToType(), Boolean.TRUE.equals(d.getSubtree()), dir));
+                }
+            }
+            Chain chain = new Chain(hops,
+                    new Terminal(List.of(req.getRelation()), Combine.OR, req.getSubjectParam()), List.of());
+            ResourceScopeMeta meta = toScopeMeta(req.getModuleCode(), sm);
+
+            // 终端谓词 → COUNT + 样本
+            SqlFragment frag = chainCompiler.compileChain(chain, meta, req.getAsUserId(), 1L);
+            String del = sm.hasDeleted() ? " AND deleted = 0" : "";
+            Bound b = inline(frag);
+            long total = orZero(simulateService.countByWhereArgs(sm.table(), b.sql + del, b.args));
+            out.put("count", total);
+            List<Map<String, Object>> samples = simulateService.sampleRowsArgs(sm.table(), sm.nameCol(), b.sql + del, b.args);
+            out.put("samples", normalizeSamples(samples));
+
+            // 每跳漏斗: 各前缀可达实体数 + 末端数据数
+            List<Map<String, Object>> funnel = new ArrayList<>();
+            for (int k = 1; k <= hops.size(); k++) {
+                SqlFragment hf = hopResolver.resolve(hops.subList(0, k), req.getAsUserId());
+                Bound hb = inline(hf);
+                long c = orZero(simulateService.countSubquery(hb.sql, hb.args));
+                Map<String, Object> stage = new LinkedHashMap<>();
+                stage.put("type", hops.get(k - 1).toType());
+                stage.put("count", c);
+                funnel.add(stage);
+            }
+            Map<String, Object> dataStage = new LinkedHashMap<>();
+            dataStage.put("type", "data");
+            dataStage.put("count", total);
+            funnel.add(dataStage);
+            out.put("funnel", funnel);
+        } catch (IllegalArgumentException e) {
+            out.put("note", "链未配置完整: " + e.getMessage());
+        } catch (Exception e) {
+            log.warn("chain-preview module {} failed: {}", req.getModuleCode(), e.getMessage());
+            out.put("note", "预览失败: " + e.getClass().getSimpleName());
+        }
+        return Result.success(out);
+    }
+
+    /** SimulateModuleMeta → ChainCompiler 用的 ResourceScopeMeta (无别名, 不启用类型过滤)。 */
+    private ResourceScopeMeta toScopeMeta(String moduleCode, SimulateModuleMeta m) {
+        String creator = m.hasCreatedBy() ? "created_by" : null;
+        if (m.membershipBased()) {
+            return new ResourceScopeMeta("", null, creator, true, m.orgCol(), null, moduleCode);
+        }
+        return new ResourceScopeMeta("", m.orgCol(), creator, false, null, null, moduleCode);
+    }
+
+    /** 命名参数 SqlFragment → 位置参数 (按 :name 出现序). */
+    private Bound inline(SqlFragment frag) {
+        Matcher mm = NAMED.matcher(frag.sql());
+        StringBuilder sb = new StringBuilder();
+        List<Object> args = new ArrayList<>();
+        while (mm.find()) {
+            args.add(frag.params() == null ? null : frag.params().get(mm.group(1)));
+            mm.appendReplacement(sb, "?");
+        }
+        mm.appendTail(sb);
+        return new Bound(sb.toString(), args.toArray());
+    }
+
+    private record Bound(String sql, Object[] args) {}
+
+    private static long orZero(Long v) { return v == null ? 0L : v; }
+
+    private List<Map<String, Object>> normalizeSamples(List<Map<String, Object>> samples) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map<String, Object> s : samples) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            Object id = s.get("id");
+            row.put("id", id == null ? null : id.toString());
+            if (s.containsKey("name")) row.put("name", s.get("name"));
+            out.add(row);
+        }
+        return out;
+    }
+
     // --- DTO ---
+    @lombok.Data
+    public static class ChainPreviewRequest {
+        private String moduleCode;
+        private Long asUserId;
+        /** 终端锚点 (= grant.relation) */
+        private String relation;
+        /** 终端成员关系 (= grant.subjectParam, SUBJECT_GRAPH 用) */
+        private String subjectParam;
+        private List<ChainHopDto> hops;
+    }
+
+    @lombok.Data
+    public static class ChainHopDto {
+        private List<String> relations;
+        private String combine;
+        private String toType;
+        private Boolean subtree;
+        private String direction;
+    }
+
     @lombok.Data
     public static class SimulateRequest {
         private Long userId;

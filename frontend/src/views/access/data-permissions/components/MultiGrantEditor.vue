@@ -18,6 +18,7 @@
             :module-code="moduleCode"
             :model-value="g"
             :disabled="disabled"
+            :as-user-id="asUserId"
             @update:model-value="(v: RelationGrant) => updateGrant(i, v)"
           />
           <button
@@ -107,6 +108,8 @@ const props = defineProps<{
   /** 当前 grant 数组 (一切皆关系; 空=创建者) */
   modelValue: RelationGrant[]
   disabled?: boolean
+  /** 模拟用户 id (透传给链编辑器出实时预览) */
+  asUserId?: number | string | null
 }>()
 const emit = defineEmits<{ 'update:model-value': [RelationGrant[]] }>()
 

@@ -105,13 +105,34 @@
       <!-- 数据节点 -->
       <span class="inline-flex items-center rounded bg-emerald-600 px-2 py-0.5 text-[11px] font-medium text-white">《数据》</span>
     </div>
+
+    <!-- 实时预览 (P-U2): 命中数 + 每跳漏斗 + 样本 -->
+    <div v-if="asUserId" class="border-t border-indigo-100 pt-1.5 text-[11px]">
+      <div v-if="preview.loading" class="text-gray-400">预览中…</div>
+      <div v-else-if="preview.note || preview.error" class="text-amber-600">{{ preview.note || preview.error }}</div>
+      <div v-else-if="preview.count != null" class="space-y-0.5">
+        <div class="flex flex-wrap items-center gap-1 text-gray-600">
+          <span class="font-medium text-indigo-700">命中 {{ preview.count }} 条</span>
+          <span class="text-gray-300">·</span>
+          <span class="text-gray-500">我</span>
+          <template v-for="(s, k) in (preview.funnel || [])" :key="k">
+            <span class="text-gray-300">→</span>
+            <span class="text-gray-500">{{ funnelLabel(s.type) }} {{ s.count }}</span>
+          </template>
+        </div>
+        <div v-if="preview.samples?.length" class="text-gray-400">
+          样本：{{ preview.samples.map(x => x.name || x.id).join('、') }}
+        </div>
+      </div>
+    </div>
+    <div v-else class="border-t border-indigo-100 pt-1.5 text-[10px] text-gray-400">选「模拟用户」后显示实时预览</div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { Plus, Workflow } from 'lucide-vue-next'
-import { dataPermissionApi, type ResourceRelationOption } from '@/api/access'
+import { dataPermissionApi, dataPermissionChainPreviewApi, type ResourceRelationOption } from '@/api/access'
 import { relationTypeApi, type RelationTypeDef } from '@/api/relationType'
 import type { RelationGrant, ChainHop } from '@/types/access'
 
@@ -120,6 +141,8 @@ const props = defineProps<{
   /** 当前 grant (hops 非空 = 链; relation = 终端锚点) */
   modelValue: RelationGrant
   disabled?: boolean
+  /** 模拟用户 id (来自 DataScopeStudio); 有值才出实时预览 */
+  asUserId?: number | string | null
 }>()
 const emit = defineEmits<{ 'update:model-value': [RelationGrant] }>()
 
@@ -265,4 +288,37 @@ function removeHop(i: number) {
 function setTerminal(v: string) {
   emitGrant(hops.value, v)
 }
+
+// ── 实时预览 (P-U2): 以模拟用户身份编译链 → 命中数 + 样本 + 每跳漏斗 ──
+const preview = ref<{ loading: boolean; count?: number | null; samples?: Array<{ id: string; name?: string }>; funnel?: Array<{ type: string; count: number }>; note?: string; error?: string }>({ loading: false })
+let debounceTimer: ReturnType<typeof setTimeout> | null = null
+function funnelLabel(t: string): string {
+  return t === 'data' ? '数据' : (TYPE_LABEL[t] || t)
+}
+function schedulePreview() {
+  if (debounceTimer) clearTimeout(debounceTimer)
+  if (!props.asUserId || !props.modelValue.relation) {
+    preview.value = { loading: false }
+    return
+  }
+  debounceTimer = setTimeout(runPreview, 500)
+}
+async function runPreview() {
+  preview.value = { loading: true }
+  try {
+    const r = await dataPermissionChainPreviewApi.preview({
+      moduleCode: props.moduleCode,
+      asUserId: props.asUserId as number | string,
+      relation: props.modelValue.relation,
+      subjectParam: props.modelValue.subjectParam,
+      hops: (props.modelValue.hops || []).map(h => ({
+        relations: h.relations, combine: h.combine, toType: h.toType, subtree: h.subtree, direction: h.direction,
+      })),
+    })
+    preview.value = { loading: false, count: r.count ?? null, samples: r.samples, funnel: r.funnel, note: r.note, error: r.error }
+  } catch {
+    preview.value = { loading: false, error: '预览失败' }
+  }
+}
+watch(() => [props.modelValue, props.asUserId, props.moduleCode], schedulePreview, { deep: true, immediate: true })
 </script>

@@ -75,6 +75,7 @@
                 :module-code="m.code"
                 :model-value="grantsOf(m.code)"
                 :disabled="roleDisabled || m.pluginEnabled === false"
+                :as-user-id="simulateUserId"
                 @update:model-value="(v: RelationGrant[]) => setGrants(m.code, v)"
               />
             </div>

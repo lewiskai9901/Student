@@ -54,4 +54,28 @@ public class DataPermissionSimulateApplicationService {
                 " FROM " + table + " WHERE " + whereClause + " LIMIT 3";
         return jdbc.queryForList(sampleSql);
     }
+
+    // ── 关系链预览 (P-U2): WHERE 含命名参数 → 位置参数绑定 (relation 码等字符串不内联, 防注入) ──
+
+    /** COUNT(*) FROM table WHERE whereClause, 位置参数绑定。 */
+    @Transactional(readOnly = true)
+    public Long countByWhereArgs(String table, String whereClause, Object[] args) {
+        return jdbc.queryForObject(
+            "SELECT COUNT(*) FROM " + table + " WHERE " + whereClause, Long.class, args);
+    }
+
+    /** 样本: SELECT id [, nameCol AS name] FROM table WHERE whereClause LIMIT 3, 位置参数绑定。 */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> sampleRowsArgs(String table, String nameCol, String whereClause, Object[] args) {
+        String nameSelect = nameCol != null ? ", " + nameCol + " AS name" : "";
+        return jdbc.queryForList(
+            "SELECT id" + nameSelect + " FROM " + table + " WHERE " + whereClause + " LIMIT 3", args);
+    }
+
+    /** 漏斗每跳计数: COUNT(*) FROM (子查询) t, 位置参数绑定。子查询由 ChainHopResolver 产出。 */
+    @Transactional(readOnly = true)
+    public Long countSubquery(String subquerySql, Object[] args) {
+        return jdbc.queryForObject(
+            "SELECT COUNT(*) FROM (" + subquerySql + ") _funnel", Long.class, args);
+    }
 }
