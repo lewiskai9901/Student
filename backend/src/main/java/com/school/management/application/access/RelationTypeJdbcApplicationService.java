@@ -24,7 +24,7 @@ public class RelationTypeJdbcApplicationService {
     private final JdbcTemplate jdbcTemplate;
 
     private static final String SELECT_COLS =
-        "SELECT relation_code, from_type, to_type, relation_name, is_transitive, " +
+        "SELECT relation_code, from_type, to_type, relation_name, reverse_name, is_transitive, " +
         "       category, tier, registered_by, description, capacity_bound, max_per_resource, max_by_subtype, " +
         "       implied_relations, industry, plugin_class, origin, is_enabled, plugin_enabled ";
 

@@ -245,6 +245,8 @@ export interface ChainHop {
   combine: 'AND' | 'OR'
   toType: 'user' | 'org_unit' | 'place'
   subtree?: boolean
+  /** 遍历方向: FORWARD=subject→resource(默认) / REVERSE=resource→subject(倒读同一条边) */
+  direction?: 'FORWARD' | 'REVERSE'
 }
 
 /**

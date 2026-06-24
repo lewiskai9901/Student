@@ -8,6 +8,8 @@ export interface RelationTypeDef {
   fromType: string
   toType: string
   relationName: string
+  /** 反向读名 (resource→subject 视角, 如 belongs_to 反向"下辖场所"); 有向链 UI 反向边显示用 */
+  reverseName?: string
   isTransitive: number
   category: string        // OWNERSHIP/MEMBERSHIP/ASSOCIATION/DELEGATION/SUBSCRIPTION
   tier: string            // CORE / COMMON_EXT / DOMAIN
