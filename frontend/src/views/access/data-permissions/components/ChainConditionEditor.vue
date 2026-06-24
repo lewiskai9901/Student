@@ -136,6 +136,7 @@ import { ref, computed, watch } from 'vue'
 import { Plus, Workflow } from 'lucide-vue-next'
 import { dataPermissionApi, dataPermissionChainPreviewApi, type ResourceRelationOption } from '@/api/access'
 import { relationTypeApi, type RelationTypeDef } from '@/api/relationType'
+import { resourceRelationLabel } from '../resourceRelationLabels'
 import type { RelationGrant, ChainHop } from '@/types/access'
 
 const props = defineProps<{
@@ -230,12 +231,12 @@ const TERM_LABEL: Record<string, string> = { owner_org: '组织归属', creator:
 const terminalOptions = computed(() =>
   resRels.value
     .filter(r => r.storageKind === 'COLUMN' || r.storageKind === 'SUBJECT_GRAPH')
-    .map(r => ({ code: r.relationCode, label: TERM_LABEL[r.relationCode] || r.relationCode }))
+    .map(r => ({ code: r.relationCode, label: TERM_LABEL[r.relationCode] || resourceRelationLabel(r.relationCode) || r.relationCode }))
 )
 const terminalLabel = computed(() => {
   const code = props.modelValue.relation
   if (!code) return '选终端'
-  return TERM_LABEL[code] || code
+  return TERM_LABEL[code] || resourceRelationLabel(code) || code
 })
 
 // 选中终端是否成员图 (SUBJECT_GRAPH) → 显示"数据↔组织成员关系"下拉

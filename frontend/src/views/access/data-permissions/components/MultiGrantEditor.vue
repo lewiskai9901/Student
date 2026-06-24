@@ -72,9 +72,8 @@
             <X class="h-3 w-3" />
           </button>
         </div>
-        <!-- 仅"和我有X关系的组织"可升级为多级链 (终端 owner_org) -->
+        <!-- 任意关系都可升级为多级链 (非 org 关系默认以"成员"作首跳, 用户再编辑) -->
         <button
-          v-if="keyIsOrg(keyOf(g))"
           class="mt-0.5 pl-3 text-[11px] text-gray-500 hover:text-indigo-600 hover:underline disabled:opacity-40"
           :disabled="disabled"
           @click="toChain(i)"
@@ -101,6 +100,8 @@ import { dataPermissionApi, type ResourceRelationOption } from '@/api/access'
 import { relationTypeApi, type RelationTypeDef } from '@/api/relationType'
 import type { RelationGrant, ChainHop } from '@/types/access'
 import { grantToKey, keyToGrant, keyIsOrg, ensureGrants, type RelOption } from '../composables/scopeRelation'
+import { scopeOptionLabel } from '../dataScopeSpecializations'
+import { resourceRelationLabel } from '../resourceRelationLabels'
 import ChainConditionEditor from './ChainConditionEditor.vue'
 
 const props = defineProps<{
@@ -195,7 +196,7 @@ const relationOptions = computed<RelOption[]>(() => {
     })),
     ...resRels.value.map(r => ({
       key: 'res:' + r.relationCode,
-      label: (RES_LABEL[r.relationCode] || r.relationCode) +
+      label: (RES_LABEL[r.relationCode] || resourceRelationLabel(r.relationCode) || r.relationCode) +
         (r.storageKind === 'PROVIDER' ? '（由插件解析）' : '（指派）'),
       kind: 'res' as const,
       code: r.relationCode,
@@ -207,7 +208,7 @@ const relationOptions = computed<RelOption[]>(() => {
     const k = grantToKey(g)
     if (k.startsWith('dim:') && !seen.has(k)) {
       const dim = g.subjectParam || ''
-      opts.push({ key: k, label: '维度：' + dim, kind: 'dim', code: dim })
+      opts.push({ key: k, label: scopeOptionLabel(dim) || ('维度：' + dim), kind: 'dim', code: dim })
       seen.add(k)
     }
   }

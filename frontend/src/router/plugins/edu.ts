@@ -1,6 +1,7 @@
 import type { RouteRecordRaw } from 'vue-router'
 import { registerRelationScenes } from '@/components/access/relationScenes'
 import { registerScopeSpecializations } from '@/views/access/data-permissions/dataScopeSpecializations'
+import { registerResourceRelationLabels } from '@/views/access/data-permissions/resourceRelationLabels'
 import { registerRoleTemplates } from '@/views/access/data-permissions/composables/useTemplateLibrary'
 import { registerDashboardCards, registerDashboardShortcuts } from '@/views/dashboard/dashboardCards'
 
@@ -50,6 +51,12 @@ registerScopeSpecializations('EDU', [
     },
   },
 ])
+
+// 数据权限"资源锚点"中文名 — EDU 自带的 PROVIDER/RECORD 锚点 (英文码 → 人话)。
+// taught_by = student 的 PROVIDER 锚点 (teachingStudentResolver: 我任课关联的学生)。
+registerResourceRelationLabels({
+  taught_by: '我任课的学生',
+})
 
 // 数据权限模板库 — EDU 行业模板 (班主任/年级主任), 仅 EDU 启用时出现在模板库。
 registerRoleTemplates('EDU', [

@@ -34,3 +34,18 @@ export function registerScopeSpecializations(pluginCode: string, specs: ScopeSpe
 export function enabledScopeSpecializations(enabledCodes: readonly string[]): ScopeSpecialization[] {
   return enabledCodes.flatMap(code => registry[code] ?? [])
 }
+
+/**
+ * 维度 scope code → 中文标签 (扫所有已登记插件的 options)。
+ * 供数据权限编辑器把已配维度 (如 BY_CLASS) 显示成人话 ("我带的班级") 而非英文码。
+ * 不依赖 enabled 门控 —— 显示已配维度时插件即便禁用也应给出标签 (与 grants 保全一致)。
+ */
+export function scopeOptionLabel(code: string): string | undefined {
+  for (const specs of Object.values(registry)) {
+    for (const s of specs) {
+      const hit = s.options.find(o => o.code === code)
+      if (hit) return hit.label
+    }
+  }
+  return undefined
+}
