@@ -163,7 +163,11 @@ const resRels = ref<ResourceRelationOption[]>([])
 async function loadOrgRelations() {
   try {
     const all = (await relationTypeApi.list()) || []
-    orgRels.value = all.filter(r => (r.toType || '').toUpperCase() === 'ORG_UNIT')
+    // "和我有 X 关系的组织" 必须是 user→org 的关系; belongs_to 是 place→org, 不该出现在"我"的视角下
+    // (此前只按 toType 过滤, 把 belongs_to 误列为"和我有「归属」关系的组织")。
+    orgRels.value = all.filter(
+      r => (r.toType || '').toUpperCase() === 'ORG_UNIT' && (r.fromType || '').toUpperCase() === 'USER'
+    )
   } catch {
     orgRels.value = []
   }

@@ -104,8 +104,9 @@
           </div>
           <div class="mb-2 flex items-center gap-2">
             <input
-              v-model.number="simulateUserId"
-              type="number"
+              v-model="simulateUserId"
+              type="text"
+              inputmode="numeric"
               placeholder="输入用户 ID (如 1)"
               class="h-7 flex-1 rounded border border-gray-300 px-2 text-[11px] outline-none focus:border-blue-500"
               @keyup.enter="runSimulate"
@@ -354,7 +355,8 @@ async function handleSave() {
 }
 
 // ── 模拟用户 ──
-const simulateUserId = ref<number | null>(null)
+// 用户 id 是雪花 (19 位, 超 JS 安全整数) → 必须 string, 不能 v-model.number (会精度截断查错用户)。
+const simulateUserId = ref<string>('')
 const simulating = ref(false)
 const simulateResults = ref<SimulateResult[]>([])
 const simulateError = ref('')
@@ -368,7 +370,8 @@ function resetSimulation() {
   expandAll.value = false
 }
 async function runSimulate() {
-  if (!simulateUserId.value) return
+  const uid = simulateUserId.value.trim()
+  if (!uid) return
   if (props.modules.length === 0) {
     simulateError.value = '当前无可配置的资源, 无法模拟'
     return
@@ -378,7 +381,7 @@ async function runSimulate() {
   simulateError.value = ''
   try {
     const res = await dataPermissionSimulateApi.simulate({
-      userId: String(simulateUserId.value),
+      userId: uid,
       modulePermissions: snapshot.map(mp => ({
         moduleCode: mp.moduleCode,
         scopeCode: mp.scopeCode,
