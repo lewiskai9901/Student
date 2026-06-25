@@ -17,6 +17,14 @@
 
 ## 阶段 A — R4 step3 完成(写路径 + 收编旁路)【周级,有真阻断】
 
+> ⚠️ **已大部分被取代 / STALE (2026-06-25 核实)**:受检面已用 **PROVIDER** 方案落地 ——
+> `CoreManifest` 注册 `inspection_record.inspected = provider(myReceivedInspectionsResolver)`,
+> resolver 内部"一把算"(`insp_submissions.target_id ∈ 我的成员组织 via access_relations member`),
+> **无需 A1 per-relation COLUMN、无需 A2 MY_MEMBER_ORGS**(`RELATION:member` 本就表达"我的全部成员组织")。
+> 残留真缺口仅:① `record_relations` 表/仓储已建但**零写入方、零消费方**(`reviewer` RECORD_RELATION
+> 声明了却没有"指派复核员→写 tuple"的业务流驱动 → 现做属 build-ahead);② `MyReceivedInspectionsController`
+> 聚合(trends/recurring)仍走旁路(A4 已判定"有意保留聚合特例")。**结论:A 实质收官,勿再实现 A1/A2。**
+
 **目标**:让 RECORD_RELATION 有真实写入与端到端真证;收编 `MyReceivedInspectionsController` 旁路。
 
 **本会话实查到的真阻断**(读 `MyReceivedInspectionsApplicationService` 得):
