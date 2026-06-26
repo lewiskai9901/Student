@@ -310,6 +310,7 @@ public class CoreManifest implements PluginPackage {
             dr("inspection_project",     "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),
             dr("inspection_task",        "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),
             dr("inspection_record",      "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),
+            dr("inspection_submission",  "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),  // 完美重构 P1: 检查提交单独立码
             dr("inspection_corrective",  "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),
             dr("inspection_alert",       "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),
             dr("inspection_observation", "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),
@@ -359,11 +360,14 @@ public class CoreManifest implements PluginPackage {
             // 引擎 (ScopeEvaluator RECORD_RELATION 分支) 据此出 record_relations 子查询。
             Stream.<Contribution>of(rr(ResourceRelationDef.recordRelation(
                 "inspection_record", "reviewer", "复核员", "USER", "reviewer"))),
-            // R3c P2: 检查记录的"受检" = PROVIDER 接口式关系 — "发生在我所属组织的检查记录"
-            // (insp_submissions.target_id ∈ 我的成员组织)。过去卡"周级"(target_id 列锚 + 成员组织主体),
-            // 现 resolver 内部一把算 (访问图取我的成员组织 → target_id 命中), 无需新 SubjectScope。
-            Stream.<Contribution>of(rr(ResourceRelationDef.provider(
-                "inspection_record", "inspected", "受检(我所属组织)", "USER", "myReceivedInspectionsResolver"))),
+            // [完美重构 P1] 检查提交单 (insp_submissions) 独立资源码: owner_org/creator + 受检 inspected。
+            // 受检 inspected 现为干净列锚 COLUMN(target_id) —— 替换原 inspection_record 上写死 FROM insp_submissions
+            // 的 PROVIDER (该 PROVIDER 被 5 表共用 → 查 tasks/evidence 时 task.id 比 submission.id 是多表 bug)。
+            // 配 {inspected, RELATION:member} → submission.target_id ∈ 我的成员组织 (经 P0 A1 per-relation COLUMN),
+            // 且只挂 submission 一张表, 多表 bug 自然消失。subjectType=ORG_UNIT (target 是被检组织)。
+            orgCreator("inspection_submission", "org_unit_id", "created_by"),
+            Stream.<Contribution>of(rr(ResourceRelationDef.column(
+                "inspection_submission", "inspected", "受检组织", "ORG_UNIT", "target_id"))),
             orgCreator("inspection_project", "org_unit_id", "created_by"),
             orgCreator("inspection_alert", "org_unit_id", "created_by"),
             orgCreator("inspection_summary", "org_unit_id", "created_by"),
