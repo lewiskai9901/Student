@@ -139,8 +139,26 @@ public class ScopeEvaluator {
         if (providerKind == StorageKind.PROVIDER) {
             return buildProviderCondition(g, spec, meta, ctx, tenantId, paramOffset);
         }
-        return composeAnchorCondition(toSubSpec(g, spec), meta, ctx,
+        // A1 per-relation COLUMN: 非 owner_org/creator 的 COLUMN 锚点 (如 inspection_submission.inspected→target_id,
+        // inspection_task.reviewer→reviewer_id) 挂在该关系注册的列上, 而非默认 owner_org/creator 列。临时换列后复用单锚点 compose。
+        ResourceScopeMeta effMeta = perRelationColumnMeta(meta, g, providerKind);
+        return composeAnchorCondition(toSubSpec(g, spec), effMeta, ctx,
                 effectiveOrgId, effectiveOrgPath, tenantId, paramOffset);
+    }
+
+    /**
+     * A1: grant.relation 是非 owner_org/creator 的 COLUMN 锚点 → 返回把 org/creator 列都换成该关系注册列的 meta
+     * 副本(让 SELF→{@code col=me}、org-set→{@code col IN(S)}); 否则原样返回。
+     */
+    private ResourceScopeMeta perRelationColumnMeta(ResourceScopeMeta meta, RelationGrant g, StorageKind providerKind) {
+        if (providerKind != StorageKind.COLUMN
+                || ResourceRelationRegistry.OWNER_ORG.equals(g.relation())
+                || ResourceRelationRegistry.CREATOR.equals(g.relation())) {
+            return meta;
+        }
+        String col = resourceRelationRegistry.relationOf(meta.resourceCode(), g.relation())
+                .map(ResourceRelationRegistry.AnchorRow::columnName).orElse(null);
+        return (col == null || col.isBlank()) ? meta : meta.withColumn(col);
     }
 
     /**

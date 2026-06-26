@@ -398,6 +398,45 @@ class ScopeEvaluatorTest {
     }
 
     @Test
+    @DisplayName("A1 per-relation COLUMN (org-set): inspected(COLUMN target_id) + RELATION:member → target_id IN (member 子查询)")
+    void perRelationColumnGrant_orgSet() {
+        when(resourceRelationRegistry.relationOf("inspection_submission", "inspected"))
+                .thenReturn(Optional.of(new ResourceRelationRegistry.AnchorRow(
+                        "inspected", StorageKind.COLUMN, "target_id", null)));
+        ResourceScopeMeta meta = new ResourceScopeMeta(
+                "t", "org_unit_id", "created_by", false, "id", null, "inspection_submission");
+        ScopeSpec spec = ScopeSpec.builder()
+                .relationGrants(List.of(new RelationGrant("inspected", SubjectScope.RELATION, "member", false, null)))
+                .build();
+
+        ScopeCondition c = evaluator().toSqlCondition(spec, meta, ctx(), 100L, "/1/100/", TENANT, 0);
+
+        assertThat(c.sql).startsWith("t.target_id IN (SELECT mar.resource_id FROM access_relations mar");
+        assertThat(c.sql).doesNotContain("org_unit_id");
+        assertThat(c.params.get(1).value).isEqualTo("member");
+    }
+
+    @Test
+    @DisplayName("A1 per-relation COLUMN (SELF): reviewer(COLUMN reviewer_id) + SELF → reviewer_id = me, 非 created_by")
+    void perRelationColumnGrant_self() {
+        when(resourceRelationRegistry.relationOf("inspection_task", "reviewer"))
+                .thenReturn(Optional.of(new ResourceRelationRegistry.AnchorRow(
+                        "reviewer", StorageKind.COLUMN, "reviewer_id", null)));
+        ResourceScopeMeta meta = new ResourceScopeMeta(
+                "t", "org_unit_id", "created_by", false, "id", null, "inspection_task");
+        ScopeSpec spec = ScopeSpec.builder()
+                .relationGrants(List.of(new RelationGrant("reviewer", SubjectScope.SELF, null, false, null)))
+                .build();
+
+        ScopeCondition c = evaluator().toSqlCondition(spec, meta, ctx(), 100L, "/1/100/", TENANT, 0);
+
+        // "我复核的" = reviewer_id = me (绑当前用户), 而非默认 created_by
+        assertThat(c.sql).isEqualTo("t.reviewer_id = ?");
+        assertThat(c.params).hasSize(1);
+        assertThat(c.params.get(0).value).isEqualTo(7L);
+    }
+
+    @Test
     @DisplayName("R4 多 grant: creator(COLUMN) ∨ reviewer(RECORD_RELATION) → 列谓词 OR record_relations 子查询")
     void multiGrant_columnOrRecordRelation() {
         when(resourceRelationRegistry.relationOf("inspection_record", "reviewer"))

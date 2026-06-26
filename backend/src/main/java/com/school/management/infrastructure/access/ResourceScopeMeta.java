@@ -57,4 +57,15 @@ public record ResourceScopeMeta(
     public String creatorFieldOrDefault() {
         return creatorField == null || creatorField.isEmpty() ? "created_by" : creatorField;
     }
+
+    /**
+     * 换列 (A1 per-relation COLUMN): 把 orgUnitField 与 creatorField 都换成该关系注册的列, 复用单锚点
+     * compose 既有分支 —— org-set 主体走 orgUnitField 得 {@code col IN (S)} (如 inspected,target_id∈我的成员组织);
+     * SELF 主体走 creatorField 得 {@code col = me} (如 reviewer,reviewer_id=me)。其余字段不变。
+     * owner_org(=orgUnitField)/creator(=creatorField) 本就默认列, 不经此换。
+     */
+    public ResourceScopeMeta withColumn(String col) {
+        return new ResourceScopeMeta(tableAlias, col, col, viaMembership,
+                membershipSubjectColumn, typeField, resourceCode);
+    }
 }
