@@ -537,18 +537,22 @@ const groupedPermissions = computed(() => {
 
 .rl-table {
   width: 100%; border-collapse: collapse; font-size: 12px;
-  background: #fff; border: 1px solid #f3f4f6; border-radius: 6px; overflow: hidden;
+  background: #fff; border: 1px solid #f3f4f6; border-radius: 6px;
+  /* 列多于中栏宽时(尤其有右侧详情面板), nowrap 内容会被父级裁掉最后一列(行业)。
+     让表自身成为横向滚动容器: display:block + overflow-x:auto。表高度 auto → 不会出现纵向滚动条,
+     仅在需要时出现横向滚动条, 任何父级(rl-group overflow:hidden / rl-body flex)都不再裁剪。 */
+  display: block; overflow-x: auto;
 }
 .rl-group .rl-table { border: none; border-radius: 0; }
 .rl-table thead th {
   text-align: left; font-size: 10px; color: #6b7280;
   font-weight: 500; text-transform: uppercase; letter-spacing: 0.3px;
-  padding: 7px 12px; border-bottom: 1px solid #e5e7eb;
+  padding: 7px 8px; border-bottom: 1px solid #e5e7eb;
   background: #fafbfc;
   white-space: nowrap;            /* 表头不逐字竖排; 列多时整表横向滚动 */
 }
 .rl-table tbody td {
-  padding: 7px 12px; font-size: 12px;
+  padding: 7px 8px; font-size: 12px;
   color: #111827; border-bottom: 1px solid #f9fafb;
   vertical-align: middle;
   white-space: nowrap;            /* 短文本单元格不竖排 */

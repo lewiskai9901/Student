@@ -126,9 +126,12 @@ const resourceIcons: Record<ResourceKey, any> = {
 }
 
 function pluginContribTotal(ind: any): number {
-  return (ind.types || 0) + (ind.relations || 0) + (ind.events || 0)
-    + (ind.roles || 0) + (ind.permissions || 0)
-    + (ind.triggerPoints || 0) + (ind.policies || 0) + (ind.dataScopes || 0)
+  // 后端把 Long 计数序列化为字符串 (防 JS 精度丢失), 直接 + 会拼接成 "04000000" 而非求和。
+  // 必须 Number() 强转后再加。
+  const n = (v: any) => Number(v) || 0
+  return n(ind.types) + n(ind.relations) + n(ind.events)
+    + n(ind.roles) + n(ind.permissions)
+    + n(ind.triggerPoints) + n(ind.policies) + n(ind.dataScopes)
 }
 
 function listenersFor(h: any): any[] {
