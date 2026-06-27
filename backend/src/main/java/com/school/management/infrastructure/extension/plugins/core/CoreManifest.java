@@ -309,7 +309,8 @@ public class CoreManifest implements PluginPackage {
             // 检查平台 (通用核心)
             dr("inspection_project",     "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),
             dr("inspection_task",        "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),
-            dr("inspection_record",      "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),
+            // 完美重构 P4: inspection_record 共享码已删 (P1-P3 把 5 mapper 全迁出 → 无 @DataPermission 引用)。
+            // 注: inspection_record 作为 casbin 功能权限码 (inspection_record:view) 是另一命名空间, 保留不动。
             dr("inspection_submission",  "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),  // 完美重构 P1: 检查提交单独立码
             dr("inspection_evidence",          "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),  // P3 余表
             dr("inspection_submission_detail", "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),  // P3 余表
@@ -357,8 +358,6 @@ public class CoreManifest implements PluginPackage {
                     .withAutoFill().withGrantsByDefault().withInsertGuard()),
                 rr(ResourceRelationDef.column("place", "creator", "创建者", "USER", "created_by").withAutoFill())
             ),
-            // 普通记录: org_unit_id + created_by
-            orgCreator("inspection_record", "org_unit_id", "created_by"),
             // [完美重构 P2] 检查任务 (insp_tasks) 独立资源码: owner_org/creator + 复核员/检查员单值列锚。
             // reviewer 原误声明为 RECORD_RELATION(多值表 record_relations), 实为 insp_tasks.reviewer_id 单值列、
             // 写入方 startReview 早有 → 改 COLUMN(reviewer_id); 同理 inspector=COLUMN(inspector_id)。
