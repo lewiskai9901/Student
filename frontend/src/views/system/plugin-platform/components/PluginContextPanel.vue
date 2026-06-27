@@ -44,25 +44,7 @@
         </dl>
       </div>
 
-      <!-- Action buttons: governance -->
-      <div v-if="canOperate" class="cx-actions">
-        <button v-if="plugin.enabled !== false" class="cx-btn" @click="$emit('disable', plugin.code)">
-          <Power :size="12" /> 禁用
-        </button>
-        <button v-else class="cx-btn cx-btn-primary" @click="$emit('enable', plugin.code)">
-          <Power :size="12" /> 启用
-        </button>
-        <button class="cx-btn" @click="$emit('health', plugin.code)">
-          <Activity :size="12" /> 健康检查
-        </button>
-        <button class="cx-btn cx-btn-danger" @click="$emit('uninstall', plugin.code)">
-          <Trash2 :size="12" /> 卸载
-        </button>
-      </div>
-      <div v-else class="cx-locked">
-        <Lock :size="11" />
-        {{ plugin.code === 'CORE' ? 'CORE 不可卸载' : '自定义资源无生命周期' }}
-      </div>
+      <!-- 治理操作已上移至主区 PluginDetail 头部 (任意屏宽可用); 此侧栏仅作信息展示 -->
     </template>
 
     <!-- Hook context -->
@@ -125,7 +107,7 @@
 <script setup lang="ts">
 import { computed, inject } from 'vue'
 import {
-  Webhook, LayoutGrid, Power, Activity, Trash2, Lock,
+  Webhook, LayoutGrid,
   ShieldCheck, AlertTriangle, Timer
 } from 'lucide-vue-next'
 import {
@@ -140,13 +122,6 @@ const props = defineProps<{
   resourceType: ResourceKey
 }>()
 
-defineEmits<{
-  (e: 'enable', code: string): void
-  (e: 'disable', code: string): void
-  (e: 'uninstall', code: string): void
-  (e: 'health', code: string): void
-}>()
-
 const data = inject<PluginData>('pluginData')!
 
 const plugin = computed(() => data.industries.find(i => i.code === props.pluginCode) || null)
@@ -159,11 +134,6 @@ const hookListeners = computed(() => {
   if (!props.hookKey) return 0
   return data.policies.filter(p => (p.supports || []).includes(props.hookKey)).length
 })
-const canOperate = computed(() => {
-  if (!plugin.value) return false
-  return plugin.value.code !== 'CORE' && plugin.value.isPlugin !== false
-})
-
 const resourceLabel = computed(() =>
   RESOURCE_TYPES.find(r => r.key === props.resourceType)?.label || ''
 )

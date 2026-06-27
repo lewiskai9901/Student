@@ -23,6 +23,16 @@
           </div>
         </div>
       </div>
+      <!-- 治理操作 (主区头部, 任意屏宽可用; 修窄屏第三栏隐藏致无法治理的缺陷) -->
+      <div class="pd-head-actions">
+        <button class="pd-act" @click="emit('health', plugin.code)" title="查看插件健康状态与依赖">健康检查</button>
+        <button v-if="plugin.code !== 'CORE' && plugin.enabled !== false" class="pd-act"
+                @click="emit('disable-plugin', plugin.code)" title="禁用插件 + 级联软失效其所有贡献">禁用</button>
+        <button v-else-if="plugin.code !== 'CORE'" class="pd-act pd-act-primary"
+                @click="emit('enable-plugin', plugin.code)" title="启用插件 + 级联恢复其所有贡献">启用</button>
+        <button v-if="plugin.code !== 'CORE'" class="pd-act pd-act-danger"
+                @click="emit('uninstall-plugin', plugin.code)" title="卸载插件 (SOFT: 持久禁用, 编译内插件重启不复活)">卸载</button>
+      </div>
     </header>
 
     <!-- Phase 2: 插件禁用警示 banner -->
@@ -343,6 +353,9 @@ const props = defineProps<{ pluginCode: string }>()
 const emit = defineEmits<{
   (e: 'jump-resource', payload: { type: ResourceKey; pluginCode?: string }): void
   (e: 'enable-plugin', pluginCode: string): void
+  (e: 'disable-plugin', pluginCode: string): void
+  (e: 'uninstall-plugin', pluginCode: string): void
+  (e: 'health', pluginCode: string): void
 }>()
 
 const data = inject<PluginData>('pluginData')!
@@ -424,6 +437,17 @@ function toggle(k: string) { openMap[k] = !openMap[k] }
 }
 .pd-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .pd-head-main { display: flex; align-items: center; gap: 10px; }
+.pd-head-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.pd-act {
+  display: inline-flex; align-items: center; padding: 5px 12px;
+  border: 1px solid #d1d5db; background: #fff; color: #4b5563;
+  border-radius: 5px; font-size: 12px; cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.pd-act:hover { border-color: #93c5fd; color: #2563eb; }
+.pd-act-primary { background: #2563eb; color: #fff; border-color: #2563eb; }
+.pd-act-primary:hover { background: #1d4ed8; color: #fff; border-color: #1d4ed8; }
+.pd-act-danger { color: #b91c1c; border-color: #fecaca; }
+.pd-act-danger:hover { background: #fef2f2; border-color: #fca5a5; color: #b91c1c; }
 .pd-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
 .pd-title {
   font-size: 15px; font-weight: 700; color: #111827; margin: 0;

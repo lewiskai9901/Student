@@ -49,6 +49,9 @@
           :plugin-code="selectedCode"
           @jump-resource="onJumpResource"
           @enable-plugin="onEnablePlugin"
+          @disable-plugin="onDisablePlugin"
+          @uninstall-plugin="onUninstallPlugin"
+          @health="onShowHealth"
         />
         <HookPointDetail
           v-else-if="view === 'hooks'"
@@ -67,10 +70,6 @@
         :plugin-code="selectedCode"
         :hook-key="selectedHookKey"
         :resource-type="selectedResource"
-        @enable="onEnablePlugin"
-        @disable="onDisablePlugin"
-        @uninstall="onUninstallPlugin"
-        @health="onShowHealth"
       />
     </div>
 
