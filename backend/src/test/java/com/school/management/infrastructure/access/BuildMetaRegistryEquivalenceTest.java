@@ -111,16 +111,17 @@ class BuildMetaRegistryEquivalenceTest {
 
     // ── 审计 P1: 非成员路径与成员路径相反, SELF 会消费 creatorField → 注册表必须登 creator ──
     @Test
-    @DisplayName("非成员 SELF 消费 creatorField(与成员路径相反): 登 created_by → 't.created_by=?', 不登('') → 't.=?' 发散")
+    @DisplayName("非成员 SELF 消费 creatorField(与成员路径相反): 登 created_by → 't.created_by=?', 不登('') → DENY '1 = 0'")
     void orgFieldSelfConsumesCreatorField() {
         ScopeSpec self = ScopeSpec.builder().orgAnchor(OrgAnchor.SELF).build();
         ResourceScopeMeta withCreator = new ResourceScopeMeta("t", "org_unit_id", "created_by", false, "id", null, null);
         ResourceScopeMeta noCreator   = new ResourceScopeMeta("t", "org_unit_id", "", false, "id", null, null);
         String a = evaluator().toSqlCondition(self, withCreator, ctx(), 100L, "/1/100/", TENANT, 0).sql;
         String b = evaluator().toSqlCondition(self, noCreator,   ctx(), 100L, "/1/100/", TENANT, 0).sql;
-        // 证明 creatorField 在非成员 SELF 确实进 SQL —— 这就是 student_grade/school_class 必须登 creator 的原因
+        // 证明 creatorField 在非成员 SELF 确实进 SQL —— 这就是 student_grade/school_class 必须登 creator 的原因。
+        // B-2 修复后: 不登 creatorField 的 SELF 不再发散为破 SQL 't. = ?', 而是显式 DENY '1 = 0' (安全 fail-closed)。
         assertThat(a).isEqualTo("t.created_by = ?");
-        assertThat(b).isEqualTo("t. = ?");
+        assertThat(b).isEqualTo("1 = 0");
         assertThat(a).isNotEqualTo(b);
     }
 }

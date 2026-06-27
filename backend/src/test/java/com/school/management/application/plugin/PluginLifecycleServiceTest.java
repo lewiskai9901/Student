@@ -34,16 +34,16 @@ class PluginLifecycleServiceTest {
         // dependency check: no dependents
         when(jdbc.queryForList(anyString(), eq(String.class), any(), any()))
             .thenReturn(List.of());
-        // 主表 UPDATE succeeded
+        // 主表 UPDATE (1 个尾参 code) succeeded
         when(jdbc.update(startsWith("UPDATE plugin_packages SET enabled=0"), eq("EDU")))
             .thenReturn(1);
-        // 9 表 + msg_subscription_rules 都返回 N 行
-        when(jdbc.update(startsWith("UPDATE "), eq("EDU"))).thenReturn(3);
+        // 级联 cascadePluginEnabled 用参数化 value: update(sql, value=0, code) → 2 个尾参
+        when(jdbc.update(startsWith("UPDATE "), eq(0), eq("EDU"))).thenReturn(3);
 
         service.disable("EDU");
 
-        // 主表 + 8 常规表 + 1 msg_subscription_rules = 至少 10 UPDATE
-        verify(jdbc, atLeast(10)).update(anyString(), eq("EDU"));
+        // 9 贡献表 + 1 msg_subscription_rules = 至少 10 次参数化级联 UPDATE (value=0)
+        verify(jdbc, atLeast(10)).update(anyString(), eq(0), eq("EDU"));
         // event published
         ArgumentCaptor<PermissionsRefreshedEvent> cap =
             ArgumentCaptor.forClass(PermissionsRefreshedEvent.class);
@@ -84,11 +84,12 @@ class PluginLifecycleServiceTest {
     void enable_cascadesAllTablesToEnabled1() {
         when(jdbc.update(startsWith("UPDATE plugin_packages SET enabled=1"), eq("EDU")))
             .thenReturn(1);
-        when(jdbc.update(startsWith("UPDATE "), eq("EDU"))).thenReturn(3);
+        // 级联恢复: update(sql, value=1, code)
+        when(jdbc.update(startsWith("UPDATE "), eq(1), eq("EDU"))).thenReturn(3);
 
         service.enable("EDU");
 
-        verify(jdbc, atLeast(10)).update(anyString(), eq("EDU"));
+        verify(jdbc, atLeast(10)).update(anyString(), eq(1), eq("EDU"));
         ArgumentCaptor<PermissionsRefreshedEvent> cap =
             ArgumentCaptor.forClass(PermissionsRefreshedEvent.class);
         verify(publisher).publishEvent(cap.capture());
