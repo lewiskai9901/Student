@@ -235,41 +235,74 @@ export function allFeatures(t: any): string[] {
  * 实体类型"特性"(feature flag) 的中文说明。特性是插件 getFeatures() 声明的能力开关 (布尔),
  * 不是方法名 —— 决定该类型在系统里能做什么 (如能否登录、是否教职工)。未知 key 回退原码。
  */
-export const FEATURE_LABELS: Record<string, string> = {
-  canLogin: '可登录系统',
-  canEnroll: '可注册入学 / 选课',
-  isLearner: '学习者 (可被评教 / 记成绩)',
-  isStaff: '教职工身份',
-  canTeach: '可授课',
-  canCounsel: '可带班 / 辅导学生',
-  canApproveGrade: '可审批成绩',
-  canBeAdminOfOrg: '可担任组织管理员',
-  canBeAssignedToClass: '可分配到班级',
-  canBeResponsibleForPlace: '可作为场所责任人',
-  isExternal: '外部人员 (非本组织正式成员)',
-  attendanceTracked: '纳入考勤统计',
-  hasAttendance: '有考勤',
-  hasCapacity: '有容量上限',
-  hasClasses: '包含班级',
-  hasExams: '有考试',
-  hasGender: '含性别属性',
-  hasGuardian: '有监护人',
-  hasOccupancy: '有占用记录',
-  hasStudents: '包含学生',
-  hasTimetable: '有课表',
-  hasProjector: '配备投影仪',
-  hasAC: '配备空调',
-  manageableByOrgAdmin: '组织管理员可管理',
-  profileEditableBySelf: '本人可编辑资料',
-  receivesPersonalGrade: '接收个人成绩',
-  isPrimary: '主身份',
-  isGlobal: '全局 (不限组织)',
-  isRootType: '根类型',
+export interface FeatureMeta {
+  /** 中文名 */
+  label: string
+  /** 用处 + 效果 (点击/悬停展示) */
+  desc: string
+  /** 归属: CORE=通用核心特性(插件可用), EDU=教育行业特性 */
+  owner: 'CORE' | 'EDU'
 }
 
-/** 特性 key → 中文说明 (未知回退原码)。 */
+/**
+ * 实体类型"特性"词典: code → {中文名, 用处说明, 归属}。
+ * 特性是共享能力词汇表 —— 通用特性(CORE)任何插件可用, 行业特性(EDU)归对应行业。
+ * 未知 key 回退原码 (label) / 空说明。
+ */
+export const FEATURE_INFO: Record<string, FeatureMeta> = {
+  // ── 通用 (用户/管理) ──
+  canLogin: { label: '可登录系统', owner: 'CORE', desc: '该类型用户能否登录系统。与账户状态(status)共同决定:关闭后,此类用户即使有账号、密码正确也无法登录(如访客)。' },
+  isStaff: { label: '教职工身份', owner: 'CORE', desc: '标记为内部教职工。影响"教职工"维度的统计、筛选与部分管理界面的可见性。' },
+  isExternal: { label: '外部人员', owner: 'CORE', desc: '非本组织正式成员(访客/家长/外包)。通常不计入成员统计,默认权限更受限。' },
+  profileEditableBySelf: { label: '本人可编辑资料', owner: 'CORE', desc: '允许该类型用户自行编辑个人档案字段(否则只能由管理员维护)。' },
+  canBeAdminOfOrg: { label: '可任组织管理员', owner: 'CORE', desc: '该类型用户可被指派为某组织的管理员(admin 关系),从而管理该组织。' },
+  canBeResponsibleForPlace: { label: '可作场所责任人', owner: 'CORE', desc: '该类型用户可被指派为场所的责任人。' },
+  // ── 场所能力 (PLACE) ──
+  hasCapacity: { label: '有容量上限', owner: 'CORE', desc: '该场所类型有容纳人数/工位上限,可在场所上设置并校验容量。' },
+  bookable: { label: '可预订', owner: 'CORE', desc: '该场所类型可被预订占用(进入预订流程),如会议室、活动室。' },
+  assignable: { label: '可分配', owner: 'CORE', desc: '该场所类型可被分配给组织/班级(归属关系),如教学楼分给某学院。' },
+  occupiable: { label: '可占用', owner: 'CORE', desc: '该场所类型可登记长期占用(如住宿床位、固定工位)。' },
+  hasGender: { label: '含性别属性', owner: 'CORE', desc: '该类型区分性别(如宿舍按性别),启用性别相关约束。' },
+  hasOccupancy: { label: '跟踪占用', owner: 'CORE', desc: '该场所跟踪当前占用情况(已用/空闲)。' },
+  // ── 组织能力 (ORG / OrgCategory) ──
+  dataPermissionBoundary: { label: '数据权限边界', owner: 'CORE', desc: '该组织是数据权限的边界节点 —— "本组织及以下"等范围以它为根划分。' },
+  inspectionTarget: { label: '可被检查', owner: 'CORE', desc: '该组织可作为检查/评分的对象(出现在检查任务的可选范围里)。' },
+  memberManagement: { label: '管理成员', owner: 'CORE', desc: '该组织直接管理成员名册(如班级、部门),可在其下增删成员。' },
+  attendance: { label: '启用考勤', owner: 'CORE', desc: '该组织启用考勤功能。' },
+  scheduling: { label: '启用排课', owner: 'CORE', desc: '该组织启用排课/课表功能。' },
+  // ── 教育行业 (EDU) ──
+  isLearner: { label: '学习者', owner: 'EDU', desc: '标记为学生类。可被评教、记成绩、纳入班级名册等学习场景;org-impact 的"学生数"按它统计。' },
+  canEnroll: { label: '可注册入学 / 选课', owner: 'EDU', desc: '参与入学注册与选课流程。' },
+  canTeach: { label: '可授课', owner: 'EDU', desc: '可被排课、担任任课教师;org-impact 的"教师数"按它统计。' },
+  canCounsel: { label: '可带班 / 辅导', owner: 'EDU', desc: '可担任辅导员、带学生。' },
+  canApproveGrade: { label: '可审批成绩', owner: 'EDU', desc: '具备成绩审批权限。' },
+  hasGuardian: { label: '有监护人', owner: 'EDU', desc: '该类型用户关联监护人(家长)信息。' },
+  receivesPersonalGrade: { label: '接收个人成绩', owner: 'EDU', desc: '会产生/接收个人成绩记录。' },
+  attendanceTracked: { label: '纳入考勤', owner: 'EDU', desc: '该类型用户参与考勤统计。' },
+  canBeAssignedToClass: { label: '可分配到班级', owner: 'EDU', desc: '可被编入班级(班级成员)。' },
+  manageableByOrgAdmin: { label: '组织管理员可管', owner: 'EDU', desc: '可由其所属组织的管理员管理。' },
+  hasStudents: { label: '含学生', owner: 'EDU', desc: '该组织下挂学生。' },
+  hasClasses: { label: '含班级', owner: 'EDU', desc: '该组织下设班级。' },
+  hasExams: { label: '有考试', owner: 'EDU', desc: '该组织组织考试。' },
+  hasTimetable: { label: '有课表', owner: 'EDU', desc: '该组织有课表。' },
+  hasAttendance: { label: '有考勤', owner: 'EDU', desc: '该组织有考勤记录。' },
+  hasProjector: { label: '配备投影仪', owner: 'EDU', desc: '该场所配备投影仪(教室设备)。' },
+  hasAC: { label: '配备空调', owner: 'EDU', desc: '该场所配备空调。' },
+}
+
+/** 特性 key → 中文名 (未知回退原码)。 */
 export function featureLabel(key: string): string {
-  return FEATURE_LABELS[key] || key
+  return FEATURE_INFO[key]?.label || key
+}
+
+/** 特性 key → 用处说明 (未知回退空串)。 */
+export function featureDesc(key: string): string {
+  return FEATURE_INFO[key]?.desc || ''
+}
+
+/** 特性 key → 归属 (CORE/EDU; 未知按 EDU 处理=行业特性更可能未登记)。 */
+export function featureOwner(key: string): 'CORE' | 'EDU' {
+  return FEATURE_INFO[key]?.owner || 'EDU'
 }
 
 /** 字段类型码 → 中文。 */

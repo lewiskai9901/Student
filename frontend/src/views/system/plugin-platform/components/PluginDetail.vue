@@ -95,7 +95,7 @@
                 <td><span class="pd-muted">{{ subjectTypeLabel(t.entityType) }}</span></td>
                 <td>{{ countFields(t) }}</td>
                 <td>
-                  <span v-for="f in topFeatures(t)" :key="f" class="pd-feat">{{ f }}</span>
+                  <span v-for="f in topFeatures(t)" :key="f" class="pd-feat" :title="(featureDesc(f) || f) + '  ·  ' + f">{{ featureLabel(f) }}</span>
                 </td>
               </tr>
             </tbody>
@@ -105,6 +105,37 @@
                   @click="emit('jump-resource', { type: 'types', pluginCode: plugin!.code })">
             查看全部 {{ pluginTypes.length }} >
           </button>
+        </div>
+      </section>
+
+      <!-- Features (本插件所有类型用到的特性汇总) -->
+      <section class="pd-sec pd-sec-collapsed">
+        <button class="pd-sec-head" @click="toggle('features')">
+          <component :is="openMap.features ? ChevronDown : ChevronRight" :size="13" />
+          <Sparkles :size="13" class="pd-sec-icon" />
+          <span class="pd-sec-title">特性</span>
+          <span class="pd-sec-count">{{ pluginFeatures.length }}</span>
+        </button>
+        <div v-if="openMap.features" class="pd-sec-body">
+          <table v-if="pluginFeatures.length" class="pd-table">
+            <thead><tr><th>特性</th><th>用处 / 效果</th><th>归属</th><th>使用类型</th></tr></thead>
+            <tbody>
+              <tr v-for="f in pluginFeatures" :key="f.key">
+                <td>
+                  <span class="pd-feat-name">{{ f.label }}</span>
+                  <code class="pd-mono">{{ f.key }}</code>
+                </td>
+                <td><span class="pd-muted">{{ f.desc || '—' }}</span></td>
+                <td>
+                  <span class="pd-feat-owner" :class="f.owner === 'CORE' ? 'pd-owner-core' : 'pd-owner-edu'">
+                    {{ f.owner === 'CORE' ? '通用' : '行业' }}
+                  </span>
+                </td>
+                <td><span class="pd-muted" :title="f.types.join('、')">{{ f.types.length }} 个类型</span></td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-else class="pd-empty-inline">该插件的类型未声明特性</div>
         </div>
       </section>
 
@@ -339,13 +370,14 @@
 import { computed, inject, reactive } from 'vue'
 import {
   Package, ChevronDown, ChevronRight, LayoutGrid, Link2, Bell, Zap,
-  ShieldCheck, Filter, Shield, UserCog, AlertTriangle
+  ShieldCheck, Filter, Shield, UserCog, AlertTriangle, Sparkles
 } from 'lucide-vue-next'
 import {
   industryColor, shortClass, subjectTypeLabel, countFields, topFeatures,
   parseImplied, parseSchema, categoryTagType, categoryLabel, polarityTagType,
   polarityLabel, permissionTypeLabel, permissionModuleLabel, roleTypeLabel,
   resolveIndustry, relationIndustry, moduleCodeToIndustry, parseDataScopeSource,
+  allFeatures, featureLabel, featureDesc, featureOwner,
   type PluginData, type ResourceKey
 } from '../helpers'
 
@@ -401,6 +433,21 @@ const counts = computed(() => ({
   triggerPoints: pluginTriggerPoints.value.length
 }))
 
+/** 该插件所有类型用到的特性汇总 (跨类型去重) → {key,中文名,说明,归属,使用该特性的类型名}。 */
+const pluginFeatures = computed(() => {
+  const m = new Map<string, string[]>()
+  for (const t of pluginTypes.value) {
+    for (const f of allFeatures(t)) {
+      if (!m.has(f)) m.set(f, [])
+      m.get(f)!.push(t.typeName || t.typeCode)
+    }
+  }
+  return Array.from(m.entries())
+    .map(([key, types]) => ({ key, types, label: featureLabel(key), desc: featureDesc(key), owner: featureOwner(key) }))
+    // 通用特性(CORE)在前, 同组按 key 排序
+    .sort((a, b) => (a.owner === b.owner ? a.key.localeCompare(b.key) : (a.owner === 'CORE' ? -1 : 1)))
+})
+
 const groupedPermissions = computed(() => {
   const m = new Map<string, any>()
   for (const p of pluginPermissions.value) {
@@ -417,6 +464,7 @@ const groupedPermissions = computed(() => {
 // Section open/close map (first three default open)
 const openMap = reactive<Record<string, boolean>>({
   types: true,
+  features: false,
   relations: true,
   triggerPoints: true,
   events: false,
@@ -515,6 +563,10 @@ function toggle(k: string) { openMap[k] = !openMap[k] }
   vertical-align: middle;
 }
 .pd-muted { color: #9ca3af; font-size: 11px; }
+.pd-feat-name { font-weight: 600; color: #111827; margin-right: 6px; }
+.pd-feat-owner { font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 8px; white-space: nowrap; }
+.pd-owner-core { color: #2563eb; background: #eff6ff; }
+.pd-owner-edu { color: #d97706; background: #fffbeb; }
 .pd-arrow { margin: 0 4px; color: #d1d5db; font-weight: 600; }
 .pd-feat {
   display: inline-block; font-size: 10px; color: #6b7280;

@@ -115,9 +115,12 @@
             特性 <span class="cx-cnt">{{ typeFeatures.length }}</span>
           </div>
           <div v-if="!typeFeatures.length" class="cx-small">未声明特性</div>
-          <div v-for="k in typeFeatures" :key="k" class="cx-feat-row">
-            <span class="cx-feat-label">{{ featureLabel(k) }}</span>
-            <code class="cx-mono cx-feat-key">{{ k }}</code>
+          <div v-for="k in typeFeatures" :key="k" class="cx-feat-item" :title="featureDesc(k) || k">
+            <div class="cx-feat-top">
+              <span class="cx-feat-label">{{ featureLabel(k) }}</span>
+              <code class="cx-mono cx-feat-key">{{ k }}</code>
+            </div>
+            <div v-if="featureDesc(k)" class="cx-feat-desc">{{ featureDesc(k) }}</div>
           </div>
         </div>
       </template>
@@ -172,7 +175,7 @@ import {
 } from 'lucide-vue-next'
 import {
   industryColor, shortClass, formatDateShort, RESOURCE_TYPES,
-  parseTypeFields, allFeatures, featureLabel, fieldTypeLabel,
+  parseTypeFields, allFeatures, featureLabel, featureDesc, fieldTypeLabel,
   typeCategoryLabel, subjectTypeLabel,
   type PluginData, type ResourceKey
 } from '../helpers'
@@ -305,6 +308,10 @@ const topRegistrars = computed(() => {
 .cx-feat-row:last-child { border-bottom: none; }
 .cx-feat-label { font-size: 11px; color: #111827; }
 .cx-feat-key { flex-shrink: 0; }
+.cx-feat-item { padding: 5px 0; border-bottom: 1px dashed #f3f4f6; }
+.cx-feat-item:last-child { border-bottom: none; }
+.cx-feat-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.cx-feat-desc { font-size: 10px; color: #6b7280; line-height: 1.4; margin-top: 2px; }
 
 .cx-actions {
   display: flex; flex-direction: column; gap: 5px; padding: 4px;

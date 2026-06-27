@@ -42,7 +42,7 @@
               <td><code class="rl-mono rl-mono-blue">{{ t.typeCode }}</code></td>
               <td>{{ t.typeName }}</td>
               <td><span class="rl-fieldcount">{{ countFields(t) }}</span></td>
-              <td><span v-for="f in topFeatures(t)" :key="f" class="rl-feat" :title="f">{{ featureLabel(f) }}</span></td>
+              <td><span v-for="f in topFeatures(t)" :key="f" class="rl-feat" :title="(featureDesc(f) || f) + '  ·  ' + f">{{ featureLabel(f) }}</span></td>
               <td>
                 <code v-if="t.pluginClass" class="rl-mono" :title="t.pluginClass">{{ shortClass(t.pluginClass) }}</code>
                 <span v-else class="rl-muted">自定义</span>
@@ -355,7 +355,7 @@ import {
 } from 'lucide-vue-next'
 import {
   RESOURCE_TYPES, subjectTypeLabel, industryChipStyle, industryLabel,
-  resolveIndustry, relationIndustry, countFields, topFeatures, featureLabel, shortClass,
+  resolveIndustry, relationIndustry, countFields, topFeatures, featureLabel, featureDesc, shortClass,
   categoryTagType, categoryLabel, tierTagType, tierLabel, parseImplied,
   polarityTagType, polarityLabel, parseSubjects, permissionTypeLabel,
   permissionScopeLabel, roleTypeLabel, permissionModuleLabel, parseSchema,
