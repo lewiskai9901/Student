@@ -142,9 +142,6 @@ public class UserApplicationService {
             user.assignRoles(roleIds);
         }
 
-        // requiresOrg 校验上移应用层：归属在 access_relations member，不在 User 聚合
-        validateRequiresOrg(userType, command.getOrgUnitId());
-
         // 保存用户
         user = userRepository.save(user);
 
@@ -190,24 +187,6 @@ public class UserApplicationService {
         return user;
     }
 
-    /**
-     * 校验用户类型 {@code requiresOrg} feature：要求必须指定归属组织。
-     *
-     * <p>归属唯一真相源是 {@code access_relations} member 关系（不再是 users.primary_org_unit_id）,
-     * 故该校验从 User 聚合上移到应用层：创建/更新时若类型要求归属而有效 orgUnitId 为空则报错。
-     *
-     * @param type          用户类型（null 不校验）
-     * @param orgUnitId     有效归属组织 id（命令带的或现有 member 归属）
-     */
-    private void validateRequiresOrg(EntityTypeConfig type, Long orgUnitId) {
-        if (type == null) {
-            return;
-        }
-        if (type.hasFeature("requiresOrg") && orgUnitId == null) {
-            throw new BusinessException(
-                    "用户类型 " + type.getTypeCode() + " 要求必须指定主归属组织");
-        }
-    }
 
     /**
      * 根据用户类型编码解析默认角色ID列表
@@ -260,10 +239,9 @@ public class UserApplicationService {
             user.setAttributes(command.getAttributes());
         }
 
-        // 更新用户类型（先验证再更新）
-        EntityTypeConfig updatedType = null;
+        // 更新用户类型（先验证类型存在再更新）
         if (command.getUserTypeCode() != null && !command.getUserTypeCode().isEmpty()) {
-            updatedType = entityTypeConfigRepository.findByTypeCode("USER", command.getUserTypeCode())
+            entityTypeConfigRepository.findByTypeCode("USER", command.getUserTypeCode())
                     .orElseThrow(() -> new BusinessException("无效的用户类型: " + command.getUserTypeCode()));
             user.changeUserType(command.getUserTypeCode());
         }
@@ -277,18 +255,6 @@ public class UserApplicationService {
         if (command.getRoleIds() != null) {
             user.assignRoles(command.getRoleIds());
         }
-
-        // requiresOrg 校验上移应用层（若改了 userType 用新 type；否则用现有 type）
-        EntityTypeConfig effectiveType = updatedType != null
-                ? updatedType
-                : (user.getUserTypeCode() != null
-                    ? entityTypeConfigRepository.findByTypeCode("USER", user.getUserTypeCode()).orElse(null)
-                    : null);
-        // 有效归属 = 本次命令带的 orgUnitId, 否则查现有 member 归属
-        Long effectiveOrgUnitId = command.getOrgUnitId() != null
-                ? command.getOrgUnitId()
-                : membershipResolver.orgOf(userId).orElse(null);
-        validateRequiresOrg(effectiveType, effectiveOrgUnitId);
 
         // 保存
         user = userRepository.save(user);

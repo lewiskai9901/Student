@@ -54,6 +54,15 @@ public class PluginRegistrar extends AbstractPluginRegistrar<EntityTypePlugin, E
         String entityType = plugin.getEntityType();
         String typeCode = plugin.getTypeCode();
 
+        // 守护: 插件声明的 category 必须 ∈ 对应实体枚举 (或 null=未归类)。分类是封闭枚举, 非法值会
+        // 静默失效 (categoryDefaults valueOf 落 catch) → 这里启动期 fail-fast, 逼插件作者用合法分类。
+        if (!EntityTypeCategories.isValid(entityType, plugin.getCategory())) {
+            throw new IllegalStateException(String.format(
+                "插件 %s 声明了非法类型分类: %s/%s category='%s' (合法值: %s, 或留 null 表示未归类)",
+                plugin.getClass().getSimpleName(), entityType, typeCode, plugin.getCategory(),
+                EntityTypeCategories.validValues(entityType)));
+        }
+
         if (isCustomProtected(
                 "SELECT industry FROM entity_type_configs WHERE entity_type=? AND type_code=? AND deleted=0",
                 entityType, typeCode)) {

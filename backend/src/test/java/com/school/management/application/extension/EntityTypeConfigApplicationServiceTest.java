@@ -192,7 +192,7 @@ class EntityTypeConfigApplicationServiceTest {
             data.put("entityType", "USER");
             data.put("typeCode", "X");
             data.put("typeName", "X类型");
-            data.put("category", "STUDENT");
+            data.put("category", "MEMBER");   // 合法 USER 分类 (原 'STUDENT' 是类型码非分类, 现写入校验会拒)
             data.put("parentTypeCode", null);
 
             service.create(data);
@@ -369,23 +369,24 @@ class EntityTypeConfigApplicationServiceTest {
         @Test
         @DisplayName("features 子集校验: 翻开 category 默认关闭的能力被拒 (payload 省略 category 时回退当前行 category)")
         void featuresSubsetUsesCurrentCategoryFallback() {
-            // current.category = ADMIN (requiresOrg 默认 false); payload 只带 features 不带 category。
-            // 校验须回退当前行 category, 否则 effectiveCategory 为空被绕过 → 翻开 requiresOrg 会漏判。
+            // current.category = ROOT (memberManagement 默认 false); payload 只带 features 不带 category。
+            // 校验须回退当前行 category, 否则 effectiveCategory 为空被绕过 → 翻开 memberManagement 会漏判。
+            // (用 ORG_UNIT/ROOT 而非旧 USER/ADMIN: UserCategory 默认特性已删, USER 无可用的 default-false 能力)
             Map<String, Object> current = new HashMap<>();
             current.put("is_plugin_registered", 0);
-            current.put("type_name", "管理员");
-            current.put("category", "ADMIN");
+            current.put("type_name", "根组织");
+            current.put("category", "ROOT");
             current.put("ui_config", null);
             current.put("overridden_fields", null);
             when(jdbc.queryForMap(anyString(), eq(9L))).thenReturn(current);
-            when(jdbc.queryForObject(anyString(), eq(String.class), eq(9L))).thenReturn("USER");
+            when(jdbc.queryForObject(anyString(), eq(String.class), eq(9L))).thenReturn("ORG_UNIT");
 
             Map<String, Object> data = new HashMap<>();
-            data.put("features", Map.of("requiresOrg", true)); // ADMIN 默认 false
+            data.put("features", Map.of("memberManagement", true)); // ROOT 默认 false
 
             assertThatThrownBy(() -> service.update(9L, data))
                     .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("requiresOrg");
+                    .hasMessageContaining("memberManagement");
             verify(jdbc, never()).update(anyString(), any(Object[].class));
         }
 

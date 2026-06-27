@@ -131,18 +131,16 @@ class OrgUnitTypeApplicationServiceTest {
         }
 
         @Test
-        @DisplayName("非法 category 字符串: 忽略, features 保持 null")
-        void shouldIgnoreInvalidCategoryForDefaultFeatures() {
+        @DisplayName("非法 category 字符串: 直接拒绝 (硬化后不再静默忽略)")
+        void shouldRejectInvalidCategory() {
             OrgUnitTypeApplicationService.CreateOrgUnitTypeCommand cmd = createCmd("X", "X");
             cmd.setCategory("NOT_A_CATEGORY");
             cmd.setFeatures(null);
             when(orgUnitTypeRepository.existsByTypeCode("X")).thenReturn(false);
-            when(orgUnitTypeRepository.save(any(OrgType.class)))
-                    .thenAnswer(inv -> inv.getArgument(0));
 
-            OrgType result = service.createOrgUnitType(cmd);
-
-            assertThat(result.getFeatures()).isNull();
+            assertThatThrownBy(() -> service.createOrgUnitType(cmd))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("非法组织类型分类");
         }
 
         @Test

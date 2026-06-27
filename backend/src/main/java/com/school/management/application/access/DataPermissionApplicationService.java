@@ -550,6 +550,11 @@ public class DataPermissionApplicationService {
         public ScopeTypeDTO(String code, String name, String description) {
             this(code, name, description, "CORE", "CORE");
         }
+
+        /** 向后兼容: 不带 industry 的 4 参构造 (industry 默认 CORE)。 */
+        public ScopeTypeDTO(String code, String name, String description, String source) {
+            this(code, name, description, source, "CORE");
+        }
     }
 
     @lombok.Data

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.application.shared.TypeTreeBuilder;
 import com.school.management.application.shared.TypeTreeBuilder.TypeTreeNode;
 import com.school.management.domain.organization.model.entity.OrgCategory;
+import com.school.management.infrastructure.extension.EntityTypeCategories;
 import com.school.management.domain.organization.model.entity.OrgType;
 import com.school.management.domain.organization.repository.OrgUnitTypeRepository;
 import com.school.management.domain.shared.repository.EntityTypeConfigRepository;
@@ -44,6 +45,10 @@ public class OrgUnitTypeApplicationService {
 
         validateMetadataSchema(command.getMetadataSchema());
         validateCrossReferences(command.getDefaultUserTypeCodes(), command.getDefaultPlaceTypeCodes());
+        if (!EntityTypeCategories.isValid("ORG_UNIT", command.getCategory())) {
+            throw new IllegalArgumentException("非法组织类型分类 '" + command.getCategory() + "': 合法分类为 ["
+                + EntityTypeCategories.validValues("ORG_UNIT") + "] 或留空");
+        }
 
         // 如果未提供 features，使用 category 的默认值
         Map<String, Boolean> features = command.getFeatures();
@@ -84,6 +89,10 @@ public class OrgUnitTypeApplicationService {
 
         validateMetadataSchema(command.getMetadataSchema());
         validateCrossReferences(command.getDefaultUserTypeCodes(), command.getDefaultPlaceTypeCodes());
+        if (!EntityTypeCategories.isValid("ORG_UNIT", command.getCategory())) {
+            throw new IllegalArgumentException("非法组织类型分类 '" + command.getCategory() + "': 合法分类为 ["
+                + EntityTypeCategories.validValues("ORG_UNIT") + "] 或留空");
+        }
 
         orgType.update(
                 command.getTypeName() != null ? command.getTypeName() : orgType.getTypeName(),

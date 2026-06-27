@@ -19,6 +19,7 @@ class ParentPlugin implements EntityTypePlugin {
     public String getEntityType() { return "USER"; }
     public String getTypeCode() { return "PARENT"; }
     public String getTypeName() { return "家长"; }
+    public String getCategory() { return "EXTERNAL"; }   // 家长=外部人员 (与其 isExternal 特性一致)
     public List<FieldDefinition> getSystemFields() { return List.of(); }
     public Map<String, Boolean> getFeatures() {
         return Map.of("canLogin", true, "isExternal", true, "hasGuardian", false);
@@ -31,6 +32,7 @@ class AdminOfficePlugin implements EntityTypePlugin {
     public String getEntityType() { return "ORG_UNIT"; }
     public String getTypeCode() { return "ADMIN_OFFICE"; }
     public String getTypeName() { return "行政部门"; }
+    public String getCategory() { return "FUNCTIONAL"; }   // 职能部门
     public List<FieldDefinition> getSystemFields() { return List.of(); }
     public Map<String, Object> getUiConfig() { return Map.of("icon", "briefcase", "color", "#475569"); }
 }
@@ -40,6 +42,7 @@ class TeachingGroupPlugin implements EntityTypePlugin {
     public String getEntityType() { return "ORG_UNIT"; }
     public String getTypeCode() { return "TEACHING_GROUP"; }
     public String getTypeName() { return "教研组"; }
+    public String getCategory() { return "FUNCTIONAL"; }   // 教研组=职能性单位
     public List<FieldDefinition> getSystemFields() { return List.of(); }
     public Map<String, Object> getUiConfig() { return Map.of("icon", "users-round", "color", "#16a34a"); }
 }
@@ -49,6 +52,7 @@ class SectionPlugin implements EntityTypePlugin {
     public String getEntityType() { return "ORG_UNIT"; }
     public String getTypeCode() { return "SECTION"; }
     public String getTypeName() { return "教研室"; }
+    public String getCategory() { return "FUNCTIONAL"; }   // 教研室=职能性单位
     public List<FieldDefinition> getSystemFields() { return List.of(); }
     public Map<String, Object> getUiConfig() { return Map.of("icon", "library", "color", "#16a34a"); }
 }

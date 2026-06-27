@@ -3,6 +3,7 @@ package com.school.management.application.extension;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.school.management.domain.organization.model.entity.OrgCategory;
+import com.school.management.infrastructure.extension.EntityTypeCategories;
 import com.school.management.domain.place.model.valueobject.BaseCategory;
 import com.school.management.domain.user.model.entity.UserCategory;
 import lombok.RequiredArgsConstructor;
@@ -144,6 +145,10 @@ public class EntityTypeConfigApplicationService {
         if (typeName == null || typeName.isBlank()) {
             throw new IllegalArgumentException("typeName 不能为空");
         }
+        if (!EntityTypeCategories.isValid(entityType, str(data.get("category")))) {
+            throw new IllegalArgumentException("非法类型分类 '" + str(data.get("category")) + "': 实体 "
+                + entityType + " 的合法分类为 [" + EntityTypeCategories.validValues(entityType) + "] 或留空");
+        }
         Integer exists = jdbc.queryForObject(
             "SELECT COUNT(*) FROM entity_type_configs WHERE entity_type = ? AND type_code = ? AND deleted = 0",
             Integer.class, entityType, typeCode);
@@ -180,9 +185,15 @@ public class EntityTypeConfigApplicationService {
         boolean isPlugin = toBool(current.get("is_plugin_registered"));
         Set<String> overridden = parseOverriddenFields(current.get("overridden_fields"), om);
 
+        // 新分类必须合法 (空=不改, 不校验)
+        String newCategory = str(data.get("category"));
+        if (newCategory != null && !newCategory.isBlank()
+                && !EntityTypeCategories.isValid(existingEntityType(id), newCategory)) {
+            throw new IllegalArgumentException("非法类型分类 '" + newCategory + "': 合法分类为 ["
+                + EntityTypeCategories.validValues(existingEntityType(id)) + "] 或留空");
+        }
         // features 子集校验: 不允许启用不在 category 默认集内的 feature。
         // category 缺省 (只改 features 的 partial-update) 时回退当前行 category, 否则校验被绕过。
-        String newCategory = str(data.get("category"));
         String effectiveCategory = (newCategory != null && !newCategory.isBlank())
                 ? newCategory : str(current.get("category"));
         Object featuresObj = data.get("features");

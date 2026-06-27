@@ -19,6 +19,7 @@ class CoreAdminPlugin implements EntityTypePlugin {
     public String getEntityType() { return "USER"; }
     public String getTypeCode() { return "ADMIN"; }
     public String getTypeName() { return "管理员"; }
+    public String getCategory() { return "ADMIN"; }
     public List<FieldDefinition> getSystemFields() { return List.of(); }
     public Map<String, Boolean> getFeatures() {
         return Map.of("canLogin", true, "isStaff", true);
@@ -31,6 +32,7 @@ class CoreStaffPlugin implements EntityTypePlugin {
     public String getEntityType() { return "USER"; }
     public String getTypeCode() { return "STAFF"; }
     public String getTypeName() { return "职工"; }
+    public String getCategory() { return "STAFF"; }
     public List<FieldDefinition> getSystemFields() { return List.of(); }
     public Map<String, Boolean> getFeatures() {
         return Map.of("canLogin", true, "isStaff", true);
@@ -43,6 +45,7 @@ class CoreGuestPlugin implements EntityTypePlugin {
     public String getEntityType() { return "USER"; }
     public String getTypeCode() { return "GUEST"; }
     public String getTypeName() { return "访客"; }
+    public String getCategory() { return "EXTERNAL"; }
     public List<FieldDefinition> getSystemFields() { return List.of(); }
     public Map<String, Boolean> getFeatures() {
         return Map.of("canLogin", false, "isExternal", true);
