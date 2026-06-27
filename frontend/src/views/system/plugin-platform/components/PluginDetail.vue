@@ -382,7 +382,9 @@ const pluginPolicies = computed(() =>
   data.policies.filter(p => p.sourcePlugin === props.pluginCode)
 )
 const pluginDataScopes = computed(() =>
-  data.dataScopes.filter(d => parseDataScopeSource(d.source) === props.pluginCode)
+  // 按 industry 归类 (后端新增字段)。source 里的 domainCode 可能与 industry 不同名
+  // (如 PLUGIN:education 但 industry=EDU), 故优先用 industry; 缺省回退解析 source 兜底。
+  data.dataScopes.filter(d => (d.industry || parseDataScopeSource(d.source)) === props.pluginCode)
 )
 const pluginTriggerPoints = computed(() =>
   data.triggerPoints.filter(t => moduleCodeToIndustry(t.module_code) === props.pluginCode)

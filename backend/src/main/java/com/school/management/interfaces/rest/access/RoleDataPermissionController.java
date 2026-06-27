@@ -121,7 +121,7 @@ public class RoleDataPermissionController {
     @CasbinAccess(resource = "system:role", action = "view")
     public Result<List<DataScopeOptionDTO>> getScopes() {
         return Result.success(dataPermissionService.getAllScopeTypes().stream()
-                .map(s -> new DataScopeOptionDTO(s.getCode(), s.getName(), s.getDescription(), s.getSource()))
+                .map(s -> new DataScopeOptionDTO(s.getCode(), s.getName(), s.getDescription(), s.getSource(), s.getIndustry()))
                 .collect(java.util.stream.Collectors.toList()));
     }
 
@@ -184,9 +184,12 @@ public class RoleDataPermissionController {
         private String description;
         /** "CORE" for hardcoded 5 enums, "PLUGIN:<domain>" for plugin-contributed dims */
         private String source;
+        /** 行业归属码 (CORE/EDU...). 与 source 里的 domainCode 可能不同名 (domainCode=education vs industry=EDU),
+         *  插件平台按 industry 归类用。 */
+        private String industry;
 
         public DataScopeOptionDTO(String scopeCode, String scopeName, String description) {
-            this(scopeCode, scopeName, description, "CORE");
+            this(scopeCode, scopeName, description, "CORE", "CORE");
         }
     }
 }

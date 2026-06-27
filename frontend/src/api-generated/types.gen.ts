@@ -1420,6 +1420,7 @@ export type DataModulePo = {
  */
 export type DataScopeOptionDto = {
   description?: string
+  industry?: string
   scopeCode?: string
   scopeName?: string
   source?: string
@@ -8994,6 +8995,7 @@ export type ScopeItemDto = {
 export type ScopeTypeDto = {
   code?: string
   description?: string
+  industry?: string
   name?: string
   source?: string
 }

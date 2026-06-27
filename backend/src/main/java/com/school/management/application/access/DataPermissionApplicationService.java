@@ -96,13 +96,13 @@ public class DataPermissionApplicationService {
         // ScopePreset 无 description 字段 → 用 displayName 充当描述, 不杜撰逐项文案。
         List<ScopeTypeDTO> hardcoded = Arrays.stream(ScopePreset.values())
                 .sorted(Comparator.comparingInt(ScopePreset::getLevel).reversed())
-                .map(s -> new ScopeTypeDTO(s.name(), s.getDisplayName(), s.getDisplayName(), "CORE"))
+                .map(s -> new ScopeTypeDTO(s.name(), s.getDisplayName(), s.getDisplayName(), "CORE", "CORE"))
                 .collect(Collectors.toList());
 
         List<ScopeTypeDTO> dynamic;
         try {
             dynamic = jdbcTemplate.query(
-                "SELECT dim_code, dim_name, description, domain_code " +
+                "SELECT dim_code, dim_name, description, domain_code, industry " +
                 "FROM data_scope_dims " +
                 // plugin_enabled=1: 插件禁用时其 scope 维度 (如 EDU 的 BY_CLASS) 不再出现在字典里
                 // (PluginLifecycleService.disable 级联置 plugin_enabled=0, 但 is_enabled 不动)
@@ -112,7 +112,8 @@ public class DataPermissionApplicationService {
                     rs.getString("dim_code"),
                     rs.getString("dim_name"),
                     rs.getString("description"),
-                    "PLUGIN:" + Optional.ofNullable(rs.getString("domain_code")).orElse("UNKNOWN")
+                    "PLUGIN:" + Optional.ofNullable(rs.getString("domain_code")).orElse("UNKNOWN"),
+                    Optional.ofNullable(rs.getString("industry")).orElse("UNKNOWN")
                 ));
         } catch (Exception e) {
             // 表不存在 / 查询失败 -> 只返 core, 不 break API
@@ -542,9 +543,12 @@ public class DataPermissionApplicationService {
         private String description;
         /** 来源标识: "CORE" = hardcoded 5 种; "PLUGIN:<domainCode>" = 插件贡献维度 */
         private String source;
+        /** 行业归属码 (与插件平台 industry 对齐, 如 CORE / EDU)。注意: 与 source 里的 domainCode 可能不同名
+         *  (如 domainCode=education 但 industry=EDU), 故单独返回, 供前端按 industry 归类。 */
+        private String industry;
 
         public ScopeTypeDTO(String code, String name, String description) {
-            this(code, name, description, "CORE");
+            this(code, name, description, "CORE", "CORE");
         }
     }
 

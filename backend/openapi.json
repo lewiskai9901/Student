@@ -4322,6 +4322,9 @@
           "description": {
             "type": "string"
           },
+          "industry": {
+            "type": "string"
+          },
           "scopeCode": {
             "type": "string"
           },
@@ -17873,6 +17876,9 @@
             "type": "string"
           },
           "description": {
+            "type": "string"
+          },
+          "industry": {
             "type": "string"
           },
           "name": {
