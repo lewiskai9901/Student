@@ -356,10 +356,16 @@ public class CoreManifest implements PluginPackage {
             ),
             // 普通记录: org_unit_id + created_by
             orgCreator("inspection_record", "org_unit_id", "created_by"),
-            // R4: 检查记录的"复核员" = 多值记录关系 (record_relations); 复核员只看指派给自己的检查记录。
-            // 引擎 (ScopeEvaluator RECORD_RELATION 分支) 据此出 record_relations 子查询。
-            Stream.<Contribution>of(rr(ResourceRelationDef.recordRelation(
-                "inspection_record", "reviewer", "复核员", "USER", "reviewer"))),
+            // [完美重构 P2] 检查任务 (insp_tasks) 独立资源码: owner_org/creator + 复核员/检查员单值列锚。
+            // reviewer 原误声明为 RECORD_RELATION(多值表 record_relations), 实为 insp_tasks.reviewer_id 单值列、
+            // 写入方 startReview 早有 → 改 COLUMN(reviewer_id); 同理 inspector=COLUMN(inspector_id)。
+            // 配 {reviewer, SELF}→reviewer_id=me(我复核的任务) / {inspector, SELF}→inspector_id=me(我检查的任务),
+            // 经 P0 A1 per-relation COLUMN(SELF 绑列)。record_relations 此域无多值关系 → 不再声明。
+            orgCreator("inspection_task", "org_unit_id", "created_by"),
+            Stream.<Contribution>of(
+                rr(ResourceRelationDef.column("inspection_task", "reviewer", "复核员", "USER", "reviewer_id")),
+                rr(ResourceRelationDef.column("inspection_task", "inspector", "检查员", "USER", "inspector_id"))
+            ),
             // [完美重构 P1] 检查提交单 (insp_submissions) 独立资源码: owner_org/creator + 受检 inspected。
             // 受检 inspected 现为干净列锚 COLUMN(target_id) —— 替换原 inspection_record 上写死 FROM insp_submissions
             // 的 PROVIDER (该 PROVIDER 被 5 表共用 → 查 tasks/evidence 时 task.id 比 submission.id 是多表 bug)。

@@ -19,21 +19,21 @@ public interface InspTaskMapper extends BaseMapper<InspTaskPO> {
     /**
      * 按项目查询任务列表 — 应用数据权限过滤
      */
-    @DataPermission(module = "inspection_record")
+    @DataPermission(module = "inspection_task")
     @Select("SELECT * FROM insp_tasks WHERE project_id = #{projectId} AND deleted = 0 ORDER BY task_date, time_slot_start")
     List<InspTaskPO> findByProjectId(@Param("projectId") Long projectId);
 
     /**
      * 按检查员查询任务列表 — 应用数据权限过滤
      */
-    @DataPermission(module = "inspection_record")
+    @DataPermission(module = "inspection_task")
     @Select("SELECT * FROM insp_tasks WHERE inspector_id = #{inspectorId} AND deleted = 0 ORDER BY task_date DESC")
     List<InspTaskPO> findByInspectorId(@Param("inspectorId") Long inspectorId);
 
     /**
      * 我的任务: 我作为检查员 OR 我作为审核员 (status 在审核相关阶段) — 应用数据权限过滤
      */
-    @DataPermission(module = "inspection_record")
+    @DataPermission(module = "inspection_task")
     @Select("SELECT * FROM insp_tasks WHERE deleted = 0 AND (" +
             "  inspector_id = #{userId} " +
             "  OR (reviewer_id = #{userId} AND status IN ('SUBMITTED','UNDER_REVIEW','REVIEWED'))" +
@@ -43,14 +43,14 @@ public interface InspTaskMapper extends BaseMapper<InspTaskPO> {
     /**
      * 按项目和日期查询任务列表 — 应用数据权限过滤
      */
-    @DataPermission(module = "inspection_record")
+    @DataPermission(module = "inspection_task")
     @Select("SELECT * FROM insp_tasks WHERE project_id = #{projectId} AND task_date = #{taskDate} AND deleted = 0")
     List<InspTaskPO> findByProjectIdAndTaskDate(@Param("projectId") Long projectId, @Param("taskDate") LocalDate taskDate);
 
     /**
      * 按项目和日期范围查询任务列表 — 应用数据权限过滤
      */
-    @DataPermission(module = "inspection_record")
+    @DataPermission(module = "inspection_task")
     @Select("SELECT * FROM insp_tasks WHERE project_id = #{projectId} AND task_date >= #{startDate} AND task_date <= #{endDate} AND deleted = 0 ORDER BY task_date, time_slot_start")
     List<InspTaskPO> findByProjectIdAndTaskDateBetween(@Param("projectId") Long projectId,
                                                         @Param("startDate") LocalDate startDate,
@@ -59,21 +59,21 @@ public interface InspTaskMapper extends BaseMapper<InspTaskPO> {
     /**
      * 按状态查询任务列表 — 应用数据权限过滤
      */
-    @DataPermission(module = "inspection_record")
+    @DataPermission(module = "inspection_task")
     @Select("SELECT * FROM insp_tasks WHERE status = #{status} AND deleted = 0")
     List<InspTaskPO> findByStatus(@Param("status") String status);
 
     /**
      * 列举所有任务 — 应用数据权限过滤（最重要：列表页入口）
      */
-    @DataPermission(module = "inspection_record")
+    @DataPermission(module = "inspection_task")
     @Select("SELECT * FROM insp_tasks WHERE deleted = 0 ORDER BY task_date DESC, time_slot_start")
     List<InspTaskPO> findAllTasks();
 
     /**
      * 查询可用任务列表 — 应用数据权限过滤
      */
-    @DataPermission(module = "inspection_record")
+    @DataPermission(module = "inspection_task")
     @Select("SELECT * FROM insp_tasks WHERE status = 'PENDING' AND inspector_id IS NULL AND deleted = 0 ORDER BY task_date")
     List<InspTaskPO> findAvailableTasks();
 
