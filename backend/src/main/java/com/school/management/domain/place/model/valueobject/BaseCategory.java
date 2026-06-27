@@ -44,10 +44,6 @@ public enum BaseCategory {
         return defaultFeatures;
     }
 
-    public boolean canHaveChild(String childCategoryCode) {
-        return allowedChildCategories.contains(childCategoryCode);
-    }
-
     public boolean isLeaf() {
         return allowedChildCategories.isEmpty();
     }

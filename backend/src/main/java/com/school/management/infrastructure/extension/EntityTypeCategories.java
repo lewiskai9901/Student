@@ -38,6 +38,23 @@ public final class EntityTypeCategories {
         }
     }
 
+    /** 分类的默认特性 (能力模板)。未知/空分类 → 空 map。供注册期把分类默认特性合并进类型 features。 */
+    public static java.util.Map<String, Boolean> defaultFeatures(String entityType, String category) {
+        if (category == null || category.isBlank()) {
+            return java.util.Map.of();
+        }
+        try {
+            switch (norm(entityType)) {
+                case "USER":     return UserCategory.valueOf(category).getDefaultFeatures();
+                case "PLACE":    return BaseCategory.valueOf(category).getDefaultFeatures();
+                case "ORG_UNIT": return OrgCategory.valueOf(category).getDefaultFeatures();
+                default:         return java.util.Map.of();
+            }
+        } catch (IllegalArgumentException e) {
+            return java.util.Map.of();
+        }
+    }
+
     /** 该实体所有合法分类值 (报错提示用), 如 "ADMIN/STAFF/MEMBER/EXTERNAL"。 */
     public static String validValues(String entityType) {
         switch (norm(entityType)) {

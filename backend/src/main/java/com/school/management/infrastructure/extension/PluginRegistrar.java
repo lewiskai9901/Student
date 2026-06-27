@@ -73,7 +73,12 @@ public class PluginRegistrar extends AbstractPluginRegistrar<EntityTypePlugin, E
             Long.class, entityType, typeCode);
 
         String childCodesJson = objectMapper.writeValueAsString(plugin.getAllowedChildTypeCodes());
-        String featuresJson = objectMapper.writeValueAsString(plugin.getFeatures());
+        // 分类默认特性 (能力模板) 作基线, 插件显式 features 覆盖 → 让 ROOM 真 bookable/occupiable 等落到 features 列
+        // (此前 PLACE/ORG 类型 features={} 时这些能力全 false, 是悬空缺陷)。USER 分类默认现为空, 不受影响。
+        java.util.Map<String, Boolean> mergedFeatures =
+                new java.util.LinkedHashMap<>(EntityTypeCategories.defaultFeatures(entityType, plugin.getCategory()));
+        mergedFeatures.putAll(plugin.getFeatures());
+        String featuresJson = objectMapper.writeValueAsString(mergedFeatures);
         String uiConfigJson = objectMapper.writeValueAsString(plugin.getUiConfig());
         List<String> pluginDefaultRoles = plugin.getDefaultRoleCodes();
         String defaultRolesJson = objectMapper.writeValueAsString(pluginDefaultRoles);
