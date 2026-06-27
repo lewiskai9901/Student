@@ -4344,6 +4344,16 @@ UPDATE `data_resources` SET `type_field`='user_type_code', `type_entity`='USER' 
 UPDATE `data_resources` SET `subject_relation_filterable`=1 WHERE `resource_code` IN ('user','system_user');
 -- 统一锚定模型 (R1): 主体型资源 — 记录本身是 user/org_unit/place, 归属走 access_relations 非列 (org_unit_id 不重建)
 UPDATE `data_resources` SET `resource_kind`='SUBJECT' WHERE `resource_code` IN ('user','system_user','org_unit','place','student');
+-- 完美重构 (2026-06-27): 检查执行域按表拆资源码。data_resources 须 seed (DataResourceUpserter 只 UPDATE 不 INSERT;
+-- resource_relations 由 contribution 启动期写, 无需 baseline)。删共享码 inspection_record (P1-P4 已把 5 mapper
+-- 迁出 → 无 @DataPermission 引用; 其 casbin 功能权限码 inspection_record:view 是另一命名空间不在此表); 加 4 拆分码
+-- (inspection_task 已在上方 dump)。
+DELETE FROM `data_resources` WHERE `resource_code`='inspection_record';
+INSERT INTO `data_resources` (`resource_code`,`resource_name`,`domain_code`,`domain_name`,`enabled`,`sort_order`,`registered_by`,`allowed_scopes`,`subject_relation_filterable`,`resource_kind`,`tenant_id`,`plugin_enabled`) VALUES
+('inspection_submission','检查提交单','inspection','检查平台',1,38,'CORE','["ALL","DEPARTMENT_AND_BELOW","MANAGED_ORGS_AND_BELOW","DEPARTMENT","MANAGED_ORGS","SELF","CUSTOM"]',0,'PLAIN',1,1),
+('inspection_evidence','检查证据','inspection','检查平台',1,39,'CORE','["ALL","DEPARTMENT_AND_BELOW","MANAGED_ORGS_AND_BELOW","DEPARTMENT","MANAGED_ORGS","SELF","CUSTOM"]',0,'PLAIN',1,1),
+('inspection_submission_detail','检查提交明细','inspection','检查平台',1,40,'CORE','["ALL","DEPARTMENT_AND_BELOW","MANAGED_ORGS_AND_BELOW","DEPARTMENT","MANAGED_ORGS","SELF","CUSTOM"]',0,'PLAIN',1,1),
+('inspection_project_inspector','检查项目成员','inspection','检查平台',1,41,'CORE','["ALL","DEPARTMENT_AND_BELOW","MANAGED_ORGS_AND_BELOW","DEPARTMENT","MANAGED_ORGS","SELF","CUSTOM"]',0,'PLAIN',1,1);
 /*!40000 ALTER TABLE `data_resources` ENABLE KEYS */;
 UNLOCK TABLES;
 
