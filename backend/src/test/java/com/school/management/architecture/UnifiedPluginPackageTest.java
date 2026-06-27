@@ -140,9 +140,11 @@ class UnifiedPluginPackageTest {
         //   删 inspection_record 的 inspected PROVIDER(-1) → resource-relation 25-1+3=27 → 323+1+2=326.
         // 完美重构 P2: inspection_task(data-resource 已存在) +owner_org/creator/reviewer/inspector 4 COLUMN 关系,
         //   删 inspection_record 的 reviewer RECORD_RELATION(-1) → resource-relation 27-1+4=30 → 326+3=329.
+        // 完美重构 P3: 余表 3 资源码(evidence/submission_detail/project_inspector)各 +dr +owner_org/creator →
+        //   data-resource 21→24(+3), resource-relation 30→36(+6) → 329+9=338.
         // 旧测试期望"默认空流"已不再适用; 改为校验内容契约.
         long count = core.contribute().count();
-        assertEquals(329, count, "CoreManifest 应贡献 329 个 contribution (15 关系 + 3 workflow + 26 TENANT_ADMIN + 21 data-resource + 30 resource-relation + 3 role + 8 menu + 223 permission)");
+        assertEquals(338, count, "CoreManifest 应贡献 338 个 contribution (15 关系 + 3 workflow + 26 TENANT_ADMIN + 24 data-resource + 36 resource-relation + 3 role + 8 menu + 223 permission)");
         long rolePermCount = new CoreManifest().contribute()
             .filter(c -> c instanceof Contribution.RolePermissionBindingContribution)
             .count();

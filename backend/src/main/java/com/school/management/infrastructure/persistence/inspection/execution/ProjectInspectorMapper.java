@@ -14,21 +14,21 @@ public interface ProjectInspectorMapper extends BaseMapper<ProjectInspectorPO> {
     /**
      * 按项目查询检查员列表 — 应用数据权限过滤
      */
-    @DataPermission(module = "inspection_record")
+    @DataPermission(module = "inspection_project_inspector")
     @Select("SELECT * FROM insp_project_inspectors WHERE project_id = #{projectId} AND deleted = 0")
     List<ProjectInspectorPO> findByProjectId(@Param("projectId") Long projectId);
 
     /**
      * 按项目和角色查询检查员列表 — 应用数据权限过滤
      */
-    @DataPermission(module = "inspection_record")
+    @DataPermission(module = "inspection_project_inspector")
     @Select("SELECT * FROM insp_project_inspectors WHERE project_id = #{projectId} AND role = #{role} AND deleted = 0")
     List<ProjectInspectorPO> findByProjectIdAndRole(@Param("projectId") Long projectId, @Param("role") String role);
 
     /**
      * 按用户查询检查员列表 — 应用数据权限过滤
      */
-    @DataPermission(module = "inspection_record")
+    @DataPermission(module = "inspection_project_inspector")
     @Select("SELECT * FROM insp_project_inspectors WHERE user_id = #{userId} AND deleted = 0")
     List<ProjectInspectorPO> findByUserId(@Param("userId") Long userId);
 

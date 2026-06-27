@@ -311,6 +311,9 @@ public class CoreManifest implements PluginPackage {
             dr("inspection_task",        "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),
             dr("inspection_record",      "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),
             dr("inspection_submission",  "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),  // 完美重构 P1: 检查提交单独立码
+            dr("inspection_evidence",          "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),  // P3 余表
+            dr("inspection_submission_detail", "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),  // P3 余表
+            dr("inspection_project_inspector", "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),  // P3 余表
             dr("inspection_corrective",  "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),
             dr("inspection_alert",       "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),
             dr("inspection_observation", "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),
@@ -374,6 +377,12 @@ public class CoreManifest implements PluginPackage {
             orgCreator("inspection_submission", "org_unit_id", "created_by"),
             Stream.<Contribution>of(rr(ResourceRelationDef.column(
                 "inspection_submission", "inspected", "受检组织", "ORG_UNIT", "target_id"))),
+            // [完美重构 P3] 检查执行域余表独立码: 均 owner_org=org_unit_id + creator=created_by (无特有锚点)。
+            // 至此 inspection_record 共享码的 5 mapper 全部迁出 (P1 submission / P2 task / P3 三表) → inspection_record
+            // 码无 mapper 引用, 留 P4 清理 (+ 那 1 条 CLASS_TEACHER {creator,SELF} 配置重指)。
+            orgCreator("inspection_evidence", "org_unit_id", "created_by"),
+            orgCreator("inspection_submission_detail", "org_unit_id", "created_by"),
+            orgCreator("inspection_project_inspector", "org_unit_id", "created_by"),
             orgCreator("inspection_project", "org_unit_id", "created_by"),
             orgCreator("inspection_alert", "org_unit_id", "created_by"),
             orgCreator("inspection_summary", "org_unit_id", "created_by"),
