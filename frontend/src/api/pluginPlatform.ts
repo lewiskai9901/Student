@@ -22,7 +22,7 @@ export interface PluginHealthInfo {
     types: number
     relations: number
     events: number
-    triggerPoints: number
+    eventTriggers: number
     permissions: number
     roles: number
     menus: number

@@ -37,35 +37,35 @@ public class PluginPlatformApplicationService {
     @Transactional(readOnly = true)
     public Map<String, Long> countTypesByIndustry() {
         return groupCount(
-            "SELECT COALESCE(industry,'UNKNOWN') k, COUNT(*) c FROM entity_type_configs WHERE deleted=0 GROUP BY industry");
+            "SELECT COALESCE(industry,'UNKNOWN') k, COUNT(*) c FROM entity_type_configs WHERE deleted=0 AND plugin_enabled=1 GROUP BY industry");
     }
 
     /** relation_types 按 industry 分组计数. */
     @Transactional(readOnly = true)
     public Map<String, Long> countRelationsByIndustry() {
         return groupCount(
-            "SELECT COALESCE(industry,'UNKNOWN') k, COUNT(*) c FROM relation_types WHERE is_enabled=1 GROUP BY industry");
+            "SELECT COALESCE(industry,'UNKNOWN') k, COUNT(*) c FROM relation_types WHERE is_enabled=1 AND plugin_enabled=1 GROUP BY industry");
     }
 
     /** entity_event_types 按 industry 分组计数. */
     @Transactional(readOnly = true)
     public Map<String, Long> countEventsByIndustry() {
         return groupCount(
-            "SELECT COALESCE(industry,'UNKNOWN') k, COUNT(*) c FROM entity_event_types WHERE deleted=0 AND is_enabled=1 GROUP BY industry");
+            "SELECT COALESCE(industry,'UNKNOWN') k, COUNT(*) c FROM entity_event_types WHERE deleted=0 AND is_enabled=1 AND plugin_enabled=1 GROUP BY industry");
     }
 
     /** roles 按 industry 分组计数. */
     @Transactional(readOnly = true)
     public Map<String, Long> countRolesByIndustry() {
         return groupCount(
-            "SELECT COALESCE(industry,'UNKNOWN') k, COUNT(*) c FROM roles WHERE deleted=0 GROUP BY industry");
+            "SELECT COALESCE(industry,'UNKNOWN') k, COUNT(*) c FROM roles WHERE deleted=0 AND plugin_enabled=1 GROUP BY industry");
     }
 
     /** permissions 按 industry 分组计数. */
     @Transactional(readOnly = true)
     public Map<String, Long> countPermissionsByIndustry() {
         return groupCount(
-            "SELECT COALESCE(industry,'UNKNOWN') k, COUNT(*) c FROM permissions WHERE deleted=0 GROUP BY industry");
+            "SELECT COALESCE(industry,'UNKNOWN') k, COUNT(*) c FROM permissions WHERE deleted=0 AND plugin_enabled=1 GROUP BY industry");
     }
 
     /** 启用的数据范围维度数 — 表未就绪兜底 0. */
@@ -73,7 +73,7 @@ public class PluginPlatformApplicationService {
     public long countEnabledDataScopeDims() {
         try {
             Long c = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM data_scope_dims WHERE is_enabled=1", Long.class);
+                "SELECT COUNT(*) FROM data_scope_dims WHERE is_enabled=1 AND plugin_enabled=1", Long.class);
             return c != null ? c : 0L;
         } catch (Exception ignored) {
             return 0L;
@@ -85,7 +85,7 @@ public class PluginPlatformApplicationService {
     public long countTriggerPoints() {
         try {
             Long c = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM trigger_points WHERE deleted=0", Long.class);
+                "SELECT COUNT(*) FROM trigger_points WHERE deleted=0 AND plugin_enabled=1", Long.class);
             return c != null ? c : 0L;
         } catch (Exception ignored) {
             return 0L;
@@ -97,7 +97,7 @@ public class PluginPlatformApplicationService {
     public long countSubscriptionRules() {
         try {
             Long c = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM msg_subscription_rules WHERE is_enabled=1 AND deleted=0", Long.class);
+                "SELECT COUNT(*) FROM msg_subscription_rules WHERE is_enabled=1 AND deleted=0 AND plugin_enabled=1", Long.class);
             return c != null ? c : 0L;
         } catch (Exception ignored) {
             return 0L;
@@ -119,49 +119,49 @@ public class PluginPlatformApplicationService {
     @Transactional(readOnly = true)
     public long countTypesOfPlugin(String code) {
         return safeCount(
-            "SELECT COUNT(*) FROM entity_type_configs WHERE industry=? AND deleted=0", code);
+            "SELECT COUNT(*) FROM entity_type_configs WHERE industry=? AND deleted=0 AND plugin_enabled=1", code);
     }
 
     /** relation_types 计数 (按插件). */
     @Transactional(readOnly = true)
     public long countRelationsOfPlugin(String code) {
         return safeCount(
-            "SELECT COUNT(*) FROM relation_types WHERE industry=? AND is_enabled=1", code);
+            "SELECT COUNT(*) FROM relation_types WHERE industry=? AND is_enabled=1 AND plugin_enabled=1", code);
     }
 
     /** entity_event_types 计数 (按插件). */
     @Transactional(readOnly = true)
     public long countEventsOfPlugin(String code) {
         return safeCount(
-            "SELECT COUNT(*) FROM entity_event_types WHERE industry=? AND deleted=0", code);
+            "SELECT COUNT(*) FROM entity_event_types WHERE industry=? AND deleted=0 AND plugin_enabled=1", code);
     }
 
     /** roles 计数 (按插件). */
     @Transactional(readOnly = true)
     public long countRolesOfPlugin(String code) {
         return safeCount(
-            "SELECT COUNT(*) FROM roles WHERE industry=? AND deleted=0", code);
+            "SELECT COUNT(*) FROM roles WHERE industry=? AND deleted=0 AND plugin_enabled=1", code);
     }
 
     /** permissions 计数 (按插件). */
     @Transactional(readOnly = true)
     public long countPermissionsOfPlugin(String code) {
         return safeCount(
-            "SELECT COUNT(*) FROM permissions WHERE industry=? AND deleted=0", code);
+            "SELECT COUNT(*) FROM permissions WHERE industry=? AND deleted=0 AND plugin_enabled=1", code);
     }
 
     /** event_triggers 计数 (按插件). */
     @Transactional(readOnly = true)
-    public long countTriggerPointsOfPlugin(String code) {
+    public long countEventTriggersOfPlugin(String code) {
         return safeCount(
-            "SELECT COUNT(*) FROM event_triggers WHERE industry=? AND deleted=0 AND is_enabled=1", code);
+            "SELECT COUNT(*) FROM event_triggers WHERE industry=? AND deleted=0 AND is_enabled=1 AND plugin_enabled=1", code);
     }
 
     /** data_scope_dims 计数 (按插件). */
     @Transactional(readOnly = true)
     public long countDataScopesOfPlugin(String code) {
         return safeCount(
-            "SELECT COUNT(*) FROM data_scope_dims WHERE industry=? AND is_enabled=1", code);
+            "SELECT COUNT(*) FROM data_scope_dims WHERE industry=? AND is_enabled=1 AND plugin_enabled=1", code);
     }
 
     /** entity_type_configs 样本 (前 3 条). */

@@ -245,7 +245,7 @@ public class PluginPlatformController {
      *
      * 返回结构 (flat, 前端卡片 UI 直接消费):
      *   code / name / version / status / enabled / lastStartedAt / installedAt / manifestClass
-     *   contributions: { types, relations, events, triggerPoints, permissions, roles, menus, policies, dataScopes }
+     *   contributions: { types, relations, events, eventTriggers, permissions, roles, menus, policies, dataScopes }
      *   samples:       { types:[], relations:[], events:[], permissions:[], roles:[] }
      *   dependencies:  [{ code, version, status, enabled }]
      *   warnings:      []
@@ -266,7 +266,7 @@ public class PluginPlatformController {
         Long events = pluginPlatformService.countEventsOfPlugin(code);
         Long roles = pluginPlatformService.countRolesOfPlugin(code);
         Long permissions = pluginPlatformService.countPermissionsOfPlugin(code);
-        Long triggerPoints = pluginPlatformService.countTriggerPointsOfPlugin(code);
+        Long eventTriggers = pluginPlatformService.countEventTriggersOfPlugin(code);  // P2#3: 实为 event_triggers 数, 非触发点
         Long dataScopes = pluginPlatformService.countDataScopesOfPlugin(code);
 
         // 菜单 / 策略: 按 manifestClass 所在包反推 (非 DB 数据, 从 registrar 取)
@@ -277,7 +277,7 @@ public class PluginPlatformController {
         contributions.put("types", types);
         contributions.put("relations", relations);
         contributions.put("events", events);
-        contributions.put("triggerPoints", triggerPoints);
+        contributions.put("eventTriggers", eventTriggers);
         contributions.put("permissions", permissions);
         contributions.put("roles", roles);
         contributions.put("menus", menus);

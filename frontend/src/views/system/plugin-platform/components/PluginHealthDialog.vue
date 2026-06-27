@@ -148,7 +148,7 @@ const CONTRIB_META = [
   { key: 'types',         label: '实体类型', icon: Package,     color: '#2563eb' },
   { key: 'relations',     label: '关系类型', icon: Link2,       color: '#7c3aed' },
   { key: 'events',        label: '事件类型', icon: Bell,        color: '#d97706' },
-  { key: 'triggerPoints', label: '触发点',   icon: Crosshair,   color: '#b45309' },
+  { key: 'eventTriggers', label: '事件触发器', icon: Crosshair,   color: '#b45309' },
   { key: 'permissions',   label: '权限',     icon: Shield,      color: '#059669' },
   { key: 'roles',         label: '角色',     icon: UserCog,     color: '#4338ca' },
   { key: 'menus',         label: '菜单',     icon: MenuIcon,    color: '#6b7280' },
