@@ -27,14 +27,17 @@ public class PluginRegistrar extends AbstractPluginRegistrar<EntityTypePlugin, E
 
     private final ExtensionDispatcher dispatcher;
     private final ObjectMapper objectMapper;
+    private final FeatureRegistry featureRegistry;
 
     public PluginRegistrar(ExtensionDispatcher dispatcher,
                             JdbcTemplate jdbc,
                             PluginPackageRegistrar packageRegistrar,
-                            ObjectMapper objectMapper) {
+                            ObjectMapper objectMapper,
+                            FeatureRegistry featureRegistry) {
         super(jdbc, packageRegistrar);
         this.dispatcher = dispatcher;
         this.objectMapper = objectMapper;
+        this.featureRegistry = featureRegistry;
     }
 
     @Override protected List<EntityTypePlugin> getPluginList() { return dispatcher.getAllPlugins(); }
@@ -61,6 +64,22 @@ public class PluginRegistrar extends AbstractPluginRegistrar<EntityTypePlugin, E
                 "插件 %s 声明了非法类型分类: %s/%s category='%s' (合法值: %s, 或留 null 表示未归类)",
                 plugin.getClass().getSimpleName(), entityType, typeCode, plugin.getCategory(),
                 EntityTypeCategories.validValues(entityType)));
+        }
+
+        // 治理: 类型声明的每个特性必须 ∈ 特性注册表 (杜绝散落 magic string), 且归属满足方向 ——
+        // 只能用 CORE 通用特性 + 本行业特性 (核心/跨行业引用即越界, 启动 fail-fast)。
+        for (String fk : plugin.getFeatures().keySet()) {
+            String owner = featureRegistry.ownerOf(fk);
+            if (owner == null) {
+                throw new IllegalStateException(String.format(
+                    "类型 %s/%s 使用了未登记特性 '%s' —— 特性须由某 FeatureDefProvider 声明 (杜绝散落 magic string)",
+                    entityType, typeCode, fk));
+            }
+            if (!"CORE".equals(owner) && !owner.equals(industry)) {
+                throw new IllegalStateException(String.format(
+                    "特性归属越界: 类型 %s/%s (行业 %s) 用了 %s 行业特性 '%s' —— 只能用 CORE + 本行业特性 (依赖只能向下)",
+                    entityType, typeCode, industry, owner, fk));
+            }
         }
 
         if (isCustomProtected(

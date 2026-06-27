@@ -47984,6 +47984,59 @@ export type DependencyGraphResponses = {
 
 export type DependencyGraphResponse = DependencyGraphResponses[keyof DependencyGraphResponses]
 
+export type FeaturesData = {
+  body?: never
+  path?: never
+  query?: never
+  url: '/plugin-platform/features'
+}
+
+export type FeaturesErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type FeaturesError = FeaturesErrors[keyof FeaturesErrors]
+
+export type FeaturesResponses = {
+  /**
+   * OK
+   */
+  200: ResultListMapStringObject
+}
+
+export type FeaturesResponse = FeaturesResponses[keyof FeaturesResponses]
+
 export type MessagingHealthData = {
   body?: never
   path?: never

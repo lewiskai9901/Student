@@ -37,6 +37,7 @@ public class PluginPlatformController {
     private final TriggerPipelineHealthCheck triggerPipelineHealthCheck;
     private final org.springframework.beans.factory.ObjectProvider<com.school.management.infrastructure.extension.MenuRegistrar> menuRegistrarProvider;
     private final PluginLifecycleService pluginLifecycleService;
+    private final com.school.management.infrastructure.extension.FeatureRegistry featureRegistry;
 
     /**
      * GET /api/plugin-platform/overview
@@ -114,6 +115,23 @@ public class PluginPlatformController {
      * 内省策略: 对 9 个核心 hook 组合调 supports(), 收集 true 的视为该策略监听点.
      * 同时附带 "可用 hook points" 清单 (无论是否有监听者), 帮助插件开发者导航.
      */
+    /** 特性注册表 — 全部已登记特性 (code/中文名/用处说明/归属), 供前端做特性词典展示。 */
+    @GetMapping("/features")
+    @CasbinAccess(resource = "admin", action = "access")
+    public Result<List<Map<String, Object>>> features() {
+        List<Map<String, Object>> out = featureRegistry.all().stream()
+            .map(e -> {
+                Map<String, Object> m = new java.util.LinkedHashMap<>();
+                m.put("code", e.def().code());
+                m.put("label", e.def().label());
+                m.put("description", e.def().description());
+                m.put("owner", e.owner());
+                return m;
+            })
+            .collect(java.util.stream.Collectors.toList());
+        return Result.success(out);
+    }
+
     @GetMapping("/policies")
     @CasbinAccess(resource = "admin", action = "access")
     public Result<Map<String, Object>> policies() {

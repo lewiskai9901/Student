@@ -106,7 +106,7 @@ import PluginContextPanel from './components/PluginContextPanel.vue'
 import GlobalSearchPalette from './components/GlobalSearchPalette.vue'
 import PluginHealthDialog from './components/PluginHealthDialog.vue'
 import type { PluginData, ResourceKey } from './helpers'
-import { inferIndustry, resolveIndustry, relationIndustry } from './helpers'
+import { inferIndustry, resolveIndustry, relationIndustry, setFeatureCatalog } from './helpers'
 
 // ───────── Router state ─────────
 const route = useRoute()
@@ -201,7 +201,7 @@ async function loadAll() {
     const typeReqs = ['USER', 'ORG_UNIT', 'PLACE'].map(et =>
       http.get('/entity-type-configs', { params: { entityType: et } }).catch(() => [])
     )
-    const [ov, r, e, p, ro, pol, ds, dr, rr, tps, srs, tms, mh, mt, ...typeResults] = await Promise.all([
+    const [ov, r, e, p, ro, pol, ds, dr, rr, tps, srs, tms, mh, mt, feats, ...typeResults] = await Promise.all([
       http.get('/plugin-platform/overview').catch(() => null),
       http.get('/relation-types').catch(() => []),
       http.get('/event/types').catch(() => []),
@@ -216,8 +216,12 @@ async function loadAll() {
       http.get('/plugin-platform/target-modes').catch(() => []),
       http.get('/plugin-platform/messaging-health').catch(() => ({ healthy: true, missingTables: [] })),
       http.get('/plugin-platform/metrics').catch(() => null),
+      http.get('/plugin-platform/features').catch(() => []),
       ...typeReqs
     ])
+
+    // 特性注册表: 后端为权威来源, 覆盖前端内置词典 (标签/说明/归属以治理后为准)。
+    setFeatureCatalog(Array.isArray(feats) ? (feats as any) : [])
 
     data.types = typeResults.flatMap((t: any) => Array.isArray(t) ? t : (t?.records || t?.list || []))
     data.relations = Array.isArray(r) ? r : ((r as any)?.records || (r as any)?.list || [])

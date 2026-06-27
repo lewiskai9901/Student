@@ -1065,6 +1065,9 @@ import type {
   FeasibilityCheckData,
   FeasibilityCheckErrors,
   FeasibilityCheckResponses,
+  FeaturesData,
+  FeaturesErrors,
+  FeaturesResponses,
   FillSelfStudyData,
   FillSelfStudyErrors,
   FillSelfStudyResponses,
@@ -11990,6 +11993,16 @@ export const dependencyGraph = <ThrowOnError extends boolean = false>(
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/plugin-platform/dependency-graph',
+    ...options
+  })
+
+export const features = <ThrowOnError extends boolean = false>(
+  options?: Options<FeaturesData, ThrowOnError>
+) =>
+  (options?.client ?? client).get<FeaturesResponses, FeaturesErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/plugin-platform/features',
     ...options
   })
 

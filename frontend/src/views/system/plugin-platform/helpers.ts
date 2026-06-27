@@ -290,19 +290,35 @@ export const FEATURE_INFO: Record<string, FeatureMeta> = {
   hasAC: { label: '配备空调', owner: 'EDU', desc: '该场所配备空调。' },
 }
 
+/**
+ * 运行时特性词典。默认用内置 FEATURE_INFO 兜底(离线/首屏); 后端特性注册表
+ * (/plugin-platform/features) 加载后由 setFeatureCatalog 覆盖为<b>单一权威来源</b>。
+ */
+const _featureCatalog: Record<string, FeatureMeta> = { ...FEATURE_INFO }
+
+/** 用后端注册表数据覆盖前端词典 (后端为权威; 治理后的标签/说明/归属以它为准)。 */
+export function setFeatureCatalog(
+  list: Array<{ code: string; label: string; description: string; owner: 'CORE' | 'EDU' }>
+): void {
+  if (!Array.isArray(list)) return
+  for (const f of list) {
+    if (f && f.code) _featureCatalog[f.code] = { label: f.label, desc: f.description, owner: f.owner }
+  }
+}
+
 /** 特性 key → 中文名 (未知回退原码)。 */
 export function featureLabel(key: string): string {
-  return FEATURE_INFO[key]?.label || key
+  return _featureCatalog[key]?.label || key
 }
 
 /** 特性 key → 用处说明 (未知回退空串)。 */
 export function featureDesc(key: string): string {
-  return FEATURE_INFO[key]?.desc || ''
+  return _featureCatalog[key]?.desc || ''
 }
 
 /** 特性 key → 归属 (CORE/EDU; 未知按 EDU 处理=行业特性更可能未登记)。 */
 export function featureOwner(key: string): 'CORE' | 'EDU' {
-  return FEATURE_INFO[key]?.owner || 'EDU'
+  return _featureCatalog[key]?.owner || 'EDU'
 }
 
 /** 字段类型码 → 中文。 */
