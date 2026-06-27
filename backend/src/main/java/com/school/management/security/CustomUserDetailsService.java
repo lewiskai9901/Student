@@ -128,6 +128,29 @@ public class CustomUserDetailsService implements UserDetailsService {
         return details;
     }
 
+    /**
+     * 用户类型是否允许登录: 类型 features 显式 {@code canLogin:false} (如访客 GUEST) → false;
+     * 其它一律 true (无类型 / 类型未声明该键 / 解析失败) —— 绝不因元数据缺失或异常把用户锁在门外。
+     * 与 users.status 一起在 {@link CustomUserDetails#isEnabled()} 里 AND 成最终登录闸。
+     */
+    private boolean resolveTypeCanLogin(String userTypeCode) {
+        if (userTypeCode == null || userTypeCode.isBlank()) {
+            return true;
+        }
+        try {
+            String features = jdbcTemplate.queryForObject(
+                    "SELECT features FROM entity_type_configs WHERE entity_type='USER' AND type_code=? AND deleted=0",
+                    String.class, userTypeCode);
+            if (features == null) {
+                return true;
+            }
+            return !features.replaceAll("\\s", "").contains("\"canLogin\":false");
+        } catch (Exception e) {
+            log.warn("解析用户类型 {} 的 canLogin 失败, 放行登录: {}", userTypeCode, e.getMessage());
+            return true;
+        }
+    }
+
     private CustomUserDetails buildUserDetails(UserPO user, List<String> roles, List<String> permissions) {
         // orgUnitId 走统一归属入口 (access_relations member 关系), 不再读 users.primary_org_unit_id
         Long orgUnitId = membershipResolver.orgOf(user.getId()).orElse(null);
@@ -157,6 +180,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         details.setRoleIds(roleIds != null ? roleIds : Collections.emptyList());
         details.setOrgUnitPath(orgUnitPath);
         details.setScopedRoles(scopedRoles);
+        details.setCanLogin(resolveTypeCanLogin(user.getUserTypeCode()));
         return details;
     }
 

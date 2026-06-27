@@ -30,6 +30,8 @@ public class CustomUserDetails implements UserDetails {
     private List<Long> roleIds;
     private Long tenantId;
     private List<UserContext.ScopedRoleInfo> scopedRoles;
+    /** 类型级登录能力: 用户类型显式 canLogin=false (如访客 GUEST) 时为 false, 与 status 一起 gate 登录。默认 true (类型未声明=允许)。 */
+    private boolean canLogin = true;
 
     public CustomUserDetails() {
     }
@@ -181,7 +183,16 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return status != null && status == 1;
+        // 登录闸: 用户 status 正常 且 用户类型允许登录 (canLogin) —— 类型 canLogin=false 直接判为不可登录。
+        return status != null && status == 1 && canLogin;
+    }
+
+    public boolean isCanLogin() {
+        return canLogin;
+    }
+
+    public void setCanLogin(boolean canLogin) {
+        this.canLogin = canLogin;
     }
 
     // Utility methods
