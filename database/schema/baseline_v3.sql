@@ -4827,6 +4827,23 @@ CREATE TABLE `entity_events` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `failed_event_notifications` (区块3-B 事件通知死信队列)
+--
+DROP TABLE IF EXISTS `failed_event_notifications`;
+CREATE TABLE `failed_event_notifications` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `event_id` bigint NOT NULL COMMENT '待重试的 entity_events.id',
+  `error_message` varchar(2000) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `retry_count` int NOT NULL DEFAULT '0',
+  `status` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING/RESOLVED/EXHAUSTED',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `last_retry_at` datetime DEFAULT NULL,
+  `tenant_id` bigint NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`),
+  KEY `idx_status_retry` (`status`,`retry_count`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='事件通知分发失败死信队列';
+
+--
 -- Dumping data for table `entity_events`
 --
 

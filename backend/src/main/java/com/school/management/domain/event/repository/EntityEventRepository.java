@@ -4,6 +4,7 @@ import com.school.management.domain.event.model.EntityEvent;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * 事件仓储接口
@@ -11,6 +12,9 @@ import java.util.Map;
 public interface EntityEventRepository {
 
     EntityEvent save(EntityEvent event);
+
+    /** 按 id 加载 (死信队列重试用)。 */
+    Optional<EntityEvent> findById(Long id);
 
     /**
      * 按主体查询时间线

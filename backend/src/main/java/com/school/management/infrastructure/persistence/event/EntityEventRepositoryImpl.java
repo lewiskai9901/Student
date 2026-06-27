@@ -62,6 +62,12 @@ public class EntityEventRepositoryImpl implements EntityEventRepository {
     }
 
     @Override
+    public java.util.Optional<EntityEvent> findById(Long id) {
+        EntityEventPO po = eventMapper.selectById(id);
+        return po == null ? java.util.Optional.empty() : java.util.Optional.of(toDomain(po));
+    }
+
+    @Override
     public List<EntityEvent> findBySubject(String subjectType, Long subjectId, int limit) {
         return eventMapper.selectBySubject(subjectType, subjectId, limit)
                 .stream().map(this::toDomain).collect(Collectors.toList());

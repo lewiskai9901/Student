@@ -1,11 +1,10 @@
 package com.school.management.infrastructure.external;
 
 import java.util.List;
-import java.util.Map;
 
 /**
- * 通知服务接口
- * 用于发送各类通知（站内消息、微信推送、短信等）
+ * 通知服务接口 —— 站内消息。
+ * (微信/短信方法已删: 原为空壳/假发送, 零调用方; 真实多通道走 application/message。)
  */
 public interface NotificationService {
 
@@ -28,24 +27,6 @@ public interface NotificationService {
      * @param type    消息类型
      */
     void sendInAppMessageBatch(List<Long> userIds, String title, String content, String type);
-
-    /**
-     * 发送微信模板消息
-     *
-     * @param userId     用户ID
-     * @param templateId 模板ID
-     * @param data       模板数据
-     * @param url        跳转链接
-     */
-    void sendWechatTemplate(Long userId, String templateId, Map<String, String> data, String url);
-
-    /**
-     * 发送短信
-     *
-     * @param phone   手机号
-     * @param content 短信内容
-     */
-    void sendSms(String phone, String content);
 
     /**
      * 消息类型常量

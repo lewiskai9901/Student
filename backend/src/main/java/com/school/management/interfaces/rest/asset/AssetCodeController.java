@@ -9,6 +9,12 @@ import org.springframework.web.bind.annotation.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import com.school.management.infrastructure.casbin.CasbinAccess;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.EncodeHintType;
+import com.google.zxing.WriterException;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.QRCodeWriter;
+import com.google.zxing.oned.Code128Writer;
 
 /**
  * Asset Code / Label REST Controller
@@ -178,88 +184,73 @@ public class AssetCodeController {
     // ==================== SVG Generators ====================
 
     /**
-     * Generate a simple placeholder QR code SVG.
-     * In production, use a real QR code library (e.g. ZXing).
+     * 生成真二维码 SVG (ZXing QRCodeWriter)。原占位实现是 Random(hash) 画的假图案, 扫不出来。
+     * BitMatrix 按行 run-length 合并为 rect, viewBox=模块数 → width/height 缩放到请求 size。
      */
     private String generateSimpleQRSvg(String content, int size) {
-        // Generate a deterministic pattern from content hash
-        int hash = content.hashCode();
-        StringBuilder svg = new StringBuilder();
-        svg.append("<svg xmlns='http://www.w3.org/2000/svg' width='").append(size)
-           .append("' height='").append(size).append("' viewBox='0 0 25 25'>");
-        svg.append("<rect width='25' height='25' fill='white'/>");
-
-        // Position detection patterns (the three large squares)
-        drawFinderPattern(svg, 0, 0);
-        drawFinderPattern(svg, 18, 0);
-        drawFinderPattern(svg, 0, 18);
-
-        // Fill some data modules based on hash
-        Random rng = new Random(hash);
-        for (int y = 0; y < 25; y++) {
-            for (int x = 0; x < 25; x++) {
-                if (isFinderArea(x, y)) continue;
-                if (rng.nextBoolean()) {
-                    svg.append("<rect x='").append(x).append("' y='").append(y)
-                       .append("' width='1' height='1' fill='black'/>");
+        try {
+            BitMatrix m = new QRCodeWriter().encode(content, BarcodeFormat.QR_CODE, size, size,
+                    java.util.Map.of(EncodeHintType.MARGIN, 1));
+            int w = m.getWidth(), h = m.getHeight();
+            StringBuilder svg = new StringBuilder();
+            svg.append("<svg xmlns='http://www.w3.org/2000/svg' width='").append(size)
+               .append("' height='").append(size).append("' viewBox='0 0 ").append(w).append(' ').append(h).append("'>");
+            svg.append("<rect width='").append(w).append("' height='").append(h).append("' fill='white'/>");
+            for (int y = 0; y < h; y++) {
+                int x = 0;
+                while (x < w) {
+                    if (m.get(x, y)) {
+                        int run = 1;
+                        while (x + run < w && m.get(x + run, y)) run++;
+                        svg.append("<rect x='").append(x).append("' y='").append(y)
+                           .append("' width='").append(run).append("' height='1' fill='black'/>");
+                        x += run;
+                    } else {
+                        x++;
+                    }
                 }
             }
+            svg.append("</svg>");
+            return svg.toString();
+        } catch (WriterException e) {
+            throw new IllegalStateException("二维码生成失败: " + e.getMessage(), e);
         }
-
-        svg.append("</svg>");
-        return svg.toString();
-    }
-
-    private void drawFinderPattern(StringBuilder svg, int ox, int oy) {
-        // Outer 7x7 black border
-        svg.append("<rect x='").append(ox).append("' y='").append(oy)
-           .append("' width='7' height='7' fill='black'/>");
-        // Inner 5x5 white
-        svg.append("<rect x='").append(ox + 1).append("' y='").append(oy + 1)
-           .append("' width='5' height='5' fill='white'/>");
-        // Center 3x3 black
-        svg.append("<rect x='").append(ox + 2).append("' y='").append(oy + 2)
-           .append("' width='3' height='3' fill='black'/>");
-    }
-
-    private boolean isFinderArea(int x, int y) {
-        if (x < 8 && y < 8) return true;
-        if (x >= 17 && y < 8) return true;
-        if (x < 8 && y >= 17) return true;
-        return false;
     }
 
     /**
-     * Generate a simple placeholder barcode SVG (Code 128-like).
+     * 生成真 Code128 条形码 SVG (ZXing Code128Writer)。原占位是随机竖条, 扫不出来。
+     * BitMatrix 1D, 合并连续黑列为竖条; 下方附人眼可读文本。
      */
     private String generateSimpleBarcodeSvg(String content, int width, int height) {
-        StringBuilder svg = new StringBuilder();
-        svg.append("<svg xmlns='http://www.w3.org/2000/svg' width='").append(width)
-           .append("' height='").append(height + 20).append("'>");
-        svg.append("<rect width='").append(width).append("' height='").append(height + 20)
-           .append("' fill='white'/>");
-
-        // Generate bars from content
-        Random rng = new Random(content.hashCode());
-        double x = 10;
-        double maxX = width - 10;
-        while (x < maxX) {
-            double barWidth = 1 + rng.nextInt(3);
-            if (rng.nextBoolean()) {
-                svg.append("<rect x='").append(String.format("%.1f", x))
-                   .append("' y='2' width='").append(String.format("%.1f", barWidth))
-                   .append("' height='").append(height - 4).append("' fill='black'/>");
+        try {
+            BitMatrix m = new Code128Writer().encode(content, BarcodeFormat.CODE_128, width, height);
+            int w = m.getWidth();
+            StringBuilder svg = new StringBuilder();
+            svg.append("<svg xmlns='http://www.w3.org/2000/svg' width='").append(width)
+               .append("' height='").append(height + 20).append("'>");
+            svg.append("<rect width='").append(width).append("' height='").append(height + 20)
+               .append("' fill='white'/>");
+            int x = 0;
+            while (x < w) {
+                if (m.get(x, 0)) {
+                    int run = 1;
+                    while (x + run < w && m.get(x + run, 0)) run++;
+                    svg.append("<rect x='").append(x).append("' y='2' width='").append(run)
+                       .append("' height='").append(height - 4).append("' fill='black'/>");
+                    x += run;
+                } else {
+                    x++;
+                }
             }
-            x += barWidth + 1;
+            svg.append("<text x='").append(width / 2).append("' y='").append(height + 14)
+               .append("' text-anchor='middle' font-family='monospace' font-size='11'>")
+               .append(escapeXml(content)).append("</text>");
+            svg.append("</svg>");
+            return svg.toString();
+        } catch (IllegalArgumentException e) {
+            // Code128 仅支持 ASCII; 内容不可编码时 Code128Writer 抛 IllegalArgumentException。
+            throw new IllegalStateException("条形码生成失败 (内容含不支持字符?): " + e.getMessage(), e);
         }
-
-        // Add text
-        svg.append("<text x='").append(width / 2).append("' y='").append(height + 14)
-           .append("' text-anchor='middle' font-family='monospace' font-size='11'>")
-           .append(escapeXml(content)).append("</text>");
-
-        svg.append("</svg>");
-        return svg.toString();
     }
 
     private String escapeXml(String s) {

@@ -1788,19 +1788,6 @@ export type FieldChangeDto = {
   oldValue?: string
 }
 
-export type FireRequest = {
-  createdBy?: LongId
-  createdByName?: string
-  eventCategory?: string
-  eventLabel?: string
-  eventType?: string
-  payload?: string
-  sourceModule?: string
-  subjectId?: LongId
-  subjectName?: string
-  subjectType?: string
-}
-
 export type FlagDetailRequest = {
   reason?: string
 }
@@ -15155,59 +15142,6 @@ export type GetUserActivityResponses = {
 }
 
 export type GetUserActivityResponse = GetUserActivityResponses[keyof GetUserActivityResponses]
-
-export type FireData = {
-  body: FireRequest
-  path?: never
-  query?: never
-  url: '/admin/demo/event/fire'
-}
-
-export type FireErrors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
-  /**
-   * Conflict
-   */
-  409: ResultVoid
-  /**
-   * Unsupported Media Type
-   */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type FireError = FireErrors[keyof FireErrors]
-
-export type FireResponses = {
-  /**
-   * OK
-   */
-  200: ResultMapStringObject
-}
-
-export type FireResponse = FireResponses[keyof FireResponses]
 
 export type ListDeadLetterData = {
   body?: never

@@ -1080,9 +1080,6 @@ import type {
   FindRecentData,
   FindRecentErrors,
   FindRecentResponses,
-  FireData,
-  FireErrors,
-  FireResponses,
   FlagDetailData,
   FlagDetailErrors,
   FlagDetailResponses,
@@ -4296,20 +4293,6 @@ export const getUserActivity = <ThrowOnError extends boolean = false>(
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/activity-events/user/{userId}',
     ...options
-  })
-
-export const fire = <ThrowOnError extends boolean = false>(
-  options: Options<FireData, ThrowOnError>
-) =>
-  (options.client ?? client).post<FireResponses, FireErrors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/admin/demo/event/fire',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
-    }
   })
 
 export const listDeadLetter = <ThrowOnError extends boolean = false>(
