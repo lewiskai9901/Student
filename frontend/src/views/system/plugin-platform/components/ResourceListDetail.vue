@@ -572,7 +572,8 @@ const groupedPermissions = computed(() => {
 .rl-feat {
   display: inline-block; font-size: 10px; color: #6b7280;
   background: #f3f4f6; padding: 1px 6px; border-radius: 3px;
-  margin-right: 3px;
+  margin-right: 3px; margin-bottom: 2px;
+  white-space: nowrap;   /* 单个 chip(如"场所/入住后")整体不逐字竖排; 多 chip 在 rl-wrap 单元格内按整块换行 */
 }
 .rl-implied { font-size: 10px; color: #7c3aed; line-height: 1.3; }
 .rl-evt-dot {
@@ -583,6 +584,7 @@ const groupedPermissions = computed(() => {
   display: inline-flex; align-items: center;
   font-size: 10px; font-weight: 500;
   padding: 1px 7px; border-radius: 10px; border: 1px solid;
+  white-space: nowrap;   /* chip 文本整体不竖排 */
 }
 .rl-chip-primary { color: #2563eb; border-color: #93c5fd; background: #eff6ff; }
 .rl-chip-success { color: #059669; border-color: #a7f3d0; background: #ecfdf5; }
