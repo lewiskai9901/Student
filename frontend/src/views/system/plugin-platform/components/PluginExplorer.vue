@@ -56,22 +56,25 @@
       </template>
     </div>
 
-    <!-- Resources view -->
+    <!-- Resources view: 按概念分组 (实体与关系 / 权限与数据范围 / 数据归属 / 事件与消息) -->
     <div v-else-if="view === 'resources'" class="ex-body">
-      <div class="ex-section-title">资源类型</div>
-      <button
-        v-for="r in RESOURCE_TYPES"
-        :key="r.key"
-        class="ex-item"
-        :class="{ active: selectedResource === r.key }"
-        @click="emit('select-resource', r.key)"
-      >
-        <component :is="resourceIcons[r.key]" :size="12" class="ex-icon-muted" />
-        <span class="ex-item-main">
-          <span class="ex-item-name">{{ r.label }}</span>
-        </span>
-        <span class="ex-item-count">{{ countFor(r.key) }}</span>
-      </button>
+      <template v-for="g in groupedResourceTypes" :key="g.label">
+        <div class="ex-section-title" :title="g.hint">{{ g.label }}</div>
+        <button
+          v-for="r in g.items"
+          :key="r.key"
+          class="ex-item"
+          :class="{ active: selectedResource === r.key }"
+          :title="r.desc"
+          @click="emit('select-resource', r.key)"
+        >
+          <component :is="resourceIcons[r.key]" :size="12" class="ex-icon-muted" />
+          <span class="ex-item-main">
+            <span class="ex-item-name">{{ r.label }}</span>
+          </span>
+          <span class="ex-item-count">{{ countFor(r.key) }}</span>
+        </button>
+      </template>
     </div>
   </aside>
 </template>
@@ -82,7 +85,7 @@ import {
   Package, Webhook, LayoutGrid, Link2, Bell, Shield, UserCog,
   ShieldCheck, Filter, Zap, BellRing, Database, Share2
 } from 'lucide-vue-next'
-import { RESOURCE_TYPES, industryColor, subjectTypeLabel, phaseLabel, type PluginData, type ResourceKey } from '../helpers'
+import { RESOURCE_TYPES, RESOURCE_GROUPS, RESOURCE_TYPE_DESC, industryColor, subjectTypeLabel, phaseLabel, type PluginData, type ResourceKey } from '../helpers'
 
 type ViewKind = 'plugins' | 'hooks' | 'resources'
 
@@ -141,6 +144,17 @@ const hookGroups = computed(() => {
   }
   return Array.from(m.values())
 })
+
+const groupedResourceTypes = computed(() =>
+  RESOURCE_GROUPS.map(g => ({
+    label: g.label,
+    hint: g.hint,
+    items: g.keys
+      .map(k => RESOURCE_TYPES.find(r => r.key === k))
+      .filter((r): r is typeof RESOURCE_TYPES[number] => !!r)
+      .map(r => ({ key: r.key, label: r.label, desc: RESOURCE_TYPE_DESC[r.key] || '' }))
+  }))
+)
 
 function countFor(key: ResourceKey): number {
   const map: Record<ResourceKey, number> = {

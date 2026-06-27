@@ -354,16 +354,103 @@ export const RESOURCE_TYPES = [
   { key: 'subscriptionRules', label: '订阅规则', icon: 'BellRing' }
 ] as const
 
-/** 存储种类 (resource_relations.storage_kind) 中文标签 */
+/** 存储种类 (resource_relations.storage_kind) → 面向意图的中文 (管理员可懂; 原码进 tooltip) */
 export function storageKindLabel(kind?: string): string {
   if (!kind) return '-'
   return ({
-    COLUMN: '业务列',
-    SUBJECT_GRAPH: '成员图',
-    RECORD_RELATION: '记录关系',
-    PROVIDER: '解析器',
+    COLUMN: '按业务字段',
+    SUBJECT_GRAPH: '按成员归属',
+    RECORD_RELATION: '按记录关系',
+    PROVIDER: '按动态规则',
     MATERIALIZED: '物化'
   } as Record<string, string>)[kind] || kind
 }
 
+/** 数据范围/维度码 (allowed_scopes / OrgAnchor / data_scope_dims) 中文 */
+export function scopeLabel(code?: string): string {
+  if (!code) return '-'
+  return ({
+    ALL: '全部', SELF: '仅本人',
+    DEPARTMENT: '本组织', DEPARTMENT_AND_BELOW: '本组织及下级',
+    MANAGED_ORGS: '我管理的组织', MANAGED_ORGS_AND_BELOW: '我管理的组织及下级',
+    PRIMARY_ORG: '主组织', RELATION: '按关系', CUSTOM: '自定义', CUSTOM_ORG: '指定组织',
+    PLUGIN_DIM: '插件维度', BY_CLASS: '按班级', BY_GRADE: '按年级', BY_MAJOR: '按专业'
+  } as Record<string, string>)[code] || code
+}
+
+/** 消息目标模式 (target_mode) 中文 */
+export function targetModeLabel(code?: string): string {
+  if (!code) return '-'
+  return ({
+    BY_SUBJECT: '主体本人', BY_ROLE: '按角色', BY_RELATION: '按关系',
+    BY_FEATURE: '按能力', FIXED: '固定名单', ALL_USERS: '全部用户'
+  } as Record<string, string>)[code] || code
+}
+
+/** 消息渠道 (channel) 中文 */
+export function channelLabel(code?: string): string {
+  if (!code) return '站内信'
+  return ({ IN_APP: '站内信', EMAIL: '邮件', SMS: '短信', WECHAT: '微信', PUSH: '推送' } as Record<string, string>)[code] || code
+}
+
+/** 策略作用点 "place/BEFORE_CHECKIN" → "场所 / 入住前" */
+export function hookKeyLabel(key?: string): string {
+  if (!key) return '-'
+  const [entity, phase] = key.split('/')
+  return subjectTypeLabel(entity) + ' / ' + phaseLabel(phase)
+}
+
 export type ResourceKey = typeof RESOURCE_TYPES[number]['key']
+
+/**
+ * 资源类型分组 (按用途归类, 让"功能与关系"一目了然)。左栏按此分组 + 概念图例用。
+ */
+export const RESOURCE_GROUPS: { label: string; hint: string; keys: ResourceKey[] }[] = [
+  { label: '实体与关系', hint: '建模主体本身, 以及主体之间的关系',
+    keys: ['types', 'relations'] },
+  { label: '权限与数据范围', hint: '谁能进哪些功能 (权限/角色), 以及能看哪些数据 (策略/维度)',
+    keys: ['permissions', 'roles', 'policies', 'dataScopes'] },
+  { label: '数据归属', hint: '业务数据受不受管控, 以及它"挂在谁名下"——决定数据权限怎么过滤',
+    keys: ['dataResources', 'resourceRelations'] },
+  { label: '事件与消息', hint: '系统发生了什么 (事件/触发点), 以及通知谁 (订阅规则)',
+    keys: ['events', 'triggerPoints', 'subscriptionRules'] }
+]
+
+/** 每个资源类型一句人话说明 (选中时显示在表顶 + 左栏 tooltip)。 */
+export const RESOURCE_TYPE_DESC: Record<ResourceKey, string> = {
+  types: '用户/组织/场所的子类型 (如 学生、教师、班级), 插件可在其上扩展字段。',
+  relations: '主体之间的关系图: 谁是某组织的成员/管理员、谁是谁的家属。回答"谁和谁有关系"。',
+  dataResources: '受数据权限管控的业务资源, 及其可配置的"可见范围"选项。回答"哪些数据受管控"。',
+  resourceRelations: '每个数据资源如何锚定到主体 (按所属组织/创建者/被检查方…) —— 直接决定数据权限怎么过滤。回答"这些数据挂在谁名下"。',
+  events: '系统中可发生的事件 (如 入住、成绩发布), 用于触发通知/流程。',
+  permissions: '功能权限点 (菜单/操作/接口/按钮/数据)。',
+  roles: '权限的集合, 授予用户。',
+  policies: '业务规则钩子 (如 入住前校验容量), 由插件挂接到实体生命周期的某个阶段。',
+  dataScopes: '插件提供的数据范围切分维度 (如 按班级、按年级), 供角色配置数据权限时选用。',
+  triggerPoints: '业务流程中可挂接事件的位置 (点火后产生事件/通知)。',
+  subscriptionRules: '事件发生时通知谁、走什么渠道。'
+}
+
+/** 资源表各列的中文 tooltip (列头 title)。key = `${resourceKey}.${列标识}`。 */
+export const COLUMN_TOOLTIPS: Record<string, string> = {
+  'common.industry': '该声明由哪个插件/行业包贡献 (通用核心 / 教育行业 / 跨行业通用扩展 / 自定义)',
+  'relations.direction': '关系从哪类主体指向哪类主体 (如 用户 → 组织)',
+  'relations.category': '关系的语义类别: 管理/成员/关联/委托/订阅',
+  'relations.chain': '传递/隐含关系: 拥有此关系会自动获得的下游关系',
+  'relations.tier': '通用度层级: 通用核心 / 通用扩展 / 行业垂直',
+  'dataResources.scopes': '该资源在数据权限里可配置的可见范围选项',
+  'dataResources.typeField': '按"类型"再过滤时所依据的字段 (留空=不按类型过滤)',
+  'dataResources.kind': '资源种类: 记录本身是否就是一个主体 (PLAIN=普通业务记录 / SUBJECT=记录即主体)',
+  'resourceRelations.subject': '该锚定关系指向哪类主体 (用户/组织/场所)',
+  'resourceRelations.storage': '锚定方式: 按业务字段 / 按成员归属 / 按记录关系 / 按动态规则',
+  'resourceRelations.anchor': '锚定到主体所依据的具体落点 (业务表列名 / 关系码 / 解析器 bean) —— 实现细节',
+  'resourceRelations.grants': '无显式授予时, 该锚定是否默认参与可见性判定',
+  'events.polarity': '事件极性: 正向 (好事) / 负向 (问题) / 中性',
+  'permissions.type': '权限类型: 菜单/操作/按钮/接口/数据',
+  'permissions.scope': '权限作用面: 公开/本人/管理/系统',
+  'roles.level': '角色级别 (数值越小越高; 仅作排序参考)',
+  'policies.hook': '策略挂接的实体与阶段 (如 场所 / 入住前)',
+  'policies.source': '实现该策略的 Java 类 —— 实现细节',
+  'triggerPoints.context': '点火时可携带的上下文字段',
+  'subscriptionRules.target': '通知目标的选取方式'
+}

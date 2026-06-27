@@ -4,7 +4,7 @@
     <header class="pp-header">
       <div class="pp-brand">
         <h1 class="pp-title">插件平台</h1>
-        <span class="pp-subtitle">Explorer · Contributions · Context</span>
+        <span class="pp-subtitle">查看各插件向系统贡献了哪些能力 (类型 / 关系 / 权限 / 数据归属 / 事件)</span>
       </div>
       <button class="pp-search-trigger" @click="searchOpen = true">
         <Search :size="13" />

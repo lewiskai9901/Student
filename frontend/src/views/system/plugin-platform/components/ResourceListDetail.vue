@@ -21,6 +21,9 @@
       </div>
     </header>
 
+    <!-- 当前资源类型的一句话说明 (让"这是什么"一目了然) -->
+    <p v-if="typeDesc" class="rl-typedesc">{{ typeDesc }}</p>
+
     <!-- Types -->
     <div v-if="resourceType === 'types'" class="rl-body">
       <div v-for="grp in groupedTypes" :key="grp.key" class="rl-group">
@@ -39,7 +42,7 @@
               <td>{{ countFields(t) }}</td>
               <td><span v-for="f in topFeatures(t)" :key="f" class="rl-feat">{{ f }}</span></td>
               <td>
-                <code v-if="t.pluginClass" class="rl-mono">{{ shortClass(t.pluginClass) }}</code>
+                <code v-if="t.pluginClass" class="rl-mono" :title="t.pluginClass">{{ shortClass(t.pluginClass) }}</code>
                 <span v-else class="rl-muted">自定义</span>
               </td>
               <td>
@@ -57,7 +60,9 @@
     <!-- Relations -->
     <table v-else-if="resourceType === 'relations'" class="rl-table">
       <thead>
-        <tr><th>代码</th><th>名称</th><th>方向</th><th>类别</th><th>关系链</th><th>层级</th><th>来源</th><th>行业</th></tr>
+        <tr><th>代码</th><th>名称</th><th :title="colTip('relations.direction')">方向</th>
+          <th :title="colTip('relations.category')">类别</th><th :title="colTip('relations.chain')">关系链</th>
+          <th :title="colTip('relations.tier')">层级</th><th>来源</th><th :title="colTip('common.industry')">行业</th></tr>
       </thead>
       <tbody>
         <tr v-for="r in filtered" :key="r.relationCode + r.fromType + r.toType">
@@ -76,7 +81,7 @@
           <td>
             <div v-if="parseImplied(r.impliedRelations).length">
               <div v-for="(imp, i) in parseImplied(r.impliedRelations)" :key="i" class="rl-implied">
-                > {{ imp.relation }} <span class="rl-muted">on</span> {{ subjectTypeLabel(imp.targetType) }}
+                → {{ imp.relation }} <span class="rl-muted">作用于</span> {{ subjectTypeLabel(imp.targetType) }}
               </div>
             </div>
             <span v-else class="rl-muted">—</span>
@@ -98,7 +103,9 @@
     <!-- Data Resources (数据资源: 受控资源 + 可配范围) -->
     <table v-else-if="resourceType === 'dataResources'" class="rl-table">
       <thead>
-        <tr><th>资源码</th><th>名称</th><th>域</th><th>可配范围</th><th>类型轴</th><th>存储类</th><th>行业</th></tr>
+        <tr><th>资源码</th><th>名称</th><th>域</th><th :title="colTip('dataResources.scopes')">可配范围</th>
+          <th :title="colTip('dataResources.typeField')">类型字段</th>
+          <th :title="colTip('dataResources.kind')">资源种类</th><th :title="colTip('common.industry')">行业</th></tr>
       </thead>
       <tbody>
         <tr v-for="d in filtered" :key="d.resource_code">
@@ -106,11 +113,11 @@
           <td>{{ d.resource_name }}</td>
           <td><span class="rl-muted">{{ d.domain_name || d.domain_code }}</span></td>
           <td class="rl-wrap">
-            <span v-for="s in parseSubjects(d.allowed_scopes)" :key="s" class="rl-feat">{{ s }}</span>
+            <span v-for="s in parseSubjects(d.allowed_scopes)" :key="s" class="rl-feat" :title="s">{{ scopeLabel(s) }}</span>
             <span v-if="!parseSubjects(d.allowed_scopes).length" class="rl-muted">—</span>
           </td>
           <td><code v-if="d.type_field" class="rl-mono">{{ d.type_field }}</code><span v-else class="rl-muted">—</span></td>
-          <td><span class="rl-muted">{{ d.resource_kind || 'PLAIN' }}</span></td>
+          <td><span class="rl-muted">{{ d.resource_kind === 'SUBJECT' ? '主体型' : '普通记录' }}</span></td>
           <td>
             <span class="rl-chip" :style="industryChipStyle(d.industry)">
               {{ industryLabel(d.industry) || '—' }}
@@ -124,7 +131,10 @@
     <!-- Resource Relations (数据关系: 资源如何锚定到主体) -->
     <table v-else-if="resourceType === 'resourceRelations'" class="rl-table">
       <thead>
-        <tr><th>资源码</th><th>关系</th><th>名称</th><th>指向主体</th><th>存储种类</th><th>锚 (列/关系/解析器)</th><th>默认可见</th><th>行业</th></tr>
+        <tr><th>资源码</th><th>关系</th><th>名称</th><th :title="colTip('resourceRelations.subject')">指向主体</th>
+          <th :title="colTip('resourceRelations.storage')">锚定方式</th>
+          <th :title="colTip('resourceRelations.anchor')">锚定落点 ⓘ</th>
+          <th :title="colTip('resourceRelations.grants')">默认可见</th><th :title="colTip('common.industry')">行业</th></tr>
       </thead>
       <tbody>
         <tr v-for="r in filtered" :key="r.resource_code + '/' + r.relation_code">
@@ -158,7 +168,7 @@
     <!-- Events -->
     <table v-else-if="resourceType === 'events'" class="rl-table">
       <thead>
-        <tr><th>代码</th><th>名称</th><th>类别</th><th>极性</th><th>适用主体</th><th>行业</th></tr>
+        <tr><th>代码</th><th>名称</th><th>类别</th><th :title="colTip('events.polarity')">极性</th><th>适用主体</th><th :title="colTip('common.industry')">行业</th></tr>
       </thead>
       <tbody>
         <tr v-for="e in filtered" :key="e.typeCode">
@@ -198,7 +208,7 @@
         </div>
         <table class="rl-table">
           <thead>
-            <tr><th>代码</th><th>名称</th><th>类型</th><th>范围</th><th>行业</th></tr>
+            <tr><th>代码</th><th>名称</th><th :title="colTip('permissions.type')">类型</th><th :title="colTip('permissions.scope')">范围</th><th :title="colTip('common.industry')">行业</th></tr>
           </thead>
           <tbody>
             <tr v-for="p in grp.items" :key="p.id">
@@ -221,7 +231,7 @@
     <!-- Roles -->
     <table v-else-if="resourceType === 'roles'" class="rl-table">
       <thead>
-        <tr><th>代码</th><th>名称</th><th>类型</th><th>级别</th><th>权限数</th><th>行业</th></tr>
+        <tr><th>代码</th><th>名称</th><th>类型</th><th :title="colTip('roles.level')">级别</th><th>权限数</th><th :title="colTip('common.industry')">行业</th></tr>
       </thead>
       <tbody>
         <tr v-for="r in filtered" :key="r.id">
@@ -243,17 +253,18 @@
     <!-- Policies -->
     <table v-else-if="resourceType === 'policies'" class="rl-table">
       <thead>
-        <tr><th>代码</th><th>名称</th><th>作用点</th><th>源类</th><th>插件</th></tr>
+        <tr><th>代码</th><th>名称</th><th :title="colTip('policies.hook')">作用点</th>
+          <th :title="colTip('policies.source')">源类 ⓘ</th><th>插件</th></tr>
       </thead>
       <tbody>
         <tr v-for="p in filtered" :key="p.code">
           <td><code class="rl-mono rl-mono-blue">{{ p.code }}</code></td>
           <td>{{ p.name }}</td>
-          <td>
-            <span v-for="h in (p.supports || [])" :key="h" class="rl-feat">{{ h }}</span>
+          <td class="rl-wrap">
+            <span v-for="h in (p.supports || [])" :key="h" class="rl-feat" :title="h">{{ hookKeyLabel(h) }}</span>
             <span v-if="!(p.supports || []).length" class="rl-muted">无匹配点</span>
           </td>
-          <td><code class="rl-mono">{{ shortClass(p.sourceClass) }}</code></td>
+          <td><code class="rl-mono" :title="p.sourceClass">{{ shortClass(p.sourceClass) }}</code></td>
           <td>
             <span class="rl-chip" :style="industryChipStyle(p.sourcePlugin)">
               {{ industryLabel(p.sourcePlugin) || p.sourcePlugin }}
@@ -287,7 +298,7 @@
     <!-- Trigger Points -->
     <table v-else-if="resourceType === 'triggerPoints'" class="rl-table">
       <thead>
-        <tr><th>模块</th><th>触发点</th><th>名称</th><th>描述</th><th>Context</th><th>触发器数</th><th>状态</th></tr>
+        <tr><th>模块</th><th>触发点</th><th>名称</th><th>描述</th><th :title="colTip('triggerPoints.context')">上下文字段</th><th>触发器数</th><th>状态</th></tr>
       </thead>
       <tbody>
         <tr v-for="t in filtered" :key="t.point_code">
@@ -314,22 +325,21 @@
     <!-- Subscription Rules -->
     <table v-else-if="resourceType === 'subscriptionRules'" class="rl-table">
       <thead>
-        <tr><th>规则名</th><th>事件匹配</th><th>目标</th><th>渠道</th><th>租户</th><th>状态</th></tr>
+        <tr><th>规则名</th><th>事件匹配</th><th :title="colTip('subscriptionRules.target')">目标</th><th>渠道</th><th>状态</th></tr>
       </thead>
       <tbody>
         <tr v-for="r in filtered" :key="r.id">
           <td>{{ r.rule_name || '—' }}</td>
           <td><code class="rl-mono">{{ [r.event_category, r.event_type].filter(Boolean).join(' / ') || '全部' }}</code></td>
-          <td><span class="rl-chip rl-chip-primary">{{ r.target_mode }}</span></td>
-          <td><span class="rl-muted">{{ r.channel || 'IN_APP' }}</span></td>
-          <td><span class="rl-muted">T-{{ r.tenant_id ?? 0 }}</span></td>
+          <td><span class="rl-chip rl-chip-primary" :title="r.target_mode">{{ targetModeLabel(r.target_mode) }}</span></td>
+          <td><span class="rl-muted">{{ channelLabel(r.channel) }}</span></td>
           <td>
             <span :class="Number(r.is_enabled) === 1 ? 'rl-chip rl-chip-success' : 'rl-chip rl-chip-info'">
               {{ Number(r.is_enabled) === 1 ? '启用' : '禁用' }}
             </span>
           </td>
         </tr>
-        <tr v-if="!filtered.length"><td colspan="6" class="rl-empty-cell">无匹配</td></tr>
+        <tr v-if="!filtered.length"><td colspan="5" class="rl-empty-cell">无匹配</td></tr>
       </tbody>
     </table>
   </div>
@@ -348,6 +358,8 @@ import {
   polarityTagType, polarityLabel, parseSubjects, permissionTypeLabel,
   permissionScopeLabel, roleTypeLabel, permissionModuleLabel, parseSchema,
   parseDataScopeSource, moduleCodeToIndustry, storageKindLabel,
+  scopeLabel, targetModeLabel, channelLabel, hookKeyLabel,
+  RESOURCE_TYPE_DESC, COLUMN_TOOLTIPS,
   type PluginData, type ResourceKey
 } from '../helpers'
 
@@ -371,6 +383,8 @@ const iconMap: Record<ResourceKey, any> = {
 }
 const activeIcon = computed(() => iconMap[props.resourceType])
 const activeLabel = computed(() => RESOURCE_TYPES.find(r => r.key === props.resourceType)?.label || '')
+const typeDesc = computed(() => RESOURCE_TYPE_DESC[props.resourceType] || '')
+function colTip(key: string): string { return COLUMN_TOOLTIPS[key] || '' }
 
 function matchesSearch(row: any, fields: string[]): boolean {
   const kw = searchText.value.trim().toLowerCase()
@@ -499,6 +513,11 @@ const groupedPermissions = computed(() => {
 .rl-chip-close {
   background: transparent; border: none; color: inherit;
   cursor: pointer; font-size: 11px;
+}
+.rl-typedesc {
+  margin: 0; padding: 7px 11px;
+  font-size: 12px; line-height: 1.5; color: #475569;
+  background: #f8fafc; border-left: 3px solid #93c5fd; border-radius: 0 4px 4px 0;
 }
 .rl-body { display: flex; flex-direction: column; gap: 10px; }
 
