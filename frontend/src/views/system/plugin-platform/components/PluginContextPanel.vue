@@ -80,7 +80,7 @@
             <dt>实体</dt>
             <dd>{{ subjectTypeLabel(selectedItem.entityType) }}</dd>
             <dt v-if="selectedItem.category">分类</dt>
-            <dd v-if="selectedItem.category">{{ categoryLabel(selectedItem.category) }}</dd>
+            <dd v-if="selectedItem.category" :title="selectedItem.category">{{ typeCategoryLabel(selectedItem.category) }}</dd>
             <dt>来源</dt>
             <dd>
               <code v-if="selectedItem.pluginClass" class="cx-mono" :title="selectedItem.pluginClass">{{ shortClass(selectedItem.pluginClass) }}</code>
@@ -173,7 +173,7 @@ import {
 import {
   industryColor, shortClass, formatDateShort, RESOURCE_TYPES,
   parseTypeFields, allFeatures, featureLabel, fieldTypeLabel,
-  categoryLabel, subjectTypeLabel,
+  typeCategoryLabel, subjectTypeLabel,
   type PluginData, type ResourceKey
 } from '../helpers'
 

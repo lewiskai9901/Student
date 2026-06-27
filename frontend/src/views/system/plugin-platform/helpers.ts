@@ -329,6 +329,22 @@ export function categoryLabel(cat?: string): string {
   } as Record<string, string>)[cat || ''] || cat || '-'
 }
 
+/**
+ * 实体"类型"的分类 (entity_type_configs.category) → 中文。
+ * 源自后端枚举 UserCategory / OrgCategory / BaseCategory。注意: 这与上面"关系"的 categoryLabel
+ * (MEMBERSHIP/OWNERSHIP…) 是两回事 —— 类型分类是把同一实体下的类型按性质归组。
+ */
+export function typeCategoryLabel(cat?: string): string {
+  return ({
+    // 用户 (UserCategory)
+    ADMIN: '管理员', STAFF: '职工', MEMBER: '成员', EXTERNAL: '外部人员',
+    // 组织 (OrgCategory)
+    ROOT: '根组织', BRANCH: '分支机构', FUNCTIONAL: '职能部门', GROUP: '成员组', CONTAINER: '容器',
+    // 场所 (BaseCategory)
+    SITE: '校区/园区', BUILDING: '楼栋', FLOOR: '楼层', ROOM: '房间', AREA: '区域', POINT: '点位', SPACE: '空间',
+  } as Record<string, string>)[cat || ''] || cat || '—'
+}
+
 export function polarityTagType(p?: string): 'success' | 'warning' | 'danger' | 'info' {
   return ({ POSITIVE: 'success', NEGATIVE: 'danger', NEUTRAL: 'info' } as any)[p || ''] || 'info'
 }
