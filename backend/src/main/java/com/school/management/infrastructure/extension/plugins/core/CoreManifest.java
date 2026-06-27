@@ -315,6 +315,9 @@ public class CoreManifest implements PluginPackage {
             dr("inspection_evidence",          "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),  // P3 余表
             dr("inspection_submission_detail", "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),  // P3 余表
             dr("inspection_project_inspector", "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),  // P3 余表
+            // B-2: org_unit_scores 从 inspection_project 拆出独立码 — 该表无 created_by, 不能共享带 creator 锚的 inspection_project
+            // (否则 {creator,SELF}/默认 SELF → created_by=me 在 org_unit_scores 上 SQL 1054)。仅 owner_org=org_unit_id。
+            dr("inspection_org_unit_score", "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "CUSTOM"),  // 无 SELF (表无 created_by)
             dr("inspection_corrective",  "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),
             dr("inspection_alert",       "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),
             dr("inspection_observation", "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),
@@ -383,6 +386,11 @@ public class CoreManifest implements PluginPackage {
             orgCreator("inspection_submission_detail", "org_unit_id", "created_by"),
             orgCreator("inspection_project_inspector", "org_unit_id", "created_by"),
             orgCreator("inspection_project", "org_unit_id", "created_by"),
+            // B-2: org_unit_scores 仅 owner_org (无 created_by 列 → 不注册 creator; SELF 在无 created_by 表的引擎级
+            // 退化是已知遗留类[同 student_grade/school_class], 此处先隔离不污染 inspection_project)。
+            Stream.<Contribution>of(rr(ResourceRelationDef.column(
+                "inspection_org_unit_score", "owner_org", "所属组织", "ORG_UNIT", "org_unit_id")
+                .withAutoFill().withGrantsByDefault())),
             orgCreator("inspection_alert", "org_unit_id", "created_by"),
             orgCreator("inspection_summary", "org_unit_id", "created_by"),
             orgCreator("inspection_observation", "org_unit_id", "created_by"),

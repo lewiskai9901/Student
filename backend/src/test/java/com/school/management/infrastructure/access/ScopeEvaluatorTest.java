@@ -437,6 +437,17 @@ class ScopeEvaluatorTest {
     }
 
     @Test
+    @DisplayName("[B-2] 无 creator 列资源 + SELF → DENY(1=0) 不崩 SQL (org_unit_scores/student_grade 类)")
+    void selfNoCreatorColumn_deny() {
+        // creatorField="" (该表无 created_by); SELF 既不能锚 created_by 也无从定义"本人" → 安全 DENY
+        ResourceScopeMeta noCreator = new ResourceScopeMeta(
+                "t", "org_unit_id", "", false, "id", null, "inspection_org_unit_score");
+        ScopeSpec spec = ScopeSpec.builder().orgAnchor(OrgAnchor.SELF).build();
+        ScopeCondition c = evaluator().toSqlCondition(spec, noCreator, ctx(), 100L, "/1/100/", TENANT, 0);
+        assertThat(c.sql).isEqualTo("1 = 0");
+    }
+
+    @Test
     @DisplayName("R4 多 grant: creator(COLUMN) ∨ reviewer(RECORD_RELATION) → 列谓词 OR record_relations 子查询")
     void multiGrant_columnOrRecordRelation() {
         when(resourceRelationRegistry.relationOf("inspection_record", "reviewer"))

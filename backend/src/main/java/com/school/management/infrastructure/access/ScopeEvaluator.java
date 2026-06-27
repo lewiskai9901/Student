@@ -596,6 +596,13 @@ public class ScopeEvaluator {
         ScopeCondition cond = new ScopeCondition();
 
         if (orgSet.self) {
+            // [B-2] 无 creator/owner-user 列的资源 (系统计算表如 org_unit_scores/student_grade/school_class):
+            // "仅本人/我创建的" 无从锚定 → DENY (空集, 安全), 而非拼出 "t.null = ?" 崩 SQL (修无 created_by 表
+            // SELF 既有 1054/500 类)。有 creator 列的资源 (绝大多数) creatorField 非空, 不受影响。
+            if (creatorField == null || creatorField.isBlank()) {
+                cond.sql = DENY;
+                return cond;
+            }
             cond.sql = alias + creatorField + " = ?";
             cond.addParam("_dp_creatorId_" + paramOffset, ctx.getUserId(), Long.class, JdbcType.BIGINT);
             return cond;
