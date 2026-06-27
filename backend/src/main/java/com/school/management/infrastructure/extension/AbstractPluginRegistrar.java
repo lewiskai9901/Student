@@ -139,7 +139,7 @@ public abstract class AbstractPluginRegistrar<P, D> implements ApplicationRunner
 
     // ═════════════════════════ 可选重写 ═════════════════════════
 
-    /** 默认走 PluginPackageRegistrar.resolveIndustry; 关系插件可重写走 resolveIndustryBySource */
+    /** 默认走 PluginPackageRegistrar.resolveIndustry(Class) (基于 manifest.owns, 权威归属)。 */
     protected String resolveIndustry(P plugin) {
         return packageRegistrar.resolveIndustry(plugin.getClass());
     }

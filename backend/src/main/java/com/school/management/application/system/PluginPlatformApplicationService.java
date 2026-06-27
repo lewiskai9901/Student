@@ -222,37 +222,9 @@ public class PluginPlatformApplicationService {
         return exists != null && exists > 0;
     }
 
-    /**
-     * 级联软删某行业插件的全部贡献声明 + 禁用插件包本身.
-     *
-     * <p>影响表: permissions / roles / entity_type_configs / entity_event_types /
-     * trigger_points / event_triggers / relation_types / data_scope_dims.
-     * CUSTOM 资源不受影响. 调用方需保证 code 非 CORE.</p>
-     *
-     * @return 各贡献表软删行数 (有序 Map)
-     */
-    @Transactional
-    public Map<String, Integer> uninstallPlugin(String code) {
-        Map<String, Integer> cascadeCounts = new LinkedHashMap<>();
-        // 贡献表列表 (表 -> 软删 SQL)
-        List<String[]> tables = List.of(
-            new String[]{"permissions",          "UPDATE permissions SET deleted=1, status=0 WHERE industry=? AND deleted=0"},
-            new String[]{"roles",                "UPDATE roles SET deleted=1, status=0 WHERE industry=? AND deleted=0"},
-            new String[]{"entity_type_configs",  "UPDATE entity_type_configs SET deleted=1, is_enabled=0 WHERE industry=? AND deleted=0"},
-            new String[]{"entity_event_types",   "UPDATE entity_event_types SET deleted=1, is_enabled=0 WHERE industry=? AND deleted=0"},
-            new String[]{"trigger_points",       "UPDATE trigger_points SET deleted=1, is_enabled=0 WHERE industry=? AND deleted=0"},
-            new String[]{"event_triggers",       "UPDATE event_triggers SET deleted=1, is_enabled=0 WHERE industry=? AND deleted=0"},
-            new String[]{"relation_types",       "UPDATE relation_types SET is_enabled=0 WHERE industry=? AND is_enabled=1"},
-            new String[]{"data_scope_dims",      "UPDATE data_scope_dims SET is_enabled=0 WHERE industry=? AND is_enabled=1"}
-        );
-        for (String[] t : tables) {
-            int n = jdbc.update(t[1], code);
-            cascadeCounts.put(t[0], n);
-        }
-        // 插件包本身
-        jdbc.update("UPDATE plugin_packages SET enabled=0 WHERE industry_code=?", code);
-        return cascadeCounts;
-    }
+    // uninstallPlugin 已删除 (P0-H2): 旧实现用 deleted=1/is_enabled=0 软删 8 表, 这些列被各 Registrar
+    // 启动期无条件重置 → 编译内插件 uninstall 重启即复活; 且漏清 data_resources。已收敛到
+    // PluginLifecycleService.uninstall (持久 plugin_enabled=0, 与 disable 同一张完整表清单)。
 
     // ═══════════════ dependency-graph ═══════════════
 

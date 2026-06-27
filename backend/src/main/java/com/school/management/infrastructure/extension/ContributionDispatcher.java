@@ -87,10 +87,13 @@ public class ContributionDispatcher implements ApplicationRunner {
                 if (c instanceof Contribution.RelationTypeContribution rtc) {
                     relations.incrementAndGet();
                     try {
+                        // P0-H1: 传所属包的权威 industry (= pkg.metadata().industryCode()) + origin,
+                        // 不再让 upserter 用 resolveIndustryBySource 字符串启发式 (对 COMMON_EXT 漏判致假禁用)。
                         RelationTypeUpserter.Result r = relationTypeUpserter.upsert(
-                            rtc.sourceName(), rtc.tier(), rtc.def());
-                        log.debug("[ContributionDispatcher] {} RelationType: {} (source={}, tier={})",
-                            r, rtc.def().relationCode(), rtc.sourceName(), rtc.tier());
+                            rtc.sourceName(), rtc.tier(), rtc.def(),
+                            industry, packageRegistrar.resolveOrigin(pkgClass));
+                        log.debug("[ContributionDispatcher] {} RelationType: {} (source={}, tier={}, industry={})",
+                            r, rtc.def().relationCode(), rtc.sourceName(), rtc.tier(), industry);
                     } catch (Exception e) {
                         log.error("[ContributionDispatcher] 关系类型写入失败 {}: {}",
                             rtc.def().relationCode(), e.getMessage());

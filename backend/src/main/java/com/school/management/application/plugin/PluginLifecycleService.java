@@ -31,7 +31,13 @@ public class PluginLifecycleService {
     private final JdbcTemplate jdbc;
     private final ApplicationEventPublisher eventPublisher;
 
-    /** 10 张贡献表 + 其 industry 归属列 (此项目所有 10 表都叫 industry). */
+    /**
+     * 贡献表清单 (单一真相; disable/enable/uninstall 共用) + 其 industry 归属列。
+     * 这些表都有 plugin_enabled 列, 走两态模型 (effective = is_enabled AND plugin_enabled)。
+     * ⚠ 不含 resource_relations: 该表无 plugin_enabled 列 (其 reader ResourceRelationRegistry 仅按
+     *   enabled=1 过滤, 且 ResourceRelationUpserter 启动期 enabled=1 复活) → 暂不纳入两态级联;
+     *   要纳入需另加列 + 改 registry 过滤 + upserter 保留, 属独立改动 (P0 暂不做, 见审计 H2 备注)。
+     */
     public static final List<String[]> CONTRIBUTION_TABLES = List.of(
         new String[]{"entity_type_configs",  "industry"},
         new String[]{"relation_types",       "industry"},
@@ -63,32 +69,10 @@ public class PluginLifecycleService {
         if (n == 0) {
             throw new IllegalStateException("插件不存在: " + industryCode);
         }
-        log.info("[PluginLifecycle] disabling {} -> cascade 9 tables", industryCode);
+        // 2. 级联 plugin_enabled=0 (单一 cascade 助手; disable/enable/uninstall 共用同一张表清单)
+        cascadePluginEnabled(industryCode, 0);
 
-        // 2. 9 表级联 plugin_enabled=0 (不动 is_enabled, 保留管理员手动决定)
-        for (String[] t : CONTRIBUTION_TABLES) {
-            try {
-                int rows = jdbc.update(
-                    "UPDATE " + t[0] + " SET plugin_enabled=0 WHERE " + t[1] + "=?",
-                    industryCode);
-                log.info("  [{}] plugin_enabled=0 -> {} rows", t[0], rows);
-            } catch (Exception e) {
-                log.warn("  [{}] cascade failed: {}", t[0], e.getMessage());
-            }
-        }
-
-        // 3. msg_subscription_rules 特殊: 按被禁插件的 event_type_code 反查
-        try {
-            int rows = jdbc.update(
-                "UPDATE msg_subscription_rules r SET r.plugin_enabled=0 " +
-                "WHERE r.event_type IN (SELECT type_code FROM entity_event_types WHERE industry=?)",
-                industryCode);
-            log.info("  [msg_subscription_rules by event_type] -> {} rows", rows);
-        } catch (Exception e) {
-            log.warn("subscription rules by event_type cascade failed: {}", e.getMessage());
-        }
-
-        // 4. 广播: Casbin 重载 / DataScope 缓存失效 / 菜单重构
+        // 3. 广播: Casbin 重载 / DataScope 缓存失效 / 菜单重构
         eventPublisher.publishEvent(new PermissionsRefreshedEvent(this, "PLUGIN_DISABLE:" + industryCode));
     }
 
@@ -103,30 +87,72 @@ public class PluginLifecycleService {
         if (n == 0) {
             throw new IllegalStateException("插件不存在: " + industryCode);
         }
-        log.info("[PluginLifecycle] enabling {} -> cascade 9 tables", industryCode);
+        cascadePluginEnabled(industryCode, 1);
+        eventPublisher.publishEvent(new PermissionsRefreshedEvent(this, "PLUGIN_ENABLE:" + industryCode));
+    }
 
+    /**
+     * 卸载插件 (SOFT) —— 与 disable 同一持久机制 (plugin_enabled=0), 收敛掉旧的
+     * {@code PluginPlatformApplicationService.uninstallPlugin} (它用 deleted=1/is_enabled=0, 而这些列
+     * 被各 Registrar 启动期无条件重置 → uninstall 对编译进单体的插件重启即复活; 且漏清 data_resources/
+     * resource_relations。修复见 2026-06-27 P0-H2)。
+     *
+     * <p><b>语义说明</b>: 单体内插件代码编译在仓内, 无法真正"删除"(重启 contribution 会重新 upsert 行);
+     * 故 SOFT uninstall = 持久禁用 (plugin_enabled=0 是唯一不被启动期重置的列)。功能等同 disable,
+     * 仅事件原因与返回(各表级联行数)不同, 供平台展示。
+     *
+     * @return 各贡献表级联行数 (供 UI 显示)
+     */
+    @Transactional
+    public java.util.Map<String, Integer> uninstall(String industryCode) {
+        if ("CORE".equalsIgnoreCase(industryCode)) {
+            throw new IllegalStateException("CORE 包不可卸载");
+        }
+        assertNotDependedOn(industryCode);
+        int n = jdbc.update(
+            "UPDATE plugin_packages SET enabled=0, last_disabled_at=NOW() WHERE industry_code=?",
+            industryCode);
+        if (n == 0) {
+            throw new IllegalStateException("插件不存在: " + industryCode);
+        }
+        log.info("[PluginLifecycle] uninstalling(SOFT) {} -> cascade {} tables", industryCode, CONTRIBUTION_TABLES.size());
+        java.util.Map<String, Integer> counts = cascadePluginEnabled(industryCode, 0);
+        eventPublisher.publishEvent(new PermissionsRefreshedEvent(this, "PLUGIN_UNINSTALL:" + industryCode));
+        return counts;
+    }
+
+    /**
+     * 级联 plugin_enabled (disable=0 / enable=1 / uninstall=0) —— 单一真相: 同一张贡献表清单 +
+     * msg_subscription_rules 特例。不动 is_enabled (管理员手动开关) / deleted (各 Registrar 启动期重置)。
+     * 返回各表受影响行数。
+     */
+    private java.util.Map<String, Integer> cascadePluginEnabled(String industryCode, int value) {
+        java.util.Map<String, Integer> counts = new java.util.LinkedHashMap<>();
         for (String[] t : CONTRIBUTION_TABLES) {
             try {
                 int rows = jdbc.update(
-                    "UPDATE " + t[0] + " SET plugin_enabled=1 WHERE " + t[1] + "=?",
-                    industryCode);
-                log.info("  [{}] plugin_enabled=1 -> {} rows", t[0], rows);
+                    "UPDATE " + t[0] + " SET plugin_enabled=? WHERE " + t[1] + "=?",
+                    value, industryCode);
+                counts.put(t[0], rows);
+                log.info("  [{}] plugin_enabled={} -> {} rows", t[0], value, rows);
             } catch (Exception e) {
+                counts.put(t[0], -1);
                 log.warn("  [{}] cascade failed: {}", t[0], e.getMessage());
             }
         }
-
+        // msg_subscription_rules 无 industry 列, 按 event_type 反查级联
         try {
             int rows = jdbc.update(
-                "UPDATE msg_subscription_rules r SET r.plugin_enabled=1 " +
+                "UPDATE msg_subscription_rules r SET r.plugin_enabled=? " +
                 "WHERE r.event_type IN (SELECT type_code FROM entity_event_types WHERE industry=?)",
-                industryCode);
+                value, industryCode);
+            counts.put("msg_subscription_rules", rows);
             log.info("  [msg_subscription_rules by event_type] -> {} rows", rows);
         } catch (Exception e) {
+            counts.put("msg_subscription_rules", -1);
             log.warn("subscription rules by event_type cascade failed: {}", e.getMessage());
         }
-
-        eventPublisher.publishEvent(new PermissionsRefreshedEvent(this, "PLUGIN_ENABLE:" + industryCode));
+        return counts;
     }
 
     /** 依赖检查: 其他 enabled 插件的 depends_on JSON 是否包含本 code. */

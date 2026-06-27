@@ -88,39 +88,11 @@ public class PluginPackageRegistrar implements ApplicationRunner {
         return "PLUGIN:" + industry + "@" + (version != null ? version : "1.0.0");
     }
 
-    /** 同上, 基于 registeredBy 字符串(供 RelationTypePlugin 用) */
-    public String resolveOriginBySource(String source) {
-        String industry = resolveIndustryBySource(source);
-        if (industry == null) return null;
-        String version = resolveVersion(industry);
-        return "PLUGIN:" + industry + "@" + (version != null ? version : "1.0.0");
-    }
-
     /** 按 industry 码查版本号 (来自 Manifest 声明) */
     private String resolveVersion(String industry) {
         if (industry == null) return null;
         for (PluginManifest m : sortedManifests) {
             if (industry.equals(m.getIndustryCode())) return m.getVersion();
-        }
-        return null;
-    }
-
-    /**
-     * 按 source/registeredBy 字符串解析行业 (供关系插件等用).
-     * "CORE" → CORE, "EducationPlugin"/"EducationRelationsPlugin" → EDU
-     */
-    public String resolveIndustryBySource(String source) {
-        if (source == null) return null;
-        if ("CORE".equals(source)) return "CORE";
-        String lower = source.toLowerCase();
-        // 先试别名映射
-        if (lower.contains("education")) return "EDU";
-        if (lower.contains("eldercare")) return "CARE";
-        for (PluginManifest m : sortedManifests) {
-            if (m.getIndustryCode().equals("CORE")) continue;
-            if (lower.contains(m.getIndustryCode().toLowerCase())) {
-                return m.getIndustryCode();
-            }
         }
         return null;
     }

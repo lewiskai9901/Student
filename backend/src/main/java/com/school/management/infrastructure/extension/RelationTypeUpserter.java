@@ -12,12 +12,14 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>Phase 2 W2.2: 取代旧的 {@code RelationTypePluginRegistrar} (扫描 List&lt;RelationTypePlugin&gt;).
  * 现在由 {@link ContributionDispatcher} 在分发 {@link Contribution.RelationTypeContribution}
- * 时直接调用 {@link #upsert(String, String, RelationTypeDef)}.
+ * 时直接调用 {@link #upsert(String, String, RelationTypeDef, String, String)}.
  *
  * <p>关键约束:
  * <ul>
- *   <li>industry 解析: 通过 {@code PluginPackageRegistrar.resolveIndustryBySource(sourceName)} —
- *       与旧实现兼容 ("CORE" / "EducationPlugin" → CORE/EDU).</li>
+ *   <li>industry/origin <b>由调用方传入权威值</b> (取自所属 {@code PluginPackage.metadata().industryCode()}
+ *       / {@code resolveOrigin(pkgClass)})。不再用脆弱的 {@code resolveIndustryBySource(sourceName)} 字符串
+ *       启发式 —— 它对 COMMON_EXT 漏判 ("commonextplugin".contains("common_ext")=false → industry=NULL →
+ *       禁用插件 WHERE industry='COMMON_EXT' 命中 0 行 = 假禁用; 修复见 2026-06-27 P0-H1)。</li>
  *   <li>CUSTOM 保护: 已被管理员标记 industry=CUSTOM 的记录不被插件覆盖.</li>
  *   <li>UPSERT 语义: 复合 key = (relation_code, from_type, to_type, tenant_id=1).</li>
  * </ul>
@@ -28,7 +30,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class RelationTypeUpserter {
 
     private final JdbcTemplate jdbc;
-    private final PluginPackageRegistrar packageRegistrar;
     private final ObjectMapper objectMapper;
 
     /**
@@ -37,12 +38,14 @@ public class RelationTypeUpserter {
      * @param sourceName  registered_by (e.g. "CORE", "EducationPlugin")
      * @param tier        关系层级 (CORE / DOMAIN / COMMON_EXT)
      * @param def         关系定义
+     * @param industry    权威行业码 (所属 PluginPackage.metadata().industryCode(), 可空)
+     * @param origin      统一来源串 (resolveOrigin(pkgClass), 可空)
      * @return CREATED / UPDATED / SKIPPED (CUSTOM 保护)
      */
     @Transactional
-    public Result upsert(String sourceName, String tier, RelationTypeDef def) {
+    public Result upsert(String sourceName, String tier, RelationTypeDef def, String industry, String origin) {
         try {
-            return doUpsert(sourceName, tier, def);
+            return doUpsert(sourceName, tier, def, industry, origin);
         } catch (Exception e) {
             log.error("[RelationTypeUpserter] 写入失败 {} {}→{}: {}",
                 def.relationCode(), def.fromType(), def.toType(), e.getMessage());
@@ -50,7 +53,8 @@ public class RelationTypeUpserter {
         }
     }
 
-    private Result doUpsert(String sourceName, String tier, RelationTypeDef def) throws Exception {
+    private Result doUpsert(String sourceName, String tier, RelationTypeDef def,
+                           String industry, String origin) throws Exception {
         // CUSTOM 保护
         String existingIndustry = jdbc.query(
             "SELECT industry FROM relation_types " +
@@ -76,8 +80,7 @@ public class RelationTypeUpserter {
             impliedJson = objectMapper.writeValueAsString(def.impliedRelations());
         }
 
-        String industry = packageRegistrar.resolveIndustryBySource(sourceName);
-        String origin = packageRegistrar.resolveOriginBySource(sourceName);
+        // industry/origin 由调用方传入权威值 (P0-H1: 不再 resolveIndustryBySource 字符串启发式)。
         // pluginClass 字段保留兼容: 没有具体插件类时填 manifest 来源标识
         String pluginClass = "PluginPackage:" + (industry != null ? industry : sourceName);
 

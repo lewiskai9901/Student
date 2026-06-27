@@ -394,12 +394,11 @@ public class PluginPlatformController {
 
     /**
      * POST /api/plugin-platform/{code}/uninstall
-     * 级联软删本行业所有贡献 (industry=X 的行). CUSTOM 资源不受影响.
+     * SOFT 卸载: 收敛到 {@link PluginLifecycleService#uninstall} (持久 plugin_enabled=0 机制,
+     * 与 disable 同一张贡献表清单)。P0-H2 修复: 旧 uninstallPlugin 用 deleted=1/is_enabled=0,
+     * 被 Registrar 启动期重置 → 编译内插件重启即复活, 且漏清 data_resources; 已删除该重复实现。
      *
-     * 影响的表: permissions / roles / entity_type_configs / entity_event_types /
-     *           trigger_points / event_triggers / relation_types / data_scope_dims
-     *
-     * CORE 不可卸载 (核心功能依赖).
+     * CORE 不可卸载; 被依赖的插件不可卸载 (lifecycle 内部 assertNotDependedOn 守护)。
      */
     @PostMapping("/{code}/uninstall")
     @CasbinAccess(resource = "admin", action = "access")
@@ -407,21 +406,21 @@ public class PluginPlatformController {
         if ("CORE".equalsIgnoreCase(code)) {
             return Result.error("CORE 包不可卸载");
         }
-        // 检查插件包存在
         if (!pluginPlatformService.pluginPackageExists(code)) {
             return Result.error("插件不存在: " + code);
         }
-
-        Map<String, Integer> cascadeCounts = pluginPlatformService.uninstallPlugin(code);
-
-        eventPublisher.publishEvent(new PermissionsRefreshedEvent(this, "UNINSTALL:" + code));
-
-        int total = cascadeCounts.values().stream().mapToInt(Integer::intValue).sum();
+        Map<String, Integer> cascadeCounts;
+        try {
+            cascadeCounts = pluginLifecycleService.uninstall(code);  // 内部已发 PLUGIN_UNINSTALL 事件
+        } catch (IllegalStateException e) {
+            return Result.error(e.getMessage());
+        }
+        int total = cascadeCounts.values().stream().filter(v -> v > 0).mapToInt(Integer::intValue).sum();
         return Result.success(Map.of(
             "code", code,
             "cascadeCounts", cascadeCounts,
             "totalAffected", total,
-            "message", "插件 " + code + " 已卸载,软删 " + total + " 条声明 (CUSTOM 资源不受影响)"
+            "message", "插件 " + code + " 已卸载 (SOFT: plugin_enabled=0 持久, 编译内插件重启不复活), 级联 " + total + " 条"
         ));
     }
 
