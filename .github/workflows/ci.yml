@@ -391,14 +391,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # P2/区块3-3: 从"软报告"改为真门禁。棘轮起步 = 仅 CRITICAL + ignore-unfixed 阻断
+      # (避免被无补丁 CVE / HIGH 噪声大面积误红); 稳定后可收紧到 HIGH。
+      # 注: 本地无法试跑 CVE 计数, 首次 CI 若因真实可修复 CRITICAL 变红 = 门禁生效, 应升级依赖或临时回退本步。
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
           scan-ref: '.'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '0'
-        continue-on-error: true
+          severity: 'CRITICAL'
+          ignore-unfixed: true
+          exit-code: '1'
 
   # Summary
   ci-summary:
