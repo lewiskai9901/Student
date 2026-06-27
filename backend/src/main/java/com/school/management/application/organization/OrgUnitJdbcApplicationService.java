@@ -23,11 +23,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class OrgUnitJdbcApplicationService {
 
-    /** 学生语义 feature (StudentPlugin.getFeatures) — 不写死类型码 STUDENT. */
-    private static final String FEATURE_LEARNER = "isLearner";
-    /** 教师语义 feature (TeacherPlugin.getFeatures) — 不写死类型码 TEACHER. */
-    private static final String FEATURE_TEACHER = "canTeach";
-
     private final JdbcTemplate jdbcTemplate;
     private final MembershipResolver membershipResolver;
     /** 行业插件贡献的影响项 (如教育班级数)。无 bean 时 Spring 注入空 List, 核心不感知行业。 */
@@ -67,12 +62,12 @@ public class OrgUnitJdbcApplicationService {
             Integer.class, treePath + "%", id);
         impact.put("descendantOrgCount", descendants != null ? descendants : 0);
 
-        // 2. 子树下的 students (含本节点 + 后代) — 走 member 归属 + 学生 feature, 不直查 user_student
-        long studentCount = membershipResolver.countMembersByFeatureInSubtree(
-            null, treePath, FEATURE_LEARNER);
-        impact.put("studentCount", studentCount);
+        // 2. 子树下的全部成员数 (通用 — 不限 feature)。学生/教师等行业拆分由 OrgImpactContributor
+        //    (教育插件 StudentTeacherImpactContributor) 贡献, 核心不碰 isLearner/canTeach 等行业 feature。
+        long memberCount = membershipResolver.countMembersInSubtree(null, treePath);
+        impact.put("memberCount", memberCount);
 
-        // 3. 子树下的 classes(教育)— 已移至教育插件 ClassImpactContributor 贡献,
+        // 3. 子树下的 classes(教育)/ students / teachers — 均由教育插件 OrgImpactContributor 贡献,
         //    见下方 impactContributors 循环。班级本身是 org_unit, 已计入 descendantOrgCount。
 
         // 4. 子树下的 places
@@ -82,10 +77,7 @@ public class OrgUnitJdbcApplicationService {
             Integer.class, treePath + "%");
         impact.put("placeCount", placeCount != null ? placeCount : 0);
 
-        // 5. 子树下的 teachers — 走 member 归属 + 教师 feature, 不直查 user_type_code/primary_org_unit_id
-        long teacherCount = membershipResolver.countMembersByFeatureInSubtree(
-            null, treePath, FEATURE_TEACHER);
-        impact.put("teacherCount", teacherCount);
+        // 5. (teachers 计数已移至教育插件 StudentTeacherImpactContributor)
 
         // 6. access_relations 引用本子树 org_unit 的关系数
         Integer relationCount = jdbcTemplate.queryForObject(
@@ -102,8 +94,7 @@ public class OrgUnitJdbcApplicationService {
 
         // 8. 警告级别 (用于 UI 是否显示二次确认)
         long total = (descendants != null ? descendants : 0)
-                  + studentCount
-                  + teacherCount;
+                  + memberCount;
         String severity = total == 0 ? "NONE"
                         : total < 10 ? "LOW"
                         : total < 100 ? "MEDIUM"

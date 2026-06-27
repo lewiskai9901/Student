@@ -62,7 +62,20 @@ class NoIndustryTypeLiteralInCoreTest {
         "\"classroom\"",
         "\"dormitory\"",
         "\"教室\"",
-        "\"宿舍\""
+        "\"宿舍\"",
+        // 行业专属"特性"(feature) 字面量 — 2026-06-28 纳入守护。
+        // 特性是共享能力词汇表, 但依赖只能向下: 行业插件可用核心特性 (canLogin/isStaff…),
+        // 核心不得引用行业特性 (核心 hasFeature("isLearner") = 架构倒挂)。这些 key 由教育插件 getFeatures 声明。
+        // (原 OrgUnitJdbcApplicationService 写死 isLearner/canTeach, 已迁 StudentTeacherImpactContributor)
+        "\"isLearner\"",
+        "\"canTeach\"",
+        "\"canEnroll\"",
+        "\"canCounsel\"",
+        "\"canApproveGrade\"",
+        "\"hasGuardian\"",
+        "\"receivesPersonalGrade\"",
+        "\"attendanceTracked\"",
+        "\"canBeAssignedToClass\""
     };
 
     /** 排除的子包 (插件 / 仍保留在 core 的历史包) */

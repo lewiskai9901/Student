@@ -162,6 +162,40 @@ public class MembershipResolver {
         return cnt != null ? cnt : 0L;
     }
 
+    /**
+     * 子树版: 统计 (org 本身 + 全部后代 org) 范围内的<b>全部成员</b>数 (跨 org 按 user 去重, 不限 feature)。
+     * 供 org-impact 严重度做通用计数 —— 核心不需要知道"学生/教师"这类行业 feature。
+     */
+    public long countMembersInSubtree(Long tenantId, String treePath) {
+        if (treePath == null || treePath.isBlank()) return 0L;
+        String prefix = treePath.endsWith("/") ? treePath : treePath + "/";
+        Long cnt;
+        if (tenantId == null) {
+            cnt = jdbcTemplate.queryForObject(
+                memberCountSql("ar.resource_id IN (SELECT id FROM org_units " +
+                    "WHERE tree_path LIKE ? AND deleted = 0)"),
+                Long.class, prefix + "%");
+        } else {
+            cnt = jdbcTemplate.queryForObject(
+                memberCountSql("ar.resource_id IN (SELECT id FROM org_units " +
+                    "WHERE tenant_id = ? AND tree_path LIKE ? AND deleted = 0)"),
+                Long.class, tenantId, prefix + "%");
+        }
+        return cnt != null ? cnt : 0L;
+    }
+
+    /** 同 featureCountSql 但不限 feature —— 统计 member 关系下的全部成员 (去重 user)。 */
+    private String memberCountSql(String resourcePredicate) {
+        return "SELECT COUNT(DISTINCT ar.subject_id) FROM access_relations ar " +
+               "JOIN users u ON ar.subject_id = u.id " +
+               "WHERE ar.relation = '" + RELATION + "' " +
+               "  AND ar.resource_type = '" + RESOURCE_TYPE + "' " +
+               "  AND ar.subject_type = '" + SUBJECT_TYPE + "' " +
+               "  AND ar.deleted = 0 AND u.deleted = 0 AND u.status = 1 " +
+               "  AND (ar.valid_to IS NULL OR ar.valid_to > NOW()) " +
+               "  AND " + resourcePredicate;
+    }
+
     /* countMembersByFeatureGlobal 已移除: 全局总数语义不应要求 org 归属, 改用 countUsersByFeature. */
 
     /**
