@@ -1,6 +1,6 @@
 package com.school.management.application.access;
 
-import com.school.management.domain.access.model.DataScope;
+import com.school.management.domain.access.model.ScopePreset;
 import com.school.management.domain.access.model.entity.DataScopeItem;
 import com.school.management.domain.access.model.entity.RoleDataPermission;
 import com.school.management.exception.BusinessException;
@@ -247,7 +247,7 @@ class DataPermissionApplicationServiceTest {
                     service.getRoleDataPermissions(9L);
 
             assertThat(result).hasSize(1);
-            assertThat(result.get(0).getScopeCode()).isEqualTo(DataScope.SELF.getCode());
+            assertThat(result.get(0).getScopeCode()).isEqualTo(ScopePreset.SELF.name());
             assertThat(result.get(0).getScopeItems()).isEmpty();
         }
 
@@ -457,7 +457,7 @@ class DataPermissionApplicationServiceTest {
                     service.getRoleDataPermissions(9L);
 
             assertThat(dtos).hasSize(1);
-            assertThat(dtos.get(0).getScopeCode()).isEqualTo(DataScope.SELF.getCode());
+            assertThat(dtos.get(0).getScopeCode()).isEqualTo(ScopePreset.SELF.name());
             assertThat(dtos.get(0).getOrgAnchor()).isEqualTo("SELF");
         }
 

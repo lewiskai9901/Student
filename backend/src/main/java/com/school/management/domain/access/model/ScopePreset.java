@@ -5,7 +5,7 @@ import com.school.management.domain.access.model.valueobject.ScopeSpec;
 /**
  * 数据范围预设目录 (ScopePreset) —— 面向 UI 的"命名范围"糖衣 (全部/本组织/我管理的组织/…)。
  *
- * <p>数据范围模型正从扁平的单枚举 {@link DataScope} 重构为若干<b>正交可组合的轴</b>。
+ * <p>数据范围模型正从扁平的单枚举 旧 DataScope 枚举(已删) 重构为若干<b>正交可组合的轴</b>。
  * 本枚举把那批熟悉的命名范围保留为 UI 预设, 每个预设<b>只映射到轴① (org anchor + param + subtree)</b>;
  * apply_to 与轴② (subject-relation filter)、轴③ (type filter) 由调用方/存储层另行叠加, 预设不碰。
  * 真正的存储真相是可组合的列, 预设只是便利入口。
@@ -15,7 +15,7 @@ import com.school.management.domain.access.model.valueobject.ScopeSpec;
  * Plugin dimensions (BY_CLASS / BY_MAJOR / …) are <b>NOT</b> presets — see
  * {@link #fromLegacyScopeType(String)} which returns {@code null} for them so the caller can branch.
  *
- * <p>{@code level} 与现有 {@link DataScope} 的等级保持一致, 以保留既有排序。
+ * <p>{@code level} 与现有 旧 DataScope 枚举(已删) 的等级保持一致, 以保留既有排序。
  */
 public enum ScopePreset {
 
@@ -53,7 +53,7 @@ public enum ScopePreset {
         return displayName;
     }
 
-    /** 排序等级 (与 {@link DataScope} 对齐)。 */
+    /** 排序等级 (与 旧 DataScope 枚举(已删) 对齐)。 */
     public int getLevel() {
         return level;
     }
@@ -73,7 +73,7 @@ public enum ScopePreset {
     /**
      * 把旧 {@code role_data_scopes.scope_type} 字符串翻译为预设。
      *
-     * <p>旧 {@link DataScope} 码与本枚举常量名同名 (ALL/SELF/DEPARTMENT/DEPARTMENT_AND_BELOW/
+     * <p>旧 旧 DataScope 枚举(已删) 码与本枚举常量名同名 (ALL/SELF/DEPARTMENT/DEPARTMENT_AND_BELOW/
      * MANAGED_ORGS/MANAGED_ORGS_AND_BELOW/CUSTOM) —— 精确命中即返回对应预设。
      * 其它一切 (插件维度 BY_CLASS/BY_MAJOR/BY_GRADE、未知码、空串、{@code null}) 返回 {@code null}:
      * 调用方将 {@code null} 视为"非预设 → 插件维度", 由 PLUGIN_DIM 路径接管 (不在本类职责内)。

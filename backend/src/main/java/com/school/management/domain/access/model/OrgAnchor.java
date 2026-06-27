@@ -3,7 +3,7 @@ package com.school.management.domain.access.model;
 /**
  * 组织锚点 (数据范围"轴①") —— 一个角色可见组织集合的派生方式。
  *
- * <p>数据范围 (data scope) 正从扁平的 {@link DataScope} 单枚举重构为若干正交可组合的轴。
+ * <p>数据范围 (data scope) 正从扁平的 旧 DataScope 枚举(已删) 单枚举重构为若干正交可组合的轴。
  * 本枚举是轴① (organization anchor) 的存储真相: 后续 {@code ScopeSpec} 值对象持有一个
  * {@code OrgAnchor} 字段, 并以 {@code name()} 持久化到 DB 列 {@code role_data_scopes.org_anchor}。
  * 因此 {@link #fromCode(String)} 必须与 {@code name()} 严格往返, 未知输入返回 {@code null}

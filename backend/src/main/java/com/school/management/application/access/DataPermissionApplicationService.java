@@ -1,6 +1,5 @@
 package com.school.management.application.access;
 
-import com.school.management.domain.access.model.DataScope;
 import com.school.management.domain.access.model.OrgAnchor;
 import com.school.management.domain.access.model.ScopePreset;
 import com.school.management.domain.access.model.entity.DataScopeItem;
@@ -177,7 +176,7 @@ public class DataPermissionApplicationService {
                                 .moduleCode(module.getModuleCode())
                                 .moduleName(module.getModuleName())
                                 .domainCode(module.getDomainCode())
-                                .scopeCode(DataScope.SELF.getCode())
+                                .scopeCode(ScopePreset.SELF.name())
                                 .scopeItems(Collections.emptyList())
                                 .typeFilter(null)
                                 // 无存储配置 → 轴① 默认 SELF (镜像 scopeCode=SELF 默认)
@@ -254,7 +253,7 @@ public class DataPermissionApplicationService {
 
                     RoleDataPermission permission = builder.build();
 
-                    if (DataScope.CUSTOM.getCode().equals(cmd.getScopeCode()) && cmd.getScopeItems() != null) {
+                    if (ScopePreset.CUSTOM.name().equals(cmd.getScopeCode()) && cmd.getScopeItems() != null) {
                         List<DataScopeItem> items = cmd.getScopeItems().stream()
                                 .map(item -> DataScopeItem.builder()
                                         .itemTypeCode(item.getItemTypeCode())

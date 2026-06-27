@@ -2,7 +2,7 @@ package com.school.management.infrastructure.access;
 
 import com.school.management.application.access.DynamicModuleService;
 import com.school.management.domain.access.model.OrgAnchor;
-import com.school.management.domain.access.model.ScopeType;
+import com.school.management.domain.access.model.RoleAssignmentScope;
 import com.school.management.domain.access.model.valueobject.ScopeSpec;
 import com.school.management.infrastructure.persistence.access.DataModulePO;
 import org.junit.jupiter.api.AfterEach;
@@ -145,7 +145,7 @@ class DataPermissionInterceptorMembershipCustomTest {
     @Test
     @DisplayName("CUSTOM 含 GRADE/部门 org → 必须子树展开 (org + 后代), 而非裸 IN(<id>)")
     void customMembershipSubtreeExpandsGrantedOrg() {
-        UserContext ctx = userWithScopedRoles(List.of(scopedRole(6L, ScopeType.ALL, 0L, null)));
+        UserContext ctx = userWithScopedRoles(List.of(scopedRole(6L, RoleAssignmentScope.ALL, 0L, null)));
         when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(6L), anyString(), anyString()))
                 .thenReturn(customOrgSpec(new HashSet<>(Set.of(77L))));
 
@@ -177,7 +177,7 @@ class DataPermissionInterceptorMembershipCustomTest {
     @Test
     @DisplayName("CUSTOM 无配置 org → 仍拒绝所有 1 = 0 (空 guard 保留)")
     void customMembershipEmptyOrgsStillDeniesAll() {
-        UserContext ctx = userWithScopedRoles(List.of(scopedRole(5L, ScopeType.ALL, 0L, null)));
+        UserContext ctx = userWithScopedRoles(List.of(scopedRole(5L, RoleAssignmentScope.ALL, 0L, null)));
         when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(5L), anyString(), anyString()))
                 .thenReturn(customOrgSpec(new HashSet<>()));
 

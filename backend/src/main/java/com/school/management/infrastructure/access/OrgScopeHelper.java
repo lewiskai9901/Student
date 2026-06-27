@@ -1,6 +1,6 @@
 package com.school.management.infrastructure.access;
 
-import com.school.management.domain.access.model.ScopeType;
+import com.school.management.domain.access.model.RoleAssignmentScope;
 import com.school.management.infrastructure.tenant.TenantContextHolder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -64,7 +64,7 @@ public class OrgScopeHelper {
 
         Set<Long> union = new HashSet<>();
         for (UserContext.ScopedRoleInfo sr : roles) {
-            if (ScopeType.ALL.equals(sr.getScopeType())) {
+            if (RoleAssignmentScope.ALL.equals(sr.getScopeType())) {
                 return null; // 任一角色 ALL scope → 整体不受限
             }
             if (sr.getScopeOrgPath() != null && !sr.getScopeOrgPath().isBlank()) {

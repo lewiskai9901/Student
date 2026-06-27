@@ -1,6 +1,6 @@
 package com.school.management.infrastructure.persistence.access;
 
-import com.school.management.domain.access.model.ScopeType;
+import com.school.management.domain.access.model.RoleAssignmentScope;
 import com.school.management.domain.access.model.UserRole;
 import com.school.management.domain.access.repository.UserRoleRepository;
 import org.springframework.stereotype.Repository;
@@ -114,7 +114,7 @@ public class UserRoleRepositoryImpl implements UserRoleRepository {
         po.setId(domain.getId());
         po.setUserId(domain.getUserId());
         po.setRoleId(domain.getRoleId());
-        po.setScopeType(domain.getScopeType() != null ? domain.getScopeType() : ScopeType.ALL);
+        po.setScopeType(domain.getScopeType() != null ? domain.getScopeType() : RoleAssignmentScope.ALL);
         po.setScopeId(domain.getScopeId() != null ? domain.getScopeId() : 0L);
         po.setAssignedAt(domain.getAssignedAt());
         po.setAssignedBy(domain.getAssignedBy());

@@ -1,6 +1,6 @@
 package com.school.management.infrastructure.inspection;
 
-import com.school.management.domain.access.model.ScopeType;
+import com.school.management.domain.access.model.RoleAssignmentScope;
 import com.school.management.infrastructure.access.UserContext;
 import com.school.management.infrastructure.access.UserContextHolder;
 import com.school.management.infrastructure.tenant.TenantContextHolder;
@@ -64,7 +64,7 @@ public class InspectionScopeHelper {
 
         Set<Long> union = new HashSet<>();
         for (UserContext.ScopedRoleInfo sr : roles) {
-            if (ScopeType.ALL.equals(sr.getScopeType())) {
+            if (RoleAssignmentScope.ALL.equals(sr.getScopeType())) {
                 // 任一角色 ALL scope → 整体不受限
                 return null;
             }

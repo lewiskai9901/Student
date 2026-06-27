@@ -1,7 +1,7 @@
 package com.school.management.infrastructure.access;
 
 import com.school.management.domain.access.model.ScopePreset;
-import com.school.management.domain.access.model.ScopeType;
+import com.school.management.domain.access.model.RoleAssignmentScope;
 import com.school.management.domain.access.model.valueobject.ScopeSpec;
 import com.school.management.infrastructure.persistence.access.DataModulePO;
 import com.school.management.infrastructure.tenant.TenantContextHolder;
@@ -240,7 +240,7 @@ public class DataPermissionInterceptor implements Interceptor {
             // (orgAnchor==ALL 且无类型/关系过滤) → 整查询放行 (返回 null)。
             // 注意: scopeType==ORG_UNIT 但 anchor==ALL 不短路 — evaluator 产空 cond, 下方 skip,
             // 与旧 case ALL→null (该角色不贡献, 不释放整查询) 等价。
-            if (ScopeType.ALL.equals(sr.getScopeType())
+            if (RoleAssignmentScope.ALL.equals(sr.getScopeType())
                     && spec.isOrgUnbounded()
                     && !spec.hasTypeFilter() && !spec.hasRelInclude() && !spec.hasRelExclude()) {
                 return null; // No filter — see everything
@@ -249,7 +249,7 @@ public class DataPermissionInterceptor implements Interceptor {
             // per-role 有效 org: ORG_UNIT scope-type → 角色 scope org; 否则用户主组织。
             Long effectiveOrgId;
             String effectiveOrgPath;
-            if (ScopeType.ORG_UNIT.equals(sr.getScopeType())) {
+            if (RoleAssignmentScope.ORG_UNIT.equals(sr.getScopeType())) {
                 effectiveOrgId = sr.getScopeId();
                 effectiveOrgPath = sr.getScopeOrgPath();
             } else {
@@ -476,8 +476,8 @@ public class DataPermissionInterceptor implements Interceptor {
                 if (com.school.management.domain.access.model.valueobject.RelationGrant.CREATOR.equals(g.relation())) return true;
                 if (g.subject() == com.school.management.domain.access.model.SubjectScope.SELF) return true;
             }
-            Long effOrg = ScopeType.ORG_UNIT.equals(sr.getScopeType()) ? sr.getScopeId() : ctx.getOrgUnitId();
-            String effPath = ScopeType.ORG_UNIT.equals(sr.getScopeType()) ? sr.getScopeOrgPath() : ctx.getOrgUnitPath();
+            Long effOrg = RoleAssignmentScope.ORG_UNIT.equals(sr.getScopeType()) ? sr.getScopeId() : ctx.getOrgUnitId();
+            String effPath = RoleAssignmentScope.ORG_UNIT.equals(sr.getScopeType()) ? sr.getScopeOrgPath() : ctx.getOrgUnitPath();
             ScopeCondition c = scopeEvaluator.toSqlCondition(spec, orgMeta, ctx, effOrg, effPath, tenantId, idx);
             if (c != null && !c.sql.isEmpty()) {
                 orgConds.add(c.sql);

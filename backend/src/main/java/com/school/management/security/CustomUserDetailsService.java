@@ -1,6 +1,6 @@
 package com.school.management.security;
 
-import com.school.management.domain.access.model.ScopeType;
+import com.school.management.domain.access.model.RoleAssignmentScope;
 import com.school.management.domain.access.model.UserRole;
 import com.school.management.domain.access.model.entity.AccessRelation;
 import com.school.management.application.organization.MembershipResolver;
@@ -172,7 +172,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         List<UserContext.ScopedRoleInfo> scopedRoles = new ArrayList<>(activeRoles.size());
         for (UserRole ur : activeRoles) {
             String scopeOrgPath = null;
-            if (ScopeType.ORG_UNIT.equals(ur.getScopeType()) && ur.getScopeId() != null && ur.getScopeId() > 0) {
+            if (RoleAssignmentScope.ORG_UNIT.equals(ur.getScopeType()) && ur.getScopeId() != null && ur.getScopeId() > 0) {
                 try {
                     scopeOrgPath = jdbcTemplate.queryForObject(
                             "SELECT tree_path FROM org_units WHERE id = ? AND deleted = 0",

@@ -38,7 +38,7 @@ public class UserRole implements Entity<Long> {
         this.id = id;
         this.userId = userId;
         this.roleId = roleId;
-        this.scopeType = scopeType != null ? scopeType : ScopeType.ALL;
+        this.scopeType = scopeType != null ? scopeType : RoleAssignmentScope.ALL;
         this.scopeId = scopeId != null ? scopeId : 0L;
         this.assignedAt = assignedAt != null ? assignedAt : LocalDateTime.now();
         this.assignedBy = assignedBy;
@@ -56,7 +56,7 @@ public class UserRole implements Entity<Long> {
         return UserRole.builder()
             .userId(userId)
             .roleId(roleId)
-            .scopeType(ScopeType.ALL)
+            .scopeType(RoleAssignmentScope.ALL)
             .scopeId(0L)
             .assignedBy(assignedBy)
             .build();
@@ -67,17 +67,17 @@ public class UserRole implements Entity<Long> {
      */
     public static UserRole assignWithScope(Long userId, Long roleId,
                                            String scopeType, Long scopeId, Long assignedBy) {
-        if (!ScopeType.isValid(scopeType)) {
+        if (!RoleAssignmentScope.isValid(scopeType)) {
             throw new IllegalArgumentException("Invalid scope type: " + scopeType);
         }
-        if (ScopeType.ORG_UNIT.equals(scopeType) && (scopeId == null || scopeId <= 0)) {
+        if (RoleAssignmentScope.ORG_UNIT.equals(scopeType) && (scopeId == null || scopeId <= 0)) {
             throw new IllegalArgumentException("ORG_UNIT scope requires a valid scopeId");
         }
         return UserRole.builder()
             .userId(userId)
             .roleId(roleId)
             .scopeType(scopeType)
-            .scopeId(ScopeType.ALL.equals(scopeType) ? 0L : scopeId)
+            .scopeId(RoleAssignmentScope.ALL.equals(scopeType) ? 0L : scopeId)
             .assignedBy(assignedBy)
             .build();
     }
@@ -111,7 +111,7 @@ public class UserRole implements Entity<Long> {
      * Whether this is a global (ALL) scope assignment.
      */
     public boolean isGlobalScope() {
-        return ScopeType.ALL.equals(scopeType);
+        return RoleAssignmentScope.ALL.equals(scopeType);
     }
 
     /**

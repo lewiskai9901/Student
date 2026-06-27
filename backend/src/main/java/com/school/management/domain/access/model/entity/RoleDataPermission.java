@@ -1,6 +1,5 @@
 package com.school.management.domain.access.model.entity;
 
-import com.school.management.domain.access.model.DataScope;
 import com.school.management.domain.shared.Entity;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -116,29 +115,5 @@ public class RoleDataPermission implements Entity<Long> {
         }
     }
 
-    /**
-     * 创建默认权限配置（ALL范围）
-     */
-    public static RoleDataPermission createDefault(Long roleId, String moduleCode) {
-        return RoleDataPermission.builder()
-                .roleId(roleId)
-                .moduleCode(moduleCode)
-                .scopeCode(DataScope.ALL.getCode())
-                .description("默认配置")
-                .build();
-    }
-
-    /**
-     * 创建自定义范围权限
-     */
-    public static RoleDataPermission createCustom(Long roleId, String moduleCode, List<DataScopeItem> items) {
-        RoleDataPermission permission = RoleDataPermission.builder()
-                .roleId(roleId)
-                .moduleCode(moduleCode)
-                .scopeCode(DataScope.CUSTOM.getCode())
-                .description("自定义范围")
-                .scopeItems(items != null ? items : new ArrayList<>())
-                .build();
-        return permission;
-    }
+    // createDefault/createCustom 已删 (DataScope purge): 零调用方死方法, 曾是 DataScope 枚举仅存消费点之一。
 }

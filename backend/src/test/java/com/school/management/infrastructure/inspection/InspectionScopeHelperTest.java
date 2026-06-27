@@ -1,6 +1,6 @@
 package com.school.management.infrastructure.inspection;
 
-import com.school.management.domain.access.model.ScopeType;
+import com.school.management.domain.access.model.RoleAssignmentScope;
 import com.school.management.infrastructure.access.UserContext;
 import com.school.management.infrastructure.access.UserContextHolder;
 import com.school.management.infrastructure.tenant.TenantContext;
@@ -93,11 +93,11 @@ class InspectionScopeHelperTest {
                     .userId(3L).username("user")
                     .scopedRoles(List.of(
                             UserContext.ScopedRoleInfo.builder()
-                                    .roleId(10L).scopeType(ScopeType.ORG_UNIT)
+                                    .roleId(10L).scopeType(RoleAssignmentScope.ORG_UNIT)
                                     .scopeId(5L).scopeOrgPath("/1/5/")
                                     .build(),
                             UserContext.ScopedRoleInfo.builder()
-                                    .roleId(11L).scopeType(ScopeType.ALL)
+                                    .roleId(11L).scopeType(RoleAssignmentScope.ALL)
                                     .scopeId(0L)
                                     .build()))
                     .build();
@@ -118,7 +118,7 @@ class InspectionScopeHelperTest {
                     .userId(4L).username("teacher")
                     .scopedRoles(List.of(
                             UserContext.ScopedRoleInfo.builder()
-                                    .roleId(20L).scopeType(ScopeType.ORG_UNIT)
+                                    .roleId(20L).scopeType(RoleAssignmentScope.ORG_UNIT)
                                     .scopeId(5L).scopeOrgPath("/1/5/")
                                     .build()))
                     .build();
@@ -173,11 +173,11 @@ class InspectionScopeHelperTest {
                     .userId(7L).username("multi-role")
                     .scopedRoles(List.of(
                             UserContext.ScopedRoleInfo.builder()
-                                    .roleId(30L).scopeType(ScopeType.ORG_UNIT)
+                                    .roleId(30L).scopeType(RoleAssignmentScope.ORG_UNIT)
                                     .scopeId(5L).scopeOrgPath("/1/5/")
                                     .build(),
                             UserContext.ScopedRoleInfo.builder()
-                                    .roleId(31L).scopeType(ScopeType.ORG_UNIT)
+                                    .roleId(31L).scopeType(RoleAssignmentScope.ORG_UNIT)
                                     .scopeId(8L).scopeOrgPath("/1/8/")
                                     .build()))
                     .build();

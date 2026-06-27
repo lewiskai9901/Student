@@ -4,7 +4,7 @@ import com.school.management.application.access.AccessApplicationService;
 import com.school.management.application.access.UserRoleJdbcApplicationService;
 import com.school.management.common.result.Result;
 import com.school.management.domain.access.model.Role;
-import com.school.management.domain.access.model.ScopeType;
+import com.school.management.domain.access.model.RoleAssignmentScope;
 import com.school.management.domain.access.model.UserRole;
 import com.school.management.common.util.SecurityUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -79,7 +79,7 @@ public class UserRoleController {
             @PathVariable Long roleId,
             @RequestBody AssignRoleWithScopeRequest request) {
 
-        String scopeType = request.getScopeType() != null ? request.getScopeType() : ScopeType.ALL;
+        String scopeType = request.getScopeType() != null ? request.getScopeType() : RoleAssignmentScope.ALL;
         Long scopeId = request.getScopeId() != null ? request.getScopeId() : 0L;
 
         UserRole userRole = accessService.assignRoleToUserWithScope(
@@ -185,10 +185,10 @@ public class UserRoleController {
         }
 
         // Enrich scope name for ORG_UNIT scope
-        if (ScopeType.ORG_UNIT.equals(userRole.getScopeType())
+        if (RoleAssignmentScope.ORG_UNIT.equals(userRole.getScopeType())
                 && userRole.getScopeId() != null && userRole.getScopeId() > 0) {
             response.setScopeName(userRoleJdbcService.findOrgUnitName(userRole.getScopeId()));
-        } else if (ScopeType.ALL.equals(userRole.getScopeType())) {
+        } else if (RoleAssignmentScope.ALL.equals(userRole.getScopeType())) {
             response.setScopeName("全局");
         }
 

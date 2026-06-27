@@ -2,7 +2,7 @@ package com.school.management.infrastructure.access;
 
 import com.school.management.application.access.DynamicModuleService;
 import com.school.management.domain.access.model.OrgAnchor;
-import com.school.management.domain.access.model.ScopeType;
+import com.school.management.domain.access.model.RoleAssignmentScope;
 import com.school.management.domain.access.model.valueobject.ScopeSpec;
 import com.school.management.infrastructure.persistence.access.DataModulePO;
 import org.apache.ibatis.executor.statement.StatementHandler;
@@ -461,7 +461,7 @@ class DataPermissionInterceptorTest {
             // 覆写: student 模块在注册表查无锚 (模拟 contribution 漏登/写失败); 删兜底后无后备
             // → buildMeta fail-fast (在 per-role 循环前抛, 故无需 getScopeSpec 桩)
             when(resourceRelationRegistry.forResource("student")).thenReturn(Optional.empty());
-            UserContext ctx = userWithScopedRoles(List.of(scopedRole(1L, ScopeType.ALL, 0L, null)));
+            UserContext ctx = userWithScopedRoles(List.of(scopedRole(1L, RoleAssignmentScope.ALL, 0L, null)));
 
             assertThatThrownBy(() -> build(stubAnnotation(), moduleConfig(true, ""), ctx, 1L))
                     .isInstanceOf(IllegalStateException.class)
@@ -471,7 +471,7 @@ class DataPermissionInterceptorTest {
         @Test
         @DisplayName("ALL scopeType + ALL anchor (无类型/关系过滤) → 短路返回 null (不过滤)")
         void allScopeShortCircuits() {
-            UserContext ctx = userWithScopedRoles(List.of(scopedRole(1L, ScopeType.ALL, 0L, null)));
+            UserContext ctx = userWithScopedRoles(List.of(scopedRole(1L, RoleAssignmentScope.ALL, 0L, null)));
             when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(1L), anyString(), anyString()))
                     .thenReturn(specOf(OrgAnchor.ALL, false));
 
@@ -482,7 +482,7 @@ class DataPermissionInterceptorTest {
         @Test
         @DisplayName("DEPARTMENT (PRIMARY_ORG 无子树, ORG_UNIT scope) → '别名.org字段 = ?' 用角色 scope org")
         void departmentScopeBuildsEqualsCondition() {
-            UserContext ctx = userWithScopedRoles(List.of(scopedRole(2L, ScopeType.ORG_UNIT, 200L, "1.10.200.")));
+            UserContext ctx = userWithScopedRoles(List.of(scopedRole(2L, RoleAssignmentScope.ORG_UNIT, 200L, "1.10.200.")));
             when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(2L), anyString(), anyString()))
                     .thenReturn(specOf(OrgAnchor.PRIMARY_ORG, false));
 
@@ -497,7 +497,7 @@ class DataPermissionInterceptorTest {
         @Test
         @DisplayName("DEPARTMENT_AND_BELOW (PRIMARY_ORG + 子树) → tree_path LIKE 子查询")
         void departmentAndBelowBuildsTreePathSubquery() {
-            UserContext ctx = userWithScopedRoles(List.of(scopedRole(3L, ScopeType.ORG_UNIT, 300L, "1.10.300.")));
+            UserContext ctx = userWithScopedRoles(List.of(scopedRole(3L, RoleAssignmentScope.ORG_UNIT, 300L, "1.10.300.")));
             when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(3L), anyString(), anyString()))
                     .thenReturn(specOf(OrgAnchor.PRIMARY_ORG, true));
 
@@ -512,7 +512,7 @@ class DataPermissionInterceptorTest {
         @Test
         @DisplayName("SELF anchor → 'creator 字段 = ?' 当前用户")
         void selfScopeBuildsCreatorCondition() {
-            UserContext ctx = userWithScopedRoles(List.of(scopedRole(4L, ScopeType.ALL, 0L, null)));
+            UserContext ctx = userWithScopedRoles(List.of(scopedRole(4L, RoleAssignmentScope.ALL, 0L, null)));
             when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(4L), anyString(), anyString()))
                     .thenReturn(specOf(OrgAnchor.SELF, false));
 
@@ -525,7 +525,7 @@ class DataPermissionInterceptorTest {
         @Test
         @DisplayName("角色无配置 (getScopeSpec 返回 null) → 默认降级 SELF")
         void unconfiguredRoleDefaultsToSelf() {
-            UserContext ctx = userWithScopedRoles(List.of(scopedRole(5L, ScopeType.ALL, 0L, null)));
+            UserContext ctx = userWithScopedRoles(List.of(scopedRole(5L, RoleAssignmentScope.ALL, 0L, null)));
             when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(5L), anyString(), anyString()))
                     .thenReturn(null);
 
@@ -537,7 +537,7 @@ class DataPermissionInterceptorTest {
         @Test
         @DisplayName("CUSTOM_ORG → 委托 evaluator emit tree_path 子查询 (subtree)")
         void customScopeDelegatesToEvaluator() {
-            UserContext ctx = userWithScopedRoles(List.of(scopedRole(7L, ScopeType.ALL, 0L, null)));
+            UserContext ctx = userWithScopedRoles(List.of(scopedRole(7L, RoleAssignmentScope.ALL, 0L, null)));
             ScopeSpec spec = ScopeSpec.builder()
                     .orgAnchor(OrgAnchor.CUSTOM_ORG)
                     .customOrgIds(new HashSet<>(Set.of(901L)))
@@ -554,7 +554,7 @@ class DataPermissionInterceptorTest {
         @Test
         @DisplayName("插件维度 scope (PLUGIN_DIM) → 委托 router, id IN (...); resourceType 兜底 moduleCode")
         void pluginDimScopeBuildsInClause() {
-            UserContext ctx = userWithScopedRoles(List.of(scopedRole(8L, ScopeType.ALL, 0L, null)));
+            UserContext ctx = userWithScopedRoles(List.of(scopedRole(8L, RoleAssignmentScope.ALL, 0L, null)));
             ScopeSpec spec = ScopeSpec.builder()
                     .orgAnchor(OrgAnchor.PLUGIN_DIM).anchorParam("BY_MAJOR").build();
             when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(8L), anyString(), anyString()))
@@ -571,7 +571,7 @@ class DataPermissionInterceptorTest {
         @Test
         @DisplayName("插件维度 resolver 返回 null → 安全降级 SELF (creator 过滤)")
         void pluginDimNullResolverDegradesToSelf() {
-            UserContext ctx = userWithScopedRoles(List.of(scopedRole(9L, ScopeType.ALL, 0L, null)));
+            UserContext ctx = userWithScopedRoles(List.of(scopedRole(9L, RoleAssignmentScope.ALL, 0L, null)));
             ScopeSpec spec = ScopeSpec.builder()
                     .orgAnchor(OrgAnchor.PLUGIN_DIM).anchorParam("BY_MAJOR").build();
             when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(9L), anyString(), anyString()))
@@ -586,7 +586,7 @@ class DataPermissionInterceptorTest {
         @Test
         @DisplayName("插件维度 resolver 返回空列表 → 拒绝所有 '1 = 0'")
         void pluginDimEmptyResolverDeniesAll() {
-            UserContext ctx = userWithScopedRoles(List.of(scopedRole(10L, ScopeType.ALL, 0L, null)));
+            UserContext ctx = userWithScopedRoles(List.of(scopedRole(10L, RoleAssignmentScope.ALL, 0L, null)));
             ScopeSpec spec = ScopeSpec.builder()
                     .orgAnchor(OrgAnchor.PLUGIN_DIM).anchorParam("BY_MAJOR").build();
             when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(10L), anyString(), anyString()))
@@ -602,7 +602,7 @@ class DataPermissionInterceptorTest {
         @Test
         @DisplayName("viaMembership + PRIMARY_ORG → 委托 evaluator 走 member 关系子查询")
         void membershipDelegatesToEvaluator() {
-            UserContext ctx = userWithScopedRoles(List.of(scopedRole(12L, ScopeType.ORG_UNIT, 200L, "1.10.200.")));
+            UserContext ctx = userWithScopedRoles(List.of(scopedRole(12L, RoleAssignmentScope.ORG_UNIT, 200L, "1.10.200.")));
             when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(12L), anyString(), anyString()))
                     .thenReturn(specOf(OrgAnchor.PRIMARY_ORG, false));
 
@@ -618,8 +618,8 @@ class DataPermissionInterceptorTest {
         @DisplayName("多角色 → 各自条件 OR 组合, 参数序拼接")
         void multipleRolesAreOrCombined() {
             UserContext ctx = userWithScopedRoles(List.of(
-                    scopedRole(20L, ScopeType.ORG_UNIT, 500L, "1.10.500."),
-                    scopedRole(21L, ScopeType.ALL, 0L, null)));
+                    scopedRole(20L, RoleAssignmentScope.ORG_UNIT, 500L, "1.10.500."),
+                    scopedRole(21L, RoleAssignmentScope.ALL, 0L, null)));
             when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(20L), anyString(), anyString()))
                     .thenReturn(specOf(OrgAnchor.PRIMARY_ORG, false));
             when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(21L), anyString(), anyString()))
@@ -638,7 +638,7 @@ class DataPermissionInterceptorTest {
             UserContext noOrgCtx = UserContext.builder()
                     .userId(42L).orgUnitId(null).orgUnitPath(null)
                     .tenantId(1L)
-                    .scopedRoles(List.of(scopedRole(30L, ScopeType.ALL, 0L, null)))
+                    .scopedRoles(List.of(scopedRole(30L, RoleAssignmentScope.ALL, 0L, null)))
                     .build();
             when(dataPermissionPolicyService.getScopeSpec(eq(1L), eq(30L), anyString(), anyString()))
                     .thenReturn(specOf(OrgAnchor.PRIMARY_ORG, false));
@@ -756,7 +756,7 @@ class DataPermissionInterceptorTest {
         @DisplayName("INSERT 语句 → 走 P3-INSERT 授权 (不再早退); moduleConfig 缺失 → fail-safe 放行")
         void insertStatementSkipped() throws Throwable {
             UserContextHolder.setContext(userWithScopedRoles(
-                    List.of(scopedRole(1L, ScopeType.ALL, 0L, null))));
+                    List.of(scopedRole(1L, RoleAssignmentScope.ALL, 0L, null))));
             when(invocation.getTarget()).thenReturn(handler(null));
             when(mappedStatement.getId()).thenReturn(AnnotatedMapper.class.getName() + ".insertOne");
             when(mappedStatement.getSqlCommandType()).thenReturn(SqlCommandType.INSERT);
@@ -789,7 +789,7 @@ class DataPermissionInterceptorTest {
 
         private void primeInsert(com.school.management.domain.access.model.valueobject.ScopeSpec spec) {
             UserContextHolder.setContext(userWithScopedRoles(
-                    List.of(scopedRole(1L, ScopeType.ORG_UNIT, 100L, "1.10.100."))));
+                    List.of(scopedRole(1L, RoleAssignmentScope.ORG_UNIT, 100L, "1.10.100."))));
             when(mappedStatement.getId()).thenReturn(AnnotatedMapper.class.getName() + ".insert");
             when(mappedStatement.getSqlCommandType()).thenReturn(SqlCommandType.INSERT);
             when(dynamicModuleService.getModuleConfig(anyLong(), anyString())).thenReturn(moduleConfig(true, ""));
@@ -828,7 +828,7 @@ class DataPermissionInterceptorTest {
         @DisplayName("R8 P3-INSERT: 方法级 mapper insert (无注解) → any-method 解析模块 → 仍受授权 (deny)")
         void insertMethodLevelMapper_resolvedViaAnyMethod() throws Throwable {
             UserContextHolder.setContext(userWithScopedRoles(
-                    List.of(scopedRole(1L, ScopeType.ORG_UNIT, 100L, "1.10.100."))));
+                    List.of(scopedRole(1L, RoleAssignmentScope.ORG_UNIT, 100L, "1.10.100."))));
             // insert 方法本身无 @DataPermission → 走 resolveAnyMethodAnnotation 扫到 findByX 的 module
             when(mappedStatement.getId()).thenReturn(MethodOnlyMapper.class.getName() + ".insert");
             when(mappedStatement.getSqlCommandType()).thenReturn(SqlCommandType.INSERT);
@@ -858,7 +858,7 @@ class DataPermissionInterceptorTest {
         @DisplayName("Mapper 无 @DataPermission 注解 → proceed, 不查 module")
         void noAnnotationProceeds() throws Throwable {
             UserContextHolder.setContext(userWithScopedRoles(
-                    List.of(scopedRole(1L, ScopeType.ALL, 0L, null))));
+                    List.of(scopedRole(1L, RoleAssignmentScope.ALL, 0L, null))));
             when(invocation.getTarget()).thenReturn(handler(null));
             when(mappedStatement.getId()).thenReturn(PlainMapper.class.getName() + ".selectList");
             when(mappedStatement.getSqlCommandType()).thenReturn(SqlCommandType.SELECT);
@@ -874,7 +874,7 @@ class DataPermissionInterceptorTest {
         @DisplayName("module 配置不存在 → proceed, 不构建条件")
         void missingModuleConfigProceeds() throws Throwable {
             UserContextHolder.setContext(userWithScopedRoles(
-                    List.of(scopedRole(1L, ScopeType.ALL, 0L, null))));
+                    List.of(scopedRole(1L, RoleAssignmentScope.ALL, 0L, null))));
             when(invocation.getTarget()).thenReturn(handler(null));
             when(mappedStatement.getId()).thenReturn(AnnotatedMapper.class.getName() + ".selectList");
             when(mappedStatement.getSqlCommandType()).thenReturn(SqlCommandType.SELECT);
@@ -892,7 +892,7 @@ class DataPermissionInterceptorTest {
         @DisplayName("module 被禁用 → proceed")
         void disabledModuleProceeds() throws Throwable {
             UserContextHolder.setContext(userWithScopedRoles(
-                    List.of(scopedRole(1L, ScopeType.ALL, 0L, null))));
+                    List.of(scopedRole(1L, RoleAssignmentScope.ALL, 0L, null))));
             when(invocation.getTarget()).thenReturn(handler(null));
             when(mappedStatement.getId()).thenReturn(AnnotatedMapper.class.getName() + ".selectList");
             when(mappedStatement.getSqlCommandType()).thenReturn(SqlCommandType.SELECT);
@@ -909,7 +909,7 @@ class DataPermissionInterceptorTest {
         @DisplayName("ALL scope → 条件为 null, proceed 不改写 SQL")
         void allScopeNoFilterProceeds() throws Throwable {
             UserContextHolder.setContext(userWithScopedRoles(
-                    List.of(scopedRole(1L, ScopeType.ALL, 0L, null))));
+                    List.of(scopedRole(1L, RoleAssignmentScope.ALL, 0L, null))));
             FakeStatementHandler fake = handler(null);
             when(invocation.getTarget()).thenReturn(fake);
             when(mappedStatement.getId()).thenReturn(AnnotatedMapper.class.getName() + ".selectList");
@@ -931,7 +931,7 @@ class DataPermissionInterceptorTest {
         @DisplayName("DEPARTMENT scope → 改写 BoundSql 注入过滤并 proceed")
         void departmentScopeInjectsFilter() throws Throwable {
             UserContextHolder.setContext(userWithScopedRoles(
-                    List.of(scopedRole(2L, ScopeType.ORG_UNIT, 200L, "1.10.200."))));
+                    List.of(scopedRole(2L, RoleAssignmentScope.ORG_UNIT, 200L, "1.10.200."))));
             when(mappedStatement.getId()).thenReturn(AnnotatedMapper.class.getName() + ".selectList");
             when(mappedStatement.getSqlCommandType()).thenReturn(SqlCommandType.SELECT);
             Configuration configuration = new Configuration();

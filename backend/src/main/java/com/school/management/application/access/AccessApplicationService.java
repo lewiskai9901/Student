@@ -392,7 +392,7 @@ public class AccessApplicationService {
                 .orElseThrow(() -> new IllegalArgumentException("角色不存在: " + roleId));
 
         // 验证 ORG_UNIT scope 的 scopeId 有效性
-        if (ScopeType.ORG_UNIT.equals(scopeType) && scopeId != null && scopeId > 0) {
+        if (RoleAssignmentScope.ORG_UNIT.equals(scopeType) && scopeId != null && scopeId > 0) {
             // scopeId 应指向一个有效的组织单元（此处仅做非零校验，因为 OrgUnitRepository 不在本服务依赖中）
             log.debug("Assigning role {} with ORG_UNIT scope, scopeId={}", roleId, scopeId);
         }
