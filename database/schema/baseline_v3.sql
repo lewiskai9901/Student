@@ -10369,6 +10369,14 @@ UPDATE `relation_types` SET `industry`='EDU' WHERE `tier`='DOMAIN' AND `industry
 UNLOCK TABLES;
 
 --
+-- 归一历史遗留 PLACE 类型分类 'SPACE' (BaseCategory 枚举已无此值, 属早期未迁移的种子) 到合法分类。
+-- 否则这些类型 category 落枚举外 → categoryDefaults valueOf 落 catch → 静默关掉特性校验。
+--
+UPDATE `entity_type_configs` SET `category`='BUILDING' WHERE `entity_type`='PLACE' AND `category`='SPACE' AND `type_code` IN ('TEACH_BUILDING','DORMITORY');
+UPDATE `entity_type_configs` SET `category`='AREA' WHERE `entity_type`='PLACE' AND `category`='SPACE' AND `type_code`='PLAYGROUND';
+UPDATE `entity_type_configs` SET `category`='ROOM' WHERE `entity_type`='PLACE' AND `category`='SPACE';
+
+--
 -- Table structure for table `role_data_scopes`
 --
 
