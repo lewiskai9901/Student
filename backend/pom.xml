@@ -485,6 +485,10 @@
                         <include>**/*Test.java</include>
                         <include>**/*Tests.java</include>
                     </includes>
+                    <!-- 隐患加固 (2026-06-27): 执行 0 个测试即判失败。防止 `-Dtest=包名.*` 通配符静默匹配 0
+                         → 假绿 (本会话曾因此漏掉 3 个陈旧单测)。即便 CLI 传 failIfNoSpecifiedTests=false,
+                         本项仍兜底: 任何跑了 0 测试的执行都报错。全量 mvn test (2418) 与 -DskipTests 均不受影响。 -->
+                    <failIfNoTests>true</failIfNoTests>
                 </configuration>
             </plugin>
         </plugins>
