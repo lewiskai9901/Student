@@ -178,6 +178,8 @@ const data = reactive<PluginData>({
   policies: [],
   hookPoints: [],
   dataScopes: [],
+  dataResources: [],
+  resourceRelations: [],
   triggerPoints: [],
   subscriptionRules: [],
   targetModes: [],
@@ -193,7 +195,7 @@ async function loadAll() {
     const typeReqs = ['USER', 'ORG_UNIT', 'PLACE'].map(et =>
       http.get('/entity-type-configs', { params: { entityType: et } }).catch(() => [])
     )
-    const [ov, r, e, p, ro, pol, ds, tps, srs, tms, mh, mt, ...typeResults] = await Promise.all([
+    const [ov, r, e, p, ro, pol, ds, dr, rr, tps, srs, tms, mh, mt, ...typeResults] = await Promise.all([
       http.get('/plugin-platform/overview').catch(() => null),
       http.get('/relation-types').catch(() => []),
       http.get('/event/types').catch(() => []),
@@ -201,6 +203,8 @@ async function loadAll() {
       http.get('/roles', { params: { pageSize: 200 } }).catch(() => []),
       http.get('/plugin-platform/policies').catch(() => ({ policies: [], hookPoints: [] })),
       http.get('/roles/data-permissions/scopes').catch(() => []),
+      http.get('/plugin-platform/data-resources').catch(() => []),
+      http.get('/plugin-platform/resource-relations').catch(() => []),
       http.get('/plugin-platform/trigger-points').catch(() => []),
       http.get('/plugin-platform/subscription-rules').catch(() => []),
       http.get('/plugin-platform/target-modes').catch(() => []),
@@ -218,6 +222,8 @@ async function loadAll() {
     data.policies = Array.isArray((pol as any)?.policies) ? (pol as any).policies : []
     data.hookPoints = Array.isArray((pol as any)?.hookPoints) ? (pol as any).hookPoints : []
     data.dataScopes = Array.isArray(ds) ? ds : ((ds as any)?.records || [])
+    data.dataResources = Array.isArray(dr) ? dr : ((dr as any)?.records || [])
+    data.resourceRelations = Array.isArray(rr) ? rr : ((rr as any)?.records || [])
     data.triggerPoints = Array.isArray(tps) ? tps : ((tps as any)?.records || [])
     data.subscriptionRules = Array.isArray(srs) ? srs : ((srs as any)?.records || [])
     data.targetModes = Array.isArray(tms) ? tms : ((tms as any)?.records || [])

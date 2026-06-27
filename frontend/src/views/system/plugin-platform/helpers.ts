@@ -330,6 +330,8 @@ export interface PluginData {
   policies: any[]
   hookPoints: any[]
   dataScopes: any[]
+  dataResources: any[]
+  resourceRelations: any[]
   triggerPoints: any[]
   subscriptionRules: any[]
   targetModes: any[]
@@ -339,7 +341,10 @@ export interface PluginData {
 
 export const RESOURCE_TYPES = [
   { key: 'types', label: '类型', icon: 'LayoutGrid' },
-  { key: 'relations', label: '关系', icon: 'Link2' },
+  // 关系分两类: 主体关系(relation_types, 主体↔主体的图) / 数据关系(resource_relations, 资源如何锚定主体)
+  { key: 'relations', label: '主体关系', icon: 'Link2' },
+  { key: 'dataResources', label: '数据资源', icon: 'Database' },
+  { key: 'resourceRelations', label: '数据关系', icon: 'Share2' },
   { key: 'events', label: '事件类型', icon: 'Bell' },
   { key: 'permissions', label: '权限', icon: 'Shield' },
   { key: 'roles', label: '角色', icon: 'UserCog' },
@@ -348,5 +353,17 @@ export const RESOURCE_TYPES = [
   { key: 'triggerPoints', label: '触发点', icon: 'Zap' },
   { key: 'subscriptionRules', label: '订阅规则', icon: 'BellRing' }
 ] as const
+
+/** 存储种类 (resource_relations.storage_kind) 中文标签 */
+export function storageKindLabel(kind?: string): string {
+  if (!kind) return '-'
+  return ({
+    COLUMN: '业务表列',
+    SUBJECT_GRAPH: '成员图(access_relations)',
+    RECORD_RELATION: '记录关系(record_relations)',
+    PROVIDER: '解析器(动态)',
+    MATERIALIZED: '物化'
+  } as Record<string, string>)[kind] || kind
+}
 
 export type ResourceKey = typeof RESOURCE_TYPES[number]['key']

@@ -95,6 +95,66 @@
       </tbody>
     </table>
 
+    <!-- Data Resources (数据资源: 受控资源 + 可配范围) -->
+    <table v-else-if="resourceType === 'dataResources'" class="rl-table">
+      <thead>
+        <tr><th>资源码</th><th>名称</th><th>域</th><th>可配范围</th><th>类型轴</th><th>存储类</th><th>行业</th></tr>
+      </thead>
+      <tbody>
+        <tr v-for="d in filtered" :key="d.resource_code">
+          <td><code class="rl-mono rl-mono-blue">{{ d.resource_code }}</code></td>
+          <td>{{ d.resource_name }}</td>
+          <td><span class="rl-muted">{{ d.domain_name || d.domain_code }}</span></td>
+          <td>
+            <span v-for="s in parseSubjects(d.allowed_scopes)" :key="s" class="rl-feat">{{ s }}</span>
+            <span v-if="!parseSubjects(d.allowed_scopes).length" class="rl-muted">—</span>
+          </td>
+          <td><code v-if="d.type_field" class="rl-mono">{{ d.type_field }}</code><span v-else class="rl-muted">—</span></td>
+          <td><span class="rl-muted">{{ d.resource_kind || 'PLAIN' }}</span></td>
+          <td>
+            <span class="rl-chip" :style="industryChipStyle(d.industry)">
+              {{ industryLabel(d.industry) || '—' }}
+            </span>
+          </td>
+        </tr>
+        <tr v-if="!filtered.length"><td colspan="7" class="rl-empty-cell">无匹配</td></tr>
+      </tbody>
+    </table>
+
+    <!-- Resource Relations (数据关系: 资源如何锚定到主体) -->
+    <table v-else-if="resourceType === 'resourceRelations'" class="rl-table">
+      <thead>
+        <tr><th>资源码</th><th>关系</th><th>名称</th><th>指向主体</th><th>存储种类</th><th>锚 (列/关系/解析器)</th><th>默认可见</th><th>行业</th></tr>
+      </thead>
+      <tbody>
+        <tr v-for="r in filtered" :key="r.resource_code + '/' + r.relation_code">
+          <td><code class="rl-mono rl-mono-blue">{{ r.resource_code }}</code></td>
+          <td><code class="rl-mono">{{ r.relation_code }}</code></td>
+          <td>{{ r.relation_name }}</td>
+          <td><span class="rl-muted">{{ subjectTypeLabel(r.subject_type) }}</span></td>
+          <td><span class="rl-chip rl-chip-info">{{ storageKindLabel(r.storage_kind) }}</span></td>
+          <td>
+            <code v-if="r.column_name" class="rl-mono">{{ r.column_name }}</code>
+            <code v-else-if="r.ar_relation" class="rl-mono">{{ r.ar_relation }}</code>
+            <code v-else-if="r.resolver_bean" class="rl-mono">{{ r.resolver_bean }}</code>
+            <span v-else class="rl-muted">—</span>
+            <span v-if="r.subject_column" class="rl-feat" title="subject 列">主体列:{{ r.subject_column }}</span>
+          </td>
+          <td>
+            <span :class="Number(r.grants_by_default) === 1 ? 'rl-chip rl-chip-success' : 'rl-chip rl-chip-info'">
+              {{ Number(r.grants_by_default) === 1 ? '是' : '否' }}
+            </span>
+          </td>
+          <td>
+            <span class="rl-chip" :style="industryChipStyle(r.industry)">
+              {{ industryLabel(r.industry) || '—' }}
+            </span>
+          </td>
+        </tr>
+        <tr v-if="!filtered.length"><td colspan="8" class="rl-empty-cell">无匹配</td></tr>
+      </tbody>
+    </table>
+
     <!-- Events -->
     <table v-else-if="resourceType === 'events'" class="rl-table">
       <thead>
@@ -279,7 +339,7 @@
 import { computed, inject, ref } from 'vue'
 import {
   LayoutGrid, Link2, Bell, Shield, UserCog,
-  ShieldCheck, Filter, Zap, BellRing
+  ShieldCheck, Filter, Zap, BellRing, Database, Share2
 } from 'lucide-vue-next'
 import {
   RESOURCE_TYPES, subjectTypeLabel, industryChipStyle, industryLabel,
@@ -287,7 +347,7 @@ import {
   categoryTagType, categoryLabel, tierTagType, tierLabel, parseImplied,
   polarityTagType, polarityLabel, parseSubjects, permissionTypeLabel,
   permissionScopeLabel, roleTypeLabel, permissionModuleLabel, parseSchema,
-  parseDataScopeSource, moduleCodeToIndustry,
+  parseDataScopeSource, moduleCodeToIndustry, storageKindLabel,
   type PluginData, type ResourceKey
 } from '../helpers'
 
@@ -306,7 +366,8 @@ const searchText = ref('')
 const iconMap: Record<ResourceKey, any> = {
   types: LayoutGrid, relations: Link2, events: Bell,
   permissions: Shield, roles: UserCog, policies: ShieldCheck,
-  dataScopes: Filter, triggerPoints: Zap, subscriptionRules: BellRing
+  dataScopes: Filter, triggerPoints: Zap, subscriptionRules: BellRing,
+  dataResources: Database, resourceRelations: Share2
 }
 const activeIcon = computed(() => iconMap[props.resourceType])
 const activeLabel = computed(() => RESOURCE_TYPES.find(r => r.key === props.resourceType)?.label || '')
@@ -327,6 +388,8 @@ function matchesPlugin(row: any, kind: ResourceKey): boolean {
     case 'roles':       return resolveIndustry(row) === props.pluginFilter
     case 'policies':    return row.sourcePlugin === props.pluginFilter
     case 'dataScopes':  return parseDataScopeSource(row.source) === props.pluginFilter
+    case 'dataResources':     return (row.industry || 'CORE') === props.pluginFilter
+    case 'resourceRelations': return (row.industry || 'CORE') === props.pluginFilter
     case 'triggerPoints':     return moduleCodeToIndustry(row.module_code) === props.pluginFilter
     case 'subscriptionRules': return props.pluginFilter === 'CORE'
     default: return true
@@ -363,6 +426,14 @@ const filtered = computed<any[]>(() => {
       return data.dataScopes
         .filter(d => matchesPlugin(d, 'dataScopes'))
         .filter(d => matchesSearch(d, ['scopeCode', 'code', 'scopeName', 'name', 'description']))
+    case 'dataResources':
+      return data.dataResources
+        .filter(d => matchesPlugin(d, 'dataResources'))
+        .filter(d => matchesSearch(d, ['resource_code', 'resource_name', 'domain_code', 'domain_name']))
+    case 'resourceRelations':
+      return data.resourceRelations
+        .filter(r => matchesPlugin(r, 'resourceRelations'))
+        .filter(r => matchesSearch(r, ['resource_code', 'relation_code', 'relation_name', 'subject_type', 'storage_kind']))
     case 'triggerPoints':
       return data.triggerPoints
         .filter(t => matchesPlugin(t, 'triggerPoints'))

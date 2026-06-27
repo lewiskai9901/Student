@@ -173,6 +173,7 @@ const resourceCount = computed(() => {
     events: data.events.length, permissions: data.permissions.length,
     roles: data.roles.length, policies: data.policies.length,
     dataScopes: data.dataScopes.length, triggerPoints: data.triggerPoints.length,
+    dataResources: data.dataResources.length, resourceRelations: data.resourceRelations.length,
     subscriptionRules: data.subscriptionRules.length
   }
   return map[props.resourceType] ?? 0

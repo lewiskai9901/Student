@@ -602,6 +602,28 @@ public class PluginPlatformController {
     }
 
     /**
+     * GET /api/plugin-platform/data-resources
+     * 全部数据资源 (data_resources) —— 数据权限"受控资源"清单 (allowed_scopes/域/插件/类型轴)。
+     * 鉴权沿用 admin/access (与页面一致, 避免 data-permission/view 权限差异致 tab 静默空)。
+     */
+    @GetMapping("/data-resources")
+    @CasbinAccess(resource = "admin", action = "access")
+    public Result<List<Map<String, Object>>> dataResources() {
+        return Result.success(pluginPlatformService.listDataResources());
+    }
+
+    /**
+     * GET /api/plugin-platform/resource-relations
+     * 全部资源关系 (resource_relations) —— "数据关系": 资源如何锚定主体 (owner_org/creator/...)。
+     * 与"主体关系"(relation_types, 见 /relation-types) 互补, 供系统人员查看数据权限锚定全貌。
+     */
+    @GetMapping("/resource-relations")
+    @CasbinAccess(resource = "admin", action = "access")
+    public Result<List<Map<String, Object>>> resourceRelations() {
+        return Result.success(pluginPlatformService.listResourceRelations());
+    }
+
+    /**
      * GET /api/plugin-platform/target-modes
      * 后端当前注册的所有 TargetModeResolver (M2 SPI).
      * 展示 modeCode / displayName / 源类 / 源插件 (CORE/EDU/...).

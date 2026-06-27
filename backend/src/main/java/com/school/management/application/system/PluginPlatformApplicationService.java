@@ -290,6 +290,35 @@ public class PluginPlatformApplicationService {
             "ORDER BY event_category, event_type, id");
     }
 
+    /**
+     * 全部数据资源 (data_resources) —— 数据权限"受控资源"清单。
+     * 每行 = 一个可配数据范围的资源 (allowed_scopes) + 所属域/插件 (industry) + 类型轴 (type_field)。
+     */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> listDataResources() {
+        return jdbc.queryForList(
+            "SELECT resource_code, resource_name, domain_code, domain_name, industry, " +
+            "       resource_kind, allowed_scopes, type_field, access_resource_type, " +
+            "       subject_relation_filterable, plugin_enabled, enabled, sort_order " +
+            "FROM data_resources WHERE tenant_id = 1 " +
+            "ORDER BY industry, domain_code, sort_order, resource_code");
+    }
+
+    /**
+     * 全部资源关系 (resource_relations) —— "数据关系": 每个数据资源如何锚定到主体。
+     * owner_org/creator/reviewer/inspected 等, 带存储种类 (COLUMN/SUBJECT_GRAPH/RECORD_RELATION/PROVIDER)、
+     * 指向主体类型、列名/关系名/subject 列。与"主体关系"(relation_types) 互补。
+     */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> listResourceRelations() {
+        return jdbc.queryForList(
+            "SELECT resource_code, relation_code, relation_name, subject_type, cardinality, " +
+            "       storage_kind, column_name, type_column, ar_relation, resolver_bean, subject_column, " +
+            "       grants_by_default, enforce_insert_scope, auto_fill, industry, enabled " +
+            "FROM resource_relations WHERE enabled = 1 AND tenant_id = 1 " +
+            "ORDER BY industry, resource_code, relation_code");
+    }
+
     // ═══════════════ 私有 helper (原控制器迁入) ═══════════════
 
     private Map<String, Long> groupCount(String sql) {

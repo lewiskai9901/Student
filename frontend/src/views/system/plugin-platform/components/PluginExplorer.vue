@@ -87,7 +87,7 @@
 import { computed, inject } from 'vue'
 import {
   Package, Webhook, LayoutGrid, Link2, Bell, Shield, UserCog,
-  ShieldCheck, Filter, Zap, BellRing, FlaskConical
+  ShieldCheck, Filter, Zap, BellRing, FlaskConical, Database, Share2
 } from 'lucide-vue-next'
 import { RESOURCE_TYPES, industryColor, subjectTypeLabel, phaseLabel, type PluginData, type ResourceKey } from '../helpers'
 
@@ -124,6 +124,8 @@ const resourceIcons: Record<ResourceKey, any> = {
   roles: UserCog,
   policies: ShieldCheck,
   dataScopes: Filter,
+  dataResources: Database,
+  resourceRelations: Share2,
   triggerPoints: Zap,
   subscriptionRules: BellRing
 }
@@ -157,6 +159,8 @@ function countFor(key: ResourceKey): number {
     roles: data.roles.length,
     policies: data.policies.length,
     dataScopes: data.dataScopes.length,
+    dataResources: data.dataResources.length,
+    resourceRelations: data.resourceRelations.length,
     triggerPoints: data.triggerPoints.length,
     subscriptionRules: data.subscriptionRules.length
   }
