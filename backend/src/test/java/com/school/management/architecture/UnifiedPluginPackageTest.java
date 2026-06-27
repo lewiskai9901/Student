@@ -121,7 +121,7 @@ class UnifiedPluginPackageTest {
     }
 
     @Test
-    @DisplayName("PluginPackage 默认 metadata() 非 null; CoreManifest.contribute() 含 326 个 contribution (完美重构 P1: +inspection_submission 码+锚)")
+    @DisplayName("PluginPackage 默认 metadata() 非 null; CoreManifest.contribute() 含 337 个 contribution (P1-P4 + B-2 拆码)")
     void pluginPackageDefaultMethods() {
         PluginPackage core = new CoreManifest();
         // Phase 2 W2.2: CoreManifest 已覆盖 contribute() 声明 9 个核心关系 (CoreRelationsPlugin 已删).

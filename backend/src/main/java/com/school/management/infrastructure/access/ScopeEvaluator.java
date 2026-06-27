@@ -552,7 +552,15 @@ public class ScopeEvaluator {
                 selfField = meta.membershipSubjectColumn() == null || meta.membershipSubjectColumn().isEmpty()
                         ? "user_id" : meta.membershipSubjectColumn();
             } else {
-                selfField = meta.creatorFieldOrDefault();
+                // [B-2 镜像] 无 created_by 列的资源 (系统计算表如 org_unit_scores/student_grade/school_class)
+                // 降级 SELF 无从锚定 → DENY (空集, 安全), 而非拼出 "t.created_by = ?" 在无该列的表上崩 SQL 1054。
+                // 与 orgFieldSelect 的 SELF 分支对称; creatorFieldOrDefault() 的 "created_by" 兜底只对有该列的资源安全。
+                String cf = meta.creatorField();
+                if (cf == null || cf.isBlank()) {
+                    cond.sql = DENY;
+                    return cond;
+                }
+                selfField = cf;
             }
             cond.sql = alias + selfField + " = ?";
             cond.addParam("_dp_pluginSelf_" + paramOffset, ctx.getUserId(), Long.class, JdbcType.BIGINT);

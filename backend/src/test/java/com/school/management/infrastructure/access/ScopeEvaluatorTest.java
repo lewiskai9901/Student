@@ -251,6 +251,20 @@ class ScopeEvaluatorTest {
     }
 
     @Test
+    @DisplayName("[B-2 镜像] PLUGIN_DIM resolver=null + org-field 无 created_by 列 → DENY(1=0) 不崩 SQL")
+    void pluginDimNullDegradeNoCreatorDeny() {
+        // 无 created_by 表 (org_unit_scores/student_grade/school_class) 的 PLUGIN_DIM 降级 SELF:
+        // 不能拼 created_by=? (列不存在 → 1054), 须 DENY。与 orgFieldSelect SELF 分支对称。
+        when(pluginDataScopeRouter.resolve(eq("BY_MAJOR"), anyLong(), any())).thenReturn(null);
+        ResourceScopeMeta noCreator = new ResourceScopeMeta(
+                "t", "org_unit_id", "", false, "id", null, "inspection_org_unit_score");
+        ScopeSpec spec = ScopeSpec.builder().orgAnchor(OrgAnchor.PLUGIN_DIM).anchorParam("BY_MAJOR").build();
+        ScopeCondition c = evaluator().toSqlCondition(spec, noCreator, ctx(), 100L, "/1/100/", TENANT, 0);
+        assertThat(c.sql).isEqualTo("1 = 0");
+        assertThat(c.params).isEmpty();
+    }
+
+    @Test
     @DisplayName("PLUGIN_DIM resolver=empty → 1 = 0")
     void pluginDimEmptyDeny() {
         when(pluginDataScopeRouter.resolve(eq("BY_MAJOR"), anyLong(), any())).thenReturn(List.of());
