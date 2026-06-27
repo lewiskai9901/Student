@@ -105,7 +105,7 @@
           <td><code class="rl-mono rl-mono-blue">{{ d.resource_code }}</code></td>
           <td>{{ d.resource_name }}</td>
           <td><span class="rl-muted">{{ d.domain_name || d.domain_code }}</span></td>
-          <td>
+          <td class="rl-wrap">
             <span v-for="s in parseSubjects(d.allowed_scopes)" :key="s" class="rl-feat">{{ s }}</span>
             <span v-if="!parseSubjects(d.allowed_scopes).length" class="rl-muted">—</span>
           </td>
@@ -173,7 +173,7 @@
               {{ polarityLabel(e.categoryPolarity) }}
             </span>
           </td>
-          <td>
+          <td class="rl-wrap">
             <span v-for="s in parseSubjects(e.applicableSubjects)" :key="s" class="rl-feat">
               {{ subjectTypeLabel(s) }}
             </span>
@@ -295,7 +295,7 @@
           <td><code class="rl-mono rl-mono-blue">{{ t.point_code }}</code></td>
           <td>{{ t.point_name }}</td>
           <td><span class="rl-muted">{{ t.description || '—' }}</span></td>
-          <td>
+          <td class="rl-wrap">
             <template v-for="(v, k) in parseSchema(t.context_schema)" :key="k">
               <span class="rl-feat" :title="`${k}: ${v}`">{{ k }}</span>
             </template>
@@ -526,12 +526,16 @@ const groupedPermissions = computed(() => {
   font-weight: 500; text-transform: uppercase; letter-spacing: 0.3px;
   padding: 7px 12px; border-bottom: 1px solid #e5e7eb;
   background: #fafbfc;
+  white-space: nowrap;            /* 表头不逐字竖排; 列多时整表横向滚动 */
 }
 .rl-table tbody td {
   padding: 7px 12px; font-size: 12px;
   color: #111827; border-bottom: 1px solid #f9fafb;
   vertical-align: middle;
+  white-space: nowrap;            /* 短文本单元格不竖排 */
 }
+/* 多 chip 单元格 (可配范围/适用主体等) 允许换行包裹, 不被 nowrap 拉成超长一行 */
+.rl-table tbody td.rl-wrap { white-space: normal; max-width: 260px; }
 .rl-table tbody tr:hover { background: #fafbfc; }
 
 .rl-mono {

@@ -358,10 +358,10 @@ export const RESOURCE_TYPES = [
 export function storageKindLabel(kind?: string): string {
   if (!kind) return '-'
   return ({
-    COLUMN: '业务表列',
-    SUBJECT_GRAPH: '成员图(access_relations)',
-    RECORD_RELATION: '记录关系(record_relations)',
-    PROVIDER: '解析器(动态)',
+    COLUMN: '业务列',
+    SUBJECT_GRAPH: '成员图',
+    RECORD_RELATION: '记录关系',
+    PROVIDER: '解析器',
     MATERIALIZED: '物化'
   } as Record<string, string>)[kind] || kind
 }
