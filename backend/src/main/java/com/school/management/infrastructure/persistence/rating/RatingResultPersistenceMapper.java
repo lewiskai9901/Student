@@ -1,6 +1,7 @@
 package com.school.management.infrastructure.persistence.rating;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.school.management.infrastructure.access.DataPermission;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -12,6 +13,7 @@ import java.util.List;
  * 评价结果 Mapper (DDD infrastructure layer)
  */
 @Mapper
+@DataPermission(module = "rating_result")
 public interface RatingResultPersistenceMapper extends BaseMapper<RatingResultPO> {
 
     /**

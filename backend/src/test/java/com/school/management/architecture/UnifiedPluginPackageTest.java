@@ -146,9 +146,12 @@ class UnifiedPluginPackageTest {
         //   data-resource 24→23, resource-relation 36→34 → 338-3=335.
         // B-2: org_unit_scores 从 inspection_project 拆出独立码 inspection_org_unit_score (该表无 created_by,
         //   不能共享带 creator 锚的码): +dr(+1, data-resource 23→24) + owner_org rr(+1, resource-relation 34→35) → 335+2=337.
+        // 缺口修复 (2026-06-27): 补 5 个 core 资源码 (indicator_result/inspection_corrective_rule/inspection_item_override/
+        //   inspection_audit_trail/rating_result): +5 dr (data-resource 24→29) + 锚点 (2 orgCreator=4 + 3 ownerOrg=3 = 7 rr,
+        //   resource-relation 35→42) → 337+12=349.
         // 旧测试期望"默认空流"已不再适用; 改为校验内容契约.
         long count = core.contribute().count();
-        assertEquals(337, count, "CoreManifest 应贡献 337 个 contribution (15 关系 + 3 workflow + 26 TENANT_ADMIN + 24 data-resource + 35 resource-relation + 3 role + 8 menu + 223 permission)");
+        assertEquals(349, count, "CoreManifest 应贡献 349 个 contribution (15 关系 + 3 workflow + 26 TENANT_ADMIN + 29 data-resource + 42 resource-relation + 3 role + 8 menu + 223 permission)");
         long rolePermCount = new CoreManifest().contribute()
             .filter(c -> c instanceof Contribution.RolePermissionBindingContribution)
             .count();

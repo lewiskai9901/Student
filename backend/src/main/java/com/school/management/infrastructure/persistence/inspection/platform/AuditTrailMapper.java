@@ -1,6 +1,7 @@
 package com.school.management.infrastructure.persistence.inspection.platform;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.school.management.infrastructure.access.DataPermission;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -9,6 +10,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Mapper
+@DataPermission(module = "inspection_audit_trail")
 public interface AuditTrailMapper extends BaseMapper<AuditTrailPO> {
 
     @Select("SELECT * FROM insp_audit_trail WHERE resource_type = #{resourceType} AND resource_id = #{resourceId} AND deleted = 0 ORDER BY occurred_at DESC")

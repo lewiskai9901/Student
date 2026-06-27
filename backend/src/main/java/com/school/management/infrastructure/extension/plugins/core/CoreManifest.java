@@ -326,7 +326,13 @@ public class CoreManifest implements PluginPackage {
             dr("inspection_template",    "ALL", "SELF"),
             dr("inspection_appeal",      "SELF"),
             dr("inspection_personal",    "SELF"),
-            dr("entity_event",           "ALL", "SELF")   // R2.2 前置②: 审计事件独立码 (无 org 维度)
+            dr("entity_event",           "ALL", "SELF"),   // R2.2 前置②: 审计事件独立码 (无 org 维度)
+            // 缺口修复 (2026-06-27): 7 处裸奔读路径补数据权限。无 created_by 表不给 SELF (默认 SELF→DENY 安全)。
+            dr("indicator_result",          "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "CUSTOM"),  // owner_org=org_unit_id (无 created_by)
+            dr("inspection_corrective_rule","ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),  // owner_org + creator
+            dr("inspection_item_override",  "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "SELF", "CUSTOM"),  // owner_org + creator
+            dr("inspection_audit_trail",    "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "CUSTOM"),  // owner_org=org_unit_id (无 created_by)
+            dr("rating_result",             "ALL", "DEPARTMENT_AND_BELOW", "MANAGED_ORGS_AND_BELOW", "DEPARTMENT", "MANAGED_ORGS", "CUSTOM")   // owner_org=org_unit_id (评级结果)
         );
     }
 
@@ -397,9 +403,22 @@ public class CoreManifest implements PluginPackage {
             orgCreator("inspection_violation", "org_unit_id", "created_by"),
             orgCreator("inspection_corrective", "org_unit_id", "created_by"),
             orgCreator("inspection_appeal", "org_unit_id", "submitter_user_id"),  // 创建者列特例
+            // 缺口修复 (2026-06-27): 5 个检查/评级资源补锚点。有 created_by → orgCreator; 无 → ownerOrg (仅 owner_org)。
+            orgCreator("inspection_corrective_rule", "org_unit_id", "created_by"),
+            orgCreator("inspection_item_override", "org_unit_id", "created_by"),
+            ownerOrg("indicator_result", "org_unit_id"),
+            ownerOrg("inspection_audit_trail", "org_unit_id"),
+            ownerOrg("rating_result", "org_unit_id"),
             // R2.2 前置②: entity_events 无 org_unit_id, owner_org/creator 均借 created_by (冻结 workaround, 见 TODO)
             orgCreator("entity_event", "created_by", "created_by")
         ).flatMap(s -> s);
+    }
+
+    /** 仅 owner_org 锚点 (无 created_by 列的资源, 如评级结果/指标结果/审计轨迹; 默认 SELF→DENY 安全)。 */
+    private static Stream<Contribution> ownerOrg(String resource, String orgCol) {
+        return Stream.of(
+            rr(ResourceRelationDef.column(resource, "owner_org", "所属组织", "ORG_UNIT", orgCol)
+                .withAutoFill().withGrantsByDefault()));
     }
 
     /** 普通记录标准锚点: owner_org(默认参与可见性) + creator, 均写入自动填。 */

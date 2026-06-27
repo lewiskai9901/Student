@@ -278,9 +278,10 @@ class PluginDeclarationCoverageTest {
             while (m.find()) referenced.add(m.group(1));
         }
 
-        // 声明: manifest 里的 orgCreator("X"...) 或 ResourceRelationDef.column/subjectGraph/recordRelation("X"...)
+        // 声明: manifest 里的 orgCreator("X"...) / ownerOrg("X"...) 或
+        //   ResourceRelationDef.column/subjectGraph/recordRelation("X"...)
         Pattern declPattern = Pattern.compile(
-            "(?:orgCreator|ResourceRelationDef\\s*\\.\\s*(?:column|subjectGraph|recordRelation))\\s*\\(\\s*\"([a-z_][a-zA-Z0-9_]*)\"");
+            "(?:orgCreator|ownerOrg|ResourceRelationDef\\s*\\.\\s*(?:column|subjectGraph|recordRelation))\\s*\\(\\s*\"([a-z_][a-zA-Z0-9_]*)\"");
         Set<String> declared = new TreeSet<>();
         for (String src : allJavaSource) {
             Matcher m = declPattern.matcher(src);

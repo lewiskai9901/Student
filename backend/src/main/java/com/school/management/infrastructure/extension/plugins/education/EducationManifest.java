@@ -193,7 +193,11 @@ public class EducationManifest implements PluginPackage {
             dr("scheduling_constraint",    "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "SELF", "CUSTOM"),
             dr("schedule_entry",           "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "SELF", "CUSTOM"),
             dr("schedule_conflict_record", "ALL", "DEPARTMENT_AND_BELOW", "DEPARTMENT", "SELF", "CUSTOM"),
-            dr("teacher_preference",       "ALL", "SELF")
+            dr("teacher_preference",       "ALL", "SELF"),
+            // 缺口修复 (2026-06-27): 教学班裸读补数据权限。teaching_classes 无 org 列 → 仅 creator (ALL/SELF,
+            // 不给 org-dim scope 以免引擎在无 org 列上崩); teaching_class_members 用 admin_class_id(行政班=org_unit) 锚。
+            dr("teaching_class",        "ALL", "SELF"),
+            dr("teaching_class_member", "ALL", "BY_CLASS", "BY_MAJOR", "CUSTOM")
         );
     }
 
@@ -247,7 +251,13 @@ public class EducationManifest implements PluginPackage {
             orgCreator("schedule_conflict_record", "org_unit_id", "created_by"),
             // 教师偏好: 无 org 维度, 仅 creator(teacher_id)
             Stream.<Contribution>of(rr(ResourceRelationDef.column(
-                "teacher_preference", "creator", "创建者", "USER", "teacher_id").withAutoFill()))
+                "teacher_preference", "creator", "创建者", "USER", "teacher_id").withAutoFill())),
+            // 缺口修复: 教学班无 org 列 → 仅 creator(created_by)
+            Stream.<Contribution>of(rr(ResourceRelationDef.column(
+                "teaching_class", "creator", "创建者", "USER", "created_by").withAutoFill())),
+            // 教学班成员: owner_org 锚行政班 (admin_class_id = 行政班 org_unit); 个人成员该列为 null → org-scope 下不可见(安全收紧)
+            Stream.<Contribution>of(rr(ResourceRelationDef.column(
+                "teaching_class_member", "owner_org", "所属组织", "ORG_UNIT", "admin_class_id").withGrantsByDefault()))
         ).flatMap(s -> s);
     }
 

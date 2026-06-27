@@ -1,6 +1,7 @@
 package com.school.management.infrastructure.persistence.inspection.evaluation;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.school.management.infrastructure.access.DataPermission;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -8,6 +9,7 @@ import org.apache.ibatis.annotations.Select;
 import java.util.List;
 
 @Mapper
+@DataPermission(module = "indicator_result")
 public interface IndicatorResultMapper extends BaseMapper<IndicatorResultPO> {
 
     @Select("SELECT * FROM indicator_results WHERE indicator_id = #{indicatorId} AND deleted = 0 " +
