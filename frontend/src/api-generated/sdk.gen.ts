@@ -114,9 +114,6 @@ import type {
   AssignRoleData,
   AssignRoleErrors,
   AssignRoleResponses,
-  AssignRolesData,
-  AssignRolesErrors,
-  AssignRolesResponses,
   AssignRoleWithScopeData,
   AssignRoleWithScopeErrors,
   AssignRoleWithScopeResponses,
@@ -192,9 +189,6 @@ import type {
   BatchUpdateConfigsData,
   BatchUpdateConfigsErrors,
   BatchUpdateConfigsResponses,
-  BindWechat2Data,
-  BindWechat2Errors,
-  BindWechat2Responses,
   BindWechatData,
   BindWechatErrors,
   BindWechatResponses,
@@ -249,6 +243,12 @@ import type {
   CategoriesData,
   CategoriesErrors,
   CategoriesResponses,
+  ChainPreviewData,
+  ChainPreviewErrors,
+  ChainPreviewResponses,
+  ChangePasswordData,
+  ChangePasswordErrors,
+  ChangePasswordResponses,
   ChangeStatusData,
   ChangeStatusErrors,
   ChangeStatusResponses,
@@ -363,6 +363,9 @@ import type {
   CreateAlertRuleData,
   CreateAlertRuleErrors,
   CreateAlertRuleResponses,
+  CreateAnnouncementsData,
+  CreateAnnouncementsErrors,
+  CreateAnnouncementsResponses,
   CreateApplicationData,
   CreateApplicationErrors,
   CreateApplicationResponses,
@@ -621,18 +624,15 @@ import type {
   CreateTypesData,
   CreateTypesErrors,
   CreateTypesResponses,
-  CreateUserUsers2Data,
-  CreateUserUsers2Errors,
-  CreateUserUsers2Responses,
-  CreateUserUsersData,
-  CreateUserUsersErrors,
-  CreateUserUsersResponses,
+  CreateUserData,
+  CreateUserErrors,
+  CreateUserResponses,
   CreateViolationRecordData,
   CreateViolationRecordErrors,
   CreateViolationRecordResponses,
-  DatascopeResolveData,
-  DatascopeResolveErrors,
-  DatascopeResolveResponses,
+  DataResourcesData,
+  DataResourcesErrors,
+  DataResourcesResponses,
   DelegateData,
   DelegateErrors,
   DelegateResponses,
@@ -645,6 +645,9 @@ import type {
   DeleteAlertRuleData,
   DeleteAlertRuleErrors,
   DeleteAlertRuleResponses,
+  DeleteAnnouncementsData,
+  DeleteAnnouncementsErrors,
+  DeleteAnnouncementsResponses,
   DeleteApplicationData,
   DeleteApplicationErrors,
   DeleteApplicationResponses,
@@ -894,18 +897,12 @@ import type {
   DeleteTypesData,
   DeleteTypesErrors,
   DeleteTypesResponses,
-  DeleteUsersBatch2Data,
-  DeleteUsersBatch2Errors,
-  DeleteUsersBatch2Responses,
-  DeleteUsersBatchData,
-  DeleteUsersBatchErrors,
-  DeleteUsersBatchResponses,
-  DeleteUserUsers2Data,
-  DeleteUserUsers2Errors,
-  DeleteUserUsers2Responses,
-  DeleteUserUsersData,
-  DeleteUserUsersErrors,
-  DeleteUserUsersResponses,
+  DeleteUserData,
+  DeleteUserErrors,
+  DeleteUserResponses,
+  DeleteUsersData,
+  DeleteUsersErrors,
+  DeleteUsersResponses,
   DeleteViolationRecordData,
   DeleteViolationRecordErrors,
   DeleteViolationRecordResponses,
@@ -921,6 +918,9 @@ import type {
   DeprecateRootSectionData,
   DeprecateRootSectionErrors,
   DeprecateRootSectionResponses,
+  DetailAnnouncementsData,
+  DetailAnnouncementsErrors,
+  DetailAnnouncementsResponses,
   DetailData,
   DetailErrors,
   DetailResponses,
@@ -954,12 +954,9 @@ import type {
   DisablePolicyErrors,
   DisablePolicyResponses,
   DisableResponses,
-  DisableUserDisable2Data,
-  DisableUserDisable2Errors,
-  DisableUserDisable2Responses,
-  DisableUserDisableData,
-  DisableUserDisableErrors,
-  DisableUserDisableResponses,
+  DisableUserData,
+  DisableUserErrors,
+  DisableUserResponses,
   DismissAlertData,
   DismissAlertErrors,
   DismissAlertResponses,
@@ -1008,12 +1005,9 @@ import type {
   EnablePolicyErrors,
   EnablePolicyResponses,
   EnableResponses,
-  EnableUserEnable2Data,
-  EnableUserEnable2Errors,
-  EnableUserEnable2Responses,
-  EnableUserEnableData,
-  EnableUserEnableErrors,
-  EnableUserEnableResponses,
+  EnableUserData,
+  EnableUserErrors,
+  EnableUserResponses,
   EndSemesterData,
   EndSemesterErrors,
   EndSemesterResponses,
@@ -1029,12 +1023,9 @@ import type {
   ExistsStudentNoData,
   ExistsStudentNoErrors,
   ExistsStudentNoResponses,
-  ExistsUsernameExists2Data,
-  ExistsUsernameExists2Errors,
-  ExistsUsernameExists2Responses,
-  ExistsUsernameExistsData,
-  ExistsUsernameExistsErrors,
-  ExistsUsernameExistsResponses,
+  ExistsUsernameData,
+  ExistsUsernameErrors,
+  ExistsUsernameResponses,
   ExportAppealsData,
   ExportAppealsErrors,
   ExportAppealsResponses,
@@ -1194,9 +1185,6 @@ import type {
   GetAllowedChildTypesForRootResponses,
   GetAllowedChildTypesResponses,
   GetAllResponses,
-  GetAllUsers2Data,
-  GetAllUsers2Errors,
-  GetAllUsers2Responses,
   GetAllUsersData,
   GetAllUsersErrors,
   GetAllUsersResponses,
@@ -1410,6 +1398,9 @@ import type {
   GetDormitoryDistributionData,
   GetDormitoryDistributionErrors,
   GetDormitoryDistributionResponses,
+  GetEffectiveGenderData,
+  GetEffectiveGenderErrors,
+  GetEffectiveGenderResponses,
   GetEnabledOrgTypesData,
   GetEnabledOrgTypesErrors,
   GetEnabledOrgTypesResponses,
@@ -1647,6 +1638,9 @@ import type {
   GetRelatedTimelineData,
   GetRelatedTimelineErrors,
   GetRelatedTimelineResponses,
+  GetResourceRelationsData,
+  GetResourceRelationsErrors,
+  GetResourceRelationsResponses,
   GetResourceTimelineData,
   GetResourceTimelineErrors,
   GetResourceTimelineResponses,
@@ -1710,12 +1704,9 @@ import type {
   GetSemesterData,
   GetSemesterErrors,
   GetSemesterResponses,
-  GetSimpleUserListSimple2Data,
-  GetSimpleUserListSimple2Errors,
-  GetSimpleUserListSimple2Responses,
-  GetSimpleUserListSimpleData,
-  GetSimpleUserListSimpleErrors,
-  GetSimpleUserListSimpleResponses,
+  GetSimpleUserListData,
+  GetSimpleUserListErrors,
+  GetSimpleUserListResponses,
   GetStatistics2Data,
   GetStatistics2Errors,
   GetStatistics2Responses,
@@ -1824,45 +1815,30 @@ import type {
   GetUserActivityData,
   GetUserActivityErrors,
   GetUserActivityResponses,
-  GetUserByUsername2Data,
-  GetUserByUsername2Errors,
-  GetUserByUsername2Responses,
   GetUserByUsernameData,
   GetUserByUsernameErrors,
   GetUserByUsernameResponses,
+  GetUserData,
+  GetUserErrors,
   GetUserPageData,
   GetUserPageErrors,
   GetUserPageResponses,
   GetUserPermissionsData,
   GetUserPermissionsErrors,
   GetUserPermissionsResponses,
-  GetUserRoleIdsData,
-  GetUserRoleIdsErrors,
-  GetUserRoleIdsResponses,
+  GetUserResponses,
   GetUserRolesData,
   GetUserRolesErrors,
   GetUserRolesResponses,
-  GetUsersByOrgUnit2Data,
-  GetUsersByOrgUnit2Errors,
-  GetUsersByOrgUnit2Responses,
   GetUsersByOrgUnitData,
   GetUsersByOrgUnitErrors,
   GetUsersByOrgUnitResponses,
-  GetUsersPageData,
-  GetUsersPageErrors,
-  GetUsersPageResponses,
   GetUsersWithDepartmentsData,
   GetUsersWithDepartmentsErrors,
   GetUsersWithDepartmentsResponses,
   GetUsersWithOrgUnitsData,
   GetUsersWithOrgUnitsErrors,
   GetUsersWithOrgUnitsResponses,
-  GetUserUsers2Data,
-  GetUserUsers2Errors,
-  GetUserUsers2Responses,
-  GetUserUsersData,
-  GetUserUsersErrors,
-  GetUserUsersResponses,
   GetVersionVersions2Data,
   GetVersionVersions2Errors,
   GetVersionVersions2Responses,
@@ -1950,6 +1926,9 @@ import type {
   ListAllCoursesData,
   ListAllCoursesErrors,
   ListAllCoursesResponses,
+  ListAnnouncementsData,
+  ListAnnouncementsErrors,
+  ListAnnouncementsResponses,
   ListApplicationsData,
   ListApplicationsErrors,
   ListApplicationsResponses,
@@ -2379,15 +2358,15 @@ import type {
   PendingLeavesData,
   PendingLeavesErrors,
   PendingLeavesResponses,
+  PinData,
+  PinErrors,
+  PinResponses,
   PlanStatisticsData,
   PlanStatisticsErrors,
   PlanStatisticsResponses,
   PoliciesData,
   PoliciesErrors,
   PoliciesResponses,
-  PolicyCheckData,
-  PolicyCheckErrors,
-  PolicyCheckResponses,
   PreviewDepreciationData,
   PreviewDepreciationErrors,
   PreviewDepreciationResponses,
@@ -2400,6 +2379,9 @@ import type {
   PreviewTargetCountData,
   PreviewTargetCountErrors,
   PreviewTargetCountResponses,
+  Publish2Data,
+  Publish2Errors,
+  Publish2Responses,
   PublishBatchPublish2Data,
   PublishBatchPublish2Errors,
   PublishBatchPublish2Responses,
@@ -2517,9 +2499,6 @@ import type {
   RejectTaskData,
   RejectTaskErrors,
   RejectTaskResponses,
-  RelationFindData,
-  RelationFindErrors,
-  RelationFindResponses,
   RemoveCourseData,
   RemoveCourseErrors,
   RemoveCourseResponses,
@@ -2565,21 +2544,12 @@ import type {
   RepopulateSubmissionsData,
   RepopulateSubmissionsErrors,
   RepopulateSubmissionsResponses,
-  ResetData,
-  ResetErrors,
   ResetFieldData,
   ResetFieldErrors,
   ResetFieldResponses,
-  ResetPassword2Data,
-  ResetPassword2Errors,
-  ResetPassword2Responses,
   ResetPasswordData,
   ResetPasswordErrors,
   ResetPasswordResponses,
-  ResetPasswordSafeData,
-  ResetPasswordSafeErrors,
-  ResetPasswordSafeResponses,
-  ResetResponses,
   ResetScheduleData,
   ResetScheduleErrors,
   ResetScheduleResponses,
@@ -2592,6 +2562,9 @@ import type {
   ResolveData,
   ResolveErrors,
   ResolveResponses,
+  ResourceRelationsData,
+  ResourceRelationsErrors,
+  ResourceRelationsResponses,
   RestoreInstanceData,
   RestoreInstanceErrors,
   RestoreInstanceResponses,
@@ -2613,6 +2586,9 @@ import type {
   ReviewTaskData,
   ReviewTaskErrors,
   ReviewTaskResponses,
+  RevokeData,
+  RevokeErrors,
+  RevokeResponses,
   RevokeResultData,
   RevokeResultErrors,
   RevokeResultResponses,
@@ -2643,9 +2619,6 @@ import type {
   SearchData,
   SearchErrors,
   SearchResponses,
-  SeedDemoData,
-  SeedDemoErrors,
-  SeedDemoResponses,
   SendManualData,
   SendManualErrors,
   SendManualResponses,
@@ -2745,9 +2718,6 @@ import type {
   SyncToTemplatesData,
   SyncToTemplatesErrors,
   SyncToTemplatesResponses,
-  TargetModeResolveData,
-  TargetModeResolveErrors,
-  TargetModeResolveResponses,
   TargetModesData,
   TargetModesErrors,
   TargetModesResponses,
@@ -2781,18 +2751,12 @@ import type {
   TriggerExecutionData,
   TriggerExecutionErrors,
   TriggerExecutionResponses,
-  TriggerFireData,
-  TriggerFireErrors,
-  TriggerFireResponses,
   TriggerOnDemandPlanData,
   TriggerOnDemandPlanErrors,
   TriggerOnDemandPlanResponses,
   TriggerPointsData,
   TriggerPointsErrors,
   TriggerPointsResponses,
-  UnbindWechat2Data,
-  UnbindWechat2Errors,
-  UnbindWechat2Responses,
   UnbindWechatData,
   UnbindWechatErrors,
   UnbindWechatResponses,
@@ -2820,6 +2784,9 @@ import type {
   UpdateAlertRuleData,
   UpdateAlertRuleErrors,
   UpdateAlertRuleResponses,
+  UpdateAnnouncementsData,
+  UpdateAnnouncementsErrors,
+  UpdateAnnouncementsResponses,
   UpdateApplicationData,
   UpdateApplicationErrors,
   UpdateApplicationResponses,
@@ -2988,6 +2955,9 @@ import type {
   UpdatePresetData,
   UpdatePresetErrors,
   UpdatePresetResponses,
+  UpdateProfileData,
+  UpdateProfileErrors,
+  UpdateProfileResponses,
   UpdateProfileScoringProfilesData,
   UpdateProfileScoringProfilesErrors,
   UpdateProfileScoringProfilesResponses,
@@ -3081,15 +3051,12 @@ import type {
   UpdateTypesData,
   UpdateTypesErrors,
   UpdateTypesResponses,
+  UpdateUserData,
+  UpdateUserErrors,
+  UpdateUserResponses,
   UpdateUserStatusData,
   UpdateUserStatusErrors,
   UpdateUserStatusResponses,
-  UpdateUserUsers2Data,
-  UpdateUserUsers2Errors,
-  UpdateUserUsers2Responses,
-  UpdateUserUsersData,
-  UpdateUserUsersErrors,
-  UpdateUserUsersResponses,
   UpdateViolationRecordData,
   UpdateViolationRecordErrors,
   UpdateViolationRecordResponses,
@@ -3111,6 +3078,9 @@ import type {
   UpsertItemOverrideErrors,
   UpsertItemOverrideResponses,
   UpsertResponses,
+  UsageCountData,
+  UsageCountErrors,
+  UsageCountResponses,
   VerifyCaseData,
   VerifyCaseErrors,
   VerifyCaseResponses,
@@ -4259,6 +4229,20 @@ export const simulate2 = <ThrowOnError extends boolean = false>(
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/access/data-permissions/simulate',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  })
+
+export const chainPreview = <ThrowOnError extends boolean = false>(
+  options: Options<ChainPreviewData, ThrowOnError>
+) =>
+  (options.client ?? client).post<ChainPreviewResponses, ChainPreviewErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/access/data-permissions/simulate/chain-preview',
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -5507,6 +5491,40 @@ export const getCurrentUser = <ThrowOnError extends boolean = false>(
   })
 
 /**
+ * 修改当前用户密码
+ */
+export const changePassword = <ThrowOnError extends boolean = false>(
+  options: Options<ChangePasswordData, ThrowOnError>
+) =>
+  (options.client ?? client).put<ChangePasswordResponses, ChangePasswordErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/auth/password',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  })
+
+/**
+ * 更新当前用户个人资料
+ */
+export const updateProfile = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateProfileData, ThrowOnError>
+) =>
+  (options.client ?? client).put<UpdateProfileResponses, UpdateProfileErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/auth/profile',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  })
+
+/**
  * 刷新令牌
  */
 export const refresh = <ThrowOnError extends boolean = false>(
@@ -6054,288 +6072,6 @@ export const updateDataModules = <ThrowOnError extends boolean = false>(
   )
 
 /**
- * 获取所有用户
- */
-export const getAllUsers2 = <ThrowOnError extends boolean = false>(
-  options?: Options<GetAllUsers2Data, ThrowOnError>
-) =>
-  (options?.client ?? client).get<GetAllUsers2Responses, GetAllUsers2Errors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/domain/users',
-    ...options
-  })
-
-/**
- * 创建用户
- */
-export const createUserUsers2 = <ThrowOnError extends boolean = false>(
-  options: Options<CreateUserUsers2Data, ThrowOnError>
-) =>
-  (options.client ?? client).post<CreateUserUsers2Responses, CreateUserUsers2Errors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/domain/users',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
-    }
-  })
-
-/**
- * 批量删除用户
- */
-export const deleteUsersBatch2 = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteUsersBatch2Data, ThrowOnError>
-) =>
-  (options.client ?? client).delete<
-    DeleteUsersBatch2Responses,
-    DeleteUsersBatch2Errors,
-    ThrowOnError
-  >({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/domain/users/batch',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
-    }
-  })
-
-/**
- * 根据组织单元获取用户列表
- */
-export const getUsersByOrgUnit2 = <ThrowOnError extends boolean = false>(
-  options: Options<GetUsersByOrgUnit2Data, ThrowOnError>
-) =>
-  (options.client ?? client).get<
-    GetUsersByOrgUnit2Responses,
-    GetUsersByOrgUnit2Errors,
-    ThrowOnError
-  >({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/domain/users/by-org-unit/{orgUnitId}',
-    ...options
-  })
-
-/**
- * 根据用户名获取用户
- */
-export const getUserByUsername2 = <ThrowOnError extends boolean = false>(
-  options: Options<GetUserByUsername2Data, ThrowOnError>
-) =>
-  (options.client ?? client).get<
-    GetUserByUsername2Responses,
-    GetUserByUsername2Errors,
-    ThrowOnError
-  >({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/domain/users/by-username/{username}',
-    ...options
-  })
-
-/**
- * 检查用户名是否存在
- */
-export const existsUsernameExists2 = <ThrowOnError extends boolean = false>(
-  options: Options<ExistsUsernameExists2Data, ThrowOnError>
-) =>
-  (options.client ?? client).get<
-    ExistsUsernameExists2Responses,
-    ExistsUsernameExists2Errors,
-    ThrowOnError
-  >({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/domain/users/exists',
-    ...options
-  })
-
-/**
- * 分页查询用户
- */
-export const getUsersPage = <ThrowOnError extends boolean = false>(
-  options?: Options<GetUsersPageData, ThrowOnError>
-) =>
-  (options?.client ?? client).get<GetUsersPageResponses, GetUsersPageErrors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/domain/users/page',
-    ...options
-  })
-
-/**
- * 获取简单用户列表（用于选择器）
- */
-export const getSimpleUserListSimple2 = <ThrowOnError extends boolean = false>(
-  options?: Options<GetSimpleUserListSimple2Data, ThrowOnError>
-) =>
-  (options?.client ?? client).get<
-    GetSimpleUserListSimple2Responses,
-    GetSimpleUserListSimple2Errors,
-    ThrowOnError
-  >({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/domain/users/simple',
-    ...options
-  })
-
-/**
- * 删除用户
- */
-export const deleteUserUsers2 = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteUserUsers2Data, ThrowOnError>
-) =>
-  (options.client ?? client).delete<
-    DeleteUserUsers2Responses,
-    DeleteUserUsers2Errors,
-    ThrowOnError
-  >({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/domain/users/{id}',
-    ...options
-  })
-
-/**
- * 获取用户详情
- */
-export const getUserUsers2 = <ThrowOnError extends boolean = false>(
-  options: Options<GetUserUsers2Data, ThrowOnError>
-) =>
-  (options.client ?? client).get<GetUserUsers2Responses, GetUserUsers2Errors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/domain/users/{id}',
-    ...options
-  })
-
-/**
- * 更新用户
- */
-export const updateUserUsers2 = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateUserUsers2Data, ThrowOnError>
-) =>
-  (options.client ?? client).put<UpdateUserUsers2Responses, UpdateUserUsers2Errors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/domain/users/{id}',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
-    }
-  })
-
-/**
- * 绑定微信
- */
-export const bindWechat2 = <ThrowOnError extends boolean = false>(
-  options: Options<BindWechat2Data, ThrowOnError>
-) =>
-  (options.client ?? client).post<BindWechat2Responses, BindWechat2Errors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/domain/users/{id}/bind-wechat',
-    ...options
-  })
-
-/**
- * 禁用用户
- */
-export const disableUserDisable2 = <ThrowOnError extends boolean = false>(
-  options: Options<DisableUserDisable2Data, ThrowOnError>
-) =>
-  (options.client ?? client).post<
-    DisableUserDisable2Responses,
-    DisableUserDisable2Errors,
-    ThrowOnError
-  >({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/domain/users/{id}/disable',
-    ...options
-  })
-
-/**
- * 启用用户
- */
-export const enableUserEnable2 = <ThrowOnError extends boolean = false>(
-  options: Options<EnableUserEnable2Data, ThrowOnError>
-) =>
-  (options.client ?? client).post<
-    EnableUserEnable2Responses,
-    EnableUserEnable2Errors,
-    ThrowOnError
-  >({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/domain/users/{id}/enable',
-    ...options
-  })
-
-/**
- * 重置用户密码
- */
-export const resetPassword2 = <ThrowOnError extends boolean = false>(
-  options: Options<ResetPassword2Data, ThrowOnError>
-) =>
-  (options.client ?? client).post<ResetPassword2Responses, ResetPassword2Errors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/domain/users/{id}/reset-password',
-    ...options
-  })
-
-/**
- * 获取用户角色ID列表
- */
-export const getUserRoleIds = <ThrowOnError extends boolean = false>(
-  options: Options<GetUserRoleIdsData, ThrowOnError>
-) =>
-  (options.client ?? client).get<GetUserRoleIdsResponses, GetUserRoleIdsErrors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/domain/users/{id}/roles',
-    ...options
-  })
-
-/**
- * 分配角色给用户
- */
-export const assignRoles = <ThrowOnError extends boolean = false>(
-  options: Options<AssignRolesData, ThrowOnError>
-) =>
-  (options.client ?? client).post<AssignRolesResponses, AssignRolesErrors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/domain/users/{id}/roles',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
-    }
-  })
-
-/**
- * 解绑微信
- */
-export const unbindWechat2 = <ThrowOnError extends boolean = false>(
-  options: Options<UnbindWechat2Data, ThrowOnError>
-) =>
-  (options.client ?? client).post<UnbindWechat2Responses, UnbindWechat2Errors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/domain/users/{id}/unbind-wechat',
-    ...options
-  })
-
-/**
  * 报名列表
  */
 export const listApplications = <ThrowOnError extends boolean = false>(
@@ -6844,6 +6580,16 @@ export const resetField = <ThrowOnError extends boolean = false>(
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/entity-type-configs/{id}/reset-field',
+    ...options
+  })
+
+export const usageCount = <ThrowOnError extends boolean = false>(
+  options: Options<UsageCountData, ThrowOnError>
+) =>
+  (options.client ?? client).get<UsageCountResponses, UsageCountErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/entity-type-configs/{id}/usage-count',
     ...options
   })
 
@@ -8464,10 +8210,10 @@ export const history_ = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const publish = <ThrowOnError extends boolean = false>(
-  options: Options<PublishData, ThrowOnError>
+export const publish2 = <ThrowOnError extends boolean = false>(
+  options: Options<Publish2Data, ThrowOnError>
 ) =>
-  (options.client ?? client).post<PublishResponses, PublishErrors, ThrowOnError>({
+  (options.client ?? client).post<Publish2Responses, Publish2Errors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/inspection/indicator-results/{id}/publish',
@@ -12244,6 +11990,16 @@ export const updatePermission = <ThrowOnError extends boolean = false>(
     }
   })
 
+export const dataResources = <ThrowOnError extends boolean = false>(
+  options?: Options<DataResourcesData, ThrowOnError>
+) =>
+  (options?.client ?? client).get<DataResourcesResponses, DataResourcesErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/plugin-platform/data-resources',
+    ...options
+  })
+
 export const dependencyGraph = <ThrowOnError extends boolean = false>(
   options?: Options<DependencyGraphData, ThrowOnError>
 ) =>
@@ -12294,98 +12050,18 @@ export const policies = <ThrowOnError extends boolean = false>(
     ...options
   })
 
-export const datascopeResolve = <ThrowOnError extends boolean = false>(
-  options: Options<DatascopeResolveData, ThrowOnError>
+export const resourceRelations = <ThrowOnError extends boolean = false>(
+  options?: Options<ResourceRelationsData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<DatascopeResolveResponses, DatascopeResolveErrors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/plugin-platform/sandbox/datascope/resolve',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
-    }
-  })
-
-export const policyCheck = <ThrowOnError extends boolean = false>(
-  options: Options<PolicyCheckData, ThrowOnError>
-) =>
-  (options.client ?? client).post<PolicyCheckResponses, PolicyCheckErrors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/plugin-platform/sandbox/policy/check',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
-    }
-  })
-
-export const relationFind = <ThrowOnError extends boolean = false>(
-  options: Options<RelationFindData, ThrowOnError>
-) =>
-  (options.client ?? client).post<RelationFindResponses, RelationFindErrors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/plugin-platform/sandbox/relation/find',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
-    }
-  })
-
-export const reset = <ThrowOnError extends boolean = false>(
-  options?: Options<ResetData, ThrowOnError>
-) =>
-  (options?.client ?? client).delete<ResetResponses, ResetErrors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/plugin-platform/sandbox/reset',
-    ...options
-  })
-
-export const seedDemo = <ThrowOnError extends boolean = false>(
-  options?: Options<SeedDemoData, ThrowOnError>
-) =>
-  (options?.client ?? client).post<SeedDemoResponses, SeedDemoErrors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/plugin-platform/sandbox/seed-demo',
-    ...options
-  })
-
-export const targetModeResolve = <ThrowOnError extends boolean = false>(
-  options: Options<TargetModeResolveData, ThrowOnError>
-) =>
-  (options.client ?? client).post<
-    TargetModeResolveResponses,
-    TargetModeResolveErrors,
+  (options?.client ?? client).get<
+    ResourceRelationsResponses,
+    ResourceRelationsErrors,
     ThrowOnError
   >({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/plugin-platform/sandbox/target-mode/resolve',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
-    }
-  })
-
-export const triggerFire = <ThrowOnError extends boolean = false>(
-  options: Options<TriggerFireData, ThrowOnError>
-) =>
-  (options.client ?? client).post<TriggerFireResponses, TriggerFireErrors, ThrowOnError>({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/plugin-platform/sandbox/trigger/fire',
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
-    }
+    url: '/plugin-platform/resource-relations',
+    ...options
   })
 
 export const subscriptionRules = <ThrowOnError extends boolean = false>(
@@ -12831,6 +12507,23 @@ export const getModules = <ThrowOnError extends boolean = false>(
   })
 
 /**
+ * 获取某资源已注册的可锚定关系 (R3c 多 grant 编辑器用; 数据驱动无硬编码)
+ */
+export const getResourceRelations = <ThrowOnError extends boolean = false>(
+  options: Options<GetResourceRelationsData, ThrowOnError>
+) =>
+  (options.client ?? client).get<
+    GetResourceRelationsResponses,
+    GetResourceRelationsErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/roles/data-permissions/resource-relations',
+    ...options
+  })
+
+/**
  * 获取所有数据范围选项 (合并 CORE 5 种 + 插件贡献维度)
  */
 export const getScopes = <ThrowOnError extends boolean = false>(
@@ -13217,6 +12910,138 @@ export const getChildModules = <ThrowOnError extends boolean = false>(
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/system-modules/{parentCode}/children',
+    ...options
+  })
+
+/**
+ * 公告分页列表
+ */
+export const listAnnouncements = <ThrowOnError extends boolean = false>(
+  options?: Options<ListAnnouncementsData, ThrowOnError>
+) =>
+  (options?.client ?? client).get<
+    ListAnnouncementsResponses,
+    ListAnnouncementsErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/system/announcements',
+    ...options
+  })
+
+/**
+ * 新建公告
+ */
+export const createAnnouncements = <ThrowOnError extends boolean = false>(
+  options: Options<CreateAnnouncementsData, ThrowOnError>
+) =>
+  (options.client ?? client).post<
+    CreateAnnouncementsResponses,
+    CreateAnnouncementsErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/system/announcements',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  })
+
+/**
+ * 删除公告 (逻辑删除)
+ */
+export const deleteAnnouncements = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteAnnouncementsData, ThrowOnError>
+) =>
+  (options.client ?? client).delete<
+    DeleteAnnouncementsResponses,
+    DeleteAnnouncementsErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/system/announcements/{id}',
+    ...options
+  })
+
+/**
+ * 公告详情
+ */
+export const detailAnnouncements = <ThrowOnError extends boolean = false>(
+  options: Options<DetailAnnouncementsData, ThrowOnError>
+) =>
+  (options.client ?? client).get<
+    DetailAnnouncementsResponses,
+    DetailAnnouncementsErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/system/announcements/{id}',
+    ...options
+  })
+
+/**
+ * 编辑公告
+ */
+export const updateAnnouncements = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateAnnouncementsData, ThrowOnError>
+) =>
+  (options.client ?? client).put<
+    UpdateAnnouncementsResponses,
+    UpdateAnnouncementsErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/system/announcements/{id}',
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  })
+
+/**
+ * 置顶/取消置顶
+ */
+export const pin = <ThrowOnError extends boolean = false>(
+  options: Options<PinData, ThrowOnError>
+) =>
+  (options.client ?? client).post<PinResponses, PinErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/system/announcements/{id}/pin',
+    ...options
+  })
+
+/**
+ * 发布公告
+ */
+export const publish = <ThrowOnError extends boolean = false>(
+  options: Options<PublishData, ThrowOnError>
+) =>
+  (options.client ?? client).post<PublishResponses, PublishErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/system/announcements/{id}/publish',
+    ...options
+  })
+
+/**
+ * 撤销发布
+ */
+export const revoke = <ThrowOnError extends boolean = false>(
+  options: Options<RevokeData, ThrowOnError>
+) =>
+  (options.client ?? client).post<RevokeResponses, RevokeErrors, ThrowOnError>({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/system/announcements/{id}/revoke',
     ...options
   })
 
@@ -16320,10 +16145,10 @@ export const getAllUsers = <ThrowOnError extends boolean = false>(
 /**
  * 创建用户
  */
-export const createUserUsers = <ThrowOnError extends boolean = false>(
-  options: Options<CreateUserUsersData, ThrowOnError>
+export const createUser = <ThrowOnError extends boolean = false>(
+  options: Options<CreateUserData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<CreateUserUsersResponses, CreateUserUsersErrors, ThrowOnError>({
+  (options.client ?? client).post<CreateUserResponses, CreateUserErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/users',
@@ -16337,14 +16162,10 @@ export const createUserUsers = <ThrowOnError extends boolean = false>(
 /**
  * 批量删除用户
  */
-export const deleteUsersBatch = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteUsersBatchData, ThrowOnError>
+export const deleteUsers = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteUsersData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<
-    DeleteUsersBatchResponses,
-    DeleteUsersBatchErrors,
-    ThrowOnError
-  >({
+  (options.client ?? client).delete<DeleteUsersResponses, DeleteUsersErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/users/batch',
@@ -16388,14 +16209,10 @@ export const getUserByUsername = <ThrowOnError extends boolean = false>(
 /**
  * 检查用户名是否存在
  */
-export const existsUsernameExists = <ThrowOnError extends boolean = false>(
-  options: Options<ExistsUsernameExistsData, ThrowOnError>
+export const existsUsername = <ThrowOnError extends boolean = false>(
+  options: Options<ExistsUsernameData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<
-    ExistsUsernameExistsResponses,
-    ExistsUsernameExistsErrors,
-    ThrowOnError
-  >({
+  (options.client ?? client).get<ExistsUsernameResponses, ExistsUsernameErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/users/exists',
@@ -16444,12 +16261,12 @@ export const getUserPage = <ThrowOnError extends boolean = false>(
 /**
  * 获取简单用户列表
  */
-export const getSimpleUserListSimple = <ThrowOnError extends boolean = false>(
-  options?: Options<GetSimpleUserListSimpleData, ThrowOnError>
+export const getSimpleUserList = <ThrowOnError extends boolean = false>(
+  options?: Options<GetSimpleUserListData, ThrowOnError>
 ) =>
   (options?.client ?? client).get<
-    GetSimpleUserListSimpleResponses,
-    GetSimpleUserListSimpleErrors,
+    GetSimpleUserListResponses,
+    GetSimpleUserListErrors,
     ThrowOnError
   >({
     responseType: 'json',
@@ -16495,10 +16312,10 @@ export const getUsersWithOrgUnits = <ThrowOnError extends boolean = false>(
 /**
  * 删除用户
  */
-export const deleteUserUsers = <ThrowOnError extends boolean = false>(
-  options: Options<DeleteUserUsersData, ThrowOnError>
+export const deleteUser = <ThrowOnError extends boolean = false>(
+  options: Options<DeleteUserData, ThrowOnError>
 ) =>
-  (options.client ?? client).delete<DeleteUserUsersResponses, DeleteUserUsersErrors, ThrowOnError>({
+  (options.client ?? client).delete<DeleteUserResponses, DeleteUserErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/users/{id}',
@@ -16508,10 +16325,10 @@ export const deleteUserUsers = <ThrowOnError extends boolean = false>(
 /**
  * 获取用户详情
  */
-export const getUserUsers = <ThrowOnError extends boolean = false>(
-  options: Options<GetUserUsersData, ThrowOnError>
+export const getUser = <ThrowOnError extends boolean = false>(
+  options: Options<GetUserData, ThrowOnError>
 ) =>
-  (options.client ?? client).get<GetUserUsersResponses, GetUserUsersErrors, ThrowOnError>({
+  (options.client ?? client).get<GetUserResponses, GetUserErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/users/{id}',
@@ -16521,10 +16338,10 @@ export const getUserUsers = <ThrowOnError extends boolean = false>(
 /**
  * 更新用户
  */
-export const updateUserUsers = <ThrowOnError extends boolean = false>(
-  options: Options<UpdateUserUsersData, ThrowOnError>
+export const updateUser = <ThrowOnError extends boolean = false>(
+  options: Options<UpdateUserData, ThrowOnError>
 ) =>
-  (options.client ?? client).put<UpdateUserUsersResponses, UpdateUserUsersErrors, ThrowOnError>({
+  (options.client ?? client).put<UpdateUserResponses, UpdateUserErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/users/{id}',
@@ -16551,14 +16368,10 @@ export const bindWechat = <ThrowOnError extends boolean = false>(
 /**
  * 禁用用户
  */
-export const disableUserDisable = <ThrowOnError extends boolean = false>(
-  options: Options<DisableUserDisableData, ThrowOnError>
+export const disableUser = <ThrowOnError extends boolean = false>(
+  options: Options<DisableUserData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<
-    DisableUserDisableResponses,
-    DisableUserDisableErrors,
-    ThrowOnError
-  >({
+  (options.client ?? client).post<DisableUserResponses, DisableUserErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/users/{id}/disable',
@@ -16568,10 +16381,10 @@ export const disableUserDisable = <ThrowOnError extends boolean = false>(
 /**
  * 启用用户
  */
-export const enableUserEnable = <ThrowOnError extends boolean = false>(
-  options: Options<EnableUserEnableData, ThrowOnError>
+export const enableUser = <ThrowOnError extends boolean = false>(
+  options: Options<EnableUserData, ThrowOnError>
 ) =>
-  (options.client ?? client).post<EnableUserEnableResponses, EnableUserEnableErrors, ThrowOnError>({
+  (options.client ?? client).post<EnableUserResponses, EnableUserErrors, ThrowOnError>({
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/users/{id}/enable',
@@ -16588,23 +16401,6 @@ export const resetPassword = <ThrowOnError extends boolean = false>(
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/users/{id}/reset-password',
-    ...options
-  })
-
-/**
- * 重置用户密码（含管理员保护）
- */
-export const resetPasswordSafe = <ThrowOnError extends boolean = false>(
-  options: Options<ResetPasswordSafeData, ThrowOnError>
-) =>
-  (options.client ?? client).post<
-    ResetPasswordSafeResponses,
-    ResetPasswordSafeErrors,
-    ThrowOnError
-  >({
-    responseType: 'json',
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/users/{id}/reset-password-safe',
     ...options
   })
 
@@ -16954,6 +16750,23 @@ export const checkOut = <ThrowOnError extends boolean = false>(
     responseType: 'json',
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/v9/places/{id}/check-out/{recordId}',
+    ...options
+  })
+
+/**
+ * 获取场所有效性别 (自身或继承自祖先, MALE/FEMALE/MIXED)
+ */
+export const getEffectiveGender = <ThrowOnError extends boolean = false>(
+  options: Options<GetEffectiveGenderData, ThrowOnError>
+) =>
+  (options.client ?? client).get<
+    GetEffectiveGenderResponses,
+    GetEffectiveGenderErrors,
+    ThrowOnError
+  >({
+    responseType: 'json',
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v9/places/{id}/effective-gender',
     ...options
   })
 

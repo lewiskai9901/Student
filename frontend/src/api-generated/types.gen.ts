@@ -50,16 +50,13 @@ export type AccessRelation = {
   createdBy?: LongId
   currentlyActive?: boolean
   id?: LongId
-  /**
-   * @deprecated
-   */
-  includeChildren?: boolean
   metadata?: {
     [key: string]: {
       [key: string]: unknown
     }
   }
   orgSubject?: boolean
+  primary?: boolean
   readWrite?: boolean
   relation?: string
   remark?: string
@@ -172,6 +169,31 @@ export type AlertRule = {
   tenantId?: LongId
   thresholdConfig?: string
   updatedAt?: string
+}
+
+export type AnnouncementPo = {
+  announcementType?: string
+  attachmentUrl?: string
+  content?: string
+  createdAt?: string
+  createdBy?: string
+  deleted?: number
+  endTime?: string
+  id?: string
+  isPinned?: number
+  isPublished?: number
+  priority?: number
+  publishTime?: string
+  publisherId?: string
+  publisherName?: string
+  startTime?: string
+  targetIds?: string
+  targetType?: string
+  tenantId?: string
+  title?: string
+  updatedAt?: string
+  updatedBy?: string
+  viewCount?: number
 }
 
 export type ApproveAppealRequest = {
@@ -340,6 +362,22 @@ export type CandidateView = {
   severity?: string
   severityScore?: number
   suggestedDeadlineDays?: number
+}
+
+export type ChainHopDto = {
+  combine?: string
+  direction?: string
+  relations?: Array<string>
+  subtree?: boolean
+  toType?: string
+}
+
+export type ChainPreviewRequest = {
+  asUserId?: LongId
+  hops?: Array<ChainHopDto>
+  moduleCode?: string
+  relation?: string
+  subjectParam?: string
 }
 
 export type ChangeStatusRequest = {
@@ -720,7 +758,6 @@ export type CreateCohortRequest = {
 
 export type CreateCommand = {
   accessLevel?: 'READ_ONLY' | 'FULL' | 'OWNER'
-  includeChildren?: boolean
   metadata?: {
     [key: string]: {
       [key: string]: unknown
@@ -1257,6 +1294,11 @@ export type CreateTemplateRequest = {
 }
 
 export type CreateUserRequest = {
+  attributes?: {
+    [key: string]: {
+      [key: string]: unknown
+    }
+  }
   birthDate?: string
   email?: string
   gender?: number
@@ -1367,7 +1409,10 @@ export type DataModulePo = {
   pluginEnabled?: boolean
   resourceType?: string
   sortOrder?: number
+  subjectRelationFilterable?: boolean
   tenantId?: string
+  typeEntity?: string
+  typeField?: string
 }
 
 /**
@@ -1896,6 +1941,14 @@ export type HolidayCalendar = {
   version?: LongId
   workdays?: string
   year?: number
+}
+
+export type Hop = {
+  combine?: 'AND' | 'OR'
+  direction?: 'FORWARD' | 'REVERSE'
+  relations?: Array<string>
+  subtree?: boolean
+  toType?: string
 }
 
 /**
@@ -2479,9 +2532,17 @@ export type ModuleDto = {
 }
 
 export type ModulePermissionDto = {
+  anchorParam?: string
+  customOrgIds?: Array<string>
+  includeSubtree?: boolean
   moduleCode?: string
+  orgAnchor?: string
+  relationGrants?: Array<RelationGrant>
   scopeCode?: string
   scopeItems?: Array<ScopeItemDto>
+  subjectRelExclude?: Array<string>
+  subjectRelInclude?: Array<string>
+  typeFilter?: Array<string>
 }
 
 export type MsgNotification = {
@@ -2802,6 +2863,19 @@ export type OrgUnitTreeDto = {
   unitCode?: string
   unitName?: string
   unitType?: string
+}
+
+/**
+ * Response data
+ */
+export type PageAnnouncementPo = {
+  current?: string
+  optimizeCountSql?: PageAnnouncementPo
+  pages?: string
+  records?: Array<AnnouncementPo>
+  searchCount?: PageAnnouncementPo
+  size?: string
+  total?: string
 }
 
 /**
@@ -3437,6 +3511,15 @@ export type RejectTaskRequest = {
   comment?: string
 }
 
+export type RelationGrant = {
+  hops?: Array<Hop>
+  orgIds?: Array<LongId>
+  relation?: string
+  subject?: 'SELF' | 'MY_ORG' | 'RELATION' | 'CUSTOM' | 'PLUGIN_DIM' | 'ALL'
+  subjectParam?: string
+  subtree?: boolean
+}
+
 export type RemarkRequest = {
   remark?: string
 }
@@ -3444,6 +3527,14 @@ export type RemarkRequest = {
 export type ReorderSectionsRequest = {
   parentSectionId: LongId
   sectionIds: Array<LongId>
+}
+
+/**
+ * Response data
+ */
+export type ResourceRelationOption = {
+  relationCode?: string
+  storageKind?: string
 }
 
 /**
@@ -3574,6 +3665,25 @@ export type ResultAlertRule = {
    * Timestamp
    */
   timestamp?: LongId
+}
+
+/**
+ * Unified response result
+ */
+export type ResultAnnouncementPo = {
+  /**
+   * Response code
+   */
+  code?: number
+  data?: AnnouncementPo
+  /**
+   * Response message
+   */
+  message?: string
+  /**
+   * Timestamp
+   */
+  timestamp?: string
 }
 
 /**
@@ -6200,6 +6310,28 @@ export type ResultListRecurrenceView = {
 /**
  * Unified response result
  */
+export type ResultListResourceRelationOption = {
+  /**
+   * Response code
+   */
+  code?: number
+  /**
+   * Response data
+   */
+  data?: Array<ResourceRelationOption>
+  /**
+   * Response message
+   */
+  message?: string
+  /**
+   * Timestamp
+   */
+  timestamp?: LongId
+}
+
+/**
+ * Unified response result
+ */
 export type ResultListResponseSetOption = {
   /**
    * Response code
@@ -7445,6 +7577,25 @@ export type ResultOrgUnitDto = {
 /**
  * Unified response result
  */
+export type ResultPageAnnouncementPo = {
+  /**
+   * Response code
+   */
+  code?: number
+  data?: PageAnnouncementPo
+  /**
+   * Response message
+   */
+  message?: string
+  /**
+   * Timestamp
+   */
+  timestamp?: string
+}
+
+/**
+ * Unified response result
+ */
 export type ResultPageCourseDto = {
   /**
    * Response code
@@ -8614,11 +8765,19 @@ export type RoleAssignmentItem = {
  * Response data
  */
 export type RoleModulePermissionDto = {
+  anchorParam?: string
+  customOrgIds?: Array<string>
   domainCode?: string
+  includeSubtree?: boolean
   moduleCode?: string
   moduleName?: string
+  orgAnchor?: string
+  relationGrants?: Array<RelationGrant>
   scopeCode?: string
   scopeItems?: Array<ScopeItemDto>
+  subjectRelExclude?: Array<string>
+  subjectRelInclude?: Array<string>
+  typeFilter?: Array<string>
 }
 
 export type RolePermissionConfigDto = {
@@ -8664,9 +8823,17 @@ export type SaveFormDataRequest = {
 }
 
 export type SavePermissionCommand = {
+  anchorParam?: string
+  customOrgIds?: Array<LongId>
+  includeSubtree?: boolean
   moduleCode?: string
+  orgAnchor?: string
+  relationGrants?: Array<RelationGrant>
   scopeCode?: string
   scopeItems?: Array<ScopeItemDto>
+  subjectRelExclude?: Array<string>
+  subjectRelInclude?: Array<string>
+  typeFilter?: Array<string>
 }
 
 /**
@@ -9631,7 +9798,6 @@ export type TemplateSection = {
   isRepeatable?: boolean
   latestVersion?: number
   parentSectionId?: LongId
-  refSectionId?: LongId
   root?: boolean
   scoringConfig?: string
   sectionCode?: string
@@ -9822,7 +9988,6 @@ export type UpdateCohortRequest = {
 
 export type UpdateCommand = {
   accessLevel?: 'READ_ONLY' | 'FULL' | 'OWNER'
-  includeChildren?: boolean
   metadata?: {
     [key: string]: {
       [key: string]: unknown
@@ -10239,6 +10404,7 @@ export type UpdateResponseSetRequest = {
 
 export type UpdateRoleRequest = {
   description?: string
+  isEnabled?: boolean
   roleName?: string
 }
 
@@ -10341,6 +10507,11 @@ export type UpdateTemplateRequest = {
 }
 
 export type UpdateUserRequest = {
+  attributes?: {
+    [key: string]: {
+      [key: string]: unknown
+    }
+  }
   birthDate?: string
   email?: string
   gender?: number
@@ -10382,6 +10553,11 @@ export type UpsertRequest = {
  */
 export type UserDomainResponse = {
   allowMultipleDevices?: boolean
+  attributes?: {
+    [key: string]: {
+      [key: string]: unknown
+    }
+  }
   avatar?: string
   birthDate?: string
   createdAt?: string
@@ -10479,6 +10655,23 @@ export type ViolationRecord = {
 /**
  * Response data
  */
+export type PageAnnouncementPoWritable = {
+  countId?: string
+  current?: string
+  maxLimit?: string
+  optimizeCountSql?: PageAnnouncementPoWritable
+  optimizeJoinOfCountSql?: boolean
+  orders?: Array<OrderItem>
+  pages?: string
+  records?: Array<AnnouncementPo>
+  searchCount?: PageAnnouncementPoWritable
+  size?: string
+  total?: string
+}
+
+/**
+ * Response data
+ */
 export type PageCourseDtoWritable = {
   countId?: string
   current?: string
@@ -10525,6 +10718,25 @@ export type PageMajorDtoWritable = {
   searchCount?: PageMajorDtoWritable
   size?: string
   total?: string
+}
+
+/**
+ * Unified response result
+ */
+export type ResultPageAnnouncementPoWritable = {
+  /**
+   * Response code
+   */
+  code?: number
+  data?: PageAnnouncementPoWritable
+  /**
+   * Response message
+   */
+  message?: string
+  /**
+   * Timestamp
+   */
+  timestamp?: string
 }
 
 /**
@@ -14661,6 +14873,59 @@ export type Simulate2Responses = {
 }
 
 export type Simulate2Response = Simulate2Responses[keyof Simulate2Responses]
+
+export type ChainPreviewData = {
+  body: ChainPreviewRequest
+  path?: never
+  query?: never
+  url: '/access/data-permissions/simulate/chain-preview'
+}
+
+export type ChainPreviewErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type ChainPreviewError = ChainPreviewErrors[keyof ChainPreviewErrors]
+
+export type ChainPreviewResponses = {
+  /**
+   * OK
+   */
+  200: ResultMapStringObject
+}
+
+export type ChainPreviewResponse = ChainPreviewResponses[keyof ChainPreviewResponses]
 
 export type ListEventsActivityEventsData = {
   body?: never
@@ -20443,6 +20708,120 @@ export type GetCurrentUserResponses = {
 
 export type GetCurrentUserResponse = GetCurrentUserResponses[keyof GetCurrentUserResponses]
 
+export type ChangePasswordData = {
+  body: {
+    [key: string]: {
+      [key: string]: unknown
+    }
+  }
+  path?: never
+  query?: never
+  url: '/auth/password'
+}
+
+export type ChangePasswordErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type ChangePasswordError = ChangePasswordErrors[keyof ChangePasswordErrors]
+
+export type ChangePasswordResponses = {
+  /**
+   * OK
+   */
+  200: ResultVoid
+}
+
+export type ChangePasswordResponse = ChangePasswordResponses[keyof ChangePasswordResponses]
+
+export type UpdateProfileData = {
+  body: {
+    [key: string]: {
+      [key: string]: unknown
+    }
+  }
+  path?: never
+  query?: never
+  url: '/auth/profile'
+}
+
+export type UpdateProfileErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type UpdateProfileError = UpdateProfileErrors[keyof UpdateProfileErrors]
+
+export type UpdateProfileResponses = {
+  /**
+   * OK
+   */
+  200: ResultVoid
+}
+
+export type UpdateProfileResponse = UpdateProfileResponses[keyof UpdateProfileResponses]
+
 export type RefreshData = {
   body: RefreshTokenRequest
   path?: never
@@ -22713,1072 +23092,6 @@ export type UpdateDataModulesResponses = {
 
 export type UpdateDataModulesResponse = UpdateDataModulesResponses[keyof UpdateDataModulesResponses]
 
-export type GetAllUsers2Data = {
-  body?: never
-  path?: never
-  query?: never
-  url: '/domain/users'
-}
-
-export type GetAllUsers2Errors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
-  /**
-   * Conflict
-   */
-  409: ResultVoid
-  /**
-   * Unsupported Media Type
-   */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type GetAllUsers2Error = GetAllUsers2Errors[keyof GetAllUsers2Errors]
-
-export type GetAllUsers2Responses = {
-  /**
-   * OK
-   */
-  200: ResultListUserDomainResponse
-}
-
-export type GetAllUsers2Response = GetAllUsers2Responses[keyof GetAllUsers2Responses]
-
-export type CreateUserUsers2Data = {
-  body: CreateUserRequest
-  path?: never
-  query?: never
-  url: '/domain/users'
-}
-
-export type CreateUserUsers2Errors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
-  /**
-   * Conflict
-   */
-  409: ResultVoid
-  /**
-   * Unsupported Media Type
-   */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type CreateUserUsers2Error = CreateUserUsers2Errors[keyof CreateUserUsers2Errors]
-
-export type CreateUserUsers2Responses = {
-  /**
-   * OK
-   */
-  200: ResultUserDomainResponse
-}
-
-export type CreateUserUsers2Response = CreateUserUsers2Responses[keyof CreateUserUsers2Responses]
-
-export type DeleteUsersBatch2Data = {
-  body: Array<string>
-  path?: never
-  query?: never
-  url: '/domain/users/batch'
-}
-
-export type DeleteUsersBatch2Errors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
-  /**
-   * Conflict
-   */
-  409: ResultVoid
-  /**
-   * Unsupported Media Type
-   */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type DeleteUsersBatch2Error = DeleteUsersBatch2Errors[keyof DeleteUsersBatch2Errors]
-
-export type DeleteUsersBatch2Responses = {
-  /**
-   * OK
-   */
-  200: ResultVoid
-}
-
-export type DeleteUsersBatch2Response = DeleteUsersBatch2Responses[keyof DeleteUsersBatch2Responses]
-
-export type GetUsersByOrgUnit2Data = {
-  body?: never
-  path: {
-    /**
-     * 组织单元ID
-     */
-    orgUnitId: string
-  }
-  query?: never
-  url: '/domain/users/by-org-unit/{orgUnitId}'
-}
-
-export type GetUsersByOrgUnit2Errors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
-  /**
-   * Conflict
-   */
-  409: ResultVoid
-  /**
-   * Unsupported Media Type
-   */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type GetUsersByOrgUnit2Error = GetUsersByOrgUnit2Errors[keyof GetUsersByOrgUnit2Errors]
-
-export type GetUsersByOrgUnit2Responses = {
-  /**
-   * OK
-   */
-  200: ResultListUserDomainResponse
-}
-
-export type GetUsersByOrgUnit2Response =
-  GetUsersByOrgUnit2Responses[keyof GetUsersByOrgUnit2Responses]
-
-export type GetUserByUsername2Data = {
-  body?: never
-  path: {
-    /**
-     * 用户名
-     */
-    username: string
-  }
-  query?: never
-  url: '/domain/users/by-username/{username}'
-}
-
-export type GetUserByUsername2Errors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
-  /**
-   * Conflict
-   */
-  409: ResultVoid
-  /**
-   * Unsupported Media Type
-   */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type GetUserByUsername2Error = GetUserByUsername2Errors[keyof GetUserByUsername2Errors]
-
-export type GetUserByUsername2Responses = {
-  /**
-   * OK
-   */
-  200: ResultUserDomainResponse
-}
-
-export type GetUserByUsername2Response =
-  GetUserByUsername2Responses[keyof GetUserByUsername2Responses]
-
-export type ExistsUsernameExists2Data = {
-  body?: never
-  path?: never
-  query: {
-    /**
-     * 用户名
-     */
-    username: string
-    /**
-     * 排除的用户ID
-     */
-    excludeId?: string
-  }
-  url: '/domain/users/exists'
-}
-
-export type ExistsUsernameExists2Errors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
-  /**
-   * Conflict
-   */
-  409: ResultVoid
-  /**
-   * Unsupported Media Type
-   */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type ExistsUsernameExists2Error =
-  ExistsUsernameExists2Errors[keyof ExistsUsernameExists2Errors]
-
-export type ExistsUsernameExists2Responses = {
-  /**
-   * OK
-   */
-  200: ResultBoolean
-}
-
-export type ExistsUsernameExists2Response =
-  ExistsUsernameExists2Responses[keyof ExistsUsernameExists2Responses]
-
-export type GetUsersPageData = {
-  body?: never
-  path?: never
-  query?: {
-    /**
-     * 页码
-     */
-    pageNum?: number
-    /**
-     * 每页数量
-     */
-    pageSize?: number
-    /**
-     * 用户名
-     */
-    username?: string
-    /**
-     * 姓名
-     */
-    realName?: string
-    /**
-     * 手机号
-     */
-    phone?: string
-    /**
-     * 组织单元ID
-     */
-    orgUnitId?: string
-    /**
-     * 状态
-     */
-    status?: number
-  }
-  url: '/domain/users/page'
-}
-
-export type GetUsersPageErrors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
-  /**
-   * Conflict
-   */
-  409: ResultVoid
-  /**
-   * Unsupported Media Type
-   */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type GetUsersPageError = GetUsersPageErrors[keyof GetUsersPageErrors]
-
-export type GetUsersPageResponses = {
-  /**
-   * OK
-   */
-  200: ResultPageResponse
-}
-
-export type GetUsersPageResponse = GetUsersPageResponses[keyof GetUsersPageResponses]
-
-export type GetSimpleUserListSimple2Data = {
-  body?: never
-  path?: never
-  query?: {
-    /**
-     * 关键词
-     */
-    keyword?: string
-  }
-  url: '/domain/users/simple'
-}
-
-export type GetSimpleUserListSimple2Errors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
-  /**
-   * Conflict
-   */
-  409: ResultVoid
-  /**
-   * Unsupported Media Type
-   */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type GetSimpleUserListSimple2Error =
-  GetSimpleUserListSimple2Errors[keyof GetSimpleUserListSimple2Errors]
-
-export type GetSimpleUserListSimple2Responses = {
-  /**
-   * OK
-   */
-  200: ResultListSimpleUserResponse
-}
-
-export type GetSimpleUserListSimple2Response =
-  GetSimpleUserListSimple2Responses[keyof GetSimpleUserListSimple2Responses]
-
-export type DeleteUserUsers2Data = {
-  body?: never
-  path: {
-    /**
-     * 用户ID
-     */
-    id: string
-  }
-  query?: never
-  url: '/domain/users/{id}'
-}
-
-export type DeleteUserUsers2Errors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
-  /**
-   * Conflict
-   */
-  409: ResultVoid
-  /**
-   * Unsupported Media Type
-   */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type DeleteUserUsers2Error = DeleteUserUsers2Errors[keyof DeleteUserUsers2Errors]
-
-export type DeleteUserUsers2Responses = {
-  /**
-   * OK
-   */
-  200: ResultVoid
-}
-
-export type DeleteUserUsers2Response = DeleteUserUsers2Responses[keyof DeleteUserUsers2Responses]
-
-export type GetUserUsers2Data = {
-  body?: never
-  path: {
-    /**
-     * 用户ID
-     */
-    id: string
-  }
-  query?: never
-  url: '/domain/users/{id}'
-}
-
-export type GetUserUsers2Errors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
-  /**
-   * Conflict
-   */
-  409: ResultVoid
-  /**
-   * Unsupported Media Type
-   */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type GetUserUsers2Error = GetUserUsers2Errors[keyof GetUserUsers2Errors]
-
-export type GetUserUsers2Responses = {
-  /**
-   * OK
-   */
-  200: ResultUserDomainResponse
-}
-
-export type GetUserUsers2Response = GetUserUsers2Responses[keyof GetUserUsers2Responses]
-
-export type UpdateUserUsers2Data = {
-  body: UpdateUserRequest
-  path: {
-    /**
-     * 用户ID
-     */
-    id: string
-  }
-  query?: never
-  url: '/domain/users/{id}'
-}
-
-export type UpdateUserUsers2Errors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
-  /**
-   * Conflict
-   */
-  409: ResultVoid
-  /**
-   * Unsupported Media Type
-   */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type UpdateUserUsers2Error = UpdateUserUsers2Errors[keyof UpdateUserUsers2Errors]
-
-export type UpdateUserUsers2Responses = {
-  /**
-   * OK
-   */
-  200: ResultUserDomainResponse
-}
-
-export type UpdateUserUsers2Response = UpdateUserUsers2Responses[keyof UpdateUserUsers2Responses]
-
-export type BindWechat2Data = {
-  body?: never
-  path: {
-    /**
-     * 用户ID
-     */
-    id: string
-  }
-  query: {
-    openid: string
-  }
-  url: '/domain/users/{id}/bind-wechat'
-}
-
-export type BindWechat2Errors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
-  /**
-   * Conflict
-   */
-  409: ResultVoid
-  /**
-   * Unsupported Media Type
-   */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type BindWechat2Error = BindWechat2Errors[keyof BindWechat2Errors]
-
-export type BindWechat2Responses = {
-  /**
-   * OK
-   */
-  200: ResultVoid
-}
-
-export type BindWechat2Response = BindWechat2Responses[keyof BindWechat2Responses]
-
-export type DisableUserDisable2Data = {
-  body?: never
-  path: {
-    /**
-     * 用户ID
-     */
-    id: string
-  }
-  query?: never
-  url: '/domain/users/{id}/disable'
-}
-
-export type DisableUserDisable2Errors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
-  /**
-   * Conflict
-   */
-  409: ResultVoid
-  /**
-   * Unsupported Media Type
-   */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type DisableUserDisable2Error = DisableUserDisable2Errors[keyof DisableUserDisable2Errors]
-
-export type DisableUserDisable2Responses = {
-  /**
-   * OK
-   */
-  200: ResultUserDomainResponse
-}
-
-export type DisableUserDisable2Response =
-  DisableUserDisable2Responses[keyof DisableUserDisable2Responses]
-
-export type EnableUserEnable2Data = {
-  body?: never
-  path: {
-    /**
-     * 用户ID
-     */
-    id: string
-  }
-  query?: never
-  url: '/domain/users/{id}/enable'
-}
-
-export type EnableUserEnable2Errors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
-  /**
-   * Conflict
-   */
-  409: ResultVoid
-  /**
-   * Unsupported Media Type
-   */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type EnableUserEnable2Error = EnableUserEnable2Errors[keyof EnableUserEnable2Errors]
-
-export type EnableUserEnable2Responses = {
-  /**
-   * OK
-   */
-  200: ResultUserDomainResponse
-}
-
-export type EnableUserEnable2Response = EnableUserEnable2Responses[keyof EnableUserEnable2Responses]
-
-export type ResetPassword2Data = {
-  body?: never
-  path: {
-    /**
-     * 用户ID
-     */
-    id: string
-  }
-  query?: never
-  url: '/domain/users/{id}/reset-password'
-}
-
-export type ResetPassword2Errors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
-  /**
-   * Conflict
-   */
-  409: ResultVoid
-  /**
-   * Unsupported Media Type
-   */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type ResetPassword2Error = ResetPassword2Errors[keyof ResetPassword2Errors]
-
-export type ResetPassword2Responses = {
-  /**
-   * OK
-   */
-  200: ResultString
-}
-
-export type ResetPassword2Response = ResetPassword2Responses[keyof ResetPassword2Responses]
-
-export type GetUserRoleIdsData = {
-  body?: never
-  path: {
-    /**
-     * 用户ID
-     */
-    id: string
-  }
-  query?: never
-  url: '/domain/users/{id}/roles'
-}
-
-export type GetUserRoleIdsErrors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
-  /**
-   * Conflict
-   */
-  409: ResultVoid
-  /**
-   * Unsupported Media Type
-   */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type GetUserRoleIdsError = GetUserRoleIdsErrors[keyof GetUserRoleIdsErrors]
-
-export type GetUserRoleIdsResponses = {
-  /**
-   * OK
-   */
-  200: ResultListLong
-}
-
-export type GetUserRoleIdsResponse = GetUserRoleIdsResponses[keyof GetUserRoleIdsResponses]
-
-export type AssignRolesData = {
-  body: Array<string>
-  path: {
-    /**
-     * 用户ID
-     */
-    id: string
-  }
-  query?: never
-  url: '/domain/users/{id}/roles'
-}
-
-export type AssignRolesErrors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
-  /**
-   * Conflict
-   */
-  409: ResultVoid
-  /**
-   * Unsupported Media Type
-   */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type AssignRolesError = AssignRolesErrors[keyof AssignRolesErrors]
-
-export type AssignRolesResponses = {
-  /**
-   * OK
-   */
-  200: ResultVoid
-}
-
-export type AssignRolesResponse = AssignRolesResponses[keyof AssignRolesResponses]
-
-export type UnbindWechat2Data = {
-  body?: never
-  path: {
-    /**
-     * 用户ID
-     */
-    id: string
-  }
-  query?: never
-  url: '/domain/users/{id}/unbind-wechat'
-}
-
-export type UnbindWechat2Errors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
-  /**
-   * Conflict
-   */
-  409: ResultVoid
-  /**
-   * Unsupported Media Type
-   */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type UnbindWechat2Error = UnbindWechat2Errors[keyof UnbindWechat2Errors]
-
-export type UnbindWechat2Responses = {
-  /**
-   * OK
-   */
-  200: ResultVoid
-}
-
-export type UnbindWechat2Response = UnbindWechat2Responses[keyof UnbindWechat2Responses]
-
 export type ListApplicationsData = {
   body?: never
   path?: never
@@ -25659,6 +24972,61 @@ export type ResetFieldResponses = {
 }
 
 export type ResetFieldResponse = ResetFieldResponses[keyof ResetFieldResponses]
+
+export type UsageCountData = {
+  body?: never
+  path: {
+    id: string
+  }
+  query?: never
+  url: '/entity-type-configs/{id}/usage-count'
+}
+
+export type UsageCountErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type UsageCountError = UsageCountErrors[keyof UsageCountErrors]
+
+export type UsageCountResponses = {
+  /**
+   * OK
+   */
+  200: ResultLong
+}
+
+export type UsageCountResponse = UsageCountResponses[keyof UsageCountResponses]
 
 export type LogData = {
   body: ClientError
@@ -32895,7 +32263,7 @@ export type HistoryResponses = {
 
 export type HistoryResponse = HistoryResponses[keyof HistoryResponses]
 
-export type PublishData = {
+export type Publish2Data = {
   body?: never
   path: {
     id: string
@@ -32904,7 +32272,7 @@ export type PublishData = {
   url: '/inspection/indicator-results/{id}/publish'
 }
 
-export type PublishErrors = {
+export type Publish2Errors = {
   /**
    * Bad Request
    */
@@ -32939,16 +32307,16 @@ export type PublishErrors = {
   500: ResultVoid
 }
 
-export type PublishError = PublishErrors[keyof PublishErrors]
+export type Publish2Error = Publish2Errors[keyof Publish2Errors]
 
-export type PublishResponses = {
+export type Publish2Responses = {
   /**
    * OK
    */
   200: ResultIndicatorResult
 }
 
-export type PublishResponse = PublishResponses[keyof PublishResponses]
+export type Publish2Response = Publish2Responses[keyof Publish2Responses]
 
 export type GetScoresData = {
   body?: never
@@ -48574,6 +47942,59 @@ export type UpdatePermissionResponses = {
 
 export type UpdatePermissionResponse = UpdatePermissionResponses[keyof UpdatePermissionResponses]
 
+export type DataResourcesData = {
+  body?: never
+  path?: never
+  query?: never
+  url: '/plugin-platform/data-resources'
+}
+
+export type DataResourcesErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type DataResourcesError = DataResourcesErrors[keyof DataResourcesErrors]
+
+export type DataResourcesResponses = {
+  /**
+   * OK
+   */
+  200: ResultListMapStringObject
+}
+
+export type DataResourcesResponse = DataResourcesResponses[keyof DataResourcesResponses]
+
 export type DependencyGraphData = {
   body?: never
   path?: never
@@ -48839,185 +48260,14 @@ export type PoliciesResponses = {
 
 export type PoliciesResponse = PoliciesResponses[keyof PoliciesResponses]
 
-export type DatascopeResolveData = {
-  body: {
-    [key: string]: {
-      [key: string]: unknown
-    }
-  }
-  path?: never
-  query?: never
-  url: '/plugin-platform/sandbox/datascope/resolve'
-}
-
-export type DatascopeResolveErrors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
-  /**
-   * Conflict
-   */
-  409: ResultVoid
-  /**
-   * Unsupported Media Type
-   */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type DatascopeResolveError = DatascopeResolveErrors[keyof DatascopeResolveErrors]
-
-export type DatascopeResolveResponses = {
-  /**
-   * OK
-   */
-  200: ResultMapStringObject
-}
-
-export type DatascopeResolveResponse = DatascopeResolveResponses[keyof DatascopeResolveResponses]
-
-export type PolicyCheckData = {
-  body: {
-    [key: string]: {
-      [key: string]: unknown
-    }
-  }
-  path?: never
-  query?: never
-  url: '/plugin-platform/sandbox/policy/check'
-}
-
-export type PolicyCheckErrors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
-  /**
-   * Conflict
-   */
-  409: ResultVoid
-  /**
-   * Unsupported Media Type
-   */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type PolicyCheckError = PolicyCheckErrors[keyof PolicyCheckErrors]
-
-export type PolicyCheckResponses = {
-  /**
-   * OK
-   */
-  200: ResultMapStringObject
-}
-
-export type PolicyCheckResponse = PolicyCheckResponses[keyof PolicyCheckResponses]
-
-export type RelationFindData = {
-  body: {
-    [key: string]: {
-      [key: string]: unknown
-    }
-  }
-  path?: never
-  query?: never
-  url: '/plugin-platform/sandbox/relation/find'
-}
-
-export type RelationFindErrors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
-  /**
-   * Conflict
-   */
-  409: ResultVoid
-  /**
-   * Unsupported Media Type
-   */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type RelationFindError = RelationFindErrors[keyof RelationFindErrors]
-
-export type RelationFindResponses = {
-  /**
-   * OK
-   */
-  200: ResultMapStringObject
-}
-
-export type RelationFindResponse = RelationFindResponses[keyof RelationFindResponses]
-
-export type ResetData = {
+export type ResourceRelationsData = {
   body?: never
   path?: never
   query?: never
-  url: '/plugin-platform/sandbox/reset'
+  url: '/plugin-platform/resource-relations'
 }
 
-export type ResetErrors = {
+export type ResourceRelationsErrors = {
   /**
    * Bad Request
    */
@@ -49052,183 +48302,16 @@ export type ResetErrors = {
   500: ResultVoid
 }
 
-export type ResetError = ResetErrors[keyof ResetErrors]
+export type ResourceRelationsError = ResourceRelationsErrors[keyof ResourceRelationsErrors]
 
-export type ResetResponses = {
+export type ResourceRelationsResponses = {
   /**
    * OK
    */
-  200: ResultMapStringObject
+  200: ResultListMapStringObject
 }
 
-export type ResetResponse = ResetResponses[keyof ResetResponses]
-
-export type SeedDemoData = {
-  body?: never
-  path?: never
-  query?: never
-  url: '/plugin-platform/sandbox/seed-demo'
-}
-
-export type SeedDemoErrors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
-  /**
-   * Conflict
-   */
-  409: ResultVoid
-  /**
-   * Unsupported Media Type
-   */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type SeedDemoError = SeedDemoErrors[keyof SeedDemoErrors]
-
-export type SeedDemoResponses = {
-  /**
-   * OK
-   */
-  200: ResultMapStringObject
-}
-
-export type SeedDemoResponse = SeedDemoResponses[keyof SeedDemoResponses]
-
-export type TargetModeResolveData = {
-  body: {
-    [key: string]: {
-      [key: string]: unknown
-    }
-  }
-  path?: never
-  query?: never
-  url: '/plugin-platform/sandbox/target-mode/resolve'
-}
-
-export type TargetModeResolveErrors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
-  /**
-   * Conflict
-   */
-  409: ResultVoid
-  /**
-   * Unsupported Media Type
-   */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type TargetModeResolveError = TargetModeResolveErrors[keyof TargetModeResolveErrors]
-
-export type TargetModeResolveResponses = {
-  /**
-   * OK
-   */
-  200: ResultMapStringObject
-}
-
-export type TargetModeResolveResponse = TargetModeResolveResponses[keyof TargetModeResolveResponses]
-
-export type TriggerFireData = {
-  body: {
-    [key: string]: {
-      [key: string]: unknown
-    }
-  }
-  path?: never
-  query?: never
-  url: '/plugin-platform/sandbox/trigger/fire'
-}
-
-export type TriggerFireErrors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
-  /**
-   * Conflict
-   */
-  409: ResultVoid
-  /**
-   * Unsupported Media Type
-   */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type TriggerFireError = TriggerFireErrors[keyof TriggerFireErrors]
-
-export type TriggerFireResponses = {
-  /**
-   * OK
-   */
-  200: ResultMapStringObject
-}
-
-export type TriggerFireResponse = TriggerFireResponses[keyof TriggerFireResponses]
+export type ResourceRelationsResponse = ResourceRelationsResponses[keyof ResourceRelationsResponses]
 
 export type SubscriptionRulesData = {
   body?: never
@@ -50998,6 +50081,62 @@ export type GetModulesResponses = {
 
 export type GetModulesResponse = GetModulesResponses[keyof GetModulesResponses]
 
+export type GetResourceRelationsData = {
+  body?: never
+  path?: never
+  query: {
+    module: string
+  }
+  url: '/roles/data-permissions/resource-relations'
+}
+
+export type GetResourceRelationsErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type GetResourceRelationsError = GetResourceRelationsErrors[keyof GetResourceRelationsErrors]
+
+export type GetResourceRelationsResponses = {
+  /**
+   * OK
+   */
+  200: ResultListResourceRelationOption
+}
+
+export type GetResourceRelationsResponse =
+  GetResourceRelationsResponses[keyof GetResourceRelationsResponses]
+
 export type GetScopesData = {
   body?: never
   path?: never
@@ -52422,6 +51561,453 @@ export type GetChildModulesResponses = {
 }
 
 export type GetChildModulesResponse = GetChildModulesResponses[keyof GetChildModulesResponses]
+
+export type ListAnnouncementsData = {
+  body?: never
+  path?: never
+  query?: {
+    pageNum?: string
+    pageSize?: string
+    announcementType?: string
+    isPublished?: number
+  }
+  url: '/system/announcements'
+}
+
+export type ListAnnouncementsErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type ListAnnouncementsError = ListAnnouncementsErrors[keyof ListAnnouncementsErrors]
+
+export type ListAnnouncementsResponses = {
+  /**
+   * OK
+   */
+  200: ResultPageAnnouncementPo
+}
+
+export type ListAnnouncementsResponse = ListAnnouncementsResponses[keyof ListAnnouncementsResponses]
+
+export type CreateAnnouncementsData = {
+  body: AnnouncementPo
+  path?: never
+  query?: never
+  url: '/system/announcements'
+}
+
+export type CreateAnnouncementsErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type CreateAnnouncementsError = CreateAnnouncementsErrors[keyof CreateAnnouncementsErrors]
+
+export type CreateAnnouncementsResponses = {
+  /**
+   * OK
+   */
+  200: ResultAnnouncementPo
+}
+
+export type CreateAnnouncementsResponse =
+  CreateAnnouncementsResponses[keyof CreateAnnouncementsResponses]
+
+export type DeleteAnnouncementsData = {
+  body?: never
+  path: {
+    id: string
+  }
+  query?: never
+  url: '/system/announcements/{id}'
+}
+
+export type DeleteAnnouncementsErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type DeleteAnnouncementsError = DeleteAnnouncementsErrors[keyof DeleteAnnouncementsErrors]
+
+export type DeleteAnnouncementsResponses = {
+  /**
+   * OK
+   */
+  200: ResultVoid
+}
+
+export type DeleteAnnouncementsResponse =
+  DeleteAnnouncementsResponses[keyof DeleteAnnouncementsResponses]
+
+export type DetailAnnouncementsData = {
+  body?: never
+  path: {
+    id: string
+  }
+  query?: never
+  url: '/system/announcements/{id}'
+}
+
+export type DetailAnnouncementsErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type DetailAnnouncementsError = DetailAnnouncementsErrors[keyof DetailAnnouncementsErrors]
+
+export type DetailAnnouncementsResponses = {
+  /**
+   * OK
+   */
+  200: ResultAnnouncementPo
+}
+
+export type DetailAnnouncementsResponse =
+  DetailAnnouncementsResponses[keyof DetailAnnouncementsResponses]
+
+export type UpdateAnnouncementsData = {
+  body: AnnouncementPo
+  path: {
+    id: string
+  }
+  query?: never
+  url: '/system/announcements/{id}'
+}
+
+export type UpdateAnnouncementsErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type UpdateAnnouncementsError = UpdateAnnouncementsErrors[keyof UpdateAnnouncementsErrors]
+
+export type UpdateAnnouncementsResponses = {
+  /**
+   * OK
+   */
+  200: ResultVoid
+}
+
+export type UpdateAnnouncementsResponse =
+  UpdateAnnouncementsResponses[keyof UpdateAnnouncementsResponses]
+
+export type PinData = {
+  body?: never
+  path: {
+    id: string
+  }
+  query: {
+    pinned: boolean
+  }
+  url: '/system/announcements/{id}/pin'
+}
+
+export type PinErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type PinError = PinErrors[keyof PinErrors]
+
+export type PinResponses = {
+  /**
+   * OK
+   */
+  200: ResultVoid
+}
+
+export type PinResponse = PinResponses[keyof PinResponses]
+
+export type PublishData = {
+  body?: never
+  path: {
+    id: string
+  }
+  query?: never
+  url: '/system/announcements/{id}/publish'
+}
+
+export type PublishErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type PublishError = PublishErrors[keyof PublishErrors]
+
+export type PublishResponses = {
+  /**
+   * OK
+   */
+  200: ResultVoid
+}
+
+export type PublishResponse = PublishResponses[keyof PublishResponses]
+
+export type RevokeData = {
+  body?: never
+  path: {
+    id: string
+  }
+  query?: never
+  url: '/system/announcements/{id}/revoke'
+}
+
+export type RevokeErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type RevokeError = RevokeErrors[keyof RevokeErrors]
+
+export type RevokeResponses = {
+  /**
+   * OK
+   */
+  200: ResultVoid
+}
+
+export type RevokeResponse = RevokeResponses[keyof RevokeResponses]
 
 export type GetAllConfigsData = {
   body?: never
@@ -65117,14 +64703,14 @@ export type GetAllUsersResponses = {
 
 export type GetAllUsersResponse = GetAllUsersResponses[keyof GetAllUsersResponses]
 
-export type CreateUserUsersData = {
+export type CreateUserData = {
   body: CreateUserRequest
   path?: never
   query?: never
   url: '/users'
 }
 
-export type CreateUserUsersErrors = {
+export type CreateUserErrors = {
   /**
    * Bad Request
    */
@@ -65159,25 +64745,25 @@ export type CreateUserUsersErrors = {
   500: ResultVoid
 }
 
-export type CreateUserUsersError = CreateUserUsersErrors[keyof CreateUserUsersErrors]
+export type CreateUserError = CreateUserErrors[keyof CreateUserErrors]
 
-export type CreateUserUsersResponses = {
+export type CreateUserResponses = {
   /**
    * OK
    */
   200: ResultUserDomainResponse
 }
 
-export type CreateUserUsersResponse = CreateUserUsersResponses[keyof CreateUserUsersResponses]
+export type CreateUserResponse = CreateUserResponses[keyof CreateUserResponses]
 
-export type DeleteUsersBatchData = {
+export type DeleteUsersData = {
   body: Array<string>
   path?: never
   query?: never
   url: '/users/batch'
 }
 
-export type DeleteUsersBatchErrors = {
+export type DeleteUsersErrors = {
   /**
    * Bad Request
    */
@@ -65212,16 +64798,16 @@ export type DeleteUsersBatchErrors = {
   500: ResultVoid
 }
 
-export type DeleteUsersBatchError = DeleteUsersBatchErrors[keyof DeleteUsersBatchErrors]
+export type DeleteUsersError = DeleteUsersErrors[keyof DeleteUsersErrors]
 
-export type DeleteUsersBatchResponses = {
+export type DeleteUsersResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type DeleteUsersBatchResponse = DeleteUsersBatchResponses[keyof DeleteUsersBatchResponses]
+export type DeleteUsersResponse = DeleteUsersResponses[keyof DeleteUsersResponses]
 
 export type GetUsersByOrgUnitData = {
   body?: never
@@ -65348,7 +64934,7 @@ export type GetUserByUsernameResponses = {
 
 export type GetUserByUsernameResponse = GetUserByUsernameResponses[keyof GetUserByUsernameResponses]
 
-export type ExistsUsernameExistsData = {
+export type ExistsUsernameData = {
   body?: never
   path?: never
   query: {
@@ -65364,7 +64950,7 @@ export type ExistsUsernameExistsData = {
   url: '/users/exists'
 }
 
-export type ExistsUsernameExistsErrors = {
+export type ExistsUsernameErrors = {
   /**
    * Bad Request
    */
@@ -65399,17 +64985,16 @@ export type ExistsUsernameExistsErrors = {
   500: ResultVoid
 }
 
-export type ExistsUsernameExistsError = ExistsUsernameExistsErrors[keyof ExistsUsernameExistsErrors]
+export type ExistsUsernameError = ExistsUsernameErrors[keyof ExistsUsernameErrors]
 
-export type ExistsUsernameExistsResponses = {
+export type ExistsUsernameResponses = {
   /**
    * OK
    */
   200: ResultBoolean
 }
 
-export type ExistsUsernameExistsResponse =
-  ExistsUsernameExistsResponses[keyof ExistsUsernameExistsResponses]
+export type ExistsUsernameResponse = ExistsUsernameResponses[keyof ExistsUsernameResponses]
 
 export type GetMyPermissionsData = {
   body?: never
@@ -65599,7 +65184,7 @@ export type GetUserPageResponses = {
 
 export type GetUserPageResponse = GetUserPageResponses[keyof GetUserPageResponses]
 
-export type GetSimpleUserListSimpleData = {
+export type GetSimpleUserListData = {
   body?: never
   path?: never
   query?: {
@@ -65611,7 +65196,7 @@ export type GetSimpleUserListSimpleData = {
   url: '/users/simple'
 }
 
-export type GetSimpleUserListSimpleErrors = {
+export type GetSimpleUserListErrors = {
   /**
    * Bad Request
    */
@@ -65646,18 +65231,16 @@ export type GetSimpleUserListSimpleErrors = {
   500: ResultVoid
 }
 
-export type GetSimpleUserListSimpleError =
-  GetSimpleUserListSimpleErrors[keyof GetSimpleUserListSimpleErrors]
+export type GetSimpleUserListError = GetSimpleUserListErrors[keyof GetSimpleUserListErrors]
 
-export type GetSimpleUserListSimpleResponses = {
+export type GetSimpleUserListResponses = {
   /**
    * OK
    */
   200: ResultListSimpleUserResponse
 }
 
-export type GetSimpleUserListSimpleResponse =
-  GetSimpleUserListSimpleResponses[keyof GetSimpleUserListSimpleResponses]
+export type GetSimpleUserListResponse = GetSimpleUserListResponses[keyof GetSimpleUserListResponses]
 
 export type GetUsersWithDepartmentsData = {
   body?: never
@@ -65778,7 +65361,7 @@ export type GetUsersWithOrgUnitsResponses = {
 export type GetUsersWithOrgUnitsResponse =
   GetUsersWithOrgUnitsResponses[keyof GetUsersWithOrgUnitsResponses]
 
-export type DeleteUserUsersData = {
+export type DeleteUserData = {
   body?: never
   path: {
     /**
@@ -65790,7 +65373,7 @@ export type DeleteUserUsersData = {
   url: '/users/{id}'
 }
 
-export type DeleteUserUsersErrors = {
+export type DeleteUserErrors = {
   /**
    * Bad Request
    */
@@ -65825,18 +65408,18 @@ export type DeleteUserUsersErrors = {
   500: ResultVoid
 }
 
-export type DeleteUserUsersError = DeleteUserUsersErrors[keyof DeleteUserUsersErrors]
+export type DeleteUserError = DeleteUserErrors[keyof DeleteUserErrors]
 
-export type DeleteUserUsersResponses = {
+export type DeleteUserResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type DeleteUserUsersResponse = DeleteUserUsersResponses[keyof DeleteUserUsersResponses]
+export type DeleteUserResponse = DeleteUserResponses[keyof DeleteUserResponses]
 
-export type GetUserUsersData = {
+export type GetUserData = {
   body?: never
   path: {
     /**
@@ -65848,7 +65431,7 @@ export type GetUserUsersData = {
   url: '/users/{id}'
 }
 
-export type GetUserUsersErrors = {
+export type GetUserErrors = {
   /**
    * Bad Request
    */
@@ -65883,18 +65466,18 @@ export type GetUserUsersErrors = {
   500: ResultVoid
 }
 
-export type GetUserUsersError = GetUserUsersErrors[keyof GetUserUsersErrors]
+export type GetUserError = GetUserErrors[keyof GetUserErrors]
 
-export type GetUserUsersResponses = {
+export type GetUserResponses = {
   /**
    * OK
    */
   200: ResultUserDomainResponse
 }
 
-export type GetUserUsersResponse = GetUserUsersResponses[keyof GetUserUsersResponses]
+export type GetUserResponse = GetUserResponses[keyof GetUserResponses]
 
-export type UpdateUserUsersData = {
+export type UpdateUserData = {
   body: UpdateUserRequest
   path: {
     /**
@@ -65906,7 +65489,7 @@ export type UpdateUserUsersData = {
   url: '/users/{id}'
 }
 
-export type UpdateUserUsersErrors = {
+export type UpdateUserErrors = {
   /**
    * Bad Request
    */
@@ -65941,16 +65524,16 @@ export type UpdateUserUsersErrors = {
   500: ResultVoid
 }
 
-export type UpdateUserUsersError = UpdateUserUsersErrors[keyof UpdateUserUsersErrors]
+export type UpdateUserError = UpdateUserErrors[keyof UpdateUserErrors]
 
-export type UpdateUserUsersResponses = {
+export type UpdateUserResponses = {
   /**
    * OK
    */
   200: ResultUserDomainResponse
 }
 
-export type UpdateUserUsersResponse = UpdateUserUsersResponses[keyof UpdateUserUsersResponses]
+export type UpdateUserResponse = UpdateUserResponses[keyof UpdateUserResponses]
 
 export type BindWechatData = {
   body?: never
@@ -66012,7 +65595,7 @@ export type BindWechatResponses = {
 
 export type BindWechatResponse = BindWechatResponses[keyof BindWechatResponses]
 
-export type DisableUserDisableData = {
+export type DisableUserData = {
   body?: never
   path: {
     /**
@@ -66024,7 +65607,7 @@ export type DisableUserDisableData = {
   url: '/users/{id}/disable'
 }
 
-export type DisableUserDisableErrors = {
+export type DisableUserErrors = {
   /**
    * Bad Request
    */
@@ -66059,19 +65642,18 @@ export type DisableUserDisableErrors = {
   500: ResultVoid
 }
 
-export type DisableUserDisableError = DisableUserDisableErrors[keyof DisableUserDisableErrors]
+export type DisableUserError = DisableUserErrors[keyof DisableUserErrors]
 
-export type DisableUserDisableResponses = {
+export type DisableUserResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type DisableUserDisableResponse =
-  DisableUserDisableResponses[keyof DisableUserDisableResponses]
+export type DisableUserResponse = DisableUserResponses[keyof DisableUserResponses]
 
-export type EnableUserEnableData = {
+export type EnableUserData = {
   body?: never
   path: {
     /**
@@ -66083,7 +65665,7 @@ export type EnableUserEnableData = {
   url: '/users/{id}/enable'
 }
 
-export type EnableUserEnableErrors = {
+export type EnableUserErrors = {
   /**
    * Bad Request
    */
@@ -66118,16 +65700,16 @@ export type EnableUserEnableErrors = {
   500: ResultVoid
 }
 
-export type EnableUserEnableError = EnableUserEnableErrors[keyof EnableUserEnableErrors]
+export type EnableUserError = EnableUserErrors[keyof EnableUserErrors]
 
-export type EnableUserEnableResponses = {
+export type EnableUserResponses = {
   /**
    * OK
    */
   200: ResultVoid
 }
 
-export type EnableUserEnableResponse = EnableUserEnableResponses[keyof EnableUserEnableResponses]
+export type EnableUserResponse = EnableUserResponses[keyof EnableUserResponses]
 
 export type ResetPasswordData = {
   body?: never
@@ -66186,64 +65768,6 @@ export type ResetPasswordResponses = {
 }
 
 export type ResetPasswordResponse = ResetPasswordResponses[keyof ResetPasswordResponses]
-
-export type ResetPasswordSafeData = {
-  body?: never
-  path: {
-    /**
-     * 用户ID
-     */
-    id: string
-  }
-  query?: never
-  url: '/users/{id}/reset-password-safe'
-}
-
-export type ResetPasswordSafeErrors = {
-  /**
-   * Bad Request
-   */
-  400: ResultVoid
-  /**
-   * Unauthorized
-   */
-  401: ResultVoid
-  /**
-   * Forbidden
-   */
-  403: ResultVoid
-  /**
-   * Not Found
-   */
-  404: ResultVoid
-  /**
-   * Method Not Allowed
-   */
-  405: ResultVoid
-  /**
-   * Conflict
-   */
-  409: ResultVoid
-  /**
-   * Unsupported Media Type
-   */
-  415: ResultVoid
-  /**
-   * Internal Server Error
-   */
-  500: ResultVoid
-}
-
-export type ResetPasswordSafeError = ResetPasswordSafeErrors[keyof ResetPasswordSafeErrors]
-
-export type ResetPasswordSafeResponses = {
-  /**
-   * OK
-   */
-  200: ResultString
-}
-
-export type ResetPasswordSafeResponse = ResetPasswordSafeResponses[keyof ResetPasswordSafeResponses]
 
 export type UpdateUserStatusData = {
   body?: never
@@ -67530,6 +67054,62 @@ export type CheckOutResponses = {
 }
 
 export type CheckOutResponse = CheckOutResponses[keyof CheckOutResponses]
+
+export type GetEffectiveGenderData = {
+  body?: never
+  path: {
+    id: string
+  }
+  query?: never
+  url: '/v9/places/{id}/effective-gender'
+}
+
+export type GetEffectiveGenderErrors = {
+  /**
+   * Bad Request
+   */
+  400: ResultVoid
+  /**
+   * Unauthorized
+   */
+  401: ResultVoid
+  /**
+   * Forbidden
+   */
+  403: ResultVoid
+  /**
+   * Not Found
+   */
+  404: ResultVoid
+  /**
+   * Method Not Allowed
+   */
+  405: ResultVoid
+  /**
+   * Conflict
+   */
+  409: ResultVoid
+  /**
+   * Unsupported Media Type
+   */
+  415: ResultVoid
+  /**
+   * Internal Server Error
+   */
+  500: ResultVoid
+}
+
+export type GetEffectiveGenderError = GetEffectiveGenderErrors[keyof GetEffectiveGenderErrors]
+
+export type GetEffectiveGenderResponses = {
+  /**
+   * OK
+   */
+  200: ResultString
+}
+
+export type GetEffectiveGenderResponse =
+  GetEffectiveGenderResponses[keyof GetEffectiveGenderResponses]
 
 export type GetOccupantHistoryData = {
   body?: never

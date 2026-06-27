@@ -73,13 +73,6 @@
         <span class="ex-item-count">{{ countFor(r.key) }}</span>
       </button>
     </div>
-
-    <!-- Sandbox view: 无左栏条目, 主区展开工作台 -->
-    <div v-else class="ex-body ex-body-empty">
-      <FlaskConical :size="24" />
-      <p class="ex-empty-title">测试沙箱工作台</p>
-      <p class="ex-empty-sub">右侧主区填表测试各扩展点</p>
-    </div>
   </aside>
 </template>
 
@@ -87,11 +80,11 @@
 import { computed, inject } from 'vue'
 import {
   Package, Webhook, LayoutGrid, Link2, Bell, Shield, UserCog,
-  ShieldCheck, Filter, Zap, BellRing, FlaskConical, Database, Share2
+  ShieldCheck, Filter, Zap, BellRing, Database, Share2
 } from 'lucide-vue-next'
 import { RESOURCE_TYPES, industryColor, subjectTypeLabel, phaseLabel, type PluginData, type ResourceKey } from '../helpers'
 
-type ViewKind = 'plugins' | 'hooks' | 'resources' | 'sandbox'
+type ViewKind = 'plugins' | 'hooks' | 'resources'
 
 const props = defineProps<{
   view: ViewKind
@@ -112,8 +105,7 @@ const data = inject<PluginData>('pluginData')!
 const tabs = [
   { key: 'plugins' as const, label: '插件', icon: Package },
   { key: 'hooks' as const, label: 'Hook', icon: Webhook },
-  { key: 'resources' as const, label: '资源', icon: LayoutGrid },
-  { key: 'sandbox' as const, label: '沙箱', icon: FlaskConical }
+  { key: 'resources' as const, label: '资源', icon: LayoutGrid }
 ]
 
 const resourceIcons: Record<ResourceKey, any> = {
