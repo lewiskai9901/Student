@@ -10319,12 +10319,14 @@ UPDATE `relation_types` SET `industry`='EDU' WHERE `tier`='DOMAIN' AND `industry
 UNLOCK TABLES;
 
 --
--- 归一历史遗留 PLACE 类型分类 'SPACE' (BaseCategory 枚举已无此值, 属早期未迁移的种子) 到合法分类。
--- 否则这些类型 category 落枚举外 → categoryDefaults valueOf 落 catch → 静默关掉特性校验。
+-- 清除未随插件模型迁移的遗留种子类型 (is_plugin_registered=0, 零使用; 多为插件类型的孤儿影子,
+-- 如 VISITOR≈GUEST、GRADUATE/UNDERGRADUATE≈STUDENT、LIBRARY/GYM 等 0 实例旧 place 类型)。
+-- 保留 VISITOR: 数据权限金标准测试用户 dpt_ct 在用 (其班主任范围走关系, 类型仅需可登录)。
+-- (取代了原 SPACE 分类归一 UPDATE —— 那些 PLACE 类型本就在此被删, 无需再 remap。)
 --
-UPDATE `entity_type_configs` SET `category`='BUILDING' WHERE `entity_type`='PLACE' AND `category`='SPACE' AND `type_code` IN ('TEACH_BUILDING','DORMITORY');
-UPDATE `entity_type_configs` SET `category`='AREA' WHERE `entity_type`='PLACE' AND `category`='SPACE' AND `type_code`='PLAYGROUND';
-UPDATE `entity_type_configs` SET `category`='ROOM' WHERE `entity_type`='PLACE' AND `category`='SPACE';
+DELETE FROM `entity_type_configs` WHERE `entity_type`='USER'     AND `is_plugin_registered`=0 AND `type_code`<>'VISITOR' AND `deleted`=0;
+DELETE FROM `entity_type_configs` WHERE `entity_type`='ORG_UNIT' AND `is_plugin_registered`=0 AND `deleted`=0;
+DELETE FROM `entity_type_configs` WHERE `entity_type`='PLACE'    AND `is_plugin_registered`=0 AND `deleted`=0;
 
 --
 -- Table structure for table `role_data_scopes`
