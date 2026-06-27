@@ -67,11 +67,11 @@ class DataPermissionInterceptorPluginDimTest {
         // student=成员图 (viaMembership), attendance=列锚 (creator=recorded_by)。
         ResourceRelationRegistry resourceRelationRegistry = mock(ResourceRelationRegistry.class);
         when(resourceRelationRegistry.forResource(anyString()))
-                .thenReturn(Optional.of(new ResourceRelationRegistry.DerivedAnchor(false, "org_unit_id", "created_by")));
+                .thenReturn(Optional.of(new ResourceRelationRegistry.DerivedAnchor(false, "org_unit_id", "created_by", null)));
         when(resourceRelationRegistry.forResource("student"))
-                .thenReturn(Optional.of(new ResourceRelationRegistry.DerivedAnchor(true, null, null)));
+                .thenReturn(Optional.of(new ResourceRelationRegistry.DerivedAnchor(true, null, null, "user_id")));  // Tier2: subject 列归注册表
         when(resourceRelationRegistry.forResource("attendance"))
-                .thenReturn(Optional.of(new ResourceRelationRegistry.DerivedAnchor(false, "org_unit_id", "recorded_by")));
+                .thenReturn(Optional.of(new ResourceRelationRegistry.DerivedAnchor(false, "org_unit_id", "recorded_by", null)));
         ReflectionTestUtils.setField(interceptor, "resourceRelationRegistry", resourceRelationRegistry);
         // T7/R4: 插件维度 compose 下沉 ScopeEvaluator (持 router + registry); 拦截器只编排。
         ReflectionTestUtils.setField(interceptor, "scopeEvaluator",
@@ -93,8 +93,7 @@ class DataPermissionInterceptorPluginDimTest {
 
     // ── fixtures ──
 
-    @DataPermission(module = "student", tableAlias = "s",
-            membershipSubjectColumn = "user_id")
+    @DataPermission(module = "student", tableAlias = "s")  // Tier2: subject 列 user_id 由注册表 mock 提供
     interface StudentMembershipMapper {
         List<Object> selectList();
     }

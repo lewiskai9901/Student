@@ -336,7 +336,7 @@ class ScopeEvaluatorTest {
     void hopChainGrant() {
         when(resourceRelationRegistry.relationOf("doc", "owner_org"))
                 .thenReturn(Optional.of(new ResourceRelationRegistry.AnchorRow(
-                        "owner_org", StorageKind.COLUMN, "org_unit_id", null)));
+                        "owner_org", StorageKind.COLUMN, "org_unit_id", null, null)));
         ResourceScopeMeta meta = new ResourceScopeMeta(
                 "t", "org_unit_id", "created_by", false, "id", null, "doc");
         ScopeSpec spec = ScopeSpec.builder()
@@ -377,7 +377,7 @@ class ScopeEvaluatorTest {
     void recordRelationGrant_emitsSubquery() {
         when(resourceRelationRegistry.relationOf("inspection_record", "reviewer"))
                 .thenReturn(Optional.of(new ResourceRelationRegistry.AnchorRow(
-                        "reviewer", StorageKind.RECORD_RELATION, null, null)));
+                        "reviewer", StorageKind.RECORD_RELATION, null, null, null)));
         ResourceScopeMeta meta = new ResourceScopeMeta(
                 "t", "org_unit_id", "created_by", false, "id", null, "inspection_record");
         ScopeSpec spec = ScopeSpec.builder()
@@ -402,7 +402,7 @@ class ScopeEvaluatorTest {
     void perRelationColumnGrant_orgSet() {
         when(resourceRelationRegistry.relationOf("inspection_submission", "inspected"))
                 .thenReturn(Optional.of(new ResourceRelationRegistry.AnchorRow(
-                        "inspected", StorageKind.COLUMN, "target_id", null)));
+                        "inspected", StorageKind.COLUMN, "target_id", null, null)));
         ResourceScopeMeta meta = new ResourceScopeMeta(
                 "t", "org_unit_id", "created_by", false, "id", null, "inspection_submission");
         ScopeSpec spec = ScopeSpec.builder()
@@ -421,7 +421,7 @@ class ScopeEvaluatorTest {
     void perRelationColumnGrant_self() {
         when(resourceRelationRegistry.relationOf("inspection_task", "reviewer"))
                 .thenReturn(Optional.of(new ResourceRelationRegistry.AnchorRow(
-                        "reviewer", StorageKind.COLUMN, "reviewer_id", null)));
+                        "reviewer", StorageKind.COLUMN, "reviewer_id", null, null)));
         ResourceScopeMeta meta = new ResourceScopeMeta(
                 "t", "org_unit_id", "created_by", false, "id", null, "inspection_task");
         ScopeSpec spec = ScopeSpec.builder()
@@ -452,7 +452,7 @@ class ScopeEvaluatorTest {
     void multiGrant_columnOrRecordRelation() {
         when(resourceRelationRegistry.relationOf("inspection_record", "reviewer"))
                 .thenReturn(Optional.of(new ResourceRelationRegistry.AnchorRow(
-                        "reviewer", StorageKind.RECORD_RELATION, null, null)));
+                        "reviewer", StorageKind.RECORD_RELATION, null, null, null)));
         // creator 关系不是 RECORD_RELATION (registry mock 默认 empty) → 走列路径
         ResourceScopeMeta meta = new ResourceScopeMeta(
                 "t", "org_unit_id", "created_by", false, "id", null, "inspection_record");
@@ -500,7 +500,7 @@ class ScopeEvaluatorTest {
     private void stubProvider(String resourceCode, String relation, String bean) {
         when(resourceRelationRegistry.relationOf(resourceCode, relation))
                 .thenReturn(Optional.of(new ResourceRelationRegistry.AnchorRow(
-                        relation, StorageKind.PROVIDER, null, bean)));
+                        relation, StorageKind.PROVIDER, null, bean, null)));
     }
 
     private ResourceScopeMeta providerMeta() {

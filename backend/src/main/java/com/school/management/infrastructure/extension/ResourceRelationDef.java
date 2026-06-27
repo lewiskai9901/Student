@@ -31,12 +31,15 @@ import com.school.management.domain.access.model.StorageKind;
  * @param autoFill        写入是否自动填 (creator/owner_org=true)
  * @param grantsByDefault 无显式授予时是否默认参与可见性 (一般 owner_org=true)
  * @param resolverBean    PROVIDER 存储: 解析器 {@code RecordRelationResolver} 的 Spring bean 名, 其它存储为 null
+ * @param subjectColumn   SUBJECT_GRAPH 存储 (统一锚定 Tier2): 主表中充当 access_relations subject_id 的列名;
+ *                        可空 (默认语义 id = 主表行本身即用户)。如 user_student 行不是用户而是档案, 设 user_id。
  */
 public record ResourceRelationDef(
         String resourceCode, String relationCode, String relationName, String subjectType,
         Cardinality cardinality, StorageKind storageKind,
         String columnName, String typeColumn, String arRelation,
-        boolean autoFill, boolean grantsByDefault, String resolverBean, boolean enforceInsertScope) {
+        boolean autoFill, boolean grantsByDefault, String resolverBean, boolean enforceInsertScope,
+        String subjectColumn) {
 
     public ResourceRelationDef {
         requireText(resourceCode, "resourceCode");
@@ -87,19 +90,19 @@ public record ResourceRelationDef(
     public static ResourceRelationDef column(String resourceCode, String relationCode, String relationName,
                                              String subjectType, String columnName) {
         return new ResourceRelationDef(resourceCode, relationCode, relationName, subjectType,
-                Cardinality.SINGLE, StorageKind.COLUMN, columnName, null, null, false, false, null, false);
+                Cardinality.SINGLE, StorageKind.COLUMN, columnName, null, null, false, false, null, false, null);
     }
 
     public static ResourceRelationDef recordRelation(String resourceCode, String relationCode, String relationName,
                                                      String subjectType, String arRelation) {
         return new ResourceRelationDef(resourceCode, relationCode, relationName, subjectType,
-                Cardinality.MULTI, StorageKind.RECORD_RELATION, null, null, arRelation, false, false, null, false);
+                Cardinality.MULTI, StorageKind.RECORD_RELATION, null, null, arRelation, false, false, null, false, null);
     }
 
     public static ResourceRelationDef subjectGraph(String resourceCode, String relationCode, String relationName,
                                                    String subjectType, Cardinality cardinality, String arRelation) {
         return new ResourceRelationDef(resourceCode, relationCode, relationName, subjectType,
-                cardinality, StorageKind.SUBJECT_GRAPH, null, null, arRelation, false, false, null, false);
+                cardinality, StorageKind.SUBJECT_GRAPH, null, null, arRelation, false, false, null, false, null);
     }
 
     /**
@@ -109,23 +112,32 @@ public record ResourceRelationDef(
     public static ResourceRelationDef provider(String resourceCode, String relationCode, String relationName,
                                                String subjectType, String resolverBean) {
         return new ResourceRelationDef(resourceCode, relationCode, relationName, subjectType,
-                Cardinality.MULTI, StorageKind.PROVIDER, null, null, null, false, false, resolverBean, false);
+                Cardinality.MULTI, StorageKind.PROVIDER, null, null, null, false, false, resolverBean, false, null);
     }
 
     // ── 链式修饰 ──────────────────────────────────────────────────────────
     public ResourceRelationDef withAutoFill() {
         return new ResourceRelationDef(resourceCode, relationCode, relationName, subjectType,
-                cardinality, storageKind, columnName, typeColumn, arRelation, true, grantsByDefault, resolverBean, enforceInsertScope);
+                cardinality, storageKind, columnName, typeColumn, arRelation, true, grantsByDefault, resolverBean, enforceInsertScope, subjectColumn);
     }
 
     public ResourceRelationDef withGrantsByDefault() {
         return new ResourceRelationDef(resourceCode, relationCode, relationName, subjectType,
-                cardinality, storageKind, columnName, typeColumn, arRelation, autoFill, true, resolverBean, enforceInsertScope);
+                cardinality, storageKind, columnName, typeColumn, arRelation, autoFill, true, resolverBean, enforceInsertScope, subjectColumn);
     }
 
     public ResourceRelationDef polymorphic(String typeColumn) {
         return new ResourceRelationDef(resourceCode, relationCode, relationName, subjectType,
-                cardinality, storageKind, columnName, typeColumn, arRelation, autoFill, grantsByDefault, resolverBean, enforceInsertScope);
+                cardinality, storageKind, columnName, typeColumn, arRelation, autoFill, grantsByDefault, resolverBean, enforceInsertScope, subjectColumn);
+    }
+
+    /**
+     * 声明 SUBJECT_GRAPH 关系的 subject 列 (统一锚定 Tier2): 主表中充当 access_relations subject_id 的列。
+     * 默认 (不调用) = id (主表行本身即用户); 主表是"挂在用户上的档案表"时 (如 user_student) 设 user_id。
+     */
+    public ResourceRelationDef withSubjectColumn(String subjectColumn) {
+        return new ResourceRelationDef(resourceCode, relationCode, relationName, subjectType,
+                cardinality, storageKind, columnName, typeColumn, arRelation, autoFill, grantsByDefault, resolverBean, enforceInsertScope, subjectColumn);
     }
 
     /**
@@ -135,6 +147,6 @@ public record ResourceRelationDef(
      */
     public ResourceRelationDef withInsertGuard() {
         return new ResourceRelationDef(resourceCode, relationCode, relationName, subjectType,
-                cardinality, storageKind, columnName, typeColumn, arRelation, autoFill, grantsByDefault, resolverBean, true);
+                cardinality, storageKind, columnName, typeColumn, arRelation, autoFill, grantsByDefault, resolverBean, true, subjectColumn);
     }
 }

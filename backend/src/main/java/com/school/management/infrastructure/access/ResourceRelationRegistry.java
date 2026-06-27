@@ -16,15 +16,17 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 资源关系注册表读服务 (统一锚定模型 R2.2) —— 从 {@code resource_relations} 派生
- * {@link ResourceScopeMeta} 所需的锚点字段 (orgUnitField / creatorField / viaMembership)。
+ * {@link ResourceScopeMeta} 所需的全部锚定字段 (orgUnitField / creatorField / viaMembership /
+ * membershipSubjectColumn)。
  *
  * <p>R2.2 把 {@code DataPermissionInterceptor.buildMeta} 的锚点来源从「注解 ⊕ data_resources 列」
- * 切到本注册表 (注册表优先, 注解兜底), 实现「锚点集中声明」。本类的 {@link #deriveAnchor} 是
+ * 切到本注册表 (R2.4 后注解兜底已删), 实现「锚点集中声明」。本类的 {@link #deriveAnchor} 是
  * 纯函数 (注册行 → 派生锚点), 与 DB 加载分离, 便于等价单测。
  *
- * <p><b>仅驱动 3 个字段</b>: orgUnitField / creatorField / viaMembership。
- * tableAlias / membershipSubjectColumn (query 形态) 仍来自注解; typeField 仍来自 data_resources;
- * resourceType 仍来自注解/data_resources (当前全 NULL)。
+ * <p><b>驱动全部锚定语义</b> (Tier2 收官): orgUnitField / creatorField / viaMembership /
+ * membershipSubjectColumn —— 注册表是这些的唯一真相源。meta 余下两字段各得其所、非注册表职责:
+ * tableAlias 来自注解 (查询级 SQL 形态, 同表多查询可异); typeField 来自 data_resources
+ * (资源级配置, 非关系级)。
  *
  * <p>启动期 (ApplicationReady, 在 {@code ContributionDispatcher} @Order(60) ApplicationRunner 写完
  * resource_relations 之后) 全量加载进内存缓存; {@link #forResource} 供拦截器热路径无 DB 命中。
@@ -49,11 +51,16 @@ public class ResourceRelationRegistry {
         this.jdbc = jdbc;
     }
 
-    /** 一条 resource_relations 行里派生锚点所需的最小字段。{@code resolverBean} 仅 PROVIDER 存储非空。 */
-    public record AnchorRow(String relationCode, StorageKind storageKind, String columnName, String resolverBean) {}
+    /**
+     * 一条 resource_relations 行里派生锚点所需的最小字段。{@code resolverBean} 仅 PROVIDER 存储非空;
+     * {@code subjectColumn} 仅 owner_org SUBJECT_GRAPH 行用 (Tier2: 主表充当 ar.subject_id 的列, 可空)。
+     */
+    public record AnchorRow(String relationCode, StorageKind storageKind, String columnName,
+                            String resolverBean, String subjectColumn) {}
 
-    /** 从注册行派生出的锚点视图 (对应 ResourceScopeMeta 的 3 个字段)。 */
-    public record DerivedAnchor(boolean viaMembership, String orgUnitField, String creatorField) {}
+    /** 从注册行派生出的锚点视图 (对应 ResourceScopeMeta 的锚定字段)。 */
+    public record DerivedAnchor(boolean viaMembership, String orgUnitField, String creatorField,
+                                String membershipSubjectColumn) {}
 
     /** 关系码常量 (与 manifest 登记一致)。 */
     public static final String OWNER_ORG = "owner_org";
@@ -69,17 +76,21 @@ public class ResourceRelationRegistry {
      *   <li>{@code creator} 行: creatorField = 该列名。</li>
      *   <li>无 owner_org 行: orgUnitField=null, viaMembership=false (该资源无组织锚)。</li>
      *   <li>无 creator 行: creatorField=null。</li>
+     *   <li>Tier2: owner_org SUBJECT_GRAPH 行的 {@code subjectColumn} → membershipSubjectColumn
+     *       (主表充当 ar.subject_id 的列; null = 默认 id)。</li>
      * </ul>
      */
     public static DerivedAnchor deriveAnchor(List<AnchorRow> rows) {
         boolean viaMembership = false;
         String orgUnitField = null;
         String creatorField = null;
+        String membershipSubjectColumn = null;
         for (AnchorRow row : rows) {
             if (OWNER_ORG.equals(row.relationCode())) {
                 if (row.storageKind() == StorageKind.SUBJECT_GRAPH) {
                     viaMembership = true;   // 成员图: 组织来自 access_relations member, 无列锚
                     orgUnitField = null;
+                    membershipSubjectColumn = row.subjectColumn();  // Tier2: subject 列归注册表
                 } else if (row.storageKind() == StorageKind.COLUMN) {
                     viaMembership = false;
                     orgUnitField = row.columnName();
@@ -88,7 +99,7 @@ public class ResourceRelationRegistry {
                 creatorField = row.columnName();
             }
         }
-        return new DerivedAnchor(viaMembership, orgUnitField, creatorField);
+        return new DerivedAnchor(viaMembership, orgUnitField, creatorField, membershipSubjectColumn);
     }
 
     // ── DB 加载 + 缓存 ─────────────────────────────────────────────────────
@@ -100,7 +111,7 @@ public class ResourceRelationRegistry {
     protected Map<String, List<AnchorRow>> fetchByResource() {
         Map<String, List<AnchorRow>> byResource = new HashMap<>();
         jdbc.query(
-            "SELECT resource_code, relation_code, storage_kind, column_name, resolver_bean " +
+            "SELECT resource_code, relation_code, storage_kind, column_name, resolver_bean, subject_column " +
             "FROM resource_relations WHERE enabled = 1 AND tenant_id = 1",
             (java.sql.ResultSet rs) -> {
                 byResource
@@ -108,7 +119,8 @@ public class ResourceRelationRegistry {
                     .add(new AnchorRow(rs.getString("relation_code"),
                             StorageKind.fromCode(rs.getString("storage_kind")),
                             rs.getString("column_name"),
-                            rs.getString("resolver_bean")));
+                            rs.getString("resolver_bean"),
+                            rs.getString("subject_column")));
             });
         return byResource;
     }

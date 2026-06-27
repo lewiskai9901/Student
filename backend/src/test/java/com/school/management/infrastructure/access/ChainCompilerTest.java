@@ -37,11 +37,11 @@ class ChainCompilerTest {
             protected Map<String, List<AnchorRow>> fetchByResource() {
                 Map<String, List<AnchorRow>> m = new HashMap<>();
                 m.put("doc", List.of(   // 列锚资源
-                        new AnchorRow("owner_org", StorageKind.COLUMN, "org_unit_id", null),
-                        new AnchorRow("creator", StorageKind.COLUMN, "created_by", null)));
+                        new AnchorRow("owner_org", StorageKind.COLUMN, "org_unit_id", null, null),
+                        new AnchorRow("creator", StorageKind.COLUMN, "created_by", null, null)));
                 m.put("student", List.of(   // 成员图资源
-                        new AnchorRow("owner_org", StorageKind.SUBJECT_GRAPH, null, null),
-                        new AnchorRow("taught_by", StorageKind.PROVIDER, null, "teachingStudentResolver")));
+                        new AnchorRow("owner_org", StorageKind.SUBJECT_GRAPH, null, null, null),
+                        new AnchorRow("taught_by", StorageKind.PROVIDER, null, "teachingStudentResolver", null)));
                 return m;
             }
             @Override

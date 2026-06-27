@@ -207,15 +207,16 @@ public class EducationManifest implements PluginPackage {
     }
 
     /**
-     * 教育资源关系声明 (统一锚定模型 R2.1) —— 冻结现状有效锚点 (注解 ⊕ data_resources)。
-     * ⚠ TODO(R2-post): {@code school_class} orgField=id 走 org-field 路径 (class.id IN orgSet) 语义存疑;
-     *   membershipSubjectColumn(student=user_id) 仍留注解, 由 R2.2 处理。
+     * 教育资源关系声明 (统一锚定模型 R2.1) —— 锚点唯一真相源。
+     * ⚠ TODO(R2-post): {@code school_class} orgField=id 走 org-field 路径 (class.id IN orgSet) 语义存疑。
+     * Tier2 收官: student 的 subject 列 (user_student.user_id) 经 withSubjectColumn 声明, 不再留注解。
      */
     private Stream<Contribution> resourceRelations() {
         return Stream.of(
-            // 学生 = user_student, 归属走 access_relations member
+            // 学生 = user_student, 归属走 access_relations member; 行不是用户而是档案 → subject 列=user_id (Tier2)
             Stream.<Contribution>of(rr(ResourceRelationDef.subjectGraph(
-                "student", "owner_org", "所属组织", "ORG_UNIT", Cardinality.SINGLE, "member").withGrantsByDefault())),
+                "student", "owner_org", "所属组织", "ORG_UNIT", Cardinality.SINGLE, "member")
+                .withSubjectColumn("user_id").withGrantsByDefault())),
             // R3c PROVIDER 样板「任课老师」: "老师任课的学生" 不落列/不入表, 由 teacher_assignments 逻辑算
             // (老师→所教组织→该组织学生)。resolver = teachingStudentResolver bean, 返回参数化子查询。
             Stream.<Contribution>of(rr(ResourceRelationDef.provider(

@@ -36,9 +36,9 @@ class ChainValidatorTest {
             protected Map<String, List<AnchorRow>> fetchByResource() {
                 Map<String, List<AnchorRow>> m = new HashMap<>();
                 m.put("student", List.of(
-                        new AnchorRow("owner_org", StorageKind.SUBJECT_GRAPH, null, null),
-                        new AnchorRow("taught_by", StorageKind.PROVIDER, null, "teachingStudentResolver"),
-                        new AnchorRow("creator", StorageKind.COLUMN, "created_by", null)));
+                        new AnchorRow("owner_org", StorageKind.SUBJECT_GRAPH, null, null, null),
+                        new AnchorRow("taught_by", StorageKind.PROVIDER, null, "teachingStudentResolver", null),
+                        new AnchorRow("creator", StorageKind.COLUMN, "created_by", null, null)));
                 return m;
             }
             @Override

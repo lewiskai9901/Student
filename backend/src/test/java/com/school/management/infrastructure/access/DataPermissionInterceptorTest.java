@@ -95,9 +95,9 @@ class DataPermissionInterceptorTest {
         // (字段, 便于个别测试覆写为 empty 验证 fail-fast)
         resourceRelationRegistry = mock(ResourceRelationRegistry.class);
         when(resourceRelationRegistry.forResource(anyString()))
-                .thenReturn(Optional.of(new ResourceRelationRegistry.DerivedAnchor(false, "org_unit_id", "created_by")));
+                .thenReturn(Optional.of(new ResourceRelationRegistry.DerivedAnchor(false, "org_unit_id", "created_by", null)));
         when(resourceRelationRegistry.forResource("user"))
-                .thenReturn(Optional.of(new ResourceRelationRegistry.DerivedAnchor(true, null, null)));
+                .thenReturn(Optional.of(new ResourceRelationRegistry.DerivedAnchor(true, null, null, null)));  // user 行即用户, subject=id (兜底)
         ReflectionTestUtils.setField(interceptor, "resourceRelationRegistry", resourceRelationRegistry);
         // R4: ScopeEvaluator 持 router + registry (registry 供 RECORD_RELATION 检测)。
         scopeEvaluator = new ScopeEvaluator(pluginDataScopeRouter, resourceRelationRegistry, org.mockito.Mockito.mock(RecordRelationResolverRouter.class),

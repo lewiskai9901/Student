@@ -67,7 +67,7 @@ class DataPermissionInterceptorMembershipCustomTest {
         // Tier 1: buildMeta 锚点改由 resourceRelationRegistry 驱动 (注解锚兜底已删)。student=成员图。
         ResourceRelationRegistry resourceRelationRegistry = mock(ResourceRelationRegistry.class);
         when(resourceRelationRegistry.forResource(anyString()))
-                .thenReturn(Optional.of(new ResourceRelationRegistry.DerivedAnchor(true, null, null)));
+                .thenReturn(Optional.of(new ResourceRelationRegistry.DerivedAnchor(true, null, null, "user_id")));  // Tier2: subject 列归注册表
         ReflectionTestUtils.setField(interceptor, "resourceRelationRegistry", resourceRelationRegistry);
         // T7/R4: CUSTOM membership compose 下沉 ScopeEvaluator (持 router + registry); 拦截器只编排。
         ReflectionTestUtils.setField(interceptor, "scopeEvaluator",
@@ -89,8 +89,7 @@ class DataPermissionInterceptorMembershipCustomTest {
 
     // ── fixtures (copied from sibling test to stay isolated) ──
 
-    @DataPermission(module = "student", tableAlias = "s",
-            membershipSubjectColumn = "user_id")
+    @DataPermission(module = "student", tableAlias = "s")  // Tier2: subject 列 user_id 由注册表 mock 提供
     interface StudentMembershipMapper {
         List<Object> selectList();
     }

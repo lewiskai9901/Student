@@ -353,15 +353,12 @@ public class DataPermissionInterceptor implements Interceptor {
      * 从 {@code resource_relations} 注册表 ⊕ {@code @DataPermission} 注解 ⊕ {@code moduleConfig}
      * 构建 {@link ResourceScopeMeta}。各字段来源 (Tier 1 R2.4 起):
      * <ul>
-     *   <li>orgUnitField / creatorField / viaMembership —— <b>resource_relations 注册表</b> (唯一真相源;
-     *       缺该模块 → fail-fast, 注解兜底已删)。</li>
-     *   <li>tableAlias —— 注解 (sanitize)。</li>
-     *   <li>resourceType —— annotation.resourceType (非空) ?? moduleConfig.resourceType。
-     *       <b>不</b>兜底 moduleCode — 核心路径 hasResourceType() 选择必须与旧 buildSingleRoleCondition
-     *       一致 (空→org-field, 非空→access_relation)。PLUGIN_DIM 的 moduleCode 由 buildPluginDimCondition
-     *       直接用 {@code meta.resourceCode()} (R4; 不再注入 resourceType, 避免污染非 PLUGIN_DIM grant)。</li>
-     *   <li>membershipSubjectColumn —— 注解 (Tier 2 再迁注册表)。</li>
-     *   <li>typeField —— moduleConfig.typeField (sanitize; 为空则轴③禁用; Tier 2 再迁)。</li>
+     *   <li>orgUnitField / creatorField / viaMembership / membershipSubjectColumn ——
+     *       <b>resource_relations 注册表</b> (锚定语义唯一真相源; 缺该模块 → fail-fast, 注解兜底已删。
+     *       Tier2 收官: subject 列也归注册表 owner_org SUBJECT_GRAPH 行)。</li>
+     *   <li>tableAlias —— 注解 (sanitize; 查询级 SQL 形态, 同表多查询可异, 终态非债务)。</li>
+     *   <li>typeField —— moduleConfig.typeField / data_resources (sanitize; 为空则轴③禁用;
+     *       资源级配置, data_resources 是正确的家, 终态非债务)。</li>
      * </ul>
      */
     private ResourceScopeMeta buildMeta(DataPermission annotation, DataModulePO moduleConfig) {
@@ -372,7 +369,8 @@ public class DataPermissionInterceptor implements Interceptor {
         // = 资源裸奔 → fail-fast。覆盖由 PluginDeclarationCoverageTest 构建期守护 (每个 @DataPermission
         // 模块必登锚点) + P3 懒加载保证运行期注册表已载, 故此异常实际不可达 (防御 contribution 漏登/写失败)。
         // null → coerce 成 "" (成员主体无列锚; 成员路径不消费 org/creator 列 — BuildMetaRegistryEquivalenceTest)。
-        // tableAlias / membershipSubjectColumn / typeField 仍来自注解/data_resources (Tier 2 再迁)。
+        // Tier2 收官: membershipSubjectColumn 也归注册表 (owner_org SUBJECT_GRAPH 行 subject_column)。
+        // 余 tableAlias (查询级形态) 来自注解; typeField (资源级配置) 来自 data_resources —— 各得其所非债务。
         ResourceRelationRegistry.DerivedAnchor a = resourceRelationRegistry.forResource(annotation.module())
                 .orElseThrow(() -> new IllegalStateException(
                         "模块 " + annotation.module() + " 未注册 resource_relations 锚点 — @DataPermission 无注解兜底 " +
@@ -381,8 +379,13 @@ public class DataPermissionInterceptor implements Interceptor {
         String creatorField = a.creatorField() == null ? "" : sanitizeIdentifier(a.creatorField());
         boolean viaMembership = a.viaMembership();
 
-        String membershipSubjectColumn = annotation.membershipSubjectColumn() == null
-                ? null : sanitizeIdentifier(annotation.membershipSubjectColumn());
+        // 注册表无声明 → 兜底 "id" (= 旧 @DataPermission.membershipSubjectColumn 注解默认值, 严格等价):
+        // 主表行本身即用户时 subject = id; 仅 user_student 经注册表声明为 user_id。注意 ScopeEvaluator
+        // 的 subjectRelFilter 路径据 meta.membershipSubjectColumn() 是否为空走 "user_id" 兜底 (有意差异),
+        // 故此处必须保持非空 "id" 而非 null, 否则该路径行为漂移。
+        String rawSubjectCol = a.membershipSubjectColumn();
+        String membershipSubjectColumn = (rawSubjectCol == null || rawSubjectCol.isEmpty())
+                ? "id" : sanitizeIdentifier(rawSubjectCol);
         String typeField = sanitizeIdentifier(moduleConfig.getTypeField());
 
         return new ResourceScopeMeta(

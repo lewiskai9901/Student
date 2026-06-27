@@ -25,17 +25,17 @@ import java.util.List;
  * member JOIN 条件统一: relation='member', resource_type='org_unit',
  * subject_type='user', ar.deleted=0, 且 (valid_to IS NULL OR valid_to > NOW())。
  *
- * <p>数据权限: {@code viaMembership=true} + {@code membershipSubjectColumn="user_id"}
+ * <p>数据权限: {@code viaMembership=true} + subject 列 {@code user_id} (Tier2 经注册表
+ * owner_org SUBJECT_GRAPH 行 withSubjectColumn("user_id") 声明, 不再留注解)
  * —— 注入 {@code s.user_id IN (SELECT ar.subject_id ... resource_id IN <scope>)},
  * 因为主表 user_student 的行是学生档案, 真正的 subject 是 s.user_id 不是 s.id。
  */
 @Mapper
 // 不配 creatorField: user_student 无 created_by 列 (V20260531 已删), viaMembership 的
-// SELF 语义走 membershipSubjectColumn (s.user_id = 本人), 拦截器各路径均不发出 creatorField。
+// SELF 语义走 subject 列 (s.user_id = 本人, 注册表声明), 拦截器各路径均不发出 creatorField。
 @DataPermission(
     module = "student",
-    tableAlias = "s",
-    membershipSubjectColumn = "user_id"
+    tableAlias = "s"
 )
 public interface DddStudentMapper extends BaseMapper<StudentPO> {
 
