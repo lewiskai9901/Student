@@ -171,13 +171,24 @@ public class ContributionDispatcher implements ApplicationRunner {
                     }
                 }
                 else if (c instanceof Contribution.DataResourceContribution drc) {
-                    // 无依赖类型: dispatcher @Order(60) 直接 UPSERT (data_resources 行由 migration 落库)
+                    // 无依赖类型: dispatcher @Order(60) 直接 UPSERT (data_resources 行由 migration/baseline 落库)
                     dataResources.incrementAndGet();
+                    DataResourceUpserter.Result r = null;
                     try {
-                        dataResourceUpserter.upsert(drc.def());
+                        r = dataResourceUpserter.upsert(drc.def());
                     } catch (Exception e) {
                         log.error("[ContributionDispatcher] 数据资源写入失败 {}: {}",
                             drc.def().resourceCode(), e.getMessage());
+                    }
+                    // 守护 (2026-06-27, 完美重构 B-1): dr() 声明了但 data_resources 无对应行 (SKIPPED) → fail-fast。
+                    // DataResourceUpserter 只 UPDATE 不 INSERT, 行须 baseline_v3 seed 或 post-v3 迁移落库; 缺行则
+                    // DataPermissionInterceptor.getModuleConfig 命中 null → @Cacheable("dynamicModules") 拒 null → 查询 422。
+                    // 与 resource_relations 同策 fail-fast: 声明与落库不一致是配置 bug, 拒绝以 422-地雷状态启动。
+                    if (r == DataResourceUpserter.Result.SKIPPED) {
+                        throw new IllegalStateException(String.format(
+                            "[ContributionDispatcher] 数据资源 '%s' 已 dr() 声明但 data_resources 无对应行 — "
+                            + "查询该资源会 422 (getModuleConfig→null)。行须 baseline_v3 seed + post-v3 迁移落库。拒绝启动 (B-1 fail-fast)",
+                            drc.def().resourceCode()));
                     }
                 }
                 else if (c instanceof Contribution.ResourceRelationContribution rrc) {

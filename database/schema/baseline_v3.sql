@@ -4354,6 +4354,10 @@ INSERT INTO `data_resources` (`resource_code`,`resource_name`,`domain_code`,`dom
 ('inspection_evidence','检查证据','inspection','检查平台',1,39,'CORE','["ALL","DEPARTMENT_AND_BELOW","MANAGED_ORGS_AND_BELOW","DEPARTMENT","MANAGED_ORGS","SELF","CUSTOM"]',0,'PLAIN',1,1),
 ('inspection_submission_detail','检查提交明细','inspection','检查平台',1,40,'CORE','["ALL","DEPARTMENT_AND_BELOW","MANAGED_ORGS_AND_BELOW","DEPARTMENT","MANAGED_ORGS","SELF","CUSTOM"]',0,'PLAIN',1,1),
 ('inspection_project_inspector','检查项目成员','inspection','检查平台',1,41,'CORE','["ALL","DEPARTMENT_AND_BELOW","MANAGED_ORGS_AND_BELOW","DEPARTMENT","MANAGED_ORGS","SELF","CUSTOM"]',0,'PLAIN',1,1);
+-- B-1 守护揪出的既有缺行: EDU dormitory/enrollment 已 dr() 声明却无 data_resources 行 (早于本次重构, 会致 422)。
+INSERT INTO `data_resources` (`resource_code`,`resource_name`,`domain_code`,`domain_name`,`enabled`,`sort_order`,`registered_by`,`allowed_scopes`,`subject_relation_filterable`,`resource_kind`,`tenant_id`,`plugin_enabled`) VALUES
+('dormitory','宿舍管理','education','教育',1,50,'EducationPlugin','["ALL","DEPARTMENT_AND_BELOW","DEPARTMENT","SELF","CUSTOM"]',0,'PLAIN',1,1),
+('enrollment','招生管理','education','教育',1,51,'EducationPlugin','["ALL","DEPARTMENT_AND_BELOW","DEPARTMENT","SELF","CUSTOM"]',0,'PLAIN',1,1);
 /*!40000 ALTER TABLE `data_resources` ENABLE KEYS */;
 UNLOCK TABLES;
 
