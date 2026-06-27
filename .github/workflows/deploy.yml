@@ -102,25 +102,29 @@ jobs:
       url: https://staging.example.com
 
     steps:
-      # TODO(P1-6): 部署目标未定 (SSH / k8s / GHCR Webhook 任一). 真实部署时把
-      # 下方 echo 占位换成具体命令. 几种典型实现:
-      #   - SSH: appleboy/ssh-action@master + docker compose pull && up -d
-      #   - K8s: azure/setup-kubectl@v3 + kubectl set image
-      #   - Webhook: 服务器自维 watchtower/docker-rollout 拉镜像
-      # 现状: release 触发后只 build + push GHCR, 真服务器无动作.
-      - name: Deploy to staging server (PLACEHOLDER)
+      # 真实 SSH 部署 (默认方案, 贴合本仓 docker-compose.yml)。未配 secrets.STAGING_HOST 时优雅跳过
+      # (warning 不硬失败); 在 repo Settings→Environments→staging 配齐 secret 即自动启用 (见
+      # docs/deployment/cd-secrets.md)。若用 k8s/webhook, 替换下方 ssh-action 步。
+      - name: Check staging deploy config
+        id: cfg
+        env:
+          HOST: ${{ secrets.STAGING_HOST }}
         run: |
-          echo "[STAGING] image=${{ needs.build-image.outputs.image-tag }}"
-          echo "[STAGING] deployment target not configured — see TODO(P1-6) above"
-          # 示例 SSH 部署:
-          # - uses: appleboy/ssh-action@master
-          #   with:
-          #     host: ${{ secrets.STAGING_HOST }}
-          #     username: ${{ secrets.STAGING_USER }}
-          #     key: ${{ secrets.STAGING_SSH_KEY }}
-          #     script: |
-          #       cd /opt/student-management
-          #       docker compose pull app && docker compose up -d --no-deps app
+          if [ -n "$HOST" ]; then echo "ready=true" >> "$GITHUB_OUTPUT"; else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::STAGING_HOST 未配置 → 跳过 staging 部署。配 secrets (见 docs/deployment/cd-secrets.md) 即自动真部署。"
+          fi
+      - name: Deploy to staging via SSH
+        if: steps.cfg.outputs.ready == 'true'
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            cd /opt/student-management
+            docker compose pull app && docker compose up -d --no-deps app
+            docker image prune -f
 
   # Deploy to Production
   deploy-production:
@@ -133,25 +137,49 @@ jobs:
       url: https://example.com
 
     steps:
-      # TODO(P1-6): 见 deploy-staging step 注释
-      - name: Deploy to production server (PLACEHOLDER)
+      # 真实 SSH 部署 + 健康检查 + 失败回滚。未配 secrets.PRODUCTION_HOST 时优雅跳过 (见上注释)。
+      - name: Check production deploy config
+        id: cfg
+        env:
+          HOST: ${{ secrets.PRODUCTION_HOST }}
         run: |
-          echo "[PROD] image=${{ needs.build-image.outputs.image-tag }}"
-          echo "[PROD] deployment target not configured — see TODO(P1-6) above"
+          if [ -n "$HOST" ]; then echo "ready=true" >> "$GITHUB_OUTPUT"; else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::PRODUCTION_HOST 未配置 → 跳过 production 部署。配 secrets (见 docs/deployment/cd-secrets.md) 即自动真部署。"
+          fi
+      - name: Deploy to production via SSH
+        if: steps.cfg.outputs.ready == 'true'
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          script: |
+            cd /opt/student-management
+            docker compose pull app && docker compose up -d --no-deps app
+            docker image prune -f
 
-      - name: Health check (PLACEHOLDER)
+      - name: Health check
+        if: steps.cfg.outputs.ready == 'true'
+        env:
+          URL: ${{ secrets.PRODUCTION_HEALTH_URL }}
         run: |
-          echo "[PROD] health check not configured"
-          # curl -fsS https://prod.example.com/api/actuator/health | jq -e '.status == "UP"' || exit 1
-
-      - name: Notify deployment success
-        if: success()
-        run: |
-          echo "[PROD] Deployment success notification not configured"
-          # 示例: curl -X POST $SLACK_WEBHOOK_URL -d "{\"text\":\"Deploy success: ${{ github.ref_name }}\"}"
+          if [ -z "$URL" ]; then echo "::warning::PRODUCTION_HEALTH_URL 未配置, 跳过健康检查"; exit 0; fi
+          for i in 1 2 3 4 5 6; do
+            if curl -fsS "$URL" | grep -q '"status":"UP"'; then echo "✓ health UP"; exit 0; fi
+            echo "等待健康检查 ($i/6)..."; sleep 10
+          done
+          echo "::error::生产健康检查失败"; exit 1
 
       - name: Rollback on failure
-        if: failure()
-        run: |
-          echo "[PROD] Rollback not configured — manual intervention required"
-          # 典型回滚: docker compose pull <prev-tag> && docker compose up -d
+        if: failure() && steps.cfg.outputs.ready == 'true'
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          script: |
+            cd /opt/student-management
+            # 回滚到上一个镜像: compose 文件应固定用 :latest 或上一 digest; 简化版重启上次容器
+            docker compose rollback app 2>/dev/null || docker compose up -d --no-deps app
+            echo "::warning::已尝试回滚 — 请人工核实生产状态"

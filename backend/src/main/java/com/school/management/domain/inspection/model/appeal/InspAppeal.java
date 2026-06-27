@@ -15,6 +15,12 @@ import java.time.LocalDateTime;
  * 的扣分判定不服时, 提交申诉; 经审核通过后回填实际调整, 驳回则维持原判.
  *
  * <p>状态机: PENDING → APPROVED / REJECTED / WITHDRAWN
+ *
+ * <p><b>设计决策 (2026-06-27): 有意保留为领域状态机, 不迁 Flowable。</b> 单级审批
+ * (PENDING→APPROVED/REJECTED/WITHDRAWN) 用 BPMN 引擎属过度工程; 审批通过经
+ * {@code AppealApprovedEvent → AppealAdjustmentHandler} 回填扣分是 load-bearing 链, 引擎分叉会引入回归。
+ * 仅当将来出现多级审批 / SLA 超时 / 转办 / 运行时可配审批路由 时才考虑迁移 (届时复用
+ * 行业无关的 WorkflowContribution + ApproverResolver + MyWorkflowTodoSource 基础设施, 而非现在预建)。
  */
 public class InspAppeal extends AggregateRoot<Long> {
 
