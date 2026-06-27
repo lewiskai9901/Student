@@ -3,7 +3,7 @@ package com.school.management.interfaces.rest.system;
 import com.school.management.application.event.TriggerPipelineHealthCheck;
 import com.school.management.application.plugin.PluginLifecycleService;
 import com.school.management.application.system.PluginPlatformApplicationService;
-import com.school.management.common.annotation.PublicEndpoint;
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.school.management.common.result.Result;
 import com.school.management.infrastructure.casbin.CasbinAccess;
 import com.school.management.infrastructure.extension.Policy;
@@ -169,7 +169,7 @@ public class PluginPlatformController {
             row.put("name", p.name());
             row.put("supports", hits);
             row.put("sourceClass", p.getClass().getName());
-            row.put("sourcePlugin", inferPluginFromClass(p.getClass().getName()));
+            row.put("sourcePlugin", industryOf(p.getClass()));
             items.add(row);
         }
 
@@ -190,19 +190,15 @@ public class PluginPlatformController {
      *   2. com.school.management.application.* 下的 core 内置 SPI 实现 (非行业插件)
      *   3. com.school.management.infrastructure.* 下的 core 基础设施
      */
-    private String inferPluginFromClass(String fqcn) {
-        if (fqcn == null) return "UNKNOWN";
-        // 行业插件优先匹配
-        if (fqcn.contains(".plugins.education.")) return "EDU";
-        if (fqcn.contains(".plugins.eldercare."))  return "CARE";
-        // core 匹配: 既包括 .plugins.core.* 也包括 application/infrastructure 里的 core SPI 实现
-        // (例: BySubjectTargetMode 在 application.message.targetmode, 属 core 内置)
-        if (fqcn.contains(".plugins.core.")
-                || fqcn.startsWith("com.school.management.application.")
-                || fqcn.startsWith("com.school.management.infrastructure.")) {
-            return "CORE";
-        }
-        return "UNKNOWN";
+    /**
+     * 类 → 行业码 (P2: 取代旧 inferPluginFromClass 包名字符串启发式, 收敛到权威
+     * {@link PluginPackageRegistrar#resolveIndustry(Class)} 单一真相源 —— 它基于各 manifest.owns():
+     * CoreManifest.owns 含 `!pkg.contains(".plugins.")` 已覆盖 application/infrastructure 里的 core SPI,
+     * EduManifest.owns 覆盖 .plugins.education.*; 无归属 → UNKNOWN)。
+     */
+    private String industryOf(Class<?> clazz) {
+        String ind = packageRegistrar.resolveIndustry(clazz);
+        return ind != null ? ind : "UNKNOWN";
     }
 
     private Long sumOf(Map<String, Long> m) {
@@ -385,7 +381,7 @@ public class PluginPlatformController {
     private long countPoliciesOfPlugin(String code) {
         try {
             return policyRegistry.getPolicies().stream()
-                .filter(p -> code.equalsIgnoreCase(inferPluginFromClass(p.getClass().getName())))
+                .filter(p -> code.equalsIgnoreCase(industryOf(p.getClass())))
                 .count();
         } catch (Exception e) {
             return 0L;
@@ -638,7 +634,7 @@ public class PluginPlatformController {
                     row.put("displayName", r.displayName());
                     row.put("supportsPreview", r.supportsPreview());
                     row.put("sourceClass", r.getClass().getName());
-                    row.put("sourcePlugin", inferPluginFromClass(r.getClass().getName()));
+                    row.put("sourcePlugin", industryOf(r.getClass()));
                     return row;
                 })
                 .toList()
@@ -650,7 +646,7 @@ public class PluginPlatformController {
      * M1 TriggerPipelineHealthCheck 结果 — healthy + 空/缺的表清单.
      */
     @GetMapping("/messaging-health")
-    @PublicEndpoint(reason = "健康检查 actuator-like, 监控用")
+    @PreAuthorize("isAuthenticated()")  // P2: 原 @PublicEndpoint 匿名泄露内部缺失表名; 改为须登录 (两个消费页均已登录)
     public Result<Map<String, Object>> messagingHealth() {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("healthy", triggerPipelineHealthCheck.isHealthy());
