@@ -220,10 +220,74 @@ export function countFields(t: any): number {
 }
 
 export function topFeatures(t: any): string[] {
+  return allFeatures(t).slice(0, 3)
+}
+
+/** 类型的全部启用特性 key (不截断)。 */
+export function allFeatures(t: any): string[] {
   const f = t?.features
   if (!f) return []
   const obj = typeof f === 'string' ? (() => { try { return JSON.parse(f) } catch { return {} } })() : f
-  return Object.entries(obj).filter(([, v]) => v === true).map(([k]) => k).slice(0, 3)
+  return Object.entries(obj).filter(([, v]) => v === true).map(([k]) => k)
+}
+
+/**
+ * 实体类型"特性"(feature flag) 的中文说明。特性是插件 getFeatures() 声明的能力开关 (布尔),
+ * 不是方法名 —— 决定该类型在系统里能做什么 (如能否登录、是否教职工)。未知 key 回退原码。
+ */
+export const FEATURE_LABELS: Record<string, string> = {
+  canLogin: '可登录系统',
+  canEnroll: '可注册入学 / 选课',
+  isLearner: '学习者 (可被评教 / 记成绩)',
+  isStaff: '教职工身份',
+  canTeach: '可授课',
+  canCounsel: '可带班 / 辅导学生',
+  canApproveGrade: '可审批成绩',
+  canBeAdminOfOrg: '可担任组织管理员',
+  canBeAssignedToClass: '可分配到班级',
+  canBeResponsibleForPlace: '可作为场所责任人',
+  isExternal: '外部人员 (非本组织正式成员)',
+  attendanceTracked: '纳入考勤统计',
+  hasAttendance: '有考勤',
+  hasCapacity: '有容量上限',
+  hasClasses: '包含班级',
+  hasExams: '有考试',
+  hasGender: '含性别属性',
+  hasGuardian: '有监护人',
+  hasOccupancy: '有占用记录',
+  hasStudents: '包含学生',
+  hasTimetable: '有课表',
+  hasProjector: '配备投影仪',
+  hasAC: '配备空调',
+  manageableByOrgAdmin: '组织管理员可管理',
+  profileEditableBySelf: '本人可编辑资料',
+  receivesPersonalGrade: '接收个人成绩',
+  isPrimary: '主身份',
+  isGlobal: '全局 (不限组织)',
+  isRootType: '根类型',
+}
+
+/** 特性 key → 中文说明 (未知回退原码)。 */
+export function featureLabel(key: string): string {
+  return FEATURE_LABELS[key] || key
+}
+
+/** 字段类型码 → 中文。 */
+export function fieldTypeLabel(type?: string): string {
+  const m: Record<string, string> = {
+    text: '文本', textarea: '多行文本', number: '数字', date: '日期', datetime: '日期时间',
+    select: '单选', multiselect: '多选', tags: '标签', relation: '关联', boolean: '是 / 否',
+    email: '邮箱', phone: '电话', file: '文件', image: '图片', json: 'JSON', richtext: '富文本',
+  }
+  return m[type || ''] || type || '—'
+}
+
+/** 解析类型的字段定义 (metadataSchema.fields)。 */
+export function parseTypeFields(t: any): any[] {
+  try {
+    const schema = typeof t?.metadataSchema === 'string' ? JSON.parse(t.metadataSchema) : t?.metadataSchema
+    return Array.isArray(schema?.fields) ? schema.fields : []
+  } catch { return [] }
 }
 
 export function parseDataScopeSource(src?: string): string {

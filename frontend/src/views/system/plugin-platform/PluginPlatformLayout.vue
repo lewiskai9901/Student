@@ -61,6 +61,8 @@
           v-else
           :resource-type="selectedResource"
           :plugin-filter="selectedCode"
+          :selected-key="selectedItem?.typeCode"
+          @select-item="onSelectItem"
         />
       </main>
 
@@ -70,6 +72,7 @@
         :plugin-code="selectedCode"
         :hook-key="selectedHookKey"
         :resource-type="selectedResource"
+        :selected-item="selectedItem"
       />
     </div>
 
@@ -116,6 +119,8 @@ const selectedHookKey = ref<string>(
   route.query.entity && route.query.phase ? `${route.query.entity}/${route.query.phase}` : ''
 )
 const selectedResource = ref<ResourceKey>((route.query.type as ResourceKey) || 'types')
+// 资源列表里被点选的具体一行 (当前用于"类型"明细: 右侧面板展示其字段/特性)
+const selectedItem = ref<any>(null)
 
 function syncUrl() {
   const q: Record<string, string> = { view: view.value }
@@ -135,6 +140,7 @@ watch([view, selectedCode, selectedHookKey, selectedResource], syncUrl)
 
 function onChangeView(v: ViewKind) {
   view.value = v
+  selectedItem.value = null
   // auto-select first plausible target in this view
   if (v === 'plugins' && !selectedCode.value && data.industries.length) {
     selectedCode.value = data.industries[0].code
@@ -153,11 +159,16 @@ function onSelectHook(key: string) {
 }
 function onSelectResource(key: ResourceKey) {
   view.value = 'resources'
+  if (key !== selectedResource.value) selectedItem.value = null
   selectedResource.value = key
+}
+function onSelectItem(item: any) {
+  selectedItem.value = item
 }
 function onJumpResource(payload: { type: ResourceKey; pluginCode?: string }) {
   view.value = 'resources'
   selectedResource.value = payload.type
+  selectedItem.value = null
   if (payload.pluginCode !== undefined) selectedCode.value = payload.pluginCode
 }
 

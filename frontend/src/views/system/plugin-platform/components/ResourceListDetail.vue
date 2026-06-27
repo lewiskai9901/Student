@@ -36,11 +36,13 @@
             <tr><th>类型码</th><th>名称</th><th>字段</th><th>特性</th><th>插件</th><th>行业</th></tr>
           </thead>
           <tbody>
-            <tr v-for="t in grp.items" :key="t.id">
+            <tr v-for="t in grp.items" :key="t.id"
+                class="rl-row-click" :class="{ 'rl-row-sel': selectedKey === t.typeCode }"
+                @click="$emit('select-item', t)" title="点击查看字段与特性明细">
               <td><code class="rl-mono rl-mono-blue">{{ t.typeCode }}</code></td>
               <td>{{ t.typeName }}</td>
-              <td>{{ countFields(t) }}</td>
-              <td><span v-for="f in topFeatures(t)" :key="f" class="rl-feat">{{ f }}</span></td>
+              <td><span class="rl-fieldcount">{{ countFields(t) }}</span></td>
+              <td><span v-for="f in topFeatures(t)" :key="f" class="rl-feat" :title="f">{{ featureLabel(f) }}</span></td>
               <td>
                 <code v-if="t.pluginClass" class="rl-mono" :title="t.pluginClass">{{ shortClass(t.pluginClass) }}</code>
                 <span v-else class="rl-muted">自定义</span>
@@ -353,7 +355,7 @@ import {
 } from 'lucide-vue-next'
 import {
   RESOURCE_TYPES, subjectTypeLabel, industryChipStyle, industryLabel,
-  resolveIndustry, relationIndustry, countFields, topFeatures, shortClass,
+  resolveIndustry, relationIndustry, countFields, topFeatures, featureLabel, shortClass,
   categoryTagType, categoryLabel, tierTagType, tierLabel, parseImplied,
   polarityTagType, polarityLabel, parseSubjects, permissionTypeLabel,
   permissionScopeLabel, roleTypeLabel, permissionModuleLabel, parseSchema,
@@ -366,10 +368,12 @@ import {
 const props = defineProps<{
   resourceType: ResourceKey
   pluginFilter: string
+  selectedKey?: string
 }>()
 
 defineEmits<{
   (e: 'clear-filter'): void
+  (e: 'select-item', item: any): void
 }>()
 
 const data = inject<PluginData>('pluginData')!
@@ -560,6 +564,15 @@ const groupedPermissions = computed(() => {
 /* 多 chip 单元格 (可配范围/适用主体等) 允许换行包裹, 不被 nowrap 拉成超长一行 */
 .rl-table tbody td.rl-wrap { white-space: normal; max-width: 260px; }
 .rl-table tbody tr:hover { background: #fafbfc; }
+.rl-table tbody tr.rl-row-click { cursor: pointer; }
+.rl-table tbody tr.rl-row-sel,
+.rl-table tbody tr.rl-row-sel:hover { background: #eff6ff; }
+.rl-fieldcount {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 20px; height: 18px; padding: 0 6px;
+  background: #eef2ff; color: #4338ca; border-radius: 9px;
+  font-size: 11px; font-weight: 600;
+}
 
 .rl-mono {
   font-family: 'JetBrains Mono', Menlo, monospace;

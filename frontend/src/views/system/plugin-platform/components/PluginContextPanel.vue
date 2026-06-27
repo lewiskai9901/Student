@@ -67,19 +67,79 @@
 
     <!-- Resource context -->
     <template v-else-if="view === 'resources'">
-      <div class="cx-section">
-        <div class="cx-section-title">
-          <LayoutGrid :size="12" />
-          资源类型
+      <!-- 选中某"类型" → 展示其字段与特性明细 -->
+      <template v-if="resourceType === 'types' && selectedItem">
+        <div class="cx-section">
+          <div class="cx-section-title">
+            <LayoutGrid :size="12" />
+            {{ selectedItem.typeName }}
+          </div>
+          <dl class="cx-kv">
+            <dt>类型码</dt>
+            <dd><code class="cx-mono">{{ selectedItem.typeCode }}</code></dd>
+            <dt>实体</dt>
+            <dd>{{ subjectTypeLabel(selectedItem.entityType) }}</dd>
+            <dt v-if="selectedItem.category">分类</dt>
+            <dd v-if="selectedItem.category">{{ categoryLabel(selectedItem.category) }}</dd>
+            <dt>来源</dt>
+            <dd>
+              <code v-if="selectedItem.pluginClass" class="cx-mono" :title="selectedItem.pluginClass">{{ shortClass(selectedItem.pluginClass) }}</code>
+              <span v-else class="cx-small">自定义</span>
+            </dd>
+          </dl>
         </div>
-        <dl class="cx-kv">
-          <dt>当前</dt>
-          <dd>{{ resourceLabel }}</dd>
-          <dt>总数</dt>
-          <dd><b>{{ resourceCount }}</b></dd>
-        </dl>
-        <p class="cx-small">通过 Explorer 切换查看不同资源; 支持按插件过滤.</p>
-      </div>
+
+        <!-- 字段明细 -->
+        <div class="cx-section">
+          <div class="cx-section-title">
+            字段 <span class="cx-cnt">{{ typeFields.length }}</span>
+          </div>
+          <div v-if="!typeFields.length" class="cx-small">该类型暂无扩展字段</div>
+          <div v-for="f in typeFields" :key="f.key" class="cx-field">
+            <div class="cx-field-top">
+              <span class="cx-field-label">{{ f.label || f.key }}</span>
+              <span v-if="f.required" class="cx-tag cx-tag-req">必填</span>
+              <span v-if="f.system" class="cx-tag cx-tag-sys">系统</span>
+            </div>
+            <div class="cx-field-sub">
+              <code class="cx-mono">{{ f.key }}</code>
+              <span class="cx-ftype">{{ fieldTypeLabel(f.type) }}</span>
+              <span v-if="f.group" class="cx-fgroup">{{ f.group }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 特性明细 (中文说明) -->
+        <div class="cx-section">
+          <div class="cx-section-title">
+            特性 <span class="cx-cnt">{{ typeFeatures.length }}</span>
+          </div>
+          <div v-if="!typeFeatures.length" class="cx-small">未声明特性</div>
+          <div v-for="k in typeFeatures" :key="k" class="cx-feat-row">
+            <span class="cx-feat-label">{{ featureLabel(k) }}</span>
+            <code class="cx-mono cx-feat-key">{{ k }}</code>
+          </div>
+        </div>
+      </template>
+
+      <!-- 否则: 资源总览 + 操作提示 -->
+      <template v-else>
+        <div class="cx-section">
+          <div class="cx-section-title">
+            <LayoutGrid :size="12" />
+            资源类型
+          </div>
+          <dl class="cx-kv">
+            <dt>当前</dt>
+            <dd>{{ resourceLabel }}</dd>
+            <dt>总数</dt>
+            <dd><b>{{ resourceCount }}</b></dd>
+          </dl>
+          <p class="cx-small">
+            {{ resourceType === 'types' ? '点击左侧表格中的类型, 这里展示它的字段与特性明细。' : '通过 Explorer 切换查看不同资源; 支持按插件过滤。' }}
+          </p>
+        </div>
+      </template>
     </template>
 
     <template v-else>
@@ -112,6 +172,8 @@ import {
 } from 'lucide-vue-next'
 import {
   industryColor, shortClass, formatDateShort, RESOURCE_TYPES,
+  parseTypeFields, allFeatures, featureLabel, fieldTypeLabel,
+  categoryLabel, subjectTypeLabel,
   type PluginData, type ResourceKey
 } from '../helpers'
 
@@ -120,7 +182,13 @@ const props = defineProps<{
   pluginCode: string
   hookKey: string
   resourceType: ResourceKey
+  selectedItem?: any
 }>()
+
+/** 选中类型的字段定义 (右侧明细)。 */
+const typeFields = computed(() => parseTypeFields(props.selectedItem))
+/** 选中类型的全部启用特性 key。 */
+const typeFeatures = computed(() => allFeatures(props.selectedItem))
 
 const data = inject<PluginData>('pluginData')!
 
@@ -212,6 +280,31 @@ const topRegistrars = computed(() => {
   padding: 1px 6px; background: #eff6ff; color: #2563eb;
   border-radius: 3px; margin-right: 3px;
 }
+
+/* 类型明细: 字段 + 特性 */
+.cx-cnt {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 16px; height: 15px; padding: 0 5px; margin-left: 4px;
+  background: #eef2ff; color: #4338ca; border-radius: 8px;
+  font-size: 10px; font-weight: 700;
+}
+.cx-field { padding: 5px 0; border-bottom: 1px dashed #f3f4f6; }
+.cx-field:last-child { border-bottom: none; }
+.cx-field-top { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.cx-field-label { font-size: 12px; font-weight: 600; color: #111827; }
+.cx-field-sub { display: flex; align-items: center; gap: 6px; margin-top: 2px; flex-wrap: wrap; }
+.cx-ftype { font-size: 10px; color: #2563eb; background: #eff6ff; padding: 0 5px; border-radius: 3px; white-space: nowrap; }
+.cx-fgroup { font-size: 10px; color: #6b7280; }
+.cx-tag { font-size: 9px; font-weight: 600; padding: 0 5px; border-radius: 3px; white-space: nowrap; }
+.cx-tag-req { color: #dc2626; background: #fef2f2; }
+.cx-tag-sys { color: #6b7280; background: #f3f4f6; }
+.cx-feat-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 4px 0; border-bottom: 1px dashed #f3f4f6;
+}
+.cx-feat-row:last-child { border-bottom: none; }
+.cx-feat-label { font-size: 11px; color: #111827; }
+.cx-feat-key { flex-shrink: 0; }
 
 .cx-actions {
   display: flex; flex-direction: column; gap: 5px; padding: 4px;
