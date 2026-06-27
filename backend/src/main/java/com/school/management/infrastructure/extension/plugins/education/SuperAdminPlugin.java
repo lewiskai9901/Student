@@ -21,6 +21,11 @@ public class SuperAdminPlugin implements EntityTypePlugin {
         return List.of(); // 超管不需要额外字段，但需要生命周期保护
     }
 
+    @Override
+    public Map<String, Boolean> getFeatures() {
+        return Map.of("canLogin", true, "isStaff", true);   // 超管可登录 (显式声明, 与 ADMIN/STAFF 一致)
+    }
+
     public Map<String, Object> getUiConfig() {
         return Map.of("icon", "shield", "color", "#dc2626");
     }
